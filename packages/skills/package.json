@@ -1,0 +1,53 @@
+{
+  "name": "@opengamehq/skills",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agent skills for making browser games and putting them on OpenGame.",
+  "keywords": [
+    "opengame",
+    "agent-skills",
+    "claude-code",
+    "codex",
+    "cursor",
+    "game-development",
+    "browser-games"
+  ],
+  "homepage": "https://docs.opengame.io",
+  "bugs": {
+    "url": "https://github.com/opengamehq/opengame/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opengamehq/opengame.git",
+    "directory": "packages/skills"
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    "./manifest.json": "./dist/skills/manifest.json",
+    "./marketplace.json": "./dist/.claude-plugin/marketplace.json",
+    "./skills/*": "./dist/skills/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node build.mjs --check",
+    "lock": "node build.mjs --lock",
+    "public": "node build.mjs --public",
+    "test": "node --test tests/*.test.mjs",
+    "prepack": "npm run build",
+    "prepublishOnly": "node -e \"console.error('Publish through scripts/release.mjs, which stages and audits the package: the publish workflow for a release, or --first-publish once per package.');process.exit(1)\""
+  },
+  "devDependencies": {
+    "@opengame/shared": "*",
+    "three": "^0.185.1"
+  }
+}

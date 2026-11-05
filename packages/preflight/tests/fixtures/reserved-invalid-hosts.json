@@ -1,0 +1,52 @@
+{
+  "cases": [
+    {
+      "url": "https://oc-cooked.invalid/abc",
+      "browserHost": "oc-cooked.invalid"
+    },
+    {
+      "url": "https://evil.com\\x.invalid/a.js",
+      "browserHost": "evil.com"
+    },
+    {
+      "url": "//cdn.invalid/x.js",
+      "browserHost": "cdn.invalid"
+    },
+    {
+      "url": "https://evil.com#.invalid",
+      "browserHost": "evil.com"
+    },
+    {
+      "url": "https://evil.com?.invalid",
+      "browserHost": "evil.com"
+    },
+    {
+      "url": "https://a.invalid:443/x",
+      "browserHost": "a.invalid"
+    },
+    {
+      "url": "https://evil.com\\@x.invalid/a.js",
+      "browserHost": "evil.com"
+    },
+    {
+      "url": "https://x.invalid\\@evil.com/a.js",
+      "browserHost": "x.invalid"
+    },
+    {
+      "url": "https://user@evil.com/x.invalid",
+      "browserHost": "evil.com"
+    },
+    {
+      "url": "https://evil.com/.invalid",
+      "browserHost": "evil.com"
+    },
+    {
+      "url": "HTTPS://EVIL.COM\\X.INVALID/a.js",
+      "browserHost": "evil.com"
+    },
+    {
+      "url": "https://evil.com.invalid/a.js",
+      "browserHost": "evil.com.invalid"
+    }
+  ]
+}

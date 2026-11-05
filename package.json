@@ -1,0 +1,24 @@
+{
+  "name": "opengame-public",
+  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opengamehq/opengame.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm run build --workspace @opengamehq/sdk && npm run build --workspace @opengamehq/cli && npm run build --workspace @opengamehq/skills",
+    "test": "npm test --workspace @opengame/shared --if-present && npm test --workspace @opengame/protocol && npm test --workspace @opengame/preflight && npm test --workspace @opengamehq/skills && npm test --workspace @opengamehq/sdk && npm test --workspace @opengamehq/cli",
+    "release": "node scripts/release.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "tsx": "4.23.12"
+  }
+}

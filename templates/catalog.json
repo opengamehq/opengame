@@ -1,0 +1,326 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "three-vite",
+      "engine": "threejs",
+      "kind": "npm",
+      "docs": "engines/threejs"
+    },
+    {
+      "id": "babylonjs",
+      "engine": "babylonjs",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "phaser",
+      "engine": "phaser",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "pixijs",
+      "engine": "pixijs",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "playcanvas",
+      "engine": "playcanvas",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "excalibur",
+      "engine": "excalibur",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "kaplay",
+      "engine": "kaplay",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "littlejs",
+      "engine": "littlejs",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "melonjs",
+      "engine": "melonjs",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "react",
+      "engine": "react",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "ctjs",
+      "engine": "ctjs",
+      "kind": "export",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "construct",
+      "engine": "construct",
+      "kind": "editor",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "gdevelop",
+      "engine": "gdevelop",
+      "kind": "export",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "rpgmaker",
+      "engine": "rpgmaker",
+      "kind": "editor",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "cocos",
+      "engine": "cocos",
+      "kind": "editor",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "heaps",
+      "engine": "heaps",
+      "kind": "toolchain",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "unity",
+      "engine": "unity",
+      "kind": "editor",
+      "docs": "engines/unity",
+      "export": "dist"
+    },
+    {
+      "id": "godot",
+      "engine": "godot",
+      "kind": "toolchain",
+      "docs": "engines/godot",
+      "command": "godot"
+    },
+    {
+      "id": "defold",
+      "engine": "defold",
+      "kind": "toolchain",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "gamemaker",
+      "engine": "gamemaker",
+      "kind": "editor",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "raylib",
+      "engine": "raylib",
+      "kind": "toolchain",
+      "docs": "engines/webassembly",
+      "command": "emcc",
+      "environment": [
+        "RAYLIB_WEB_LIBRARY",
+        "RAYLIB_INCLUDE"
+      ]
+    },
+    {
+      "id": "love2d",
+      "engine": "love2d",
+      "kind": "toolchain",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "renpy",
+      "engine": "renpy",
+      "kind": "toolchain",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "solar2d",
+      "engine": "solar2d",
+      "kind": "editor",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "kaigen",
+      "engine": "kaigen",
+      "kind": "editor",
+      "docs": "engines/kaigen",
+      "export": "dist"
+    },
+    {
+      "id": "bevy",
+      "engine": "bevy",
+      "kind": "export",
+      "docs": "engines/webassembly",
+      "export": "dist"
+    },
+    {
+      "id": "ebiten",
+      "engine": "ebiten",
+      "kind": "toolchain",
+      "docs": "engines/webassembly",
+      "command": "go"
+    },
+    {
+      "id": "kni",
+      "engine": "kni",
+      "kind": "toolchain",
+      "docs": "engines/overview",
+      "export": "publish/wwwroot",
+      "command": "dotnet"
+    },
+    {
+      "id": "monogame",
+      "engine": "monogame",
+      "kind": "unavailable",
+      "docs": "engines/overview"
+    },
+    {
+      "id": "stride",
+      "engine": "stride",
+      "kind": "unavailable",
+      "docs": "engines/overview"
+    },
+    {
+      "id": "flame",
+      "engine": "flame",
+      "kind": "toolchain",
+      "docs": "engines/overview",
+      "command": "flutter"
+    },
+    {
+      "id": "jsdos",
+      "engine": "jsdos",
+      "kind": "payload",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "ruffle",
+      "engine": "ruffle",
+      "kind": "payload",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "gbstudio",
+      "engine": "gbstudio",
+      "kind": "editor",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "pico8",
+      "engine": "pico8",
+      "kind": "editor",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "javascript",
+      "engine": "javascript",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "typescript",
+      "engine": "typescript",
+      "kind": "npm",
+      "docs": "engines/javascript"
+    },
+    {
+      "id": "c",
+      "engine": "c",
+      "kind": "toolchain",
+      "docs": "engines/webassembly",
+      "command": "emcc"
+    },
+    {
+      "id": "cpp",
+      "engine": "cpp",
+      "kind": "toolchain",
+      "docs": "engines/webassembly",
+      "command": "em++"
+    },
+    {
+      "id": "csharp",
+      "engine": "csharp",
+      "kind": "toolchain",
+      "docs": "engines/overview",
+      "command": "dotnet"
+    },
+    {
+      "id": "go",
+      "engine": "go",
+      "kind": "toolchain",
+      "docs": "engines/webassembly",
+      "command": "go"
+    },
+    {
+      "id": "haxe",
+      "engine": "haxe",
+      "kind": "toolchain",
+      "docs": "engines/overview",
+      "command": "haxe"
+    },
+    {
+      "id": "lua",
+      "engine": "lua",
+      "kind": "npm",
+      "docs": "engines/overview"
+    },
+    {
+      "id": "python",
+      "engine": "python",
+      "kind": "payload",
+      "docs": "engines/overview",
+      "environment": [
+        "PYODIDE_RUNTIME_DIR"
+      ]
+    },
+    {
+      "id": "rust",
+      "engine": "rust",
+      "kind": "toolchain",
+      "docs": "engines/webassembly",
+      "command": "cargo"
+    },
+    {
+      "id": "swift",
+      "engine": "swift",
+      "kind": "toolchain",
+      "docs": "engines/overview",
+      "export": "dist"
+    },
+    {
+      "id": "zig",
+      "engine": "zig",
+      "kind": "toolchain",
+      "docs": "engines/webassembly",
+      "command": "zig"
+    }
+  ]
+}

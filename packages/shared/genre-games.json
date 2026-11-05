@@ -1,0 +1,1320 @@
+{
+  "genres": {
+    "shooter-survival": [
+      {
+        "title": "Call of Duty",
+        "note": "2003",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Halo",
+        "note": "2001",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Counter-Strike",
+        "note": "2000"
+      },
+      {
+        "title": "Fortnite",
+        "note": "2017",
+        "alsoIn": [
+          "action-adventure",
+          "party-social-sandbox"
+        ]
+      },
+      {
+        "title": "PUBG: Battlegrounds",
+        "note": "2017"
+      },
+      {
+        "title": "Apex Legends",
+        "note": "2019"
+      },
+      {
+        "title": "Valorant",
+        "note": "2020"
+      },
+      {
+        "title": "Overwatch",
+        "note": "2016"
+      },
+      {
+        "title": "Doom",
+        "note": "1993"
+      },
+      {
+        "title": "Half-Life",
+        "note": "1998"
+      },
+      {
+        "title": "Resident Evil",
+        "note": "1996",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "The Last of Us",
+        "note": "2013",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Left 4 Dead",
+        "note": "2008"
+      },
+      {
+        "title": "Rainbow Six Siege",
+        "note": "2015"
+      },
+      {
+        "title": "Battlefield",
+        "note": "2002"
+      },
+      {
+        "title": "Destiny",
+        "note": "2014",
+        "alsoIn": [
+          "rpg"
+        ]
+      },
+      {
+        "title": "Borderlands",
+        "note": "2009",
+        "alsoIn": [
+          "rpg"
+        ]
+      },
+      {
+        "title": "Titanfall",
+        "note": "2014"
+      },
+      {
+        "title": "BioShock",
+        "note": "2007"
+      },
+      {
+        "title": "Dead Space",
+        "note": "2008",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Silent Hill",
+        "note": "1999"
+      },
+      {
+        "title": "Far Cry",
+        "note": "2004",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Helldivers 2",
+        "note": "2024"
+      },
+      {
+        "title": "Team Fortress 2",
+        "note": "2007"
+      },
+      {
+        "title": "Subnautica",
+        "note": "2018"
+      },
+      {
+        "title": "Deep Rock Galactic",
+        "note": "2020"
+      },
+      {
+        "title": "Rust",
+        "note": "Survival"
+      },
+      {
+        "title": "Escape from Tarkov",
+        "note": "Extraction"
+      }
+    ],
+    "action-adventure": [
+      {
+        "title": "The Legend of Zelda",
+        "note": "1986"
+      },
+      {
+        "title": "God of War",
+        "note": "2005"
+      },
+      {
+        "title": "Dark Souls",
+        "note": "2011",
+        "alsoIn": [
+          "rpg"
+        ]
+      },
+      {
+        "title": "Elden Ring",
+        "note": "2022",
+        "alsoIn": [
+          "rpg"
+        ]
+      },
+      {
+        "title": "Sekiro: Shadows Die Twice",
+        "note": "2019"
+      },
+      {
+        "title": "Bloodborne",
+        "note": "2015",
+        "alsoIn": [
+          "rpg"
+        ]
+      },
+      {
+        "title": "Uncharted",
+        "note": "2007",
+        "alsoIn": [
+          "shooter-survival"
+        ]
+      },
+      {
+        "title": "Tomb Raider",
+        "note": "1996"
+      },
+      {
+        "title": "Assassin's Creed",
+        "note": "2007"
+      },
+      {
+        "title": "Batman: Arkham Asylum",
+        "note": "2009"
+      },
+      {
+        "title": "Devil May Cry",
+        "note": "2001"
+      },
+      {
+        "title": "Bayonetta",
+        "note": "2009"
+      },
+      {
+        "title": "Metal Gear Solid",
+        "note": "1998"
+      },
+      {
+        "title": "Hitman",
+        "note": "2000"
+      },
+      {
+        "title": "Ghost of Tsushima",
+        "note": "2020"
+      },
+      {
+        "title": "Red Dead Redemption 2",
+        "note": "2018"
+      },
+      {
+        "title": "Grand Theft Auto V",
+        "note": "2013"
+      },
+      {
+        "title": "Marvel's Spider-Man",
+        "note": "2018"
+      },
+      {
+        "title": "Horizon Zero Dawn",
+        "note": "2017"
+      },
+      {
+        "title": "Shadow of the Colossus",
+        "note": "2005"
+      },
+      {
+        "title": "Okami",
+        "note": "2006"
+      },
+      {
+        "title": "Star Wars Jedi: Fallen Order",
+        "note": "2019"
+      },
+      {
+        "title": "Lies of P",
+        "note": "2023"
+      },
+      {
+        "title": "Black Myth: Wukong",
+        "note": "2024"
+      },
+      {
+        "title": "Streets of Rage",
+        "note": "1991",
+        "alsoIn": [
+          "fighting"
+        ]
+      },
+      {
+        "title": "Ninja Gaiden",
+        "note": "1988"
+      },
+      {
+        "title": "Dishonored",
+        "note": "2012"
+      },
+      {
+        "title": "A Plague Tale: Innocence",
+        "note": "2019"
+      }
+    ],
+    "rpg": [
+      {
+        "title": "Final Fantasy",
+        "note": "1987"
+      },
+      {
+        "title": "The Elder Scrolls V: Skyrim",
+        "note": "2011"
+      },
+      {
+        "title": "The Witcher 3: Wild Hunt",
+        "note": "2015"
+      },
+      {
+        "title": "Pokémon",
+        "note": "1996"
+      },
+      {
+        "title": "Diablo",
+        "note": "1996",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "World of Warcraft",
+        "note": "2004"
+      },
+      {
+        "title": "Baldur's Gate 3",
+        "note": "2023"
+      },
+      {
+        "title": "Mass Effect",
+        "note": "2007",
+        "alsoIn": [
+          "shooter-survival"
+        ]
+      },
+      {
+        "title": "Persona 5",
+        "note": "2016"
+      },
+      {
+        "title": "Dragon Quest",
+        "note": "1986"
+      },
+      {
+        "title": "Chrono Trigger",
+        "note": "1995"
+      },
+      {
+        "title": "Fallout",
+        "note": "1997",
+        "alsoIn": [
+          "shooter-survival"
+        ]
+      },
+      {
+        "title": "Path of Exile",
+        "note": "2013"
+      },
+      {
+        "title": "Hades",
+        "note": "2020",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "The Binding of Isaac",
+        "note": "2011",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Kingdom Hearts",
+        "note": "2002",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Monster Hunter",
+        "note": "2004",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Divinity: Original Sin 2",
+        "note": "2017"
+      },
+      {
+        "title": "Undertale",
+        "note": "2015"
+      },
+      {
+        "title": "Genshin Impact",
+        "note": "2020",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Cyberpunk 2077",
+        "note": "2020",
+        "alsoIn": [
+          "shooter-survival"
+        ]
+      },
+      {
+        "title": "Dragon Age: Origins",
+        "note": "2009"
+      },
+      {
+        "title": "Xenoblade Chronicles",
+        "note": "2010"
+      },
+      {
+        "title": "Octopath Traveler",
+        "note": "2018"
+      },
+      {
+        "title": "RuneScape",
+        "note": "2001"
+      },
+      {
+        "title": "Darkest Dungeon",
+        "note": "2016",
+        "alsoIn": [
+          "strategy"
+        ]
+      },
+      {
+        "title": "Disco Elysium",
+        "note": "2019"
+      },
+      {
+        "title": "Paper Mario",
+        "note": "2000"
+      }
+    ],
+    "platformer": [
+      {
+        "title": "Super Mario Bros.",
+        "note": "1985"
+      },
+      {
+        "title": "Super Mario Odyssey",
+        "note": "2017"
+      },
+      {
+        "title": "Sonic the Hedgehog",
+        "note": "1991"
+      },
+      {
+        "title": "Celeste",
+        "note": "2018"
+      },
+      {
+        "title": "Hollow Knight",
+        "note": "2017",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Ori and the Blind Forest",
+        "note": "2015"
+      },
+      {
+        "title": "Rayman",
+        "note": "1995"
+      },
+      {
+        "title": "Crash Bandicoot",
+        "note": "1996"
+      },
+      {
+        "title": "Spyro the Dragon",
+        "note": "1998"
+      },
+      {
+        "title": "Donkey Kong Country",
+        "note": "1994"
+      },
+      {
+        "title": "Mega Man",
+        "note": "1987"
+      },
+      {
+        "title": "Super Meat Boy",
+        "note": "2010"
+      },
+      {
+        "title": "Metroid",
+        "note": "1986",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Castlevania: Symphony of the Night",
+        "note": "1997",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Cuphead",
+        "note": "2017"
+      },
+      {
+        "title": "Shovel Knight",
+        "note": "2014"
+      },
+      {
+        "title": "Kirby",
+        "note": "1992"
+      },
+      {
+        "title": "LittleBigPlanet",
+        "note": "2008"
+      },
+      {
+        "title": "Limbo",
+        "note": "2010"
+      },
+      {
+        "title": "Inside",
+        "note": "2016"
+      },
+      {
+        "title": "Subway Surfers",
+        "note": "2012",
+        "alsoIn": [
+          "puzzle-casual"
+        ]
+      },
+      {
+        "title": "Temple Run",
+        "note": "2011",
+        "alsoIn": [
+          "puzzle-casual"
+        ]
+      },
+      {
+        "title": "Geometry Dash",
+        "note": "2013"
+      },
+      {
+        "title": "Dead Cells",
+        "note": "2018",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Ratchet & Clank",
+        "note": "2002",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Astro Bot",
+        "note": "2024"
+      },
+      {
+        "title": "It Takes Two",
+        "note": "2021",
+        "alsoIn": [
+          "party-social-sandbox"
+        ]
+      }
+    ],
+    "strategy": [
+      {
+        "title": "StarCraft",
+        "note": "1998"
+      },
+      {
+        "title": "Age of Empires",
+        "note": "1997"
+      },
+      {
+        "title": "Civilization",
+        "note": "1991"
+      },
+      {
+        "title": "XCOM: Enemy Unknown",
+        "note": "2012"
+      },
+      {
+        "title": "Total War",
+        "note": "2000"
+      },
+      {
+        "title": "League of Legends",
+        "note": "2009"
+      },
+      {
+        "title": "Dota 2",
+        "note": "2013"
+      },
+      {
+        "title": "Clash Royale",
+        "note": "2016"
+      },
+      {
+        "title": "Clash of Clans",
+        "note": "2012"
+      },
+      {
+        "title": "Plants vs. Zombies",
+        "note": "2009",
+        "alsoIn": [
+          "puzzle-casual"
+        ]
+      },
+      {
+        "title": "Bloons TD",
+        "note": "2007"
+      },
+      {
+        "title": "Kingdom Rush",
+        "note": "2011"
+      },
+      {
+        "title": "Slay the Spire",
+        "note": "2019"
+      },
+      {
+        "title": "Hearthstone",
+        "note": "2014"
+      },
+      {
+        "title": "Teamfight Tactics",
+        "note": "2019"
+      },
+      {
+        "title": "Into the Breach",
+        "note": "2018"
+      },
+      {
+        "title": "Fire Emblem",
+        "note": "1990",
+        "alsoIn": [
+          "rpg"
+        ]
+      },
+      {
+        "title": "Advance Wars",
+        "note": "2001"
+      },
+      {
+        "title": "Warcraft III",
+        "note": "2002"
+      },
+      {
+        "title": "Command & Conquer",
+        "note": "1995"
+      },
+      {
+        "title": "Company of Heroes",
+        "note": "2006"
+      },
+      {
+        "title": "Stellaris",
+        "note": "2016"
+      },
+      {
+        "title": "Crusader Kings",
+        "note": "2004"
+      },
+      {
+        "title": "Balatro",
+        "note": "2024",
+        "alsoIn": [
+          "puzzle-casual"
+        ]
+      },
+      {
+        "title": "Marvel Snap",
+        "note": "2022"
+      },
+      {
+        "title": "Northgard",
+        "note": "2018"
+      },
+      {
+        "title": "Magic: The Gathering Arena",
+        "note": "Cards"
+      },
+      {
+        "title": "Heroes of Might and Magic",
+        "note": "1995"
+      }
+    ],
+    "simulation-management": [
+      {
+        "title": "The Sims",
+        "note": "2000"
+      },
+      {
+        "title": "Stardew Valley",
+        "note": "2016"
+      },
+      {
+        "title": "Animal Crossing",
+        "note": "2001",
+        "alsoIn": [
+          "party-social-sandbox"
+        ]
+      },
+      {
+        "title": "SimCity",
+        "note": "1989"
+      },
+      {
+        "title": "Cities: Skylines",
+        "note": "2015"
+      },
+      {
+        "title": "RollerCoaster Tycoon",
+        "note": "1999"
+      },
+      {
+        "title": "Planet Coaster",
+        "note": "2016"
+      },
+      {
+        "title": "Two Point Hospital",
+        "note": "2018"
+      },
+      {
+        "title": "Microsoft Flight Simulator",
+        "note": "Flight"
+      },
+      {
+        "title": "Euro Truck Simulator 2",
+        "note": "2012",
+        "alsoIn": [
+          "racing-sports"
+        ]
+      },
+      {
+        "title": "Farming Simulator",
+        "note": "2008"
+      },
+      {
+        "title": "Factorio",
+        "note": "2020"
+      },
+      {
+        "title": "Satisfactory",
+        "note": "Factory"
+      },
+      {
+        "title": "RimWorld",
+        "note": "2018",
+        "alsoIn": [
+          "strategy"
+        ]
+      },
+      {
+        "title": "Frostpunk",
+        "note": "2018",
+        "alsoIn": [
+          "strategy"
+        ]
+      },
+      {
+        "title": "Dwarf Fortress",
+        "note": "2006"
+      },
+      {
+        "title": "Harvest Moon",
+        "note": "1996"
+      },
+      {
+        "title": "PowerWash Simulator",
+        "note": "2022"
+      },
+      {
+        "title": "Theme Hospital",
+        "note": "1997"
+      },
+      {
+        "title": "Zoo Tycoon",
+        "note": "2001"
+      },
+      {
+        "title": "Anno 1800",
+        "note": "2019",
+        "alsoIn": [
+          "strategy"
+        ]
+      },
+      {
+        "title": "Kerbal Space Program",
+        "note": "2015"
+      },
+      {
+        "title": "House Flipper",
+        "note": "2018"
+      },
+      {
+        "title": "Papers, Please",
+        "note": "2013",
+        "alsoIn": [
+          "puzzle-casual"
+        ]
+      },
+      {
+        "title": "Oxygen Not Included",
+        "note": "2019"
+      },
+      {
+        "title": "Unpacking",
+        "note": "2021",
+        "alsoIn": [
+          "puzzle-casual"
+        ]
+      },
+      {
+        "title": "Graveyard Keeper",
+        "note": "2018"
+      },
+      {
+        "title": "Spiritfarer",
+        "note": "2020"
+      }
+    ],
+    "racing-sports": [
+      {
+        "title": "Mario Kart",
+        "note": "1992",
+        "alsoIn": [
+          "party-social-sandbox"
+        ]
+      },
+      {
+        "title": "Forza Horizon",
+        "note": "2012"
+      },
+      {
+        "title": "Gran Turismo",
+        "note": "1997"
+      },
+      {
+        "title": "Need for Speed",
+        "note": "1994"
+      },
+      {
+        "title": "Burnout Paradise",
+        "note": "2008"
+      },
+      {
+        "title": "Rocket League",
+        "note": "2015"
+      },
+      {
+        "title": "EA Sports FC",
+        "note": "Football"
+      },
+      {
+        "title": "NBA 2K",
+        "note": "1999"
+      },
+      {
+        "title": "Madden NFL",
+        "note": "1988"
+      },
+      {
+        "title": "Tony Hawk's Pro Skater",
+        "note": "1999"
+      },
+      {
+        "title": "Trackmania",
+        "note": "2003"
+      },
+      {
+        "title": "F1 24",
+        "note": "2024"
+      },
+      {
+        "title": "Crash Team Racing",
+        "note": "1999"
+      },
+      {
+        "title": "Wii Sports",
+        "note": "2006",
+        "alsoIn": [
+          "party-social-sandbox"
+        ]
+      },
+      {
+        "title": "Riders Republic",
+        "note": "2021"
+      },
+      {
+        "title": "SSX",
+        "note": "2000"
+      },
+      {
+        "title": "Football Manager",
+        "note": "Management",
+        "alsoIn": [
+          "simulation-management"
+        ]
+      },
+      {
+        "title": "Wipeout",
+        "note": "1995"
+      },
+      {
+        "title": "Dirt Rally",
+        "note": "2015"
+      },
+      {
+        "title": "eFootball",
+        "note": "Football"
+      },
+      {
+        "title": "Skate",
+        "note": "2007"
+      },
+      {
+        "title": "Ridge Racer",
+        "note": "1993"
+      },
+      {
+        "title": "OutRun",
+        "note": "1986"
+      },
+      {
+        "title": "Hot Wheels Unleashed",
+        "note": "2021"
+      },
+      {
+        "title": "MLB The Show",
+        "note": "2006"
+      },
+      {
+        "title": "NHL",
+        "note": "Hockey"
+      },
+      {
+        "title": "BeamNG.drive",
+        "note": "Physics",
+        "alsoIn": [
+          "simulation-management"
+        ]
+      }
+    ],
+    "fighting": [
+      {
+        "title": "Street Fighter",
+        "note": "1987"
+      },
+      {
+        "title": "Tekken",
+        "note": "1994"
+      },
+      {
+        "title": "Mortal Kombat",
+        "note": "1992"
+      },
+      {
+        "title": "Super Smash Bros.",
+        "note": "1999",
+        "alsoIn": [
+          "party-social-sandbox"
+        ]
+      },
+      {
+        "title": "Dragon Ball FighterZ",
+        "note": "2018"
+      },
+      {
+        "title": "Guilty Gear",
+        "note": "1998"
+      },
+      {
+        "title": "Soulcalibur",
+        "note": "1998"
+      },
+      {
+        "title": "The King of Fighters",
+        "note": "1994"
+      },
+      {
+        "title": "Brawlhalla",
+        "note": "2017"
+      },
+      {
+        "title": "Injustice",
+        "note": "2013"
+      },
+      {
+        "title": "Virtua Fighter",
+        "note": "1993"
+      },
+      {
+        "title": "Dead or Alive",
+        "note": "1996"
+      },
+      {
+        "title": "Marvel vs. Capcom",
+        "note": "1998"
+      },
+      {
+        "title": "BlazBlue",
+        "note": "2008"
+      },
+      {
+        "title": "Killer Instinct",
+        "note": "1994"
+      },
+      {
+        "title": "Skullgirls",
+        "note": "2012"
+      },
+      {
+        "title": "For Honor",
+        "note": "2017",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Absolver",
+        "note": "2017"
+      },
+      {
+        "title": "Punch-Out!!",
+        "note": "1984"
+      },
+      {
+        "title": "EA Sports UFC",
+        "note": "2014",
+        "alsoIn": [
+          "racing-sports"
+        ]
+      },
+      {
+        "title": "WWE 2K",
+        "note": "Wrestling",
+        "alsoIn": [
+          "racing-sports"
+        ]
+      },
+      {
+        "title": "Fight Night",
+        "note": "2004",
+        "alsoIn": [
+          "racing-sports"
+        ]
+      },
+      {
+        "title": "Nidhogg",
+        "note": "2014",
+        "alsoIn": [
+          "party-social-sandbox"
+        ]
+      },
+      {
+        "title": "Rivals of Aether",
+        "note": "2017"
+      },
+      {
+        "title": "Power Stone",
+        "note": "1999"
+      },
+      {
+        "title": "MultiVersus",
+        "note": "Platform"
+      },
+      {
+        "title": "Samurai Shodown",
+        "note": "1993"
+      },
+      {
+        "title": "Def Jam: Fight for NY",
+        "note": "2004"
+      }
+    ],
+    "puzzle-casual": [
+      {
+        "title": "Tetris",
+        "note": "1984"
+      },
+      {
+        "title": "Candy Crush Saga",
+        "note": "2012"
+      },
+      {
+        "title": "Portal",
+        "note": "2007"
+      },
+      {
+        "title": "Bejeweled",
+        "note": "2001"
+      },
+      {
+        "title": "Wordle",
+        "note": "2021"
+      },
+      {
+        "title": "Angry Birds",
+        "note": "2009"
+      },
+      {
+        "title": "Cut the Rope",
+        "note": "2010"
+      },
+      {
+        "title": "Monument Valley",
+        "note": "2014"
+      },
+      {
+        "title": "The Witness",
+        "note": "2016"
+      },
+      {
+        "title": "Baba Is You",
+        "note": "2019"
+      },
+      {
+        "title": "Beat Saber",
+        "note": "2019"
+      },
+      {
+        "title": "Guitar Hero",
+        "note": "2005",
+        "alsoIn": [
+          "party-social-sandbox"
+        ]
+      },
+      {
+        "title": "Rhythm Heaven",
+        "note": "2006"
+      },
+      {
+        "title": "Cookie Clicker",
+        "note": "2013"
+      },
+      {
+        "title": "Fruit Ninja",
+        "note": "2010"
+      },
+      {
+        "title": "Flappy Bird",
+        "note": "2013"
+      },
+      {
+        "title": "2048",
+        "note": "2014"
+      },
+      {
+        "title": "Pac-Man",
+        "note": "1980"
+      },
+      {
+        "title": "Puyo Puyo",
+        "note": "1991"
+      },
+      {
+        "title": "Lemmings",
+        "note": "1991"
+      },
+      {
+        "title": "Peggle",
+        "note": "2007"
+      },
+      {
+        "title": "Crossy Road",
+        "note": "2014"
+      },
+      {
+        "title": "osu!",
+        "note": "2007"
+      },
+      {
+        "title": "Professor Layton",
+        "note": "2007"
+      },
+      {
+        "title": "Two Dots",
+        "note": "2014"
+      },
+      {
+        "title": "Zuma",
+        "note": "2003"
+      },
+      {
+        "title": "Suika Game",
+        "note": "2021"
+      },
+      {
+        "title": "Trivia Crack",
+        "note": "2013"
+      }
+    ],
+    "party-social-sandbox": [
+      {
+        "title": "Minecraft",
+        "note": "2011",
+        "alsoIn": [
+          "simulation-management"
+        ]
+      },
+      {
+        "title": "Roblox",
+        "note": "2006"
+      },
+      {
+        "title": "Among Us",
+        "note": "2018"
+      },
+      {
+        "title": "Fall Guys",
+        "note": "2020",
+        "alsoIn": [
+          "platformer"
+        ]
+      },
+      {
+        "title": "Mario Party",
+        "note": "1998"
+      },
+      {
+        "title": "The Jackbox Party Pack",
+        "note": "2014"
+      },
+      {
+        "title": "Overcooked",
+        "note": "2016"
+      },
+      {
+        "title": "Terraria",
+        "note": "2011",
+        "alsoIn": [
+          "action-adventure"
+        ]
+      },
+      {
+        "title": "Garry's Mod",
+        "note": "2006"
+      },
+      {
+        "title": "Goat Simulator",
+        "note": "2014"
+      },
+      {
+        "title": "Human: Fall Flat",
+        "note": "2016",
+        "alsoIn": [
+          "puzzle-casual"
+        ]
+      },
+      {
+        "title": "Gang Beasts",
+        "note": "2017"
+      },
+      {
+        "title": "Lethal Company",
+        "note": "2023",
+        "alsoIn": [
+          "shooter-survival"
+        ]
+      },
+      {
+        "title": "Phasmophobia",
+        "note": "2020"
+      },
+      {
+        "title": "Stumble Guys",
+        "note": "2021"
+      },
+      {
+        "title": "Pummel Party",
+        "note": "2018"
+      },
+      {
+        "title": "Ultimate Chicken Horse",
+        "note": "2016"
+      },
+      {
+        "title": "Totally Accurate Battle Simulator",
+        "note": "Physics",
+        "alsoIn": [
+          "strategy"
+        ]
+      },
+      {
+        "title": "Rec Room",
+        "note": "2016"
+      },
+      {
+        "title": "VRChat",
+        "note": "2017"
+      },
+      {
+        "title": "Content Warning",
+        "note": "2024"
+      },
+      {
+        "title": "Peak",
+        "note": "2025"
+      },
+      {
+        "title": "Party Animals",
+        "note": "2023"
+      },
+      {
+        "title": "Dreams",
+        "note": "2020"
+      },
+      {
+        "title": "Super Mario Maker",
+        "note": "2015",
+        "alsoIn": [
+          "platformer"
+        ]
+      },
+      {
+        "title": "Valheim",
+        "note": "2021",
+        "alsoIn": [
+          "shooter-survival"
+        ]
+      },
+      {
+        "title": "R.E.P.O.",
+        "note": "2025"
+      },
+      {
+        "title": "Wii Party",
+        "note": "2010"
+      }
+    ]
+  }
+}

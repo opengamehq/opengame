@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Wasm target</title><body style="margin:0;background:#17191c;color:white;font:18px system-ui"><p id="score">Points: 0</p><canvas width="640" height="440" style="max-width:100%"></canvas><script src="opengame-global.js"></script><script type="module">
+import { createOpenGameImports } from './opengame.mjs';
+const canvas=document.querySelector('canvas'), ctx=canvas.getContext('2d');
+let instance;
+const host=createOpenGameImports(()=>instance);
+({instance}=await WebAssembly.instantiateStreaming(fetch('./game.wasm'), host.imports));
+const game=instance.exports;
+function draw(){ctx.fillStyle='#17191c';ctx.fillRect(0,0,640,440);ctx.fillStyle='#f0be55';ctx.fillRect(game.target_x(),180,70,70);document.querySelector('#score').textContent='Points: '+game.points();}
+canvas.addEventListener('pointerdown',event=>{const r=canvas.getBoundingClientRect();game.tap((event.clientX-r.left)*640/r.width,(event.clientY-r.top)*440/r.height);draw();});
+window.addEventListener('pagehide',()=>{game.stop();host.dispose();});
+draw();game.start();
+</script></body></html>

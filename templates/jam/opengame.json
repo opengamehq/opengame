@@ -1,0 +1,11 @@
+{
+  "title": "Jam Starter",
+  "description": "Dodge falling blocks for as long as you can. A starting point for a jam entry with a menu, pause, results and a leaderboard.",
+  "genre": "action-adventure",
+  "build": { "command": "npm run build", "output": "dist" },
+  "controls": ["keyboard", "mouse"],
+  "leaderboards": [
+    { "key": "survived_s", "order": "desc", "label": "Longest run in seconds", "min": 0, "max": 3600 }
+  ],
+  "sdk": "^0.1"
+}

@@ -1,0 +1,11 @@
+{
+  "name": "opengame-csharp-starter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@opengamehq/sdk": "file:../../packages/sdk"
+  }
+}

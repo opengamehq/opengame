@@ -1,0 +1,396 @@
+[
+  {
+    "id": "excalibur",
+    "path": "excalibur/build/esm/excalibur.js",
+    "text": "return Color.fromHex(\"#FFFFFF00\");\n  }\n  /**\n   * ExcaliburBlue (#176BAA)\n   */\n  static get ExcaliburBlue() {\n  \n      return;\n    }\n    this._logger.warn(\n      `Could not add entity/system ${entityOrSystem.constructor.name} to Excalibur!\n",
+    "source": "https://unpkg.com/excalibur@0.32.0/build/esm/excalibur.js",
+    "sha256": "d952ac705571eef9cc83cc063b4d0671ed886dc4c0256b1babe8a30eb43a6ecb",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "kaplay",
+    "path": "kaplay/dist/kaplay.js",
+    "text": "a=(t={tagsAsComponents:!0})=>{a.k&&(console.warn(\"KAPLAY already initialized, you are calling kaplay() multiple times, it may lead bugs!\"),a.k.quit()),a.globalOpt=t;le\nrsion:\"3001.0.19\",license:\"MIT\",homepage:\"https://kaplayjs.com/\",bugs:{url:\"https://github.com/kaplayjs/kaplay/i\nrawInspect\"]),Mr=200,fs=640,hs=65536,Dn=Symbol.for(\"kaplay.cancel\");",
+    "source": "https://unpkg.com/kaplay@3001.0.19/dist/kaplay.js",
+    "sha256": "88a946eafc4161f83505449d830b87c7bc15822bb0dae8ce03b2437506ef4a4b",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "kaplay",
+    "path": "assets/index-PcLs0lJ5.js",
+    "text": "[a++]=o<<6|c}return n}})(),Rl={version:\"3001.0.19\"};function At(e,t,r){return t>r?At\nrawInspect\"]),Qi=200,Ph=640,_h=65536,Xa=Symbol.for(\"kaplay.cancel\"),Ja=class extends Map{lastID=0\ntagsAsComponents:!0})=>{p.k&&(console.warn(\"KAPLAY already initialized, you are calling kaplay() multiple times, it may lead bugs!\"),p.k.quit()),p.g",
+    "source": "Wickwood (kaplay-deckbuilder), a Vite production build of kaplay 3001.0.19",
+    "sha256": "c43bc41fc605ef105c7b30747c45b668349b12aee64a8e7546626b589cf04662",
+    "kind": "exported-game-runtime",
+    "paths": [],
+    "version": "3001.0.19"
+  },
+  {
+    "id": "littlejs",
+    "path": "littlejsengine/src/engine.js",
+    "text": "tring}\n *  @default\n *  @memberof Engine */\nconst engineName = 'LittleJS';\n\n/** Version of engine\n *  @type {string}\n *  @d\ntring}\n *  @default\n *  @memberof Engine */\nconst engineVersion = '1.28.0';\n\n/** Frames per second to update\n *  @t",
+    "source": "https://unpkg.com/littlejsengine@1.28.0/src/engine.js",
+    "sha256": "bb8c4f9c63ae2d167d04dc7eb3f592fc59a8f76944c0a24827da1932248dade4",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "littlejs",
+    "path": "assets/index-BLVVTsOJ.js",
+    "text": "&&(Me=To),Ds=Ra=void 0)}}Ut||On()}lo=!0,console.log(\"LittleJS Engine v1.28.0\"),vi=[],Dn=0,typeof a==\nhighp float;in vec4 d;out vec4 c;void main(){c=d;}`),(ws.has(hi)||ws.has(ps))&&(console.error(\"LittleJS: WebGL can not draw on this device, using Canvas2D\"),Oe=!1,ge.style.display=\"none\");va",
+    "source": "Voltbreak (littlejs-breaker), a Vite production build of littlejsengine 1.28.0",
+    "sha256": "2606818fa1c0a091772736d8814059a17e372a3ae9a660fccf87673f7225dffa",
+    "kind": "exported-game-runtime",
+    "paths": [],
+    "version": "1.28.0"
+  },
+  {
+    "id": "littlejs",
+    "path": "bundle.js",
+    "text": "var xc=\"LittleJS\",bc=\"1.28.0\";var Lr=.016666666666666666,ue=\nd;out vec4 c;void main(){c=d;}`),(_o.has(Dn)||_o.has(xo))&&(console.error(\"LittleJS: WebGL can not draw on this device, using Canvas2D\"),ge=Ya=!1,xu=!",
+    "source": "esbuild 0.28.2 --bundle --minify --format=esm of engineInit called with five no-op callbacks, littlejsengine 1.28.0, default conditions; sha256 of the whole bundle",
+    "sha256": "eb42eced8f1609e06816203cce91bcfc713fe4766100b3b7a44f7d267e032b8d",
+    "kind": "upstream-generated-runtime",
+    "paths": [],
+    "version": "1.28.0"
+  },
+  {
+    "id": "melonjs",
+    "path": "melonjs/build/index.js",
+    "text": " err.message : String(err);\n        console.warn(`melonJS: audio context resume failed: ${reason}`);\n        this.state = \"suspended\";\n \nte.retryCounters[sound_name];\n    const errmsg = `melonJS: failed loading ${sound_name}`;\n    if (!stopOnError) {\n      aud",
+    "source": "https://unpkg.com/melonjs@20.10.0/build/index.js",
+    "sha256": "39aea0820f6d425d3a1d0deeebf3e9f12493a73ae71dffdf146f96e2c2e98b65",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "react",
+    "path": "react/cjs/react.production.js",
+    "text": "tree.\n */\n\n\"use strict\";\nvar REACT_ELEMENT_TYPE = Symbol.for(\"react.transitional.element\"),\n  REACT_PORTAL_TYPE = Symbol.for(\"react.portal\")\nmbol.for(\"react.portal\"),\n  REACT_FRAGMENT_TYPE = Symbol.for(\"react.fragment\"),\n  REACT_STRICT_MODE_TYPE = Symbol.for(\"react.str",
+    "source": "https://unpkg.com/react@19.3.1/cjs/react.production.js",
+    "sha256": "0b5529981841afa1b58c76ba85c29bb681ff5f07cd8cde6a10b967d3915b8e1c",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "jsdos",
+    "path": "js-dos/dist/js-dos.js",
+    "text": "ig={dosboxConf:qr[0].contents,jsdosConf:{version:\"js-dos-v8\"}}):(e.configChanged=!1,e.bundleConfig=t.payload)\nl===t.payload?(e.configChanged=!0,e.bundleConfig={dosboxConf:qr[0].contents,jsdosConf:{version:\"js-dos-v8\"}}):",
+    "source": "https://unpkg.com/js-dos@8.5.3/dist/js-dos.js",
+    "sha256": "3e4da1cc59fa89c42182d3df5b7e738c6207090c3c0aec115d67d047353b826c",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "ruffle",
+    "path": "@ruffle-rs_ruffle/ruffle.js",
+    "text": "ScriptAccess:Fn(\"samedomain\",e.url)}:{},...window.RufflePlayer?.config??{},...this.config,...e},this.loadedConfi\nn(n+e))}if(_e||void 0===a.documentElement.dataset.ruffleOptout)if(_e)e.RufflePlayer||(e.RufflePlayer={}),e.Ruffl",
+    "source": "https://unpkg.com/@ruffle-rs/ruffle@0.7.1/ruffle.js",
+    "sha256": "26036a94567088dfb3de88a759e8ed10a4cea07b29500af36f345eef42420098",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "pyodide",
+    "path": "pyodide/pyodide.js",
+    "text": "\"use strict\";var loadPyodide=(()=>{var ne=Object.create;var F=Object.definePro\nonverter<\"u\")return;let{binary:t,response:n}=R(e+\"pyodide.asm.wasm\"),o=Q();return function(a,r){return async functio",
+    "source": "https://unpkg.com/pyodide@314.0.7/pyodide.js",
+    "sha256": "3141b814715a72e59b51b1b18b9ceae5bf19f7c852417e431bb0a34feadf825c",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "wasmoon",
+    "path": "wasmoon/dist/index.js",
+    "text": "  }\n    }\n\n    var version = '1.16.0';\n\n    class LuaFactory {\n        constructor(customWasmUri, environmentV\n }\n        getTop() {\n            return this.lua.lua_gettop(this.address);\n        }\n        setTop(index) {\n",
+    "source": "https://unpkg.com/wasmoon@1.16.0/dist/index.js",
+    "sha256": "dc2dcf019449008bb224370052473dc760db28b3ba14fc604e1ca3e8646af35d",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "rpgmaker",
+    "path": "rpgmaker-utils.js",
+    "text": "perty RPGMAKER_NAME\n * @type String\n * @final\n */\nUtils.RPGMAKER_NAME = 'MV';\n\n/**\n * The version of the RPG Maker.\n *\n * @sta\nty RPGMAKER_VERSION\n * @type String\n * @final\n */\nUtils.RPGMAKER_VERSION = \"1.6.1\";\n\nUtils.RPGMAKER_ENGINE = \"community-1.3b",
+    "source": "https://raw.githubusercontent.com/rpgtkoolmv/corescript/182e31449707ba7e406db0485c44c2a9d11e2dcd/js/rpg_core/Utils.js",
+    "sha256": "31cba82553c3af8e7f61336e646a04be98798b992d5dd69d8e5fdc3f6637bf0d",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "ctjs",
+    "path": "ctjs-index.ts",
+    "text": "le-next-line no-console\nconsole.log(\n    '%c 😺 %c ct.js game engine %c v/*!@ctversion@*/ %c https://ctjs.rocks/ ',\n  \nect[] = [];\nexport const copyTypeSymbol = Symbol('I am a ct.js copy');\n/**\n * A set of copies that must be destroyed\n",
+    "source": "https://raw.githubusercontent.com/ct-js/ct-js/63791a05b7ecb6ced3c14de72b0649e4eb54574b/src/ct.release/index.ts",
+    "sha256": "23366be84a94fb777a5735b3fa45707b0ca0ff130c6fafba2f3f5be5be58771a",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "love2d",
+    "path": "love.js",
+    "text": "\nvar Love = (function() {\n  var _scriptDir = typeof document !== 'undef\non(err){if(err){Module[\"printErr\"](err)}})})}\n\n\n  return Love.ready\n}\n);\n})();\nif (typeof exports === 'object' && typ",
+    "source": "https://raw.githubusercontent.com/Davidobot/love.js/c4f04e185033a7c9fbefa9be3bec88c41a90421b/src/release/love.js",
+    "sha256": "0e2b73b96a5cadd56e6c4f09300534f5acd0b6f4e7c0e1bb287e375e5c448c3b",
+    "kind": "upstream-runtime-artifact",
+    "paths": []
+  },
+  {
+    "id": "love2d",
+    "path": "love.js",
+    "text": "\nvar Love = (function() {\n  var _scriptDir = typeof document !== \n{if(err){Module[\"printErr\"](err)}})})}\n\n\n  return Love.ready\n}\n);\n})();\nif (typeof exports === 'objec",
+    "source": "A love.js threaded export of scripts/engine-fixtures/native/lovejs, packaged on 4 Nov 2026 by love.js 11.4.1 from npm (scripts/engine-fixtures/pins.json, sha256 9eb2db1f789254faed8e5cf7eeeded46a7e56ecbc931c88be809526c448d25fb) with its retained tool-package-lock.json: the default build, whose love.js is the package's src/release/love.js. The text is the two lines the signature reads.",
+    "sha256": "eb20a4d947dc99e08e906e946c5b783e3f542f60a3107167a1e92d07bfe531d4",
+    "kind": "exported-game-runtime",
+    "paths": [
+      "index.html",
+      "game.js",
+      "game.data",
+      "love.wasm",
+      "love.worker.js"
+    ]
+  },
+  {
+    "id": "love2d",
+    "path": "love.js",
+    "text": "\nvar Love = (function() {\n  var _scriptDir = typeof document !== \n{if(err){Module[\"printErr\"](err)}})})}\n\n\n  return Love.ready\n}\n);\n})();\nif (typeof exports === 'objec",
+    "source": "A love.js compat export of scripts/engine-fixtures/native/lovejs, packaged on 4 Nov 2026 by love.js 11.4.1 from npm (scripts/engine-fixtures/pins.json, sha256 9eb2db1f789254faed8e5cf7eeeded46a7e56ecbc931c88be809526c448d25fb) with its retained tool-package-lock.json: the -c build, whose love.js is the package's src/compat/love.js. The text is the two lines the signature reads.",
+    "sha256": "12db012a5cf4e0661f9eaf154c4c10c3cba7a7db31e6a36856028bbaf5f942f0",
+    "kind": "exported-game-runtime",
+    "paths": [
+      "index.html",
+      "game.js",
+      "game.data",
+      "love.wasm"
+    ]
+  },
+  {
+    "id": "renpy",
+    "path": "renpy-pre.js",
+    "text": "ring = query_string.slice(0, -1);\n\n\n    var url = DEFAULT_GAME_FILENAME;\n\n    if (_GET['game']) {\n\tif (_GET['game'].match\n.\\n\");\n            window.setTimeout(function() { gameExtractAndRun(); }, 200);\n        } else {\n            console.lo",
+    "source": "https://raw.githubusercontent.com/renpy/renpyweb/f9212e675b20c71488c0be5e24b7d20a4c0b7f9f/renpy-pre.js",
+    "sha256": "0f89031af7f0c93ed0d706fe1f64e7a7e9b0d48fc835a135bc92dd1f335d9f00",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "gbstudio",
+    "path": "gbstudio-binjgb.js",
+    "text": "File;function findWasmBinary(){return locateFile(\"binjgb.wasm\")}function getBinarySync(file){if(file==wasmBinar\n\"];var _free=Module[\"_free\"]=wasmExports[\"k\"];var _emulator_set_builtin_palette=Module[\"_emulator_set_builtin_palette\"]=wasmExpor",
+    "source": "https://raw.githubusercontent.com/chrismaltby/gb-studio/a227e7dbe5eef9186afabc1b4e27cf873438b4c4/appData/wasm/binjgb/binjgb.js",
+    "sha256": "0d8d628de318d0867f223797e16e8d598760ccf7f2c5a23aad12d4e46bc18cac",
+    "kind": "upstream-runtime-artifact",
+    "paths": []
+  },
+  {
+    "id": "swift",
+    "path": "swift-runtime.mjs",
+    "text": "           `);\n        }\n        if (this.exports.swjs_library_version() != this.version) {\n            throw new Error(\nrt === \"function\") {\n            throw new Error(`JavaScriptKit supports only WASI reactor ABI.\n                Please make sure you are buildin",
+    "source": "https://raw.githubusercontent.com/swiftwasm/JavaScriptKit/dbbfdc3f9b709a0fb3a0e1f887333818c5f20812/Plugins/PackageToJS/Templates/runtime.mjs",
+    "sha256": "e022015518329b447458a0b5bd56226a8faa243ae8ba19cde74d9d8a4c1cacb3",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "flutter",
+    "path": "flutter-loader.js",
+    "text": "./types\").BuildConfig} */\n    const buildConfig = _flutter.buildConfig;\n    if (!buildConfig) {\n      throw \"FlutterLoad\nuildIsCompatible);\n    if (!build) {\n      throw \"FlutterLoader could not find a build compatible with configuration and environment.\";\n    }\n\n    ",
+    "source": "https://raw.githubusercontent.com/flutter/engine/main/lib/web_ui/flutter_js/src/loader.js",
+    "sha256": "0e282d758c77470175e0dea8dddb87ca5672d3a38a9bb64277d21a3960d38112",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "cocos",
+    "path": "cocos-game.ts",
+    "text": " EventTarget, AsyncDelegate, sys, macro, VERSION, cclegacy, screen, settings,\n    assert, garbageCollectionM\nator v1.x 版本中名字为 EVENT_RENDERER_INITED，在 v2.0 更名为 EVENT_ENGINE_INITED\n     * 并在 Cocos Creator v3.0 中将 EVENT_RENDERER_IN",
+    "source": "https://raw.githubusercontent.com/cocos/cocos-engine/v3.8.8/cocos/game/game.ts",
+    "sha256": "237c2a66b2e644f27d3e471b254c295df667ea15d3e2a86decf0c3bc1d8d47d5",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "solar2d",
+    "path": "solar2d-audio.js",
+    "text": "rict';\n\n\nvar audioLibrary =\n{\n\t$audioCtx: null,\n\t$audioReservedChannels: 0,\n\t$audioSounds: [],\t\t// loaded sounds\n\t$audioC\nhis.fTicks = 0;\n\t\tthis.fStartPosition = 0;\n\t\tthis.fLuaCallback = null;\n\t\tthis.fMinVolume = 0;\n\t\tthis.fMaxVolume ",
+    "source": "https://raw.githubusercontent.com/coronalabs/corona/d74923057d3fc3abad1903b61de5a459d9566363/platform/emscripten/Rtt_PlatformWebAudioPlayer.js",
+    "sha256": "f07b19e6ba95f6aa974a917ce05ce68a6ab628272f1396a8aadaac68c8517b71",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "dotnet",
+    "path": "dotnet-startup.ts",
+    "text": "\"./cwraps\";\nimport { mono_wasm_raise_debug_event, mono_wasm_runtime_ready } from \"./debug\";\nimport { toBase64StringImpl } f\n.gitHash) {\n        mono_log_warn(`The version of dotnet.runtime.js ${runtimeHelpers.gitHash} is different from the v",
+    "source": "https://raw.githubusercontent.com/dotnet/runtime/main/src/mono/browser/runtime/startup.ts",
+    "sha256": "f8906e78d1f7e3842e0ef32038eec0777afc17ad38d4488d3b6125df2b710eda",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "emscripten",
+    "path": "emscripten-preamble.js",
+    "text": "n preRun() {\n#if ASSERTIONS && PTHREADS\n  assert(!ENVIRONMENT_IS_PTHREAD); // PThreads reuse the runtime from the main thr\nfunctions\n#endif\n  <<< ATEXITS >>>\n#if PTHREADS\n  PThread.terminateRuntime();\n#endif\n  runtimeExited = true;\n}\n#endif\n\nfunct",
+    "source": "https://raw.githubusercontent.com/emscripten-core/emscripten/main/src/preamble.js",
+    "sha256": "cd14b8bfbb45fcae6134bb459fae269ad9dbc3c2912c1ff6706999aba57d8947",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "emscripten",
+    "path": "index.js",
+    "text": "var Module=globalThis.Module||{};var ENVIRONMENT_IS_NODE=typeof process==\"object\"&&process.versions?.node&&process.type!=\"renderer\";var out=(...args)=>console.log(...args);var err=(...args)=>console.error(...args);function ready(){run()}if(ENVIRONMENT_IS_NODE){var fs=require(\"fs\");Module[\"wasm\"]=fs.readFileSync(__dirname+\"/index.wasm\")}function abort(what){throw what}\nvar wasmImports={a:_emscripten_resize_heap,b:_fd_write};function run(){var ret=_main()}function initRuntime(wasmExports){wasmExports[\"c\"]()}var imports={a:wasmImports};WebAssembly.instantiate(Module[\"wasm\"],imports).then(output=>{var wasmExports=output.instance.exports;assignWasmExports(wasmExports);wasmMemory=wasmExports[\"b\"];updateMemoryViews();initRuntime(wasmExports);ready()});",
+    "source": "Reconstructed, not emitted: no emcc was installed where this was written (5 Nov 2026), and the pinned emsdk in scripts/engine-fixtures is the macOS arm64 build. The text is what emcc 4.0.12 writes for `emcc game.c -O2 -sMINIMAL_RUNTIME -o index.html`, assembled from its src/shell_minimal.js, src/postamble_minimal.js (sha256 97491d684c1a6770dd240053d76afd63c2323149517107623343af83d4d0f213) and the default node environment's readFileSync, with whitespace minified as -O2 does and Closure off, so top-level names survive. At -O2 the module's imports are minified to `a.a` and `a.b` (MINIFY_WASM_IMPORTS_AND_EXPORTS, tools/link.py), which is why nothing Emscripten names reaches the module; the synthetic module here is a header, one type and those two imports.",
+    "sha256": "97491d684c1a6770dd240053d76afd63c2323149517107623343af83d4d0f213",
+    "kind": "upstream-source",
+    "paths": [
+      "index.html",
+      "index.wasm"
+    ],
+    "wasm": [
+      {
+        "path": "index.wasm",
+        "base64": "AGFzbQEAAAABBAFgAAACDQIBYQFhAAABYQFiAAA="
+      }
+    ]
+  },
+  {
+    "id": "go",
+    "path": "go-wasm_exec.js",
+    "text": "function.\n\n\t\t\t\t\t// func wasmExit(code int32)\n\t\t\t\t\t\"runtime.wasmExit\": (sp) => {\n\t\t\t\t\t\tsp >>>= 0;\n\t\t\t\t\t\tconst code = th\n\n\n\t\t\t\t\t// func valueGet(v ref, p string) ref\n\t\t\t\t\t\"syscall/js.valueGet\": (sp) => {\n\t\t\t\t\t\tsp >>>= 0;\n\t\t\t\t\t\tconst result = ",
+    "source": "/usr/local/go/lib/wasm/wasm_exec.js (go1.24.2)",
+    "sha256": "0c949f4996f9a89698e4b5c586de32249c3b69b7baadb64d220073cc04acba14",
+    "kind": "installed-go-1.24.2-runtime",
+    "paths": []
+  },
+  {
+    "id": "gamemaker",
+    "path": "gamemaker-_GameMaker.js",
+    "text": "d;\n\nfunction IsFeatureEnabled( _flag )\n{\n\treturn (g_pGMFile.FeatureFlags !== undefined) && (g_pGMFile.FeatureFlags[ _flag \nr div_a = 0;\nvar xxx=100;\n\nvar canvas = null;\nvar g_Canvas_OriginalPosition, g_Canvas_OriginalLeft, g_Canvas_OriginalTop, g_C",
+    "source": "https://raw.githubusercontent.com/YoYoGames/GameMaker-HTML5/60e51be51ce7f3d52025ef18106cf172b8e22a00/scripts/_GameMaker.js",
+    "sha256": "09502f8b22f25afca06c1601f270f03277f610cdb746f278a0f21224a2cb1f0f",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "haxe",
+    "path": "haxe-Boot.hx",
+    "text": "super__, cl);\n\t}\n\n\t@:pure private static function __instanceof(o:Dynamic, cl:Dynamic) {\n\t\tif (cl == null)\n\t\t\tret\n || k == \"__class__\" || k == \"__super__\" || k == \"__interfaces__\" || k == \"__properties__\")\n\t\t\t\t\t\tjs.Syntax.code(\"\n untyped __define_feature__(\"js.Boot.getClass\", o.__class__);\n\t\t\tif (cl != null)\n\t\t\t\treturn cl;\n\t\t\tvar name =",
+    "source": "https://raw.githubusercontent.com/HaxeFoundation/haxe/development/std/js/Boot.hx",
+    "sha256": "7a35c9c22acb8b46f727bab5f10ec736726397306b7faa98ea2fe912dd2a631c",
+    "kind": "upstream-source",
+    "paths": []
+  },
+  {
+    "id": "bevy",
+    "path": "pkg/opengame_bevy_fixture.js",
+    "text": "        const ret = arg1.brand;\n        const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);\n        const len1 = WASM_VECTOR_LEN;\n    imports.wbg.__wbg_error_7534b8e9a36f1ab4 = function(arg0, arg1) {\n        let deferred0_0;\n        let deferred0_1;\n        try {\n            deferred0_0 = arg0;\n            deferred0_1 = arg1;\n            console.error(getStringFromWasm0(arg0, arg1));\n        } finally {\n            wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);\n        }\n    };\n",
+    "source": "Engine matrix export of scripts/engine-fixtures/native/bevy (Bevy 0.15.3, wasm-bindgen 0.2.100), 31 Oct 2026. The text is lines 452-454 and 842-852 of its generated pkg/opengame_bevy_fixture.js. The module is synthetic: a header and one custom section holding two panic locations copied from the real opengame_bevy_fixture_bg.wasm (18 MB, sha256 b7006efa5b03b711d1c4fac967243da406db80bebb300f39c250619d835bb767), where Bevy keeps them in the data section.",
+    "sha256": "b0aec3302de63fa16f3b093ef56e7e64757a2d867db0a559d6c9c86f31af84ba",
+    "kind": "exported-game-runtime",
+    "paths": [
+      "index.html",
+      "pkg/opengame_bevy_fixture_bg.wasm"
+    ],
+    "version": "0.15.3",
+    "wasm": [
+      {
+        "path": "pkg/opengame_bevy_fixture_bg.wasm",
+        "base64": "AGFzbQEAAAAA1gEib3BlbmdhbWUuc3ludGhldGljLnBhbmljLWxvY2F0aW9ucy9ob21lL2NhcmdvL3JlZ2lzdHJ5L3NyYy9pbmRleC5jcmF0ZXMuaW8tMTk0OWNmOGM2YjViNTU3Zi9iZXZ5X2FwcC0wLjE1LjMvc3JjL2FwcC5ycwAvaG9tZS9jYXJnby9yZWdpc3RyeS9zcmMvaW5kZXguY3JhdGVzLmlvLTE5NDljZjhjNmI1YjU1N2YvYmV2eV9lY3MtMC4xNS40L3NyYy9zeXN0ZW0vcXVlcnkucnMA"
+      }
+    ]
+  },
+  {
+    "id": "luau",
+    "path": "Luau.Web.js",
+    "text": "smBinary(binaryFile);var instance=await WebAssembly.instantiate(binary,imports);return instance}cat\non mismatch (expected [%d..%d], got %d)?%s: bytecode version mismatch (expected [%d..%d], got %d)?inlining succeeded \nesVectorMetatable?string/function/table?attempt to modify a readonly table?nil or table?field ",
+    "source": "luau-web 1.5.1 from npm (tarball sha256 4be7763e4c96039b3f4638554f65fc1059d3e191b01e2e32932de08bba1b6386), src/lib/Luau.Web.Asyncify.js, an Emscripten SINGLE_FILE build of Luau whose module bytes are written into the script as text. The excerpt is its instantiation and the two VM messages from inside those bytes, with control bytes shown as ?.",
+    "sha256": "996155e15e63e033f421a4b7ab220550070f55702bd30d0b56f537ebad00605e",
+    "kind": "upstream-runtime-artifact",
+    "paths": []
+  },
+  {
+    "id": "luau",
+    "path": "assets/luau_wasm.js",
+    "text": "rCodeAt(i);\n\t}\n\tif (sync) {\n\t\tconst mod = new WebAssembly.Module(buf);\n\t\treturn new WebAssembly.Inst\nents, abort) {\n\t\tconst ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);\n\t\t\nFromWasm0(ret[0], ret[1]);\n\t\t\twasm.__wbindgen_free(ret[0], ret[1] * 1, 1);\n\t\t}\n\t\treturn v1;\n\t}\n\t/**\n\t* @",
+    "source": "@luau-rs/luau 0.739.0 from npm (tarball sha256 1ce6cc5753d0720f5642b4c1740ce5dbca7256faf1ca931aab99f8421b53676e). The text is three lines of its wasm-bindgen loader, dist/luau_wasm-CuutyWMJ.js. The module is synthetic: a header and one custom section holding the two VM messages copied from the real dist/luau_wasm_bg.wasm (sha256 865a9d3d3d55ba98252d3fc91adee7acb2f691516244ab23ef6faf59fa0be839), where Luau keeps them in the data section.",
+    "sha256": "8f5be8bbb572dd2cf1163c7af6383ed297dcae5ef0366fde43ffe4e6af8cfb5f",
+    "kind": "upstream-runtime-artifact",
+    "paths": [
+      "index.html",
+      "assets/luau_wasm_bg.wasm"
+    ],
+    "wasm": [
+      {
+        "path": "assets/luau_wasm_bg.wasm",
+        "base64": "AGFzbQEAAAAAgAEjb3BlbmdhbWUuc3ludGhldGljLmx1YXUtdm0tbWVzc2FnZXMlczogYnl0ZWNvZGUgdmVyc2lvbiBtaXNtYXRjaCAoZXhwZWN0ZWQgWyVkLi4lZF0sIGdvdCAlZCkAYXR0ZW1wdCB0byBtb2RpZnkgYSByZWFkb25seSB0YWJsZQ=="
+      }
+    ]
+  },
+  {
+    "id": "rust",
+    "path": "@ruffle-rs_ruffle/core.ruffle.16d61072ac7fdc4d5013.js",
+    "text": "g_ptr)}call_exposed_callback(e,_){const n=Qe(e,__.__wbindgen_malloc,__.__wbindgen_realloc),t=n_,r=je(_,__.__wbindgen_\now Je(e[2]);var _=De(e[0],e[1]).slice();return __.__wbindgen_free(e[0],1*e[1],1),_}}function u(){__.global_init()}f",
+    "source": "https://unpkg.com/@ruffle-rs/ruffle@0.7.1/core.ruffle.16d61072ac7fdc4d5013.js",
+    "sha256": "d27c6bdce2a34afb32e8dfa40970bc7e86cbcb912f92db7eb3e1ac70e943bd82",
+    "kind": "upstream-generated-runtime",
+    "paths": []
+  },
+  {
+    "id": "kaigen",
+    "path": "main_worker.js",
+    "text": "// Synthetic Kaigen-shaped glue for detection tests; not Kaigen code.\nconst flags = WebAssembly.Module.customSections(module, \"hz_flags\");\nconst imports = { env: { js_gpu_get_supported_compressed_formats: () => 1, _os_get_file_range_bytes: () => 0 } };\n",
+    "source": "Synthetic, built by packages/preflight/tests/fixtures/synthetic_kaigen.py: Kaigen's import names, hz_flags section and licence-stamp marker with fake fields. No Kaigen software, template or sample content.",
+    "sha256": "da0f94b16b2060317f79b0766e35d5ee7a6ac2641dec52f929df88d2c9cc6990",
+    "kind": "exported-game-runtime",
+    "paths": [
+      "game.wasm.br",
+      "ios/game.wasm.br"
+    ],
+    "version": "0.6.2.001-beta",
+    "wasm": [
+      {
+        "path": "game.wasm",
+        "base64": "AGFzbQEAAAABBAFgAAACTgIDZW52J2pzX2dwdV9nZXRfc3VwcG9ydGVkX2NvbXByZXNzZWRfZm9ybWF0cwAAA2Vudhhfb3NfZ2V0X2ZpbGVfcmFuZ2VfYnl0ZXMAAAAKCGh6X2ZsYWdzAAByGG9wZW5nYW1lLnN5bnRoZXRpYy5zdGFtcEhaTElDU1RBTVAxfGxpY2VuY2U9U1lOVEhFVElDLU5PVC1BLUxJQ0VOQ0V8aW5nZXN0PVNZTlRIRVRJQy1OT1QtQS1UT0tFTnwAMC42LjIuMDAxLWJldGEA"
+      }
+    ]
+  },
+  {
+    "id": "emscripten",
+    "path": "index.js",
+    "text": "tRuns)}function abort(what){Module[\"onAbort\"]?.(what);what=`Aborted(${what})`;err(what);ABORT=true;what+=\". Build with -sASSERTIONS for more info.\";throw new WebAssembly.RuntimeError(what)}va\nr binary=await getWasmBinary(binaryFile);var instance=await WebAssembly.instantiate(binary,imports);return instance}catch(reason){err(`failed to\nModule[\"onRuntimeInitialized\"]?.();var noInitialRun=Module[\"noInitialRun\"]||false;if(!noInitialRun)callMain();postRun()}var wasmExports;\n",
+    "source": "Emscripten 6.0.13 (emcc e13ee988ce3d87a738dd8f3661d02223308c412a), 5 Nov 2026, compiling one 12-line C program (malloc, printf, emscripten_get_now and emscripten_set_main_loop) with `emcc game.c -O2 -o index.js`. The text is the lines around each signature pattern and the instantiate call in the generated index.js; the module is the whole index.wasm (sha256 0e5cc3dd4085aeebc21481e0dbab1c7c4c7184826de48eee14f24904f1f781ee).",
+    "sha256": "d72bc406f1164eb0d398aee00884da8f335567c54a54dafef98804bab303385e",
+    "kind": "exported-game-runtime",
+    "paths": [
+      "index.html",
+      "index.wasm"
+    ],
+    "wasm": [
+      {
+        "path": "index.wasm",
+        "base64": "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"
+      }
+    ]
+  },
+  {
+    "id": "emscripten",
+    "path": "index.js",
+    "text": "tRuns)}function abort(what){Module[\"onAbort\"]?.(what);what=`Aborted(${what})`;err(what);ABORT=true;what+=\". Build with -sASSERTIONS for more info.\";throw new WebAssembly.RuntimeError(what)}va\nr binary=await getWasmBinary(binaryFile);var instance=await WebAssembly.instantiate(binary,imports);return instance}catch(reason){err(`failed to\nModule[\"onRuntimeInitialized\"]?.();var noInitialRun=Module[\"noInitialRun\"]||false;if(!noInitialRun)callMain();postRun()}var wasmExports;\n",
+    "source": "Emscripten 6.0.13 (emcc e13ee988ce3d87a738dd8f3661d02223308c412a), 5 Nov 2026, compiling one 12-line C program (malloc, printf, emscripten_get_now and emscripten_set_main_loop) with `emcc game.c -O3 -sALLOW_MEMORY_GROWTH=1 -o index.js`. The text is the lines around each signature pattern and the instantiate call in the generated index.js; the module is the whole index.wasm (sha256 01f0d28cc5a45c4a7d042b9188c3178394afeb85af6ffff20ef37c7fdd5adf13).",
+    "sha256": "7925e851745d04aa5096674bf3fd97a691eae1899198992e7d682bfda85f7dae",
+    "kind": "exported-game-runtime",
+    "paths": [
+      "index.html",
+      "index.wasm"
+    ],
+    "wasm": [
+      {
+        "path": "index.wasm",
+        "base64": "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"
+      }
+    ]
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "title": "Orb Run",
+  "description": "Steer a glowing orb around a dark arena and collect as many sparks as you can in sixty seconds.",
+  "genre": "puzzle-casual",
+  "build": { "command": "npm run build", "output": "dist" },
+  "controls": ["keyboard", "mouse"],
+  "leaderboards": [
+    { "key": "sparks", "order": "desc", "label": "Sparks in a minute", "min": 0, "max": 500 }
+  ],
+  "sdk": "^0.1"
+}

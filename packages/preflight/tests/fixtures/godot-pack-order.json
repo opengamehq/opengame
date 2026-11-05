@@ -1,0 +1,162 @@
+{
+  "cases": [
+    {
+      "name": "executable names the main pack ahead of sorted order",
+      "paths": [
+        "index.html",
+        "index.pck",
+        "a.pck"
+      ],
+      "sources": [
+        {
+          "path": "index.html",
+          "text": "<script>const GODOT_CONFIG = {\"args\":[],\"executable\":\"index\",\"fileSizes\":{\"index.pck\":3160}};const GODOT_THREADS_ENABLED = false;</script>"
+        }
+      ],
+      "heads": {
+        "index.pck": "4744504303000000040000000500000001000000",
+        "a.pck": "4744504301000000030000000600000002000000"
+      },
+      "order": [
+        "index.pck",
+        "a.pck"
+      ],
+      "version": "4.5.1",
+      "from": "index.pck"
+    },
+    {
+      "name": "mainPack before executable",
+      "paths": [
+        "index.html",
+        "index.pck",
+        "game/main.pck"
+      ],
+      "sources": [
+        {
+          "path": "index.html",
+          "text": "<script>const GODOT_CONFIG = {\"executable\":\"index\",\"mainPack\":\"game/main.pck\"};const GODOT_THREADS_ENABLED = false;</script>"
+        }
+      ],
+      "heads": {
+        "index.pck": "4744504301000000030000000600000002000000",
+        "game/main.pck": "4744504303000000040000000500000001000000"
+      },
+      "order": [
+        "game/main.pck",
+        "index.pck"
+      ],
+      "version": "4.5.1",
+      "from": "game/main.pck"
+    },
+    {
+      "name": "resolved beside the declaring page",
+      "paths": [
+        "web/index.html",
+        "web/index.pck",
+        "aaa.pck"
+      ],
+      "sources": [
+        {
+          "path": "web/index.html",
+          "text": "<script>const GODOT_CONFIG = {\"executable\":\"index\"};const GODOT_THREADS_ENABLED = false;</script>"
+        }
+      ],
+      "heads": {
+        "web/index.pck": "4744504303000000040000000500000001000000",
+        "aaa.pck": "4744504301000000030000000600000002000000"
+      },
+      "order": [
+        "web/index.pck",
+        "aaa.pck"
+      ],
+      "version": "4.5.1",
+      "from": "web/index.pck"
+    },
+    {
+      "name": "an unparseable main pack falls through to the rest in order",
+      "paths": [
+        "index.html",
+        "index.pck",
+        "c.pck",
+        "b.pck"
+      ],
+      "sources": [
+        {
+          "path": "index.html",
+          "text": "<script>const GODOT_CONFIG = {\"executable\":\"index\"};const GODOT_THREADS_ENABLED = false;</script>"
+        }
+      ],
+      "heads": {
+        "index.pck": "4744504309000000040000000500000001000000",
+        "b.pck": "504b030400000000000000000000000000000000",
+        "c.pck": "4744504301000000030000000600000002000000"
+      },
+      "order": [
+        "index.pck",
+        "b.pck",
+        "c.pck"
+      ],
+      "version": "3.6.2",
+      "from": "c.pck"
+    },
+    {
+      "name": "no config: UTF-16 code-unit order, so upper case first",
+      "paths": [
+        "a.pck",
+        "Z.pck",
+        "é.pck"
+      ],
+      "sources": [],
+      "heads": {
+        "a.pck": "4744504303000000040000000500000001000000",
+        "Z.pck": "4744504301000000030000000600000002000000",
+        "é.pck": "4744504303000000040000000500000001000000"
+      },
+      "order": [
+        "Z.pck",
+        "a.pck",
+        "é.pck"
+      ],
+      "version": "3.6.2",
+      "from": "Z.pck"
+    },
+    {
+      "name": "a parent-directory name is ignored, and a missing head is skipped",
+      "paths": [
+        "index.html",
+        "x.pck",
+        "y.pck"
+      ],
+      "sources": [
+        {
+          "path": "index.html",
+          "text": "<script>const GODOT_CONFIG = {\"mainPack\":\"../x.pck\",\"executable\":\"y\"};const GODOT_THREADS_ENABLED = false;</script>"
+        }
+      ],
+      "heads": {
+        "x.pck": "4744504303000000040000000500000001000000"
+      },
+      "order": [
+        "y.pck",
+        "x.pck"
+      ],
+      "version": "4.5.1",
+      "from": "x.pck"
+    },
+    {
+      "name": "nothing parses",
+      "paths": [
+        "index.pck"
+      ],
+      "sources": [],
+      "heads": {
+        "index.pck": "4744504309000000040000000500000001000000"
+      },
+      "order": [
+        "index.pck"
+      ],
+      "version": null,
+      "from": null
+    }
+  ]
+}

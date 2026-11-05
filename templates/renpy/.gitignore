@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.opengame/
+*.rpyc
+*.pyc
+__pycache__/
+game/cache/
+game/saves/
+log.txt
+traceback.txt
+errors.txt

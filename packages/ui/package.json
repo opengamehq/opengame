@@ -1,0 +1,15 @@
+{
+  "name": "@opengame/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./components/mascot/*": "./src/components/mascot/*.ts",
+    "./mascot-art": "./src/components/mascot-art.ts",
+    "./mascot-driver": "./src/components/mascot/driver.ts"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  }
+}

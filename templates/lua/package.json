@@ -1,0 +1,16 @@
+{
+  "name": "opengame-lua-starter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@opengamehq/sdk": "file:../../packages/sdk",
+    "wasmoon": "1.16.0"
+  },
+  "devDependencies": {
+    "vite": "7.3.7"
+  }
+}

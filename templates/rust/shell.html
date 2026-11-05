@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Wasm target</title><body style="margin:0;background:#17191c;color:white;font:18px system-ui"><p id="score">Points: 0</p><canvas width="640" height="440" style="max-width:100%"></canvas><script type="module">
+const canvas=document.querySelector('canvas'), ctx=canvas.getContext('2d');
+const {instance}=await WebAssembly.instantiateStreaming(fetch('./game.wasm'), {}), game=instance.exports;
+const og=window.OpenGame; if(og) await og.init(); let paused=false; og?.onPause(value=>{paused=value;});
+function draw(){ctx.fillStyle='#17191c';ctx.fillRect(0,0,640,440);ctx.fillStyle='#f0be55';ctx.fillRect(game.target_x(),180,70,70);document.querySelector('#score').textContent='Points: '+game.points();}
+canvas.addEventListener('pointerdown',event=>{if(paused)return;const r=canvas.getBoundingClientRect();game.tap((event.clientX-r.left)*640/r.width,(event.clientY-r.top)*440/r.height);draw();});
+draw(); requestAnimationFrame(()=>og?.ready());
+</script></body></html>

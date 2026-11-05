@@ -1,0 +1,20 @@
+{
+  "title": "Renpy target",
+  "description": "A Ren'Py story about timing your shots. Choose an action and collect points.",
+  "genre": "puzzle-casual",
+  "controls": [
+    "keyboard",
+    "mouse"
+  ],
+  "build": {
+    "output": "dist"
+  },
+  "leaderboards": [
+    {
+      "key": "targets",
+      "order": "desc",
+      "label": "Targets hit",
+      "min": 0
+    }
+  ]
+}

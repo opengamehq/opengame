@@ -1,0 +1,79 @@
+{
+  "name": "@opengamehq/sdk",
+  "version": "0.2.0",
+  "private": true,
+  "description": "The OpenGame SDK for browser games: players, leaderboards, achievements and events.",
+  "keywords": [
+    "opengame",
+    "sdk",
+    "browser-games",
+    "game-development",
+    "leaderboards",
+    "achievements",
+    "threejs",
+    "unity",
+    "godot"
+  ],
+  "homepage": "https://docs.opengame.io",
+  "bugs": {
+    "url": "https://github.com/opengamehq/opengame/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opengamehq/opengame.git",
+    "directory": "packages/sdk"
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": [
+    "./dist/opengame-global.js"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./avatar": {
+      "types": "./dist/avatar.d.ts",
+      "import": "./dist/avatar.js"
+    },
+    "./bridge": {
+      "types": "./dist/bridge.d.ts",
+      "import": "./dist/bridge.js"
+    },
+    "./global": {
+      "types": "./dist/global/bridge.d.ts",
+      "default": "./dist/opengame-global.js"
+    },
+    "./og-platform": {
+      "types": "./dist/og-platform.d.ts",
+      "import": "./dist/og-platform.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "AVATAR-SPEC.md",
+    "examples"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node build.mjs && tsc --emitDeclarationOnly",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "npm run build && ../../scripts/slot.sh node --test --test-concurrency=1 tests/browser/*.e2e.mjs",
+    "test:bridge:browser": "npm run build && ../../scripts/slot.sh node --test --test-concurrency=1 tests/browser/bridge.e2e.mjs",
+    "pretest": "npm run build",
+    "prepack": "npm run build",
+    "prepublishOnly": "node -e \"console.error('Publish through scripts/release.mjs, which stages and audits the package: the publish workflow for a release, or --first-publish once per package.');process.exit(1)\""
+  },
+  "devDependencies": {
+    "@opengame/shared": "*",
+    "esbuild": "^0.28.2",
+    "typescript": "^5"
+  }
+}

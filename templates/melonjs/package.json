@@ -1,0 +1,18 @@
+{
+  "name": "opengame-melonjs-starter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@opengamehq/sdk": "file:../../packages/sdk",
+    "melonjs": "20.10.0"
+  },
+  "devDependencies": {
+    "vite": "7.3.7"
+  }
+}

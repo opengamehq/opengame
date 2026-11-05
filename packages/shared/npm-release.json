@@ -1,0 +1,9 @@
+{
+  "scopeOwned": true,
+  "published": false,
+  "packages": {
+    "cli": "@opengamehq/cli",
+    "sdk": "@opengamehq/sdk",
+    "skills": "@opengamehq/skills"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opengame.io/schema/opengame.json",
+  "title": "Der Koloss",
+  "description": "Round-based zombie survival in a ruined fortress.",
+  "tagline": "Hold the walls.",
+  "genre": "shooter-survival",
+  "build": { "command": "npm run build", "output": "dist" },
+  "cover": "marketing/cover.png",
+  "controls": ["keyboard", "mouse", "gamepad"],
+  "multiplayer": { "mode": "p2p", "maxPlayers": 4 },
+  "leaderboards": [{ "key": "rounds", "order": "desc", "label": "Rounds survived", "min": 0, "max": 500 }],
+  "sdk": "^1"
+}

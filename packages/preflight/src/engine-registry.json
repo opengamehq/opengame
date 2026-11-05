@@ -1,0 +1,773 @@
+{
+  "godot": {
+    "name": "Godot",
+    "evidenceStatus": "existing-detector",
+    "reason": "Existing layout and loader detector retained. No new Gate H validation is implied.",
+    "signatures": []
+  },
+  "unity": {
+    "name": "Unity",
+    "evidenceStatus": "existing-detector",
+    "reason": "Existing layout and loader detector retained. No new Gate H validation is implied.",
+    "signatures": []
+  },
+  "construct": {
+    "name": "Construct",
+    "evidenceStatus": "existing-detector",
+    "reason": "Existing layout and loader detector retained. No new Gate H validation is implied.",
+    "signatures": []
+  },
+  "gdevelop": {
+    "name": "GDevelop",
+    "evidenceStatus": "existing-detector",
+    "reason": "Existing layout and loader detector retained. No new Gate H validation is implied.",
+    "signatures": []
+  },
+  "defold": {
+    "name": "Defold",
+    "evidenceStatus": "existing-detector",
+    "reason": "Existing layout and loader detector retained. No new Gate H validation is implied.",
+    "signatures": []
+  },
+  "gamemaker": {
+    "name": "GameMaker",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "g_pGMFile\\.FeatureFlags",
+          "g_Canvas_OriginalPosition"
+        ],
+        "evidence": "gamemaker runtime signatures",
+        "source": "https://raw.githubusercontent.com/YoYoGames/GameMaker-HTML5/60e51be51ce7f3d52025ef18106cf172b8e22a00/scripts/_GameMaker.js",
+        "sha256": "09502f8b22f25afca06c1601f270f03277f610cdb746f278a0f21224a2cb1f0f",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "rpgmaker": {
+    "name": "RPG Maker",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "Utils\\.RPGMAKER_NAME[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]MV[\\x22\\x27]",
+          "Utils\\.RPGMAKER_VERSION[ \\t\\n\\r\\f\\v]*="
+        ],
+        "evidence": "rpgmaker runtime signatures",
+        "source": "https://raw.githubusercontent.com/rpgtkoolmv/corescript/182e31449707ba7e406db0485c44c2a9d11e2dcd/js/rpg_core/Utils.js",
+        "sha256": "31cba82553c3af8e7f61336e646a04be98798b992d5dd69d8e5fdc3f6637bf0d",
+        "kind": "upstream-source",
+        "versionPattern": "RPGMAKER_VERSION[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]([^\\x22\\x27]+)"
+      }
+    ]
+  },
+  "cocos": {
+    "name": "Cocos Creator",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "cclegacy",
+          "EVENT_ENGINE_INITED"
+        ],
+        "evidence": "cocos runtime signatures",
+        "source": "https://raw.githubusercontent.com/cocos/cocos-engine/v3.8.8/cocos/game/game.ts",
+        "sha256": "237c2a66b2e644f27d3e471b254c295df667ea15d3e2a86decf0c3bc1d8d47d5",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "ctjs": {
+    "name": "ct.js",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "ct\\.js game engine",
+          "I am a ct\\.js copy"
+        ],
+        "evidence": "ctjs runtime signatures",
+        "source": "https://raw.githubusercontent.com/ct-js/ct-js/63791a05b7ecb6ced3c14de72b0649e4eb54574b/src/ct.release/index.ts",
+        "sha256": "23366be84a94fb777a5735b3fa45707b0ca0ff130c6fafba2f3f5be5be58771a",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "love2d": {
+    "name": "LÖVE (love.js)",
+    "evidenceStatus": "source-verified",
+    "reason": "Matched on 4 Nov 2026 in real love.js 11.4.1 exports, compat and threaded, of scripts/engine-fixtures/native/lovejs packaged by the pinned npm tool, as well as in the upstream runtime at Davidobot/love.js c4f04e18. Detection only: hosting and play are not measured, and Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "var Love[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*\\(function",
+          "return Love\\.ready"
+        ],
+        "evidence": "love2d runtime signatures",
+        "source": "love.js 11.4.1 from npm (scripts/engine-fixtures/pins.json, sha256 9eb2db1f789254faed8e5cf7eeeded46a7e56ecbc931c88be809526c448d25fb), the threaded export's love.js, which is the package's src/release/love.js; the compat export's love.js is src/compat/love.js (sha256 12db012a5cf4e0661f9eaf154c4c10c3cba7a7db31e6a36856028bbaf5f942f0). The same two lines are in Davidobot/love.js c4f04e185033a7c9fbefa9be3bec88c41a90421b src/release/love.js (sha256 0e2b73b96a5cadd56e6c4f09300534f5acd0b6f4e7c0e1bb287e375e5c448c3b)",
+        "sha256": "eb20a4d947dc99e08e906e946c5b783e3f542f60a3107167a1e92d07bfe531d4",
+        "kind": "exported-game-runtime"
+      }
+    ]
+  },
+  "renpy": {
+    "name": "Ren'Py",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "DEFAULT_GAME_FILENAME",
+          "gameExtractAndRun\\(\\)"
+        ],
+        "evidence": "renpy runtime signatures",
+        "source": "https://raw.githubusercontent.com/renpy/renpyweb/f9212e675b20c71488c0be5e24b7d20a4c0b7f9f/renpy-pre.js",
+        "sha256": "0f89031af7f0c93ed0d706fe1f64e7a7e9b0d48fc835a135bc92dd1f335d9f00",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "solar2d": {
+    "name": "Solar2D",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "audioReservedChannels",
+          "fLuaCallback"
+        ],
+        "evidence": "solar2d runtime signatures",
+        "source": "https://raw.githubusercontent.com/coronalabs/corona/d74923057d3fc3abad1903b61de5a459d9566363/platform/emscripten/Rtt_PlatformWebAudioPlayer.js",
+        "sha256": "f07b19e6ba95f6aa974a917ce05ce68a6ab628272f1396a8aadaac68c8517b71",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "kaigen": {
+    "name": "Kaigen",
+    "evidenceStatus": "source-verified",
+    "reason": "Structural: a real Kaigen 0.6.2.001-beta export (OG Clash R196) is recognised by its wasm glue and confirmed by the module's own import section and hz_flags section. The licence stamp in any .wasm asks for the publication statement without identifying the engine. Hosting validation is still required.",
+    "licenceStamp": "HZLICSTAMP1|",
+    "signatures": [
+      {
+        "patterns": [
+          "\\bcustomSections\\([^()]*[\"']hz_flags[\"']\\)",
+          "\\bjs_gpu_get_supported_compressed_formats[ \\t\\n\\r\\f\\v]*:",
+          "\\b_os_get_file_range_bytes[ \\t\\n\\r\\f\\v]*[:,}]"
+        ],
+        "paths": [
+          "\\.wasm(?:\\.(?:br|gz))?(?![\\s\\S])"
+        ],
+        "wasm": {
+          "imports": [
+            "js_gpu_get_supported_compressed_formats",
+            "_os_get_file_range_bytes"
+          ],
+          "customSections": [
+            "hz_flags"
+          ]
+        },
+        "versionPattern": "HZLICSTAMP1\\|[\\s\\S]{0,256}?\\x00(\\d+(?:\\.\\d+){1,3}(?:-[A-Za-z0-9.]+)?)\\x00",
+        "evidence": "the Kaigen wasm glue (its hz_flags section and engine imports)",
+        "source": "OG Clash R196 export built with Kaigen 0.6.2.001-beta, main_worker.js (engine source: src/os/wasm/main_worker.ts, gpu_webgpu.ts, os_fs.ts)",
+        "sha256": "afd9455f0b90b06935b66bdcd9d090d2d347f85f66cd573c40b054564e350ac4",
+        "kind": "exported-game-runtime"
+      }
+    ]
+  },
+  "bevy": {
+    "name": "Bevy",
+    "evidenceStatus": "source-verified",
+    "reason": "A Bevy build names its crates in the wasm's panic locations, bevy_app and bevy_ecs among them, beside wasm-bindgen's glue. A build stripped of those paths is still reported as Rust.",
+    "signatures": [
+      {
+        "patterns": [
+          "__wbindgen_malloc",
+          "__wbindgen_free"
+        ],
+        "paths": [
+          "\\.wasm(?:\\.(?:br|gz))?(?![\\s\\S])"
+        ],
+        "wasm": {
+          "imports": [],
+          "customSections": [],
+          "strings": [
+            "/bevy_app-",
+            "/bevy_ecs-"
+          ]
+        },
+        "versionPattern": "/bevy_app-(\\d+\\.\\d+\\.\\d+(?:-[\\w.]+)?)/src/",
+        "evidence": "wasm-bindgen glue beside a module built from Bevy's bevy_app and bevy_ecs crates",
+        "source": "Engine matrix export of scripts/engine-fixtures/native/bevy (Bevy 0.15.3, wasm-bindgen 0.2.100), 31 Oct 2026: pkg/opengame_bevy_fixture.js and opengame_bevy_fixture_bg.wasm (sha256 b7006efa5b03b711d1c4fac967243da406db80bebb300f39c250619d835bb767), whose panic locations name bevy_app-0.15.3 9 times and bevy_ecs-0.15.4 60 times",
+        "sha256": "b0aec3302de63fa16f3b093ef56e7e64757a2d867db0a559d6c9c86f31af84ba",
+        "kind": "exported-game-runtime"
+      }
+    ]
+  },
+  "ebiten": {
+    "name": "Ebiten",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "go"
+  },
+  "kni": {
+    "name": "KNI",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "dotnet"
+  },
+  "monogame": {
+    "name": "MonoGame",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "dotnet"
+  },
+  "stride": {
+    "name": "Stride",
+    "evidenceStatus": "pending",
+    "reason": "No upstream browser export target has been verified. A KNI port is identified by its runtime, not claimed to be Stride.",
+    "signatures": [],
+    "detectedAs": "dotnet"
+  },
+  "flutter": {
+    "name": "Flutter",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "_flutter\\.buildConfig",
+          "FlutterLoader could not find a build compatible"
+        ],
+        "evidence": "flutter runtime signatures",
+        "source": "https://raw.githubusercontent.com/flutter/engine/main/lib/web_ui/flutter_js/src/loader.js",
+        "sha256": "0e282d758c77470175e0dea8dddb87ca5672d3a38a9bb64277d21a3960d38112",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "flame": {
+    "name": "Flame",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "flutter"
+  },
+  "gbstudio": {
+    "name": "GB Studio",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "binjgb\\.wasm",
+          "_emulator_set_builtin_palette"
+        ],
+        "evidence": "gbstudio runtime signatures",
+        "source": "https://raw.githubusercontent.com/chrismaltby/gb-studio/a227e7dbe5eef9186afabc1b4e27cf873438b4c4/appData/wasm/binjgb/binjgb.js",
+        "sha256": "0d8d628de318d0867f223797e16e8d598760ccf7f2c5a23aad12d4e46bc18cac",
+        "kind": "upstream-runtime-artifact"
+      }
+    ]
+  },
+  "pico8": {
+    "name": "PICO-8",
+    "evidenceStatus": "pending",
+    "reason": "No distinctive browser-export signature verified. Falls back to the recognised runtime or custom; does not imply hosting support.",
+    "signatures": []
+  },
+  "jsdos": {
+    "name": "js-dos",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "js-dos-v8",
+          "dosboxConf"
+        ],
+        "evidence": "jsdos runtime signatures",
+        "source": "https://unpkg.com/js-dos@8.5.3/dist/js-dos.js",
+        "sha256": "3e4da1cc59fa89c42182d3df5b7e738c6207090c3c0aec115d67d047353b826c",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "ruffle": {
+    "name": "Ruffle",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "RufflePlayer",
+          "ruffleOptout"
+        ],
+        "evidence": "ruffle runtime signatures",
+        "source": "https://unpkg.com/@ruffle-rs/ruffle@0.7.1/ruffle.js",
+        "sha256": "26036a94567088dfb3de88a759e8ed10a4cea07b29500af36f345eef42420098",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "threejs": {
+    "name": "Three.js",
+    "evidenceStatus": "existing-detector",
+    "reason": "Existing detector with measured local Vite exports from 14 Oct 2026. Later versions still require their own fixture validation.",
+    "signatures": []
+  },
+  "babylonjs": {
+    "name": "Babylon.js",
+    "evidenceStatus": "existing-detector",
+    "reason": "Existing detector with measured local Vite exports from 14 Oct 2026. Later versions still require their own fixture validation.",
+    "signatures": []
+  },
+  "phaser": {
+    "name": "Phaser",
+    "evidenceStatus": "existing-detector",
+    "reason": "Existing detector with measured local Vite exports from 14 Oct 2026. Later versions still require their own fixture validation.",
+    "signatures": []
+  },
+  "pixijs": {
+    "name": "PixiJS",
+    "evidenceStatus": "existing-detector",
+    "reason": "Existing detector with measured local Vite exports from 14 Oct 2026. Later versions still require their own fixture validation.",
+    "signatures": []
+  },
+  "playcanvas": {
+    "name": "PlayCanvas",
+    "evidenceStatus": "existing-detector",
+    "reason": "Existing detector with measured local Vite exports from 14 Oct 2026. Later versions still require their own fixture validation.",
+    "signatures": []
+  },
+  "excalibur": {
+    "name": "Excalibur",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "ExcaliburBlue",
+          "Could not add entity/system"
+        ],
+        "evidence": "excalibur runtime signatures",
+        "source": "https://unpkg.com/excalibur@0.32.0/build/esm/excalibur.js",
+        "sha256": "d952ac705571eef9cc83cc063b4d0671ed886dc4c0256b1babe8a30eb43a6ecb",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "kaplay": {
+    "name": "KAPLAY",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source and confirmed in Wickwood's real Vite build on 24 Oct 2026, where the bundler keeps only the version field of KAPLAY's package metadata. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "KAPLAY already initialized, you are calling kaplay\\(\\) multiple times",
+          "Symbol\\.for\\([\\x22\\x27]kaplay\\.cancel[\\x22\\x27]\\)"
+        ],
+        "evidence": "kaplay runtime signatures",
+        "source": "https://unpkg.com/kaplay@3001.0.19/dist/kaplay.js",
+        "sha256": "88a946eafc4161f83505449d830b87c7bc15822bb0dae8ce03b2437506ef4a4b",
+        "kind": "upstream-source",
+        "versionPattern": "[{,]version:[ \\t\\n\\r\\f\\v]*[\\x22\\x27]([34]\\d{3}\\.\\d+\\.\\d+)[\\x22\\x27]"
+      }
+    ]
+  },
+  "littlejs": {
+    "name": "LittleJS",
+    "evidenceStatus": "source-verified",
+    "reason": "Three shapes of one runtime. Upstream source names engineName and engineVersion. The package's production export, dist/littlejs.esm.min.js, which Vite resolves for a build, has already folded them into the start-up banner \"LittleJS Engine v1.28.0\" (read from Voltbreak's real build on 24 Oct 2026). A bundler on default conditions minifies dist/littlejs.esm.js itself and keeps the pair as renamed constants. Each of the last two is read beside the WebGL fallback message. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "engineName[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]LittleJS[\\x22\\x27]",
+          "engineVersion[ \\t\\n\\r\\f\\v]*="
+        ],
+        "evidence": "littlejs runtime signatures",
+        "source": "https://unpkg.com/littlejsengine@1.28.0/src/engine.js",
+        "sha256": "bb8c4f9c63ae2d167d04dc7eb3f592fc59a8f76944c0a24827da1932248dade4",
+        "kind": "upstream-source",
+        "versionPattern": "engineVersion[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]([^\\x22\\x27]+)"
+      },
+      {
+        "patterns": [
+          "[\\x22\\x27]LittleJS Engine v\\d+\\.\\d+",
+          "LittleJS: WebGL can not draw on this device"
+        ],
+        "evidence": "the LittleJS start-up banner",
+        "source": "Voltbreak (littlejs-breaker), a Vite production build of littlejsengine 1.28.0, assets/index-BLVVTsOJ.js",
+        "sha256": "2606818fa1c0a091772736d8814059a17e372a3ae9a660fccf87673f7225dffa",
+        "kind": "exported-game-runtime",
+        "versionPattern": "[\\x22\\x27]LittleJS Engine v(\\d+\\.\\d+\\.\\d+)[\\x22\\x27]"
+      },
+      {
+        "patterns": [
+          "=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]LittleJS[\\x22\\x27][ \\t\\n\\r\\f\\v]*,[ \\t\\n\\r\\f\\v]*[\\w$]{1,64}[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]\\d+\\.\\d+\\.\\d+[\\x22\\x27]",
+          "LittleJS: WebGL can not draw on this device"
+        ],
+        "evidence": "the LittleJS name and version constants",
+        "source": "esbuild 0.28.2 --bundle --minify --format=esm of `import { engineInit } from 'littlejsengine'; engineInit(()=>{},()=>{},()=>{},()=>{},()=>{});` with default conditions, which resolve littlejsengine 1.28.0 dist/littlejs.esm.js; sha256 of the whole bundle",
+        "sha256": "eb42eced8f1609e06816203cce91bcfc713fe4766100b3b7a44f7d267e032b8d",
+        "kind": "upstream-generated-runtime",
+        "versionPattern": "=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]LittleJS[\\x22\\x27][ \\t\\n\\r\\f\\v]*,[ \\t\\n\\r\\f\\v]*[\\w$]{1,64}[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27](\\d+\\.\\d+\\.\\d+)[\\x22\\x27]"
+      }
+    ]
+  },
+  "melonjs": {
+    "name": "melonJS",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "melonJS: audio context resume failed",
+          "melonJS: failed loading"
+        ],
+        "evidence": "melonjs runtime signatures",
+        "source": "https://unpkg.com/melonjs@20.10.0/build/index.js",
+        "sha256": "39aea0820f6d425d3a1d0deeebf3e9f12493a73ae71dffdf146f96e2c2e98b65",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "react": {
+    "name": "React",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "Symbol\\.for\\([\\x22\\x27]react\\.transitional\\.element[\\x22\\x27]\\)",
+          "Symbol\\.for\\([\\x22\\x27]react\\.fragment[\\x22\\x27]\\)"
+        ],
+        "evidence": "react runtime signatures",
+        "source": "https://unpkg.com/react@19.3.1/cjs/react.production.js",
+        "sha256": "0b5529981841afa1b58c76ba85c29bb681ff5f07cd8cde6a10b967d3915b8e1c",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "heaps": {
+    "name": "Heaps.io",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "haxe"
+  },
+  "raylib": {
+    "name": "raylib",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "emscripten"
+  },
+  "luau": {
+    "name": "Luau",
+    "evidenceStatus": "source-verified",
+    "reason": "Luau's VM has two messages that no other Lua has, the bytecode loader's version check (VM/src/lvmload.cpp) and the readonly-table error (VM/src/ldebug.cpp). They are read in the module beside a WebAssembly loader, or in the script of a single-file build, where Emscripten writes the module's bytes as text. Both were found on 4 Nov 2026 in @luau-rs/luau 0.739.0 and luau-web 1.5.1, and neither in wasmoon 1.16.0 or love.js 11.4.1. A .luau file name identifies nothing. A single-file build that inlines its module as base64 is not recognised. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "\\bWebAssembly[ \\t\\r\\n]*\\.[ \\t\\r\\n]*(?:instantiate(?:Streaming)?|compile(?:Streaming)?|Module|Instance)\\b",
+          "%s: bytecode version mismatch \\(expected \\[%d\\.\\.%d\\], got %d\\)",
+          "attempt to modify a readonly table"
+        ],
+        "evidence": "the Luau VM's own messages in a single-file WebAssembly build",
+        "source": "luau-web 1.5.1 from npm (tarball sha256 4be7763e4c96039b3f4638554f65fc1059d3e191b01e2e32932de08bba1b6386), src/lib/Luau.Web.Asyncify.js, an Emscripten SINGLE_FILE build of Luau",
+        "sha256": "996155e15e63e033f421a4b7ab220550070f55702bd30d0b56f537ebad00605e",
+        "kind": "upstream-runtime-artifact"
+      },
+      {
+        "patterns": [
+          "\\bWebAssembly[ \\t\\r\\n]*\\.[ \\t\\r\\n]*(?:instantiate(?:Streaming)?|compile(?:Streaming)?|Module|Instance)\\b"
+        ],
+        "paths": [
+          "\\.wasm(?:\\.(?:br|gz))?(?![\\s\\S])"
+        ],
+        "wasm": {
+          "imports": [],
+          "customSections": [],
+          "strings": [
+            "bytecode version mismatch (expected [%d..%d], got %d)",
+            "attempt to modify a readonly table"
+          ]
+        },
+        "evidence": "a WebAssembly loader and the Luau VM's own messages",
+        "source": "@luau-rs/luau 0.739.0 from npm (tarball sha256 1ce6cc5753d0720f5642b4c1740ce5dbca7256faf1ca931aab99f8421b53676e), dist/luau_wasm_bg.wasm, beside its wasm-bindgen loader dist/luau_wasm-CuutyWMJ.js; strings from luau-lang/luau e3275c20972d97fd5b230b89b742770064004256 VM/src/lvmload.cpp and VM/src/ldebug.cpp",
+        "sha256": "865a9d3d3d55ba98252d3fc91adee7acb2f691516244ab23ef6faf59fa0be839",
+        "kind": "upstream-runtime-artifact"
+      }
+    ]
+  },
+  "dotnet": {
+    "name": ".NET",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "mono_wasm_runtime_ready",
+          "dotnet\\.runtime\\.js"
+        ],
+        "evidence": "dotnet runtime signatures",
+        "source": "https://raw.githubusercontent.com/dotnet/runtime/main/src/mono/browser/runtime/startup.ts",
+        "sha256": "f8906e78d1f7e3842e0ef32038eec0777afc17ad38d4488d3b6125df2b710eda",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "pyodide": {
+    "name": "Pyodide",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "loadPyodide",
+          "pyodide\\.asm\\.wasm"
+        ],
+        "evidence": "pyodide runtime signatures",
+        "source": "https://unpkg.com/pyodide@314.0.7/pyodide.js",
+        "sha256": "3141b814715a72e59b51b1b18b9ceae5bf19f7c852417e431bb0a34feadf825c",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "wasmoon": {
+    "name": "wasmoon",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "LuaFactory",
+          "lua_gettop"
+        ],
+        "evidence": "wasmoon runtime signatures",
+        "source": "https://unpkg.com/wasmoon@1.16.0/dist/index.js",
+        "sha256": "dc2dcf019449008bb224370052473dc760db28b3ba14fc604e1ca3e8646af35d",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "haxe": {
+    "name": "Haxe",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "__instanceof",
+          "__interfaces__",
+          "__class__"
+        ],
+        "evidence": "haxe runtime signatures",
+        "source": "https://raw.githubusercontent.com/HaxeFoundation/haxe/development/std/js/Boot.hx",
+        "sha256": "7a35c9c22acb8b46f727bab5f10ec736726397306b7faa98ea2fe912dd2a631c",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "rust": {
+    "name": "Rust",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "__wbindgen_malloc",
+          "__wbindgen_free"
+        ],
+        "evidence": "rust runtime signatures",
+        "source": "https://unpkg.com/@ruffle-rs/ruffle@0.7.1/core.ruffle.16d61072ac7fdc4d5013.js",
+        "sha256": "d27c6bdce2a34afb32e8dfa40970bc7e86cbcb912f92db7eb3e1ac70e943bd82",
+        "kind": "upstream-generated-runtime"
+      }
+    ]
+  },
+  "go": {
+    "name": "Go",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "[\\x22\\x27]runtime\\.wasmExit[\\x22\\x27]",
+          "[\\x22\\x27]syscall/js\\.valueGet[\\x22\\x27]"
+        ],
+        "evidence": "go runtime signatures",
+        "source": "/usr/local/go/lib/wasm/wasm_exec.js (go1.24.2)",
+        "sha256": "0c949f4996f9a89698e4b5c586de32249c3b69b7baadb64d220073cc04acba14",
+        "kind": "installed-go-1.24.2-runtime"
+      }
+    ]
+  },
+  "zig": {
+    "name": "Zig",
+    "evidenceStatus": "runtime-only",
+    "reason": "Zig's wasm32-freestanding output carries nothing of Zig's own. The page's module script loads it with WebAssembly.instantiateStreaming, so the export is reported as WebAssembly.",
+    "signatures": [],
+    "detectedAs": "webassembly"
+  },
+  "swift": {
+    "name": "Swift",
+    "evidenceStatus": "source-verified",
+    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "swjs_library_version",
+          "JavaScriptKit supports only WASI reactor ABI"
+        ],
+        "evidence": "swift runtime signatures",
+        "source": "https://raw.githubusercontent.com/swiftwasm/JavaScriptKit/dbbfdc3f9b709a0fb3a0e1f887333818c5f20812/Plugins/PackageToJS/Templates/runtime.mjs",
+        "sha256": "e022015518329b447458a0b5bd56226a8faa243ae8ba19cde74d9d8a4c1cacb3",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "emscripten": {
+    "name": "Emscripten",
+    "evidenceStatus": "source-verified",
+    "reason": "Structural: Emscripten's runtime glue for a program with a main (its abort message, its build hint or fetch failure, and the noInitialRun test that decides whether main runs, all of which every optimisation level and Closure keep), beside a .wasm whose imports come only from Emscripten's modules: env and wasi_snapshot_preview1 by name up to -O2, or the one minified module `a` that -O3 and Closure write. Threads play no part, so a single-threaded build is named too. A library built with Emscripten and no main, such as a Draco or Basis decoder, is not the game and is not named. A MINIMAL_RUNTIME build writes none of that glue, and at -O2 its module imports are minified to `a.a`; its src/postamble_minimal.js instantiates Module.wasm, or a fetch of the module, with its own `imports` object and hands the exports to initRuntime, the same in 2.0.34, 3.1.0, 3.1.50 and 4.0.12, which the fourth signature reads (upstream source, not an exported game). A Closure-minified MINIMAL_RUNTIME build renames initRuntime and is not recognised. Gate H has not been measured.",
+    "signatures": [
+      {
+        "patterns": [
+          "Aborted\\((?:[\\x22\\x27][ \\t\\n\\r\\f\\v]*\\+|\\$\\{)",
+          "Build with -s ?ASSERTIONS|both async and sync fetching of the wasm failed",
+          "noInitialRun(?:[\\x22\\x27]\\])?[ \\t\\n\\r\\f\\v]*(?:\\|\\||\\))"
+        ],
+        "paths": [
+          "\\.wasm(?:\\.(?:br|gz))?(?![\\s\\S])"
+        ],
+        "wasm": {
+          "imports": [],
+          "customSections": [],
+          "importModulesWithin": [
+            "env",
+            "wasi_snapshot_preview1",
+            "GOT.mem",
+            "GOT.func"
+          ]
+        },
+        "evidence": "Emscripten's runtime glue beside a module importing only from env and wasi_snapshot_preview1",
+        "source": "Emscripten 6.0.13 (emcc e13ee988ce3d87a738dd8f3661d02223308c412a), 5 Nov 2026: one 12-line C program with a main loop, built at -O0, -O1, -O2, -O3 -sALLOW_MEMORY_GROWTH=1, -O3 -g2, -O3 -sMODULARIZE, -O3 -sMODULARIZE -sEXPORT_ES6, -Os --closure 1, and -pthread at -O0 and -O3. Cross-checked against older shipped Emscripten glue on this machine (draco3d 1.5.7, basis_transcoder, MediaPipe tasks-vision, sharp-wasm32 0.35, watlas 1.0.1, pdf.js quickjs-eval), each of which carries the first two patterns and, having no main, not the third (watlas, an ASSERTIONS build, names noInitialRun only in its list of ignored settings, which the pattern does not read). The -O0 to -O2 modules import from env and wasi_snapshot_preview1 by name; sha256 is the -O2 index.js.",
+        "sha256": "d72bc406f1164eb0d398aee00884da8f335567c54a54dafef98804bab303385e",
+        "kind": "exported-game-runtime"
+      },
+      {
+        "patterns": [
+          "Aborted\\((?:[\\x22\\x27][ \\t\\n\\r\\f\\v]*\\+|\\$\\{)",
+          "Build with -s ?ASSERTIONS|both async and sync fetching of the wasm failed",
+          "noInitialRun(?:[\\x22\\x27]\\])?[ \\t\\n\\r\\f\\v]*(?:\\|\\||\\))"
+        ],
+        "paths": [
+          "\\.wasm(?:\\.(?:br|gz))?(?![\\s\\S])"
+        ],
+        "wasm": {
+          "imports": [],
+          "customSections": [],
+          "importModulesWithin": [
+            "a"
+          ]
+        },
+        "evidence": "Emscripten's runtime glue beside a module with Emscripten's minified imports",
+        "source": "Emscripten 6.0.13 (emcc e13ee988ce3d87a738dd8f3661d02223308c412a), 5 Nov 2026: one 12-line C program with a main loop, built at -O0, -O1, -O2, -O3 -sALLOW_MEMORY_GROWTH=1, -O3 -g2, -O3 -sMODULARIZE, -O3 -sMODULARIZE -sEXPORT_ES6, -Os --closure 1, and -pthread at -O0 and -O3. Cross-checked against older shipped Emscripten glue on this machine (draco3d 1.5.7, basis_transcoder, MediaPipe tasks-vision, sharp-wasm32 0.35, watlas 1.0.1, pdf.js quickjs-eval), each of which carries the first two patterns and, having no main, not the third (watlas, an ASSERTIONS build, names noInitialRun only in its list of ignored settings, which the pattern does not read). The -O3, -O3 -g2 and Closure modules import everything from one module named a, with minified names; sha256 is the -O3 index.js.",
+        "sha256": "7925e851745d04aa5096674bf3fd97a691eae1899198992e7d682bfda85f7dae",
+        "kind": "exported-game-runtime"
+      },
+      {
+        "patterns": [
+          "ENVIRONMENT_IS_PTHREAD",
+          "PThread\\.terminateRuntime"
+        ],
+        "evidence": "emscripten runtime signatures",
+        "source": "https://raw.githubusercontent.com/emscripten-core/emscripten/main/src/preamble.js",
+        "sha256": "cd14b8bfbb45fcae6134bb459fae269ad9dbc3c2912c1ff6706999aba57d8947",
+        "kind": "upstream-source"
+      },
+      {
+        "patterns": [
+          "\\bWebAssembly[ \\t\\r\\n]*\\.[ \\t\\r\\n]*instantiate(?:Streaming)?[ \\t\\r\\n]*\\([ \\t\\r\\n]*(?:Module[ \\t\\r\\n]*(?:\\[[ \\t\\r\\n]*[\"\\x27]wasm[\"\\x27][ \\t\\r\\n]*\\]|\\.[ \\t\\r\\n]*wasm\\b)|fetch[ \\t\\r\\n]*\\([^()]*\\))[ \\t\\r\\n]*,[ \\t\\r\\n]*imports[ \\t\\r\\n]*\\)",
+          "\\bfunction[ \\t\\r\\n]+initRuntime[ \\t\\r\\n]*\\([ \\t\\r\\n]*[A-Za-z_$][\\w$]*[ \\t\\r\\n]*\\)"
+        ],
+        "evidence": "Emscripten's MINIMAL_RUNTIME loader",
+        "source": "https://raw.githubusercontent.com/emscripten-core/emscripten/4.0.12/src/postamble_minimal.js",
+        "sha256": "97491d684c1a6770dd240053d76afd63c2323149517107623343af83d4d0f213",
+        "kind": "upstream-source"
+      }
+    ]
+  },
+  "webassembly": {
+    "name": "WebAssembly",
+    "evidenceStatus": "existing-detector",
+    "reason": "Reported when a page script instantiates a .wasm module that the bundle carries and names, and no other engine is recognised. engines.ts rawWebAssembly decides it in code, after every other probe, so it is never reported beside another engine. A bundle whose glue names Emscripten, wasm-bindgen, Go, Unity, Godot, Defold or Kaigen, or whose .wasm module has their imports, Kaigen's section or a licence stamp, stays custom. The glue of a library built with Emscripten, a Draco or Ammo.js beside the game, is set aside rather than counted either way. A plain JavaScript game that loads one helper module of its own is also named WebAssembly. Gate H has not been measured.",
+    "signatures": []
+  },
+  "c": {
+    "name": "C",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "emscripten"
+  },
+  "cpp": {
+    "name": "C++",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "emscripten"
+  },
+  "csharp": {
+    "name": "C#",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "dotnet"
+  },
+  "python": {
+    "name": "Python",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "pyodide"
+  },
+  "lua": {
+    "name": "Lua",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "wasmoon"
+  },
+  "javascript": {
+    "name": "JavaScript",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "custom"
+  },
+  "typescript": {
+    "name": "TypeScript",
+    "evidenceStatus": "runtime-only",
+    "reason": "The source language or wrapper is not reliably identifiable from a stripped browser export. Report the verified runtime, or custom, unless distinctive export evidence is available.",
+    "signatures": [],
+    "detectedAs": "custom"
+  },
+  "custom": {
+    "name": "Custom",
+    "evidenceStatus": "fallback",
+    "reason": "Every unrecognised static export uses custom, including incomplete reads; evidence records what was not inspected.",
+    "signatures": []
+  }
+}

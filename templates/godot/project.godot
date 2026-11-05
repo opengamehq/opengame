@@ -1,0 +1,12 @@
+config_version=5
+[application]
+config/name="OpenGame target"
+run/main_scene="res://main.tscn"
+[display]
+window/size/viewport_width=640
+window/size/viewport_height=440
+window/stretch/mode="canvas_items"
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.09, 0.1, 0.11, 1)

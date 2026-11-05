@@ -1,0 +1,139 @@
+name: Publish approved npm package
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to release
+        type: choice
+        options: [cli, sdk, skills]
+        required: true
+      version:
+        description: Exact major.minor.patch version
+        type: string
+        required: true
+      approval:
+        description: Type publish to approve this release
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: npm-public-release
+  cancel-in-progress: false
+# Two jobs, because installing and building runs code from every dependency in the
+# lockfile, and a job holding id-token: write lets any of that code mint an OIDC token npm
+# accepts as this repository's publisher. The build job installs with --ignore-scripts,
+# holds no token and hands over two files. The publish job checks those files against each
+# other, installs nothing and runs no package scripts, and it waits for a person: the
+# npm-release-approved environment requires a reviewer who is not the one who started it.
+#
+# Runs from main, this repository's default branch. Packages are published from here
+# because npm records provenance only for a public source repository.
+#
+# Every action is GitHub's own and pinned to a commit.
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main' && inputs.approval == 'publish'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - run: npm install --global --ignore-scripts npm@11.6.2
+      - run: npm ci --ignore-scripts
+      # release.mjs builds what the package needs first: the CLI serves the SDK's browser
+      # bundle from `opengame dev`, so a CLI release builds the SDK before the CLI.
+      - name: Build and inspect approved package
+        env:
+          OPENGAME_RELEASE_APPROVED: 'true'
+          RELEASE_PACKAGE: ${{ inputs.package }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: node scripts/release.mjs "$RELEASE_PACKAGE" --version "$RELEASE_VERSION" --out-dir "$RUNNER_TEMP/opengame-release" --approved
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opengame-release
+          path: ${{ runner.temp }}/opengame-release/
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # npm's trusted publisher for each package names this repository, this workflow file and
+    # this environment, so a publish from anywhere else is refused by npm itself.
+    environment: npm-release-approved
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      # First, before anything is downloaded or installed, so a misconfigured environment
+      # stops the job while it has run nothing but this. Read-only. actions: read is what
+      # lets GITHUB_TOKEN read an environment and its branch policies on a private
+      # repository; nothing else in this job needs it. gh and node are the runner image's
+      # own, since setup-node has not run yet.
+      - name: Verify protected release environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ENVIRONMENT=$(gh api "repos/$GITHUB_REPOSITORY/environments/npm-release-approved")
+          POLICIES=$(gh api "repos/$GITHUB_REPOSITORY/environments/npm-release-approved/deployment-branch-policies")
+          ENVIRONMENT="$ENVIRONMENT" POLICIES="$POLICIES" node --input-type=module <<'NODE'
+          const environment = JSON.parse(process.env.ENVIRONMENT);
+          const review = environment.protection_rules?.find(rule => rule.type === 'required_reviewers');
+          if (!review?.reviewers?.length || review.prevent_self_review !== true || environment.can_admins_bypass !== false) throw new Error('Release requires reviewers, prevention of self-review and disabled administrator bypass.');
+          // The ref check on the build job is a line in this file; the environment's own
+          // branch policy is the control a workflow edit on another branch cannot remove.
+          const branch = environment.deployment_branch_policy;
+          const policies = JSON.parse(process.env.POLICIES).branch_policies ?? [];
+          if (branch?.custom_branch_policies !== true || branch.protected_branches !== false || policies.length !== 1 ||
+              policies[0].name !== 'main' || (policies[0].type ?? 'branch') !== 'branch') throw new Error('The release environment must allow deployments from main only.');
+          NODE
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+      # 11.5.1 is the first npm that exchanges the job's OIDC token for a publish token.
+      - run: npm install --global --ignore-scripts npm@11.6.2
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: opengame-release
+          path: ${{ runner.temp }}/opengame-release
+      - name: Publish exact inspected archive
+        env:
+          RELEASE_PACKAGE: ${{ inputs.package }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          # Packages are published only from the public repository, opengamehq/opengame,
+          # always with provenance, so every version on npm links to source anybody can
+          # read. npm refuses --provenance from a private repository, and publishing from
+          # one without it (which an earlier copy of this step did) would put a permanent
+          # version on npm that names no readable source. So a private repository stops.
+          # The first version of each package is published by an owner from their own
+          # machine with scripts/release.mjs --first-publish, because npm lets a trusted
+          # publisher be set only on a package that exists; this workflow holds no token
+          # and publishes through npm trusted publishing (OIDC) alone.
+          REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          set -euo pipefail
+          if [ "$REPOSITORY_PRIVATE" != "false" ]; then echo "Publish from the public repository only (GitHub says private=$REPOSITORY_PRIVATE)." >&2; exit 1; fi
+          export NODE_AUTH_TOKEN=
+          ARCHIVE=$(node -e 'const fs=require("node:fs"),crypto=require("node:crypto"),path=require("node:path");const dir=process.env.RUNNER_TEMP+"/opengame-release/";const p=JSON.parse(fs.readFileSync(dir+process.env.RELEASE_PACKAGE+"-release.json"));if(typeof p.archive!=="string"||path.basename(p.archive)!==p.archive||p.version!==process.env.RELEASE_VERSION)process.exit(1);const b=fs.readFileSync(dir+p.archive);if(p.private!==false||crypto.createHash("sha256").update(b).digest("hex")!==p.sha256)process.exit(1);process.stdout.write(p.archive)')
+          # The report travelled with the archive, so it cannot vouch for it. Read the
+          # package's own manifest out of the tarball and hold it to what was approved.
+          # Exactly one package/package.json, because tar extracts the last of two and npm
+          # might read the other, and an empty one is not a manifest anybody approved.
+          tar -tzf "$RUNNER_TEMP/opengame-release/$ARCHIVE" > "$RUNNER_TEMP/published-files.txt"
+          if [ "$(grep -cx 'package/package.json' "$RUNNER_TEMP/published-files.txt")" != "1" ]; then echo "The archive must hold exactly one package/package.json." >&2; exit 1; fi
+          tar -xOzf "$RUNNER_TEMP/opengame-release/$ARCHIVE" package/package.json > "$RUNNER_TEMP/published-package.json"
+          if [ ! -s "$RUNNER_TEMP/published-package.json" ]; then echo "The archive's package.json is empty." >&2; exit 1; fi
+          # No install-time scripts: whoever installs the package would run them. The
+          # repository must be the public one every package names, and the repository
+          # running this, or npm refuses the provenance anyway.
+          node -e 'const m=JSON.parse(require("node:fs").readFileSync(process.env.RUNNER_TEMP+"/published-package.json","utf8"));const name={cli:"@opengamehq/cli",sdk:"@opengamehq/sdk",skills:"@opengamehq/skills"}[process.env.RELEASE_PACKAGE];const s=m.scripts??{};const repo=typeof m.repository==="string"?m.repository:m.repository?.url;const pub="git+https://github.com/opengamehq/opengame.git";if(!name||m.name!==name||m.version!==process.env.RELEASE_VERSION||m.private===true||repo!==pub||repo!=="git+https://github.com/"+process.env.GITHUB_REPOSITORY+".git"||JSON.stringify(m.publishConfig)!==JSON.stringify({access:"public"})||["preinstall","install","postinstall","prepare"].some(k=>Object.hasOwn(s,k))){console.error("The archive is not the approved package and version, names another repository, sets its own provenance, or carries install scripts.");process.exit(1)}'
+          npm publish "$RUNNER_TEMP/opengame-release/$ARCHIVE" --registry=https://registry.npmjs.org --access=public --provenance --ignore-scripts

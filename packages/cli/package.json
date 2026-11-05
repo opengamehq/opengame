@@ -1,0 +1,62 @@
+{
+  "name": "@opengamehq/cli",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Deploy browser games to OpenGame from the command line.",
+  "keywords": [
+    "opengame",
+    "cli",
+    "deploy",
+    "browser-games",
+    "game-development",
+    "webgl",
+    "webassembly"
+  ],
+  "homepage": "https://docs.opengame.io",
+  "bugs": {
+    "url": "https://github.com/opengamehq/opengame/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opengamehq/opengame.git",
+    "directory": "packages/cli"
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "opengame": "dist/cli.mjs"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "AGENTS.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node ../shared/scripts/limits-values.mjs --check && node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "OPENGAME_TEST_SKIP_LAUNCH_CHECK=1 node --import tsx --test tests/*.test.ts",
+    "prepack": "npm run build",
+    "pretest": "npm run build",
+    "test:matrix": "node scripts/node-matrix.mjs",
+    "prepublishOnly": "node -e \"console.error('Publish through scripts/release.mjs, which stages and audits the package: the publish workflow for a release, or --first-publish once per package.');process.exit(1)\""
+  },
+  "devDependencies": {
+    "@opengame/preflight": "*",
+    "@opengame/protocol": "*",
+    "@opengame/shared": "*",
+    "@opengamehq/skills": "*",
+    "@opengame/ui": "*",
+    "@types/proper-lockfile": "^4.1.4",
+    "esbuild": "^0.28.2",
+    "fflate": "^0.8.3",
+    "proper-lockfile": "^4.1.2",
+    "undici": "^6.29.0"
+  }
+}

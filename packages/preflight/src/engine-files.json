@@ -1,0 +1,12 @@
+{
+  "text": [
+    "html",
+    "htm",
+    "js",
+    "mjs",
+    "cjs"
+  ],
+  "module": [
+    "wasm"
+  ]
+}

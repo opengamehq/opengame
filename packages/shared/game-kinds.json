@@ -1,0 +1,38 @@
+{
+  "kinds": [
+    {
+      "slug": "game",
+      "label": "Game",
+      "plural": "Games",
+      "help": "Something to play, with goals, rules or a way to win",
+      "basedOn": false,
+      "jam": true
+    },
+    {
+      "slug": "world",
+      "label": "World",
+      "plural": "Worlds",
+      "help": "A place to explore or hang out in, with nothing you have to win",
+      "basedOn": false,
+      "jam": true
+    },
+    {
+      "slug": "decomp",
+      "label": "Decomp",
+      "plural": "Decomps",
+      "help": "An existing game rebuilt from its decompiled code",
+      "basedOn": true,
+      "basedOnPrompt": "Which game is this a decomp of?",
+      "jam": false
+    },
+    {
+      "slug": "mod",
+      "label": "Mod",
+      "plural": "Mods",
+      "help": "Changes to an existing game, like new levels, rules or art",
+      "basedOn": true,
+      "basedOnPrompt": "Which game does this mod change?",
+      "jam": false
+    }
+  ]
+}

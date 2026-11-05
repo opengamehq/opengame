@@ -1,0 +1,1472 @@
+{
+  "verified=false": {
+    "late": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "confidence": 0.7,
+          "fault": "unknown",
+          "fix": "no progression",
+          "frame": 0,
+          "gaps": [
+            "no progression"
+          ],
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "Scored tier 3 at confidence 0.7. The marketplace bar is not calibrated yet, so a person decides.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never",
+          "scorecard": {
+            "blocked": null,
+            "confidence": 0.7,
+            "dimensions": {
+              "challenge": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "content": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "coreLoop": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "effort": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "feedback": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "systems": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "works": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              }
+            },
+            "gaps": [
+              "no progression"
+            ],
+            "summary": "A small complete game.",
+            "tier": 3
+          },
+          "tier": 3
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game answered input.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "game",
+          "firstFrameMs": 41483.0,
+          "fix": "Draw the first frame sooner: load the smallest assets first and stream the rest.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The first frame took 41483 ms, past the 30000 ms limit. The game did draw, so a person will look before anything is asked of you.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "failed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "fault": "platform",
+          "fix": "Nothing to change in the game.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "measured": {
+            "evidence": {
+              "certainty": "certain",
+              "controllerSource": "isolated-browser-v1",
+              "errors": [],
+              "fault": "unknown",
+              "fix": "Nothing to fix.",
+              "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+              "observed": "No runtime errors were captured.",
+              "observedCloud": "CLOUD_PROVIDER_AWS",
+              "observedRegion": "us-east",
+              "pageCrashes": 0,
+              "retry": "never",
+              "uncaughtErrorCount": 0
+            },
+            "state": "passed"
+          },
+          "observed": "The isolated GPU runtime has not passed its live infrastructure proof.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "later"
+        },
+        "state": "inconclusive"
+      }
+    },
+    "never": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "game",
+          "fix": "Fix the boot first; the bot plays after it.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The bot did not get to play the game, so no model was paid to play it.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "not run"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "game",
+          "fix": "Fix the boot first; the bot plays after it.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game drew no frame, so the bot did not play it.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "not run"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "game",
+          "fix": "Make the game draw a frame without any input other than a start button; check the failed request and console lines, then run opengame check.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "No frame was drawn within 30000 ms.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "failed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "game",
+          "fix": "Fix the boot first; the viewports are photographed after it.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game drew no frame, so no viewport was photographed.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "not run"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "fault": "platform",
+          "fix": "Nothing to change in the game.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "measured": {
+            "evidence": {
+              "certainty": "certain",
+              "controllerSource": "isolated-browser-v1",
+              "fault": "game",
+              "fix": "Fix the boot first; runtime output is judged after it.",
+              "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+              "observed": "The game drew no frame, so no runtime output was judged.",
+              "observedCloud": "CLOUD_PROVIDER_AWS",
+              "observedRegion": "us-east",
+              "retry": "after-fix"
+            },
+            "state": "not run"
+          },
+          "observed": "The isolated GPU runtime has not passed its live infrastructure proof.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "later"
+        },
+        "state": "inconclusive"
+      }
+    },
+    "provider-down-early": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The agent playtest returned no scorecard, so no model has rated the game.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game answered input.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "blocking": true,
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "First frame drawn at 900 ms.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "fault": "platform",
+          "fix": "Nothing to change in the game.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "measured": {
+            "evidence": {
+              "certainty": "certain",
+              "controllerSource": "isolated-browser-v1",
+              "errors": [],
+              "fault": "unknown",
+              "fix": "Nothing to fix.",
+              "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+              "observed": "No runtime errors were captured.",
+              "observedCloud": "CLOUD_PROVIDER_AWS",
+              "observedRegion": "us-east",
+              "pageCrashes": 0,
+              "retry": "never",
+              "uncaughtErrorCount": 0
+            },
+            "state": "passed"
+          },
+          "observed": "The isolated GPU runtime has not passed its live infrastructure proof.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "later"
+        },
+        "state": "inconclusive"
+      }
+    },
+    "unbooted": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "Nothing to change in the game yet; a person looks at the bot playtest first.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The bot could not load the game on the last attempt, so no model was paid to play it.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "booted": false,
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "If the game can fail to start on a second load, check what it waits for at startup; otherwise nothing to change.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game drew a frame in the GPU check, then drew none when the bot loaded it again.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "blocking": true,
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "First frame drawn at 900 ms.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "fault": "platform",
+          "fix": "Nothing to change in the game.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "measured": {
+            "evidence": {
+              "certainty": "certain",
+              "controllerSource": "isolated-browser-v1",
+              "errors": [],
+              "fault": "unknown",
+              "fix": "Nothing to fix.",
+              "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+              "observed": "No runtime errors were captured.",
+              "observedCloud": "CLOUD_PROVIDER_AWS",
+              "observedRegion": "us-east",
+              "pageCrashes": 0,
+              "retry": "never",
+              "uncaughtErrorCount": 0
+            },
+            "state": "passed"
+          },
+          "observed": "The isolated GPU runtime has not passed its live infrastructure proof.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "later"
+        },
+        "state": "inconclusive"
+      }
+    },
+    "unmeasured": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The bot did not get to play the game, so no model was paid to play it.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The GPU run could not measure the boot, so the bot did not play it.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The GPU run returned no boot row.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The GPU run could not measure the boot, so no viewport was photographed.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The GPU run returned no network row.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "fault": "platform",
+          "fix": "Nothing to change in the game.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "measured": {
+            "evidence": {
+              "certainty": "heuristic",
+              "controllerSource": "isolated-browser-v1",
+              "fault": "unknown",
+              "fix": "A person checks this at review.",
+              "forAPerson": true,
+              "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+              "observed": "The GPU run could not measure the boot, so no runtime output was judged.",
+              "observedCloud": "CLOUD_PROVIDER_AWS",
+              "observedRegion": "us-east",
+              "retry": "never"
+            },
+            "state": "inconclusive"
+          },
+          "observed": "The isolated GPU runtime has not passed its live infrastructure proof.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "later"
+        },
+        "state": "inconclusive"
+      }
+    },
+    "unscored": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The agent playtest returned no scorecard, so no model has rated the game.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game answered input.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "blocking": true,
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "First frame drawn at 900 ms.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "fault": "platform",
+          "fix": "Nothing to change in the game.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "measured": {
+            "evidence": {
+              "certainty": "certain",
+              "controllerSource": "isolated-browser-v1",
+              "errors": [],
+              "fault": "unknown",
+              "fix": "Nothing to fix.",
+              "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+              "observed": "No runtime errors were captured.",
+              "observedCloud": "CLOUD_PROVIDER_AWS",
+              "observedRegion": "us-east",
+              "pageCrashes": 0,
+              "retry": "never",
+              "uncaughtErrorCount": 0
+            },
+            "state": "passed"
+          },
+          "observed": "The isolated GPU runtime has not passed its live infrastructure proof.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "later"
+        },
+        "state": "inconclusive"
+      }
+    },
+    "unscored-early": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The agent playtest returned no scorecard, so no model has rated the game.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game answered input.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "blocking": true,
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "First frame drawn at 900 ms.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "fault": "platform",
+          "fix": "Nothing to change in the game.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "measured": {
+            "evidence": {
+              "certainty": "certain",
+              "controllerSource": "isolated-browser-v1",
+              "errors": [],
+              "fault": "unknown",
+              "fix": "Nothing to fix.",
+              "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+              "observed": "No runtime errors were captured.",
+              "observedCloud": "CLOUD_PROVIDER_AWS",
+              "observedRegion": "us-east",
+              "pageCrashes": 0,
+              "retry": "never",
+              "uncaughtErrorCount": 0
+            },
+            "state": "passed"
+          },
+          "observed": "The isolated GPU runtime has not passed its live infrastructure proof.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "later"
+        },
+        "state": "inconclusive"
+      }
+    }
+  },
+  "verified=true": {
+    "late": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "confidence": 0.7,
+          "fault": "unknown",
+          "fix": "no progression",
+          "frame": 0,
+          "gaps": [
+            "no progression"
+          ],
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "Scored tier 3 at confidence 0.7. The marketplace bar is not calibrated yet, so a person decides.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never",
+          "scorecard": {
+            "blocked": null,
+            "confidence": 0.7,
+            "dimensions": {
+              "challenge": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "content": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "coreLoop": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "effort": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "feedback": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "systems": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              },
+              "works": {
+                "evidence": [
+                  {
+                    "action": 0,
+                    "frame": 0,
+                    "observed": "the ship turns under the arrow keys"
+                  }
+                ],
+                "score": 3
+              }
+            },
+            "gaps": [
+              "no progression"
+            ],
+            "summary": "A small complete game.",
+            "tier": 3
+          },
+          "tier": 3
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game answered input.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "game",
+          "firstFrameMs": 41483.0,
+          "fix": "Draw the first frame sooner: load the smallest assets first and stream the rest.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The first frame took 41483 ms, past the 30000 ms limit. The game did draw, so a person will look before anything is asked of you.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "failed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "errors": [],
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "No runtime errors were captured.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "pageCrashes": 0,
+          "retry": "never",
+          "uncaughtErrorCount": 0
+        },
+        "state": "passed"
+      }
+    },
+    "never": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "game",
+          "fix": "Fix the boot first; the bot plays after it.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The bot did not get to play the game, so no model was paid to play it.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "not run"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "game",
+          "fix": "Fix the boot first; the bot plays after it.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game drew no frame, so the bot did not play it.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "not run"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "game",
+          "fix": "Make the game draw a frame without any input other than a start button; check the failed request and console lines, then run opengame check.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "No frame was drawn within 30000 ms.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "failed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "game",
+          "fix": "Fix the boot first; the viewports are photographed after it.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game drew no frame, so no viewport was photographed.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "not run"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "fault": "game",
+          "fix": "Fix the boot first; runtime output is judged after it.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game drew no frame, so no runtime output was judged.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "after-fix"
+        },
+        "state": "not run"
+      }
+    },
+    "provider-down-early": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The agent playtest returned no scorecard, so no model has rated the game.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game answered input.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "blocking": true,
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "First frame drawn at 900 ms.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "errors": [],
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "No runtime errors were captured.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "pageCrashes": 0,
+          "retry": "never",
+          "uncaughtErrorCount": 0
+        },
+        "state": "passed"
+      }
+    },
+    "unbooted": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "Nothing to change in the game yet; a person looks at the bot playtest first.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The bot could not load the game on the last attempt, so no model was paid to play it.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "booted": false,
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "If the game can fail to start on a second load, check what it waits for at startup; otherwise nothing to change.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game drew a frame in the GPU check, then drew none when the bot loaded it again.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "blocking": true,
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "First frame drawn at 900 ms.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "errors": [],
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "No runtime errors were captured.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "pageCrashes": 0,
+          "retry": "never",
+          "uncaughtErrorCount": 0
+        },
+        "state": "passed"
+      }
+    },
+    "unmeasured": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The bot did not get to play the game, so no model was paid to play it.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The GPU run could not measure the boot, so the bot did not play it.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The GPU run returned no boot row.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The GPU run could not measure the boot, so no viewport was photographed.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The GPU run returned no network row.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "heuristic",
+          "controllerSource": "isolated-browser-v1",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The GPU run could not measure the boot, so no runtime output was judged.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      }
+    },
+    "unscored": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The agent playtest returned no scorecard, so no model has rated the game.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game answered input.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "blocking": true,
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "First frame drawn at 900 ms.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "errors": [],
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "No runtime errors were captured.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "pageCrashes": 0,
+          "retry": "never",
+          "uncaughtErrorCount": 0
+        },
+        "state": "passed"
+      }
+    },
+    "unscored-early": {
+      "agent-playtest": {
+        "evidence": {
+          "certainty": "heuristic",
+          "fault": "unknown",
+          "fix": "A person checks this at review.",
+          "forAPerson": true,
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The agent playtest returned no scorecard, so no model has rated the game.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "inconclusive"
+      },
+      "bot-playtest": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "The game answered input.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-boot": {
+        "evidence": {
+          "blocking": true,
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "First frame drawn at 900 ms.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-desktop": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-network": {
+        "evidence": {
+          "certainty": "certain",
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "fixture",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "retry": "never"
+        },
+        "state": "passed"
+      },
+      "gpu-runtime": {
+        "evidence": {
+          "certainty": "certain",
+          "controllerSource": "isolated-browser-v1",
+          "errors": [],
+          "fault": "unknown",
+          "fix": "Nothing to fix.",
+          "guestGenerationId": "11111111-1111-4111-8111-111111111111",
+          "observed": "No runtime errors were captured.",
+          "observedCloud": "CLOUD_PROVIDER_AWS",
+          "observedRegion": "us-east",
+          "pageCrashes": 0,
+          "retry": "never",
+          "uncaughtErrorCount": 0
+        },
+        "state": "passed"
+      }
+    }
+  }
+}

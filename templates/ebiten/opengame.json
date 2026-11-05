@@ -1,0 +1,13 @@
+{
+  "title": "Ebiten target",
+  "description": "A small browser target game built from source. Select the moving square and collect points.",
+  "genre": "puzzle-casual",
+  "controls": [
+    "keyboard",
+    "mouse"
+  ],
+  "build": {
+    "command": "npm run build",
+    "output": "dist"
+  }
+}

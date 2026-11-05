@@ -1,0 +1,37 @@
+{
+  "public": [
+    "threejs",
+    "unity",
+    "godot",
+    "kaigen",
+    "webassembly",
+    "javascript"
+  ],
+  "emscripten": [
+    "emscripten",
+    "c",
+    "cpp",
+    "raylib"
+  ],
+  "webassembly": [
+    "rust",
+    "bevy",
+    "zig",
+    "go",
+    "ebiten"
+  ],
+  "javascript": [
+    "phaser",
+    "pixijs",
+    "babylonjs",
+    "playcanvas",
+    "excalibur",
+    "kaplay",
+    "melonjs",
+    "littlejs",
+    "react",
+    "typescript",
+    "luau",
+    "canvas"
+  ]
+}

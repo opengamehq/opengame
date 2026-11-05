@@ -1,0 +1,14 @@
+{
+  "name": "opengame-renpy",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "opengame.py",
+    "opengame.rpy",
+    "lifecycle.js",
+    "opengame.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "target": "RenPy web with the emscripten Python module"
+}

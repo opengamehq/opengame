@@ -1,0 +1,23 @@
+{
+  "title": "Target practice",
+  "description": "Find and press the target to score points, then record your total on the game leaderboard.",
+  "genre": "puzzle-casual",
+  "controls": [
+    "keyboard",
+    "mouse"
+  ],
+  "build": {
+    "command": "npm run build",
+    "output": "dist"
+  },
+  "leaderboards": [
+    {
+      "key": "points",
+      "order": "desc",
+      "label": "Points",
+      "min": 0,
+      "max": 100000
+    }
+  ],
+  "sdk": "^0.1"
+}

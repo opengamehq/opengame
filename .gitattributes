@@ -1,0 +1,3 @@
+# Pinned licence texts are checked by SHA-256 byte for byte (scripts/build-engine-runtimes.mjs),
+# so no checkout may rewrite their line endings; one of them is CRLF upstream.
+scripts/engine-runtimes/licences/** -text

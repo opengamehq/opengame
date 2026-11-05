@@ -1,0 +1,12 @@
+{
+  "title": "Pico8 target",
+  "description": "A small browser target game built from source. Select the moving square and collect points.",
+  "genre": "puzzle-casual",
+  "controls": [
+    "keyboard",
+    "mouse"
+  ],
+  "build": {
+    "output": "dist"
+  }
+}

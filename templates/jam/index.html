@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jam Starter</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="hud" aria-live="polite"><span id="time">0.0 s</span><button id="pause" type="button">Pause</button></div>
+    <section class="screen" id="title">
+      <h1>Jam Starter</h1>
+      <p>Move with WASD or the arrow keys. Dodge the blocks.</p>
+      <button type="button" data-action="play">Play</button>
+    </section>
+    <section class="screen" id="paused" hidden>
+      <h2>Paused</h2>
+      <button type="button" data-action="resume">Resume</button>
+      <button type="button" data-action="quit">Quit to title</button>
+    </section>
+    <section class="screen" id="results" hidden>
+      <h2 id="result-line"></h2>
+      <ol id="board" aria-label="Best runs"></ol>
+      <button type="button" data-action="play">Play again</button>
+    </section>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

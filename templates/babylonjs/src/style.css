@@ -1,0 +1,6 @@
+html, body { margin: 0; min-height: 100%; background: #17191c; color: #f5f5f3; font: 16px system-ui, sans-serif; }
+canvas { display: block; max-width: 100%; }
+#game { width: 100vw; height: calc(100vh - 100px); overflow: hidden; }
+header { height: 100px; box-sizing: border-box; padding: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+button { font: inherit; color: inherit; background: #30343a; border: 1px solid #777; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }

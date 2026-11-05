@@ -1,0 +1,23 @@
+/** Types for limits-values.mjs, which the web, studio island and CLI tests import. */
+export declare const SOURCE: string;
+export declare const OUTPUT: string;
+export declare const TILE: number;
+export declare const SPAN: number;
+export declare const CLEAN_RUN: RegExp;
+export declare const PRERENDERED: RegExp;
+export declare function withoutNotes<T>(value: T): T;
+export declare function render(limits: unknown): string;
+export declare function limitsNotes(limits?: unknown): [path: string, note: string][];
+export declare function notesIn(text: string, notes?: [path: string, note: string][]): string[];
+export declare function scan(paths: string[], shipped?: RegExp): { file: string; notes: string[] }[] & { read: number };
+export declare const BROWSER_PATHS: string;
+export declare const BROWSER_OUTPUT: string;
+export declare function projectLimits<T = Record<string, unknown>>(values: unknown, paths: string[], source?: string): T;
+export declare function browserPaths(file?: string): string[];
+export declare function renderBrowser(limits: unknown, paths?: string[]): string;
+export declare const WHOLE_LIMITS: string[];
+export declare const refuseWholeLimitsEsbuild: { name: string; setup(build: unknown): void };
+export declare const refuseWholeLimitsVite: { name: string; enforce: "pre"; load(this: { error(message: string): never }, id: string): null };
+export declare function excludedLimitKeys(limits?: unknown, paths?: string[]): Map<string, string>;
+export declare function excludedLimitPairs(limits?: unknown, paths?: string[]): Map<string, { forms: string[]; path: string }[]>;
+export declare function scanLimits(paths: string[], shipped?: RegExp, names?: Map<string, string>, pairs?: Map<string, { forms: string[]; path: string }[]>): { file: string; limits: string[] }[] & { names: number; pairs: number };

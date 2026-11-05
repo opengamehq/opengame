@@ -1,0 +1,580 @@
+{
+  "other": "other",
+  "games": [
+    {
+      "slug": "super-mario-64",
+      "name": "Super Mario 64",
+      "aliases": [
+        "mario 64",
+        "sm64"
+      ],
+      "tags": [
+        "super mario 64",
+        "mario 64",
+        "sm64",
+        "mario",
+        "nintendo 64",
+        "n64"
+      ]
+    },
+    {
+      "slug": "ocarina-of-time",
+      "name": "The Legend of Zelda: Ocarina of Time",
+      "aliases": [
+        "ocarina of time",
+        "oot",
+        "zelda ocarina of time"
+      ],
+      "tags": [
+        "ocarina of time",
+        "oot",
+        "zelda",
+        "legend of zelda",
+        "nintendo 64",
+        "n64"
+      ]
+    },
+    {
+      "slug": "majoras-mask",
+      "name": "The Legend of Zelda: Majora's Mask",
+      "aliases": [
+        "majora's mask",
+        "majoras mask",
+        "zelda majora's mask"
+      ],
+      "tags": [
+        "majora's mask",
+        "majoras mask",
+        "mm",
+        "zelda",
+        "legend of zelda",
+        "nintendo 64",
+        "n64"
+      ]
+    },
+    {
+      "slug": "mario-kart-64",
+      "name": "Mario Kart 64",
+      "aliases": [
+        "mk64"
+      ],
+      "tags": [
+        "mario kart 64",
+        "mk64",
+        "mario kart",
+        "mario",
+        "nintendo 64",
+        "n64"
+      ]
+    },
+    {
+      "slug": "goldeneye-007",
+      "name": "GoldenEye 007",
+      "aliases": [
+        "goldeneye",
+        "goldeneye 64"
+      ],
+      "tags": [
+        "goldeneye 007",
+        "goldeneye",
+        "007",
+        "james bond",
+        "nintendo 64",
+        "n64"
+      ]
+    },
+    {
+      "slug": "perfect-dark",
+      "name": "Perfect Dark",
+      "aliases": [],
+      "tags": [
+        "perfect dark",
+        "pd",
+        "nintendo 64",
+        "n64"
+      ]
+    },
+    {
+      "slug": "banjo-kazooie",
+      "name": "Banjo-Kazooie",
+      "aliases": [],
+      "tags": [
+        "banjo-kazooie",
+        "banjo kazooie",
+        "banjo",
+        "nintendo 64",
+        "n64"
+      ]
+    },
+    {
+      "slug": "star-fox-64",
+      "name": "Star Fox 64",
+      "aliases": [
+        "starfox 64",
+        "sf64"
+      ],
+      "tags": [
+        "star fox 64",
+        "starfox 64",
+        "sf64",
+        "star fox",
+        "nintendo 64",
+        "n64"
+      ]
+    },
+    {
+      "slug": "paper-mario",
+      "name": "Paper Mario",
+      "aliases": [
+        "paper mario 64"
+      ],
+      "tags": [
+        "paper mario",
+        "mario",
+        "nintendo 64",
+        "n64"
+      ]
+    },
+    {
+      "slug": "super-mario-bros",
+      "name": "Super Mario Bros.",
+      "aliases": [
+        "smb1"
+      ],
+      "tags": [
+        "super mario bros",
+        "smb",
+        "mario",
+        "nes"
+      ]
+    },
+    {
+      "slug": "super-mario-world",
+      "name": "Super Mario World",
+      "aliases": [
+        "smw"
+      ],
+      "tags": [
+        "super mario world",
+        "smw",
+        "mario",
+        "snes"
+      ]
+    },
+    {
+      "slug": "a-link-to-the-past",
+      "name": "The Legend of Zelda: A Link to the Past",
+      "aliases": [
+        "a link to the past",
+        "alttp",
+        "zelda a link to the past"
+      ],
+      "tags": [
+        "a link to the past",
+        "alttp",
+        "zelda",
+        "legend of zelda",
+        "snes"
+      ]
+    },
+    {
+      "slug": "super-metroid",
+      "name": "Super Metroid",
+      "aliases": [],
+      "tags": [
+        "super metroid",
+        "metroid",
+        "snes"
+      ]
+    },
+    {
+      "slug": "pokemon-red-and-blue",
+      "name": "Pokémon Red and Blue",
+      "aliases": [
+        "pokemon red",
+        "pokemon blue",
+        "pokemon red and blue"
+      ],
+      "tags": [
+        "pokemon red",
+        "pokemon blue",
+        "pokémon",
+        "pokemon",
+        "game boy"
+      ]
+    },
+    {
+      "slug": "pokemon-emerald",
+      "name": "Pokémon Emerald",
+      "aliases": [],
+      "tags": [
+        "pokemon emerald",
+        "pokémon",
+        "pokemon",
+        "game boy advance",
+        "gba"
+      ]
+    },
+    {
+      "slug": "super-smash-bros-melee",
+      "name": "Super Smash Bros. Melee",
+      "aliases": [
+        "smash bros melee",
+        "smash melee",
+        "ssbm"
+      ],
+      "tags": [
+        "super smash bros melee",
+        "melee",
+        "smash",
+        "ssbm",
+        "gamecube"
+      ]
+    },
+    {
+      "slug": "sonic-the-hedgehog",
+      "name": "Sonic the Hedgehog",
+      "aliases": [
+        "sonic 1"
+      ],
+      "tags": [
+        "sonic the hedgehog",
+        "sonic",
+        "sega",
+        "mega drive",
+        "genesis"
+      ]
+    },
+    {
+      "slug": "sonic-the-hedgehog-2",
+      "name": "Sonic the Hedgehog 2",
+      "aliases": [
+        "sonic 2"
+      ],
+      "tags": [
+        "sonic the hedgehog 2",
+        "sonic 2",
+        "sonic",
+        "sega",
+        "mega drive",
+        "genesis"
+      ]
+    },
+    {
+      "slug": "crash-bandicoot",
+      "name": "Crash Bandicoot",
+      "aliases": [],
+      "tags": [
+        "crash bandicoot",
+        "crash",
+        "playstation",
+        "ps1"
+      ]
+    },
+    {
+      "slug": "spyro-the-dragon",
+      "name": "Spyro the Dragon",
+      "aliases": [],
+      "tags": [
+        "spyro the dragon",
+        "spyro",
+        "playstation",
+        "ps1"
+      ]
+    },
+    {
+      "slug": "tony-hawks-pro-skater-2",
+      "name": "Tony Hawk's Pro Skater 2",
+      "aliases": [
+        "tony hawks pro skater 2",
+        "tony hawk's pro skater 2",
+        "thps2"
+      ],
+      "tags": [
+        "tony hawk's pro skater 2",
+        "thps2",
+        "tony hawk",
+        "playstation",
+        "ps1"
+      ]
+    },
+    {
+      "slug": "symphony-of-the-night",
+      "name": "Castlevania: Symphony of the Night",
+      "aliases": [
+        "symphony of the night",
+        "sotn"
+      ],
+      "tags": [
+        "symphony of the night",
+        "sotn",
+        "castlevania",
+        "playstation",
+        "ps1"
+      ]
+    },
+    {
+      "slug": "wolfenstein-3d",
+      "name": "Wolfenstein 3D",
+      "aliases": [
+        "wolf3d"
+      ],
+      "tags": [
+        "wolfenstein 3d",
+        "wolf3d",
+        "wolfenstein",
+        "id software",
+        "dos"
+      ]
+    },
+    {
+      "slug": "doom",
+      "name": "Doom",
+      "aliases": [
+        "doom 1993"
+      ],
+      "tags": [
+        "doom",
+        "doom 1993",
+        "id software",
+        "dos"
+      ]
+    },
+    {
+      "slug": "doom-ii",
+      "name": "Doom II",
+      "aliases": [
+        "doom 2"
+      ],
+      "tags": [
+        "doom ii",
+        "doom 2",
+        "doom",
+        "id software",
+        "dos"
+      ]
+    },
+    {
+      "slug": "quake",
+      "name": "Quake",
+      "aliases": [
+        "quake 1"
+      ],
+      "tags": [
+        "quake",
+        "quake 1",
+        "id software"
+      ]
+    },
+    {
+      "slug": "quake-iii-arena",
+      "name": "Quake III Arena",
+      "aliases": [
+        "quake 3",
+        "quake iii",
+        "quake 3 arena",
+        "q3a"
+      ],
+      "tags": [
+        "quake iii arena",
+        "quake 3",
+        "q3a",
+        "quake",
+        "id software"
+      ]
+    },
+    {
+      "slug": "duke-nukem-3d",
+      "name": "Duke Nukem 3D",
+      "aliases": [
+        "duke3d"
+      ],
+      "tags": [
+        "duke nukem 3d",
+        "duke3d",
+        "duke nukem",
+        "dos"
+      ]
+    },
+    {
+      "slug": "half-life",
+      "name": "Half-Life",
+      "aliases": [
+        "half life",
+        "hl1"
+      ],
+      "tags": [
+        "half-life",
+        "half life",
+        "hl1",
+        "valve"
+      ]
+    },
+    {
+      "slug": "half-life-2",
+      "name": "Half-Life 2",
+      "aliases": [
+        "half life 2",
+        "hl2"
+      ],
+      "tags": [
+        "half-life 2",
+        "half life 2",
+        "hl2",
+        "valve"
+      ]
+    },
+    {
+      "slug": "portal",
+      "name": "Portal",
+      "aliases": [],
+      "tags": [
+        "portal",
+        "valve"
+      ]
+    },
+    {
+      "slug": "counter-strike",
+      "name": "Counter-Strike",
+      "aliases": [
+        "counter strike",
+        "counter-strike 1.6",
+        "cs 1.6"
+      ],
+      "tags": [
+        "counter-strike",
+        "counter strike",
+        "cs",
+        "valve"
+      ]
+    },
+    {
+      "slug": "grand-theft-auto-iii",
+      "name": "Grand Theft Auto III",
+      "aliases": [
+        "gta iii",
+        "gta 3"
+      ],
+      "tags": [
+        "grand theft auto iii",
+        "gta iii",
+        "gta 3",
+        "gta",
+        "rockstar"
+      ]
+    },
+    {
+      "slug": "gta-vice-city",
+      "name": "Grand Theft Auto: Vice City",
+      "aliases": [
+        "gta vice city",
+        "vice city",
+        "gta vc"
+      ],
+      "tags": [
+        "grand theft auto vice city",
+        "vice city",
+        "gta vc",
+        "gta",
+        "rockstar"
+      ]
+    },
+    {
+      "slug": "gta-san-andreas",
+      "name": "Grand Theft Auto: San Andreas",
+      "aliases": [
+        "gta san andreas",
+        "san andreas",
+        "gta sa"
+      ],
+      "tags": [
+        "grand theft auto san andreas",
+        "san andreas",
+        "gta sa",
+        "gta",
+        "rockstar"
+      ]
+    },
+    {
+      "slug": "starcraft",
+      "name": "StarCraft",
+      "aliases": [],
+      "tags": [
+        "starcraft",
+        "sc1",
+        "blizzard"
+      ]
+    },
+    {
+      "slug": "warcraft-iii",
+      "name": "Warcraft III",
+      "aliases": [
+        "warcraft 3",
+        "wc3"
+      ],
+      "tags": [
+        "warcraft iii",
+        "warcraft 3",
+        "wc3",
+        "warcraft",
+        "blizzard"
+      ]
+    },
+    {
+      "slug": "minecraft",
+      "name": "Minecraft",
+      "aliases": [],
+      "tags": [
+        "minecraft",
+        "mc",
+        "mojang"
+      ]
+    },
+    {
+      "slug": "terraria",
+      "name": "Terraria",
+      "aliases": [],
+      "tags": [
+        "terraria"
+      ]
+    },
+    {
+      "slug": "stardew-valley",
+      "name": "Stardew Valley",
+      "aliases": [],
+      "tags": [
+        "stardew valley",
+        "stardew"
+      ]
+    },
+    {
+      "slug": "celeste",
+      "name": "Celeste",
+      "aliases": [],
+      "tags": [
+        "celeste"
+      ]
+    },
+    {
+      "slug": "tetris",
+      "name": "Tetris",
+      "aliases": [],
+      "tags": [
+        "tetris"
+      ]
+    },
+    {
+      "slug": "pac-man",
+      "name": "Pac-Man",
+      "aliases": [
+        "pacman"
+      ],
+      "tags": [
+        "pac-man",
+        "pacman",
+        "namco",
+        "arcade"
+      ]
+    }
+  ]
+}

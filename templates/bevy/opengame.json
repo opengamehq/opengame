@@ -1,0 +1,12 @@
+{
+  "title": "Bevy target",
+  "description": "Your own Bevy game, exported for the web. Replace this with what the game is and how it plays.",
+  "genre": "puzzle-casual",
+  "controls": [
+    "keyboard",
+    "mouse"
+  ],
+  "build": {
+    "output": "dist"
+  }
+}

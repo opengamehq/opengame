@@ -1,0 +1,5 @@
+node_modules/
+.build/
+dist/
+opengame-sdk/bin/
+opengame-sdk/obj/

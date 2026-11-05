@@ -1,0 +1,8 @@
+{
+  "artifact": "opengame-5e12458bd.js",
+  "sha256": "790660975f64af56116b458fd3ae4958271ee42e569bda0c2974f93d93dfc00b",
+  "bytes": 32692,
+  "checkoutHead": "5e12458bdf6917540edf499abba06c541fd0079f",
+  "packageVersion": "0.1.0",
+  "provenance": "Copied byte-for-byte from the pre-existing dist file in the SDK release checkout. Not rebuilt or synthesized in this task. Checkout identity does not prove which source tree produced an untracked dist artifact or that these bytes were published."
+}

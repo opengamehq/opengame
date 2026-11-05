@@ -1,0 +1,11 @@
+html, body { margin: 0; height: 100%; background: #0a0a0b; color: #f7f7f8; font: 500 15px/1.4 system-ui, sans-serif; overflow: hidden; }
+canvas { display: block; width: 100vw; height: 100vh; }
+#hud { position: fixed; top: 16px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: center; font-variant-numeric: tabular-nums; }
+.screen { position: fixed; inset: 0; display: grid; place-content: center; gap: 12px; text-align: center; background: rgba(10, 10, 11, .78); }
+.screen[hidden] { display: none; }
+h1 { margin: 0; font-size: 44px; letter-spacing: -0.045em; }
+h2 { margin: 0; font-size: 28px; letter-spacing: -0.035em; }
+button { justify-self: center; padding: 10px 24px; border: 0; border-radius: 999px; background: #f7f7f5; color: #0a0a0a; font: inherit; font-weight: 600; cursor: pointer; }
+#hud button { padding: 6px 14px; background: #27272b; color: #f7f7f8; }
+#board { margin: 0 auto; padding: 0; list-style: none; min-width: 240px; font-variant-numeric: tabular-nums; color: #92929a; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

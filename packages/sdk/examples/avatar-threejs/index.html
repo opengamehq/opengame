@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An OG in Three.js</title>
+<style>
+  /* OpenGame's dark page: --bg, --surface, --tx and --mu from its design tokens. */
+  :root { color-scheme: dark; font: 500 15px/1.4 Geist, system-ui, sans-serif; }
+  body { margin: 0; background: #0A0A0B; color: #F7F7F8; display: grid; place-items: center; min-height: 100vh; }
+  main { display: grid; gap: 12px; justify-items: center; padding: 16px; box-sizing: border-box; width: 100%; max-width: 680px; }
+  .stage { display: flex; gap: 16px; align-items: end; flex-wrap: wrap; justify-content: center; max-width: 100%; }
+  canvas { border-radius: 16px; background: #151517; max-width: 100%; height: auto; }
+  figure { margin: 0; display: grid; gap: 6px; justify-items: center; }
+  figure[hidden] { display: none; }
+  figcaption, output { color: #92929A; }
+  output { max-width: 100%; overflow-wrap: anywhere; text-align: center; }
+  img { width: 128px; height: 128px; image-rendering: pixelated; }
+</style>
+<!-- Three.js from a CDN, and the SDK's avatar entry from this package. With a bundler,
+     install three and @opengamehq/sdk and delete the import map. -->
+<script type="importmap">
+  { "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+    "@opengamehq/sdk/avatar": "../../dist/avatar.js"
+  } }
+</script>
+<main>
+  <div class="stage">
+    <canvas id="stage" width="480" height="560" aria-label="The OG, drawn in Three.js"></canvas>
+    <figure id="portrait-figure" hidden>
+      <img id="portrait" alt="The same OG's portrait, drawn by OpenGame">
+      <figcaption>Portrait from OpenGame</figcaption>
+    </figure>
+  </div>
+  <output id="status" aria-live="polite">Loading</output>
+</main>
+<script type="module" src="./main.js"></script>
+</html>

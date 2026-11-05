@@ -1,0 +1,10 @@
+html, body { margin: 0; min-height: 100%; background: #17191c; color: #f5f5f3; font: 16px system-ui, sans-serif; }
+/* No max-width on the canvas. melonJS's auto scale reads it with parseInt, so 100% became a
+   100px ceiling and the game drew at 100x69. The engine fits the canvas to #game itself. */
+canvas { display: block; }
+/* Flex centres the canvas in the box. melonJS keeps the aspect ratio, so the fitted canvas
+   is narrower or shorter than #game, and without this it sat in the top-left corner. */
+#game { width: 100vw; height: calc(100vh - 100px); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+header { height: 100px; box-sizing: border-box; padding: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+button { font: inherit; color: inherit; background: #30343a; border: 1px solid #777; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }

@@ -1,0 +1,77 @@
+{
+  "tags": "<script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script>",
+  "documents": [
+    {
+      "name": "doctype first",
+      "path": "index.html",
+      "input": "<!doctype html><html><head><script src=\"game.js\"></script></head><body></body></html>",
+      "output": "<!doctype html><script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script><html><head><script src=\"game.js\"></script></head><body></body></html>"
+    },
+    {
+      "name": "no doctype puts the tags before everything",
+      "path": "levels/intro.htm",
+      "input": "<head><script src=\"../game.js\"></script></head><body>Intro</body>",
+      "output": "<script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script><head><script src=\"../game.js\"></script></head><body>Intro</body>"
+    },
+    {
+      "name": "an existing SDK tag is kept, late or not",
+      "path": "credits.html",
+      "input": "<!DOCTYPE html>\n<html><head><script async src=\"/_og/sdk.js\"></script><script src=\"game.js\"></script></head></html>",
+      "output": "<!DOCTYPE html><script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script>\n<html><head><script async src=\"/_og/sdk.js\"></script><script src=\"game.js\"></script></head></html>"
+    },
+    {
+      "name": "uppercase HEAD, a leading comment, a byte order mark and a public identifier",
+      "path": "legacy/Page.HTML",
+      "input": "\ufeff<!-- exported by a tool -->\n<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">\n<HTML><HEAD><TITLE>Old</TITLE></HEAD></HTML>",
+      "output": "<!-- exported by a tool -->\n<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\"><script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script>\n<HTML><HEAD><TITLE>Old</TITLE></HEAD></HTML>"
+    },
+    {
+      "name": "a quoted greater-than inside the doctype",
+      "path": "quoted.html",
+      "input": "<!doctype html \"a>b\"><p>Quoted</p>",
+      "output": "<!doctype html \"a>b\"><script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script><p>Quoted</p>"
+    },
+    {
+      "name": "an unclosed comment leaves no doctype to find",
+      "path": "unclosed.html",
+      "input": "<!-- never closed <!doctype html><p>Open</p>",
+      "output": "<script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script><!-- never closed <!doctype html><p>Open</p>"
+    },
+    {
+      "name": "text before the doctype",
+      "path": "text-first.html",
+      "input": "hello<!doctype html><p>Late</p>",
+      "output": "<script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script>hello<!doctype html><p>Late</p>"
+    },
+    {
+      "name": "an unterminated doctype",
+      "path": "unterminated.html",
+      "input": "<!doctype html \"never closed><p>x</p>",
+      "output": "<script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script><!doctype html \"never closed><p>x</p>"
+    },
+    {
+      "name": "html5 is not the html doctype",
+      "path": "html5.html",
+      "input": "<!doctype html5><p>x</p>",
+      "output": "<script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script><!doctype html5><p>x</p>"
+    },
+    {
+      "name": "whitespace and two comments before the doctype",
+      "path": "comments.html",
+      "input": " \n\t<!-- one --><!-- two -->\r\n<!DocType   html><title>x</title>",
+      "output": " \n\t<!-- one --><!-- two -->\r\n<!DocType   html><script src=\"/_og/host.js\" data-og-audio=\"fixture-host\"></script><script src=\"/_og/sdk.js\"></script><title>x</title>"
+    },
+    {
+      "name": "a script is not a document",
+      "path": "game.js",
+      "input": "document.write('<!doctype html>');",
+      "output": "document.write('<!doctype html>');"
+    },
+    {
+      "name": "a text file named after HTML is not a document",
+      "path": "notes.html.txt",
+      "input": "<!doctype html><p>notes</p>",
+      "output": "<!doctype html><p>notes</p>"
+    }
+  ]
+}

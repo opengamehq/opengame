@@ -1,0 +1,1573 @@
+{
+  "bundle": {
+    "archiveBytesMax": 1073741824,
+    "uncompressedBytesMax": 1610612736,
+    "fileBytesMax": 268435456,
+    "fileCountMax": 10000,
+    "compressionRatioMax": 200,
+    "entryPoint": "index.html",
+    "pathBytesMax": 768
+  },
+  "catalogue": {
+    "searchTagsMax": 12,
+    "searchTagCharsMax": 60
+  },
+  "viewports": [
+    {
+      "label": "1080p",
+      "width": 1920,
+      "height": 1080,
+      "primary": true
+    },
+    {
+      "label": "laptop",
+      "width": 1366,
+      "height": 768
+    },
+    {
+      "label": "qhd",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "label": "ultrawide",
+      "width": 3440,
+      "height": 1440
+    },
+    {
+      "label": "small",
+      "width": 1024,
+      "height": 640
+    }
+  ],
+  "checks": [
+    {
+      "key": "malware",
+      "kind": "auto",
+      "blocking": true,
+      "label": "Malware scan",
+      "hint": "ClamAV over the archive"
+    },
+    {
+      "key": "archive",
+      "kind": "auto",
+      "blocking": true,
+      "label": "Archive is safe to open",
+      "hint": "Quotas, traversal, symlinks, ratio"
+    },
+    {
+      "key": "entry",
+      "kind": "auto",
+      "blocking": true,
+      "label": "index.html at root",
+      "hint": "After root-directory normalisation"
+    },
+    {
+      "key": "boot",
+      "kind": "auto",
+      "blocking": true,
+      "label": "Boots and renders",
+      "hint": "A frame within 30s"
+    },
+    {
+      "key": "net",
+      "kind": "auto",
+      "blocking": true,
+      "label": "No disallowed origins",
+      "hint": "Blocked services and CSP refusals during the run"
+    },
+    {
+      "key": "size",
+      "kind": "auto",
+      "blocking": false,
+      "label": "Initial download",
+      "hint": "Bytes before first playable frame"
+    },
+    {
+      "key": "tti",
+      "kind": "auto",
+      "blocking": false,
+      "label": "Time to playable",
+      "hint": "og:ready, or frame-stability heuristic"
+    },
+    {
+      "key": "mem",
+      "kind": "auto",
+      "blocking": false,
+      "label": "Peak memory",
+      "hint": "Over a three minute run"
+    },
+    {
+      "key": "fps",
+      "kind": "auto",
+      "blocking": false,
+      "label": "Frame rate",
+      "hint": "Median at 1080p on a known GPU"
+    },
+    {
+      "key": "desktop",
+      "kind": "auto",
+      "blocking": false,
+      "label": "Works at every size",
+      "hint": "Five viewports, responds to resize"
+    },
+    {
+      "key": "content",
+      "kind": "manual",
+      "blocking": true,
+      "label": "Content and conduct",
+      "hint": "Scanned and playtested automatically"
+    },
+    {
+      "key": "engine",
+      "kind": "manual",
+      "blocking": true,
+      "label": "Declared engine",
+      "hint": "Matches what the bundle actually loads"
+    },
+    {
+      "key": "ip",
+      "kind": "manual",
+      "blocking": true,
+      "label": "Originality and IP",
+      "hint": "Declared by the creator, and removed on a valid DMCA notice"
+    },
+    {
+      "key": "fresh",
+      "kind": "manual",
+      "blocking": true,
+      "label": "Built after kickoff",
+      "hint": "Attested by the creator"
+    }
+  ],
+  "allowedGameOrigins": {
+    "self": true,
+    "api": "https://api.opengame.gg",
+    "rtc": "wss://rtc.opengame.gg",
+    "rtcHttps": "https://rtc.opengame.gg"
+  },
+  "trustedGameAssetOrigins": {
+    "style": [
+      "https://fonts.googleapis.com"
+    ],
+    "font": [
+      "https://fonts.gstatic.com"
+    ]
+  },
+  "gamePolicy": {
+    "categories": {
+      "payments": {
+        "label": "payments",
+        "rule": "Games on OpenGame are free to play. A game may not take money, tips, donations or card details, or send players to a page that does."
+      },
+      "crypto": {
+        "label": "crypto",
+        "rule": "Games on OpenGame may not use crypto wallets, tokens, NFTs or blockchains, and may not mine."
+      },
+      "accounts": {
+        "label": "accounts",
+        "rule": "Players start playing without making an account, signing in, or giving an email address. OpenGame gives every game a player through the SDK, so a game never needs its own sign-in."
+      },
+      "ads": {
+        "label": "ads",
+        "rule": "Games on OpenGame may not show ads. A portal SDK such as Poki's or CrazyGames' serves ads, so remove it."
+      },
+      "tracking": {
+        "label": "tracking",
+        "rule": "Games on OpenGame may not carry ad pixels or session recording. Use the SDK's events for analytics."
+      }
+    },
+    "blockedServices": [
+      {
+        "name": "Stripe",
+        "category": "payments",
+        "hosts": [
+          "stripe.com",
+          "stripe.network"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\bStripe\\(\\s*['\"`]pk_(?:live|test)_",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "PayPal",
+        "category": "payments",
+        "hosts": [
+          "paypal.com",
+          "paypalobjects.com",
+          "paypal.me",
+          "braintreegateway.com",
+          "braintree-api.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\bpaypal\\.Buttons\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "\\bbraintree\\.dropin\\.create\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "Paddle",
+        "category": "payments",
+        "hosts": [
+          "paddle.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\bPaddle\\.Checkout\\.open\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "Lemon Squeezy",
+        "category": "payments",
+        "hosts": [
+          "lemonsqueezy.com"
+        ],
+        "patterns": []
+      },
+      {
+        "name": "Gumroad",
+        "category": "payments",
+        "hosts": [
+          "gumroad.com",
+          "gum.co"
+        ],
+        "patterns": []
+      },
+      {
+        "name": "Square",
+        "category": "payments",
+        "hosts": [
+          "squareup.com",
+          "squarecdn.com"
+        ],
+        "patterns": []
+      },
+      {
+        "name": "Adyen",
+        "category": "payments",
+        "hosts": [
+          "adyen.com",
+          "adyenpayments.com"
+        ],
+        "patterns": []
+      },
+      {
+        "name": "Checkout.com",
+        "category": "payments",
+        "hosts": [
+          "checkout.com"
+        ],
+        "patterns": []
+      },
+      {
+        "name": "Xsolla",
+        "category": "payments",
+        "hosts": [
+          "xsolla.com"
+        ],
+        "patterns": []
+      },
+      {
+        "name": "Google Pay",
+        "category": "payments",
+        "hosts": [
+          "pay.google.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\bgoogle\\.payments\\.api\\.PaymentsClient\\b",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "Apple Pay",
+        "category": "payments",
+        "hosts": [],
+        "patterns": [
+          {
+            "pattern": "\\bnew\\s+ApplePaySession\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "the Payment Request API",
+        "category": "payments",
+        "hosts": [],
+        "patterns": [
+          {
+            "pattern": "\\bnew\\s+PaymentRequest\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "a tip jar",
+        "category": "payments",
+        "hosts": [
+          "ko-fi.com",
+          "buymeacoffee.com",
+          "patreon.com",
+          "venmo.com",
+          "cash.app",
+          "liberapay.com",
+          "streamlabs.com",
+          "streamelements.com",
+          "throne.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "github\\.com/sponsors/",
+            "flags": "i",
+            "severity": "warning"
+          },
+          {
+            "pattern": "opencollective\\.com/[a-z0-9-]+/(?:donate|contribute)",
+            "flags": "i",
+            "severity": "warning"
+          }
+        ]
+      },
+      {
+        "name": "a crypto wallet",
+        "category": "crypto",
+        "hosts": [
+          "walletconnect.com",
+          "walletconnect.org",
+          "reown.com",
+          "web3modal.com",
+          "web3modal.org",
+          "metamask.io",
+          "phantom.app",
+          "phantom.com",
+          "coinbase.com",
+          "thirdweb.com",
+          "rainbowkit.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\bwindow\\.ethereum\\b",
+            "flags": "",
+            "severity": "warning"
+          },
+          {
+            "pattern": "\\beth_requestAccounts\\b",
+            "flags": "",
+            "severity": "warning"
+          },
+          {
+            "pattern": "\\beth_sendTransaction\\b",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "\\beth_sign\\b",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "\\beth_signTypedData(?:_v[134])?\\b",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "\\bwallet_sendCalls\\b",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "\\bpersonal_sign\\b",
+            "flags": "",
+            "severity": "warning"
+          },
+          {
+            "pattern": "\\bwallet_switchEthereumChain\\b",
+            "flags": "",
+            "severity": "warning"
+          },
+          {
+            "pattern": "\\bwindow\\.(?:solana|phantom)\\b",
+            "flags": "",
+            "severity": "warning"
+          }
+        ]
+      },
+      {
+        "name": "a blockchain node",
+        "category": "crypto",
+        "hosts": [
+          "infura.io",
+          "alchemy.com",
+          "alchemyapi.io",
+          "moralis.io",
+          "quiknode.pro",
+          "quicknode.com",
+          "ankr.com",
+          "helius-rpc.com",
+          "solana.com",
+          "polygon-rpc.com",
+          "etherscan.io",
+          "blockcypher.com",
+          "blockchain.info",
+          "binance.com",
+          "binance.org",
+          "opensea.io"
+        ],
+        "patterns": []
+      },
+      {
+        "name": "a service that sells crypto",
+        "category": "crypto",
+        "hosts": [
+          "moonpay.com",
+          "ramp.network",
+          "transak.com"
+        ],
+        "patterns": []
+      },
+      {
+        "name": "a crypto miner",
+        "category": "crypto",
+        "hosts": [
+          "coinhive.com",
+          "coin-hive.com",
+          "crypto-loot.org",
+          "cryptoloot.pro",
+          "coinimp.com",
+          "webminepool.com",
+          "minero.cc",
+          "jsecoin.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\bCoinHive\\.(?:Anonymous|User|Token)\\b",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "\\bstratum\\+(?:tcp|ssl)://",
+            "flags": "i",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "Google sign-in",
+        "category": "accounts",
+        "hosts": [
+          "accounts.google.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\bgoogle\\.accounts\\.(?:id|oauth2)\\.",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "Sign in with Apple",
+        "category": "accounts",
+        "hosts": [
+          "appleid.apple.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\bAppleID\\.auth\\.(?:init|signIn)\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "Facebook login",
+        "category": "accounts",
+        "hosts": [],
+        "patterns": [
+          {
+            "pattern": "\\bFB\\.login\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "facebook\\.com/(?:v[0-9.]+/)?dialog/oauth",
+            "flags": "i",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "an OAuth sign-in",
+        "category": "accounts",
+        "hosts": [],
+        "patterns": [
+          {
+            "pattern": "discord(?:app)?\\.com/(?:api/)?oauth2/authorize",
+            "flags": "i",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "github\\.com/login/oauth/authorize",
+            "flags": "i",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "id\\.twitch\\.tv/oauth2/authorize",
+            "flags": "i",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "steamcommunity\\.com/openid/login",
+            "flags": "i",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "a sign-in service",
+        "category": "accounts",
+        "hosts": [
+          "auth0.com",
+          "clerk.com",
+          "clerk.dev",
+          "clerk.accounts.dev",
+          "stytch.com",
+          "magic.link",
+          "privy.io",
+          "okta.com",
+          "oktacdn.com",
+          "kinde.com",
+          "workos.com",
+          "authkit.app",
+          "frontegg.com",
+          "descope.com",
+          "userfront.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "cognito-idp\\.[a-z0-9-]+\\.amazonaws\\.com",
+            "flags": "i",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "Supabase sign-up",
+        "category": "accounts",
+        "hosts": [],
+        "patterns": [
+          {
+            "pattern": "\\.auth\\.(?:signUp|signInWithPassword|signInWithOtp|signInWithOAuth)\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "Firebase email sign-in",
+        "category": "accounts",
+        "hosts": [],
+        "patterns": [
+          {
+            "pattern": "\\b(?:createUserWithEmailAndPassword|signInWithEmailAndPassword|sendSignInLinkToEmail)\\b",
+            "flags": "",
+            "severity": "warning"
+          }
+        ]
+      },
+      {
+        "name": "PlayFab email sign-in",
+        "category": "accounts",
+        "hosts": [],
+        "patterns": [
+          {
+            "pattern": "\\b(?:RegisterPlayFabUser|LoginWithEmailAddress|AddUsernamePassword)\\b",
+            "flags": "",
+            "severity": "warning"
+          }
+        ]
+      },
+      {
+        "name": "an email sign-up form",
+        "category": "accounts",
+        "hosts": [
+          "list-manage.com",
+          "mailchimp.com",
+          "convertkit.com",
+          "ck.page",
+          "beehiiv.com",
+          "substack.com",
+          "klaviyo.com",
+          "hsforms.com",
+          "hsforms.net",
+          "mailerlite.com",
+          "typeform.com",
+          "jotform.com",
+          "tally.so",
+          "formspree.io",
+          "getform.io",
+          "web3forms.com",
+          "emailjs.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "docs\\.google\\.com/forms/",
+            "flags": "i",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "an ad network",
+        "category": "ads",
+        "hosts": [
+          "googlesyndication.com",
+          "doubleclick.net",
+          "googleadservices.com",
+          "imasdk.googleapis.com",
+          "adinplay.com",
+          "applixir.com",
+          "gamemonetize.com",
+          "gamedistribution.com",
+          "cpmstar.com",
+          "adsterra.com",
+          "propellerads.com",
+          "adnxs.com",
+          "amazon-adsystem.com",
+          "applovin.com",
+          "unityads.unity3d.com",
+          "ironsrc.com",
+          "vungle.com",
+          "chartboost.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\badsbygoogle\\b",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "a game portal SDK",
+        "category": "ads",
+        "hosts": [
+          "poki.com",
+          "poki-gdn.com",
+          "crazygames.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\bPokiSDK\\.(?:init|commercialBreak|rewardedBreak)\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "\\bCrazyGames\\.SDK\\.ad\\.",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "an ad pixel",
+        "category": "tracking",
+        "hosts": [
+          "google-analytics.com",
+          "googletagmanager.com",
+          "connect.facebook.net",
+          "analytics.tiktok.com",
+          "ads-twitter.com",
+          "snap.licdn.com",
+          "bat.bing.com"
+        ],
+        "patterns": [
+          {
+            "pattern": "\\bfbq\\(\\s*['\"]init['\"]",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "\\bgtag\\(\\s*['\"]config['\"]",
+            "flags": "",
+            "severity": "blocker"
+          }
+        ]
+      },
+      {
+        "name": "session recording",
+        "category": "tracking",
+        "hosts": [
+          "hotjar.com",
+          "clarity.ms",
+          "fullstory.com",
+          "mouseflow.com",
+          "smartlook.com",
+          "logrocket.com",
+          "lr-ingest.com",
+          "luckyorange.com"
+        ],
+        "patterns": []
+      }
+    ],
+    "packageCdnHosts": [
+      "esm.sh",
+      "cdn.jsdelivr.net",
+      "unpkg.com",
+      "cdn.skypack.dev",
+      "ga.jspm.io",
+      "jspm.dev",
+      "cdnjs.cloudflare.com",
+      "esm.run"
+    ],
+    "blockedPackages": [
+      {
+        "name": "Stripe",
+        "category": "payments",
+        "severity": "blocker",
+        "packages": [
+          "@stripe/"
+        ]
+      },
+      {
+        "name": "PayPal",
+        "category": "payments",
+        "severity": "blocker",
+        "packages": [
+          "@paypal/",
+          "braintree-web",
+          "braintree-web-drop-in"
+        ]
+      },
+      {
+        "name": "Paddle",
+        "category": "payments",
+        "severity": "blocker",
+        "packages": [
+          "@paddle/"
+        ]
+      },
+      {
+        "name": "a crypto wallet",
+        "category": "crypto",
+        "severity": "blocker",
+        "packages": [
+          "@walletconnect/",
+          "@web3modal/",
+          "@reown/",
+          "@metamask/",
+          "@solana/wallet-adapter-base",
+          "@solana/wallet-adapter-react",
+          "@solana/wallet-adapter-wallets",
+          "@coinbase/wallet-sdk",
+          "@thirdweb-dev/",
+          "@rainbow-me/",
+          "@privy-io/"
+        ]
+      },
+      {
+        "name": "a crypto library",
+        "category": "crypto",
+        "severity": "warning",
+        "packages": [
+          "ethers",
+          "web3",
+          "viem",
+          "wagmi",
+          "@solana/web3.js"
+        ]
+      },
+      {
+        "name": "a sign-in service",
+        "category": "accounts",
+        "severity": "blocker",
+        "packages": [
+          "@clerk/",
+          "@auth0/",
+          "auth0-js",
+          "magic-sdk",
+          "@magic-sdk/",
+          "@stytch/",
+          "@kinde-oss/"
+        ]
+      },
+      {
+        "name": "session recording",
+        "category": "tracking",
+        "severity": "blocker",
+        "packages": [
+          "logrocket",
+          "@fullstory/",
+          "@hotjar/",
+          "@microsoft/clarity"
+        ]
+      }
+    ],
+    "reviewSignals": [
+      {
+        "label": "an email field",
+        "category": "accounts",
+        "pattern": "<input\\b[^<>]{0,512}\\btype\\s*=\\s*['\"]?email\\b",
+        "flags": "i"
+      },
+      {
+        "label": "a password field",
+        "category": "accounts",
+        "pattern": "<input\\b[^<>]{0,512}\\btype\\s*=\\s*['\"]?password\\b",
+        "flags": "i"
+      }
+    ]
+  },
+  "credentialPatterns": {
+    "content": [
+      {
+        "label": "an OpenGame creator token",
+        "pattern": "\\bog[at]_[0-9a-f]{16}_[A-Za-z0-9_-]{43}\\b",
+        "flags": ""
+      },
+      {
+        "label": "an AWS access key id",
+        "pattern": "\\b(?:AKIA|ASIA|AGPA|AIDA|AROA|ANPA|ANVA|APKA)[0-9A-Z]{16}\\b",
+        "flags": ""
+      },
+      {
+        "label": "an AWS secret access key",
+        "pattern": "aws[_-]?secret[_-]?access[_-]?key\\s*[:=]\\s*\\S{20,}",
+        "flags": "i"
+      },
+      {
+        "label": "a GitHub token",
+        "pattern": "\\bgh[pousr]_[A-Za-z0-9]{36,}\\b",
+        "flags": ""
+      },
+      {
+        "label": "a GitHub fine-grained token",
+        "pattern": "\\bgithub_pat_[A-Za-z0-9_]{40,}\\b",
+        "flags": ""
+      },
+      {
+        "label": "an Anthropic API key",
+        "pattern": "\\bsk-ant-[A-Za-z0-9_\\-]{20,}",
+        "flags": ""
+      },
+      {
+        "label": "an OpenAI API key",
+        "pattern": "\\bsk-(?:proj-)?[A-Za-z0-9_\\-]{32,}",
+        "flags": ""
+      },
+      {
+        "label": "a Stripe secret key",
+        "pattern": "\\b[sr]k_(?:live|test)_[A-Za-z0-9]{16,}\\b",
+        "flags": ""
+      },
+      {
+        "label": "a Slack token",
+        "pattern": "\\bxox[abposr]-[A-Za-z0-9\\-]{10,}\\b",
+        "flags": ""
+      },
+      {
+        "label": "a Google API key",
+        "pattern": "\\bAIza[0-9A-Za-z_\\-]{35}\\b",
+        "flags": ""
+      },
+      {
+        "label": "a private key block",
+        "pattern": "-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----(?:[ \\t\\r\\n]|\\\\+(?:[rnt]|u000[aAdD]|x0[aAdD])|<[bB][rR] ?/?>|[\"'`][ \\t\\r\\n]*(?:[+,][ \\t\\r\\n]*)?[\"'`])*[A-Za-z0-9+/]{4}",
+        "flags": "",
+        "parts": {
+          "bannerOpen": "-----BEGIN ",
+          "keyType": "[A-Z0-9 ]",
+          "bannerClose": "PRIVATE KEY-----",
+          "separator": "[ \\t\\r\\n]|\\\\+(?:[rnt]|u000[aAdD]|x0[aAdD])|<[bB][rR] ?/?>|[\"'`][ \\t\\r\\n]*(?:[+,][ \\t\\r\\n]*)?[\"'`]",
+          "body": "[A-Za-z0-9+/]",
+          "bodyMin": 4
+        }
+      },
+      {
+        "label": "a Supabase service-role key name",
+        "pattern": "SUPABASE_SERVICE_ROLE(?:_KEY)?\\s*[:=]",
+        "flags": "i"
+      },
+      {
+        "label": "a Twilio auth token",
+        "pattern": "\\bSK[0-9a-fA-F]{32}\\b",
+        "flags": ""
+      },
+      {
+        "label": "a SendGrid API key",
+        "pattern": "\\bSG\\.[A-Za-z0-9_\\-]{16,}\\.[A-Za-z0-9_\\-]{16,}\\b",
+        "flags": ""
+      }
+    ],
+    "suspicious": [
+      {
+        "label": "a private key header without its key beside it",
+        "pattern": "-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----(?!(?:[ \\t\\r\\n]|\\\\+[rn]|\\x00)*(?:-----END|\\x00|$))",
+        "flags": ""
+      },
+      {
+        "label": "an assignment that looks like a secret",
+        "pattern": "\\b(?:api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key)\\s*[:=]\\s*['\"][^'\"\\s]{16,}['\"]",
+        "flags": "i"
+      }
+    ]
+  },
+  "analytics": {
+    "reports": {
+      "outstandingJobsPerOwnerMax": 20
+    },
+    "batchEventsMax": 50,
+    "flushIntervalMs": 10000,
+    "requestTimeoutMs": 10000,
+    "eventsPerSessionMax": 200,
+    "runtime": {
+      "inputIntervalMs": 1000
+    },
+    "windowSettleHours": 6,
+    "windowsFromDay": "2026-08-01",
+    "windowPeriodsBackMax": 104,
+    "funnelStepsMax": 10,
+    "achievementDefinitionsMax": 100,
+    "achievementIdCharsMax": 48,
+    "achievementTitleCharsMax": 120,
+    "achievementDescriptionCharsMax": 500
+  },
+  "play": {
+    "sessionRefreshTimeoutMs": 10000,
+    "frameEventStringCharsMax": 120,
+    "frameEventDigitRunMin": 9,
+    "frameEventNameMax": 48,
+    "frameEventPropertyKeys": [
+      "level",
+      "mode",
+      "difficulty",
+      "score",
+      "duration_ms",
+      "result",
+      "step",
+      "board",
+      "fps",
+      "heap_mb",
+      "sample_rate"
+    ],
+    "frameEventNumericBounds": {
+      "fps": [
+        0,
+        1000
+      ],
+      "heap_mb": [
+        0,
+        65536
+      ],
+      "sample_rate": [
+        0.000001,
+        1
+      ]
+    },
+    "frameEventBytesMax": 1024
+  },
+  "jam": {
+    "entriesPerCreator": 2
+  },
+  "handle": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$",
+    "minLength": 3,
+    "maxLength": 20
+  },
+  "text": {
+    "copyrightName": {
+      "min": 1,
+      "max": 200
+    },
+    "copyrightOrganisation": {
+      "max": 200
+    },
+    "copyrightNoticePhone": {
+      "max": 40
+    },
+    "copyrightNoticeSignature": {
+      "max": 200
+    },
+    "copyrightUserAgent": {
+      "max": 400
+    },
+    "copyrightUrl": {
+      "min": 1,
+      "max": 2000
+    },
+    "copyrightMaterial": {
+      "min": 1,
+      "max": 2000
+    },
+    "copyrightSenderValue": {
+      "min": 3,
+      "max": 320
+    },
+    "copyrightSenderReason": {
+      "max": 2000
+    },
+    "copyrightNote": {
+      "max": 2000
+    },
+    "copyrightCounterPhone": {
+      "min": 1,
+      "max": 40
+    },
+    "copyrightCounterSignature": {
+      "min": 1,
+      "max": 200
+    },
+    "copyrightExplanation": {
+      "min": 1,
+      "max": 4000
+    },
+    "gameTitle": {
+      "min": 1,
+      "productMin": 3,
+      "max": 40
+    },
+    "gameTagline": {
+      "max": 140
+    },
+    "gameDescription": {
+      "productMin": 40,
+      "max": 500
+    },
+    "gameLanguage": {
+      "min": 2,
+      "max": 35
+    },
+    "gameBasedOn": {
+      "min": 1,
+      "max": 60
+    },
+    "gameModelNote": {
+      "max": 1000
+    },
+    "mediaTitle": {
+      "min": 1,
+      "max": 40
+    },
+    "profileDisplayName": {
+      "min": 1,
+      "max": 32
+    },
+    "profileBio": {
+      "max": 500
+    },
+    "profileSiteUrl": {
+      "max": 200
+    },
+    "profileXHandle": {
+      "max": 30
+    },
+    "estateTheme": {
+      "max": 96
+    },
+    "estateCreature": {
+      "max": 64
+    },
+    "profileGithubHandle": {
+      "max": 40
+    },
+    "profileLocale": {
+      "min": 2,
+      "max": 35
+    },
+    "socialReactionEmoji": {
+      "min": 1,
+      "max": 16
+    },
+    "reviewNote": {
+      "max": 4000
+    },
+    "platformAppeal": {
+      "min": 1,
+      "max": 2000
+    },
+    "reviewComment": {
+      "min": 1,
+      "max": 8000
+    },
+    "flagNote": {
+      "max": 2000
+    },
+    "flagResolution": {
+      "max": 2000
+    },
+    "auditNote": {
+      "max": 4000
+    },
+    "jamTrackEvidence": {
+      "max": 2000
+    },
+    "scorePlayerName": {
+      "min": 1,
+      "max": 32
+    },
+    "reviewMarkWord": {
+      "max": 24
+    },
+    "escalationNote": {
+      "min": 1,
+      "max": 2000
+    },
+    "agentTokenName": {
+      "min": 1,
+      "max": 60
+    },
+    "submissionCheckValue": {
+      "max": 200
+    },
+    "escalationKey": {
+      "min": 1,
+      "max": 120
+    },
+    "certificationUserAgent": {
+      "max": 500
+    },
+    "playerReview": {
+      "min": 1,
+      "max": 2000
+    }
+  },
+  "rtc": {
+    "peersPerLobbyMax": 16
+  },
+  "studio": {
+    "preview": {
+      "screenshot": {
+        "edgePx": 1280,
+        "bytesMax": 400000,
+        "timeoutMs": 4000
+      }
+    },
+    "promptHelp": {
+      "notesCharsMax": 300,
+      "likedMax": 10,
+      "platformAbsorbed": true
+    },
+    "tools": {
+      "image": {
+        "referenceBytesMax": 8388608
+      },
+      "concept": {
+        "referenceImagesMax": 10,
+        "anchorBytesMax": 3801088
+      }
+    }
+  },
+  "platform": {
+    "engineRuntimes": {
+      "runtimes": {
+        "jsdos": {
+          "version": "8.5.3",
+          "package": "js-dos",
+          "sha256": "711f7741486daef927c7f2b6ac6c1037b830dffc75ebf7d7106173f18fbe8756",
+          "integrity": "sha512-1nZxQqW4wlsAKXIrvw9g6kUbSJECkJlAi+VOf/yD7Y1aRkO6TNixFuuD6uePMiEno8NXQJCGVr/QBvrCd9MNZQ==",
+          "license": "GPL-2.0",
+          "licenses": [
+            {
+              "url": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt",
+              "path": "LICENSE-GPL-2.0.txt",
+              "sha256": "edaef632cbb643e4e7a221717a6c441a4c1a7c918e6e4d56debc3d8739b233f6"
+            },
+            {
+              "url": "https://raw.githubusercontent.com/js-dos/emulators/6bbf0925d221a7304ea8e0dda1e89b8dc01569b2/LICENSE",
+              "path": "LICENSE-emulators-GPL-2.0.txt",
+              "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+              "bytes": 18092
+            },
+            {
+              "url": "https://raw.githubusercontent.com/js-dos/dosbox/528578d5a6f76afd4d5ef4e722b5670826f1183a/COPYING",
+              "path": "LICENSE-DOSBox.txt",
+              "sha256": "61e0922747762a12e88a47ab66ef4ed026148361900440086b4863145973a374",
+              "bytes": 17995
+            },
+            {
+              "url": "https://raw.githubusercontent.com/js-dos/dosbox-x/788fde99d3d451eab3621009186e5abe516f2b9c/COPYING",
+              "path": "LICENSE-DOSBox-X.txt",
+              "sha256": "93c59ba0fd92fef7746f0e0809cb49a0c27ab21376da0ac6a583688401afd441",
+              "bytes": 18334
+            },
+            {
+              "url": "https://raw.githubusercontent.com/ptitSeb/gl4es/a744af14d4afbda77bf472bc53f43b9ceba39cc0/LICENSE",
+              "path": "LICENSE-gl4es.txt",
+              "sha256": "69a3049c77abd88658f6ad7cf6a5b6ceb5cf03b80e60f7c4657d90322cfab7bd",
+              "bytes": 1105
+            },
+            {
+              "url": "https://raw.githubusercontent.com/floooh/sokol/fa3d7cbe9ca85b8b87824ac366c724cb0e33a6af/LICENSE",
+              "path": "LICENSE-sokol.txt",
+              "sha256": "72f9367756dba68918b8955092c14503934681862eee33cc16495a02f40025ef",
+              "bytes": 897
+            },
+            {
+              "url": "https://raw.githubusercontent.com/zloirock/core-js/v3.30.0/LICENSE",
+              "path": "LICENSE-core-js.txt",
+              "sha256": "66c014a988c01fdfd53ea344563c0aca795b321c66fe619a0cf40049fe0912de",
+              "bytes": 1064
+            }
+          ]
+        },
+        "ruffle": {
+          "version": "0.7.1",
+          "package": "@ruffle-rs/ruffle",
+          "sha256": "dc9e7407549a91accc41a14932b0b9d9a9d51a3742ce6f020888c8a76682b157",
+          "integrity": "sha512-6ZWxx/cfX3RoNyQ1AVimECSae4gKqMxdPimOD+chiIcOFiJS0ATGKcjkretxNT03lqNUpiSyJjF55AuvvZ+QeA==",
+          "license": "(MIT OR Apache-2.0)",
+          "licenses": [
+            {
+              "source": "package/LICENSE_APACHE",
+              "path": "LICENSE_APACHE.txt",
+              "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+            },
+            {
+              "source": "package/LICENSE_MIT",
+              "path": "LICENSE_MIT.txt",
+              "sha256": "4de9338a7879c68e911742a7d691f0797ff1ef8d8a6fb978b0c711e258fe959c"
+            }
+          ]
+        },
+        "pyodide": {
+          "version": "314.0.7",
+          "package": "pyodide",
+          "sha256": "66b7949e5a0cba2250b586d7e368bf12fb482800748d182c4618254b685ffaa0",
+          "integrity": "sha512-0YvXxEhfEdpLfb/XkM2BFAeMROq0iMUX2bzzH9pOttyMcWkwq+HbE5uyuGD82LN7y2q+SNvi/6V5JEsOlD2R1A==",
+          "license": "MPL-2.0",
+          "licenses": [
+            {
+              "url": "https://raw.githubusercontent.com/pyodide/pyodide/b1e4fcc2488962f6360a97f19b9982d6fdb5d16f/LICENSE",
+              "path": "LICENSE-MPL-2.0.txt",
+              "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+            },
+            {
+              "url": "https://raw.githubusercontent.com/python/cpython/v3.14.2/LICENSE",
+              "path": "LICENSE-CPython-3.14.2.txt",
+              "sha256": "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231",
+              "bytes": 13804
+            },
+            {
+              "url": "https://raw.githubusercontent.com/python/cpython/v3.14.2/Doc/license.rst",
+              "path": "NOTICE-CPython-3.14.2.rst",
+              "sha256": "c695d550b135e53e38807e76496d1db17d22c40e461d1f3f354c86188d3305dd",
+              "bytes": 57595
+            },
+            {
+              "url": "https://raw.githubusercontent.com/pyodide/pyodide/b1e4fcc2488962f6360a97f19b9982d6fdb5d16f/src/js/vendor/stackframe/LICENSE",
+              "path": "LICENSE-stackframe.txt",
+              "sha256": "899da9d991cb211a3642b84e82a9ae0b4b4e44546fd207e34d7d4ec2eb40f420",
+              "bytes": 1080
+            },
+            {
+              "url": "https://raw.githubusercontent.com/emscripten-ports/bzip2/1.0.6/LICENSE",
+              "path": "NOTICE-bzip2-LICENSE.txt",
+              "sha256": "4919cfb14a73cd64fcef67b107613970cf1659a09aa675dba31314f373bc7204",
+              "bytes": 1901
+            },
+            {
+              "url": "https://raw.githubusercontent.com/emscripten-core/emscripten/5.0.3/LICENSE",
+              "path": "NOTICE-emscripten-LICENSE.txt",
+              "sha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86",
+              "bytes": 5093
+            },
+            {
+              "url": "https://raw.githubusercontent.com/pyodide/hiwire/6a1e67280a15d929ebeceee54a6358c9c8d5f697/LICENSE",
+              "path": "NOTICE-hiwire-LICENSE.txt",
+              "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+              "bytes": 16725
+            },
+            {
+              "url": "https://raw.githubusercontent.com/libffi/libffi/f08493d249d2067c8b3207ba46693dd858f95db3/LICENSE",
+              "path": "NOTICE-libffi-LICENSE.txt",
+              "sha256": "2c9c2acb9743e6b007b91350475308aee44691d96aa20eacef8e199988c8c388",
+              "bytes": 1132
+            },
+            {
+              "url": "https://raw.githubusercontent.com/tukaani-project/xz/v5.2.2/COPYING",
+              "path": "NOTICE-xz-COPYING.txt",
+              "sha256": "c4f8e14fafe458d84808a4cd8b69f94673ebe2bf8fc992291629a69ac12218f8",
+              "bytes": 2774
+            },
+            {
+              "url": "https://raw.githubusercontent.com/tukaani-project/xz/v5.2.2/COPYING.LGPLv2.1",
+              "path": "NOTICE-xz-COPYING.LGPLv2.1.txt",
+              "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551",
+              "bytes": 26530
+            },
+            {
+              "url": "https://raw.githubusercontent.com/madler/zlib/v1.3.1/LICENSE",
+              "path": "NOTICE-zlib-LICENSE.txt",
+              "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243",
+              "bytes": 1002
+            },
+            {
+              "url": "https://raw.githubusercontent.com/python/cpython-source-deps/zstd-1.5.7/COPYING",
+              "path": "NOTICE-zstd-COPYING.txt",
+              "sha256": "f9c375a1be4a41f7b70301dd83c91cb89e41567478859b77eef375a52d782505",
+              "bytes": 18091
+            },
+            {
+              "url": "https://raw.githubusercontent.com/python/cpython-source-deps/zstd-1.5.7/LICENSE",
+              "path": "NOTICE-zstd-LICENSE.txt",
+              "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8",
+              "bytes": 1549
+            },
+            {
+              "url": "https://raw.githubusercontent.com/python/cpython/df793163d5821791d4e7caf88885a2c11a107986/Modules/expat/COPYING",
+              "path": "NOTICE-CPython-expat-COPYING.txt",
+              "sha256": "122f2c27000472a201d337b9b31f7eb2b52d091b02857061a8880371612d9534",
+              "bytes": 1144
+            }
+          ]
+        },
+        "wasmoon": {
+          "version": "1.16.0",
+          "package": "wasmoon",
+          "sha256": "7a07cb6d39af10911fabd50740833477b18b47b6f03148f15218edf474c8af56",
+          "integrity": "sha512-FlRLb15WwAOz1A9OQDbf6oOKKSiefi5VK0ZRF2wgH9xk3o5SnU11tNPaOnQuAh1Ucr66cwwvVXaeVRaFdRBt5g==",
+          "license": "MIT",
+          "licenses": [
+            {
+              "source": "package/LICENSE",
+              "path": "LICENSE.txt",
+              "sha256": "9ed9226c0138819a0859cf3c55a3414b4a186a17a4eaf4b5a51ceed7937615ac"
+            }
+          ]
+        },
+        "flutter-canvaskit": {
+          "version": "deb287481e3ce9468f3434937ced4240a70539ca",
+          "sha256": "20800952ee0ab5f854b850ef5023e0fe8c4369c960d4c80df8d856b59f0e992d",
+          "license": "BSD-3-Clause",
+          "licenses": [
+            {
+              "url": "https://raw.githubusercontent.com/flutter/flutter/abaf9c523780a608bd46686fd5e53740a07077f8/LICENSE",
+              "path": "LICENSE-Flutter.txt",
+              "sha256": "a598db94b6290ffbe10b5ecf911057b6a943351c727fdda9e5f2891d68700a20"
+            },
+            {
+              "url": "https://raw.githubusercontent.com/flutter/flutter/deb287481e3ce9468f3434937ced4240a70539ca/engine/src/flutter/sky/packages/sky_engine/LICENSE",
+              "path": "NOTICES-Flutter-engine.txt",
+              "sha256": "3c0040023a5789bf56d6bf41fd44f08b21758523d41f128fb7dd6beb398d1191",
+              "bytes": 1269349
+            },
+            {
+              "url": "https://raw.githubusercontent.com/flutter/flutter/deb287481e3ce9468f3434937ced4240a70539ca/engine/src/flutter/LICENSE",
+              "path": "LICENSE-Flutter-engine.txt",
+              "sha256": "89519eca6f7b9529b35bdddd623a58c3af06a88c458dbd6531ddb4675acf75a9",
+              "bytes": 1519
+            },
+            {
+              "url": "https://skia.googlesource.com/external/github.com/google/brotli/+/350100a5bb9d9671aca85213b2ec7a70a361b0cd/LICENSE?format=TEXT",
+              "path": "notices/brotli/LICENSE",
+              "sha256": "3d180008e36922a4e8daec11c34c7af264fed5962d07924aea928c38e8663c94",
+              "bytes": 1084,
+              "encoding": "base64",
+              "transportSha256": "65095f05bb6abd91355df7ddbf5e773811476fc45635f5707aebe7a207edcb85",
+              "transportBytes": 1448
+            },
+            {
+              "url": "https://flutter.googlesource.com/third_party/freetype2/+/be4bcb57914154fc1b9e2900bf8e4b516057e2b8/LICENSE.TXT?format=TEXT",
+              "path": "notices/freetype/LICENSE.TXT",
+              "sha256": "bd36c8b474855fa294c2ec5c184544478ef3720aad37d65a6296a4f264fd2d3b",
+              "bytes": 2149,
+              "encoding": "base64",
+              "transportSha256": "ee91be56d34d6f10aea199833cbc1fe5f7be2782228f95bd9166ea8bb4f4bc85",
+              "transportBytes": 2868
+            },
+            {
+              "url": "https://flutter.googlesource.com/third_party/freetype2/+/be4bcb57914154fc1b9e2900bf8e4b516057e2b8/docs/FTL.TXT?format=TEXT",
+              "path": "notices/freetype/docs/FTL.TXT",
+              "sha256": "5a5ee54c5001bbad1cdc1a57cc3dd4c42199b2da09d39c7ee41fab002d02967f",
+              "bytes": 6743,
+              "encoding": "base64",
+              "transportSha256": "25583f0ff56971f957fc1db6e0e877c766ced1f29de8285525316599eb8f0866",
+              "transportBytes": 8992
+            },
+            {
+              "url": "https://flutter.googlesource.com/third_party/freetype2/+/be4bcb57914154fc1b9e2900bf8e4b516057e2b8/docs/GPLv2.TXT?format=TEXT",
+              "path": "notices/freetype/docs/GPLv2.TXT",
+              "sha256": "c4120c6752c910c299e3bd9cb3a46ff262c268303ca2069b61f92f10a5656c18",
+              "bytes": 17994,
+              "encoding": "base64",
+              "transportSha256": "33d67c37dcc7c318f8ff142de4c5405df1bb0551c82095c96b12f6c5c77c470e",
+              "transportBytes": 23992
+            },
+            {
+              "url": "https://flutter.googlesource.com/third_party/harfbuzz/+/49844c32a7a3f6be371355a1213c952a3f4a44e7/COPYING?format=TEXT",
+              "path": "notices/harfbuzz/COPYING",
+              "sha256": "ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64",
+              "bytes": 1971,
+              "encoding": "base64",
+              "transportSha256": "84db39e4c28b8f5012cc4bc0903ca95121f229d4f0054c11fe06111c33248109",
+              "transportBytes": 2628
+            },
+            {
+              "url": "https://chromium.googlesource.com/chromium/deps/icu/+/d578f2e8b7bd5938e21cfb6bf15c079e0aa5b738/LICENSE?format=TEXT",
+              "path": "notices/icu/LICENSE",
+              "sha256": "e55522d81edc687a341a4411e0776e54ca654e90147f354a90458aaced4116af",
+              "bytes": 27718,
+              "encoding": "base64",
+              "transportSha256": "5454b44b5ca65cbfdf73f11dd63ca33e2ec90fec2a6c187d64ff8368999127be",
+              "transportBytes": 36960
+            },
+            {
+              "url": "https://flutter.googlesource.com/third_party/libjpeg-turbo/+/0fb821f3b2e570b2783a94ccd9a2fb1f4916ae9f/LICENSE.md?format=TEXT",
+              "path": "notices/libjpeg-turbo/LICENSE.md",
+              "sha256": "fffd497be5f4ae0a10b8258e191125fb58b90250ecbf3c79398d79604dd00b7d",
+              "bytes": 2939,
+              "encoding": "base64",
+              "transportSha256": "9bd96d5bddd8f2e193f8a488807cb84498b362e1888fd52b5b193a7a32c355b1",
+              "transportBytes": 3920
+            },
+            {
+              "url": "https://flutter.googlesource.com/third_party/libjpeg-turbo/+/0fb821f3b2e570b2783a94ccd9a2fb1f4916ae9f/README.ijg?format=TEXT",
+              "path": "notices/libjpeg-turbo/README.ijg",
+              "sha256": "53a3e3c299e08856964f4c5986e242c3695837b73c64625092f70c774e8af5d2",
+              "bytes": 13668,
+              "encoding": "base64",
+              "transportSha256": "df5fef3a21be76143c67e5f6da891c087bda98bf28078175d50e928fc4388374",
+              "transportBytes": 18224
+            },
+            {
+              "url": "https://flutter.googlesource.com/third_party/libpng/+/ced6b6c0c1e24716423a417b399d3c7d4623890d/LICENSE?format=TEXT",
+              "path": "notices/libpng/LICENSE",
+              "sha256": "bdb0a645ea18c60507d0368379b1ac5474b92255fcc2d115e07486a7672ba526",
+              "bytes": 5345,
+              "encoding": "base64",
+              "transportSha256": "52e9b8d1082de7e54fd06a60fe61f80bbded3c027b6ae269b87ab0edc298e166",
+              "transportBytes": 7128
+            },
+            {
+              "url": "https://chromium.googlesource.com/webm/libwebp/+/ca332209cb5567c9b249c86788cb2dbf8847e760/COPYING?format=TEXT",
+              "path": "notices/libwebp/COPYING",
+              "sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf",
+              "bytes": 1496,
+              "encoding": "base64",
+              "transportSha256": "cd38893a47087d081767960fb7269a1207296c8248da567ed0060a06c4a40c18",
+              "transportBytes": 1996
+            },
+            {
+              "url": "https://chromium.googlesource.com/webm/libwebp/+/ca332209cb5567c9b249c86788cb2dbf8847e760/PATENTS?format=TEXT",
+              "path": "notices/libwebp/PATENTS",
+              "sha256": "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c",
+              "bytes": 1436,
+              "encoding": "base64",
+              "transportSha256": "161dd76ae97de98bd2989c5874137d6bae2a6f1edd05e1fc517a05ff30cbc3b5",
+              "transportBytes": 1916
+            },
+            {
+              "url": "https://skia.googlesource.com/skia/+/8df24be66531469e576a806749a0202ae26b8d08/LICENSE?format=TEXT",
+              "path": "notices/skia/LICENSE",
+              "sha256": "5f787c1dee3c56547f09ccc2906ab5f5293c4d8dd6c8654e573216c38e908dbd",
+              "bytes": 1507,
+              "encoding": "base64",
+              "transportSha256": "bd3944af94c3d8a6e2340cd8f2562a790ba9e9bdbe7fd11031e8436f5fb9b490",
+              "transportBytes": 2012
+            },
+            {
+              "url": "https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c/+/600cd96cf47788ee3a74b40a6028b035c9fd6a61/LICENSE?format=TEXT",
+              "path": "notices/wuffs/LICENSE",
+              "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+              "bytes": 11358,
+              "encoding": "base64",
+              "transportSha256": "01cd5191f2c0ccdb7085cc8ec6db495c955eaed85546081304c1f9317699a368",
+              "transportBytes": 15144
+            },
+            {
+              "url": "https://chromium.googlesource.com/chromium/src/third_party/zlib/+/7eda07b1e067ef3fd7eea0419c88b5af45c9a776/LICENSE?format=TEXT",
+              "path": "notices/zlib/LICENSE",
+              "sha256": "e1cfcc55c325b3f78cf55df9664abaa066e2271dffe8213347d9fccdfbac8f2c",
+              "bytes": 910,
+              "encoding": "base64",
+              "transportSha256": "a933cce44298f130692ed93dd7820bb26de792251c4b4c4677bf746f4dd9492d",
+              "transportBytes": 1216
+            }
+          ]
+        }
+      }
+    },
+    "incrementalUpload": {
+      "bodyBytesMax": 4194304,
+      "archiveBytesMax": 209715200,
+      "batchFilesMax": 32,
+      "chunkBytesMax": 1048576,
+      "concurrency": 8,
+      "verificationLeaseSeconds": 120
+    },
+    "deploy": {
+      "perAccountPerDay": 5,
+      "multipart": {
+        "concurrency": 4
+      },
+      "uploadAttemptsMax": 3,
+      "uploadTimeoutMs": 600000,
+      "releasesKept": 10,
+      "failedRetentionSeconds": 86400
+    },
+    "moderation": {
+      "imageBytesMax": 10485760
+    },
+    "submit": {
+      "maintenanceRetryAfterSeconds": 60
+    },
+    "preview": {
+      "inventoryBytesMax": 8388608,
+      "documentBufferBytesMax": 33554432
+    },
+    "review": {
+      "autonomous": true,
+      "statusPollMs": 15000
+    },
+    "manifest": {
+      "bytesMax": 65536,
+      "lobbySettingsMax": 4,
+      "lobbyChoicesMax": 6,
+      "lobbyIdCharsMax": 16,
+      "lobbyLabelCharsMax": 48,
+      "lobbyDescriptionCharsMax": 120,
+      "lobbySchemaBytesMax": 4096,
+      "boardCountMax": 10,
+      "boardKeyCharsMax": 48,
+      "boardLabelCharsMax": 60,
+      "pathCharsMax": 512,
+      "buildCommandCharsMax": 1000
+    },
+    "sdk": {
+      "versionCharsMax": 64,
+      "externalLinkUrlCharsMax": 2048,
+      "externalLinkConfirmationMs": 30000,
+      "rateWindowMs": 60000,
+      "lobbyRequestTimeoutMs": 10000,
+      "analyticsGroupMin": 5
+    },
+    "operations": {
+      "pollIntervalMs": 2000,
+      "listPageSize": 12
+    },
+    "http": {
+      "timeoutMs": 30000
+    }
+  },
+  "character": {
+    "accessoriesMax": 4
+  }
+}

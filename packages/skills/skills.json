@@ -1,0 +1,115 @@
+{
+  "skills": [
+    {
+      "name": "opengame-router",
+      "family": "platform",
+      "default": true
+    },
+    {
+      "name": "opengame-deploy",
+      "family": "platform",
+      "default": true
+    },
+    {
+      "name": "opengame-cli",
+      "family": "platform"
+    },
+    {
+      "name": "opengame-api",
+      "family": "platform"
+    },
+    {
+      "name": "opengame-jam",
+      "family": "platform"
+    },
+    {
+      "name": "opengame-sdk",
+      "family": "platform"
+    },
+    {
+      "name": "opengame-quality-bar",
+      "family": "craft",
+      "default": true
+    },
+    {
+      "name": "opengame-look",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-lighting",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-world-physics",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-scene-audit",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-game-feel",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-characters",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-audio",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-front-end",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-performance",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-assets",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-depth",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-verification",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-accessibility",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-weapons",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-enemies",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-loading",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-mobile",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-stability",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-capture",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-production",
+      "family": "craft"
+    }
+  ]
+}

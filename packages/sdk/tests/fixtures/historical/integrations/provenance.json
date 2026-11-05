@@ -1,0 +1,51 @@
+{
+  "commit": "7517acdef3e42d9709d868478e3e21d15c5334d1",
+  "provenance": "Copied byte-for-byte with git show from the parent of 2e3ae62aa (Remove SDK multiplayer and the lobby path that served it), the last commit at which these integrations still used OpenGame.multiplayer and the bridge room calls. Between it and 91688d076, which took multiplayer out of the integrations, they changed only to stop requiring it, so this is the newest code a game exported before the removal can carry. Fixtures for tests/legacy-integrations.test.mjs; never edit them.",
+  "files": {
+    "cocos/runtime/OpenGameServices.ts": {
+      "source": "integrations/cocos/runtime/OpenGameServices.ts",
+      "sha256": "ebd1a8069cde7e06803b44ace470d1706fb424cd21f494523c7a56c23bedc11a",
+      "bytes": 12024
+    },
+    "gamemaker/extensions/OpenGame/opengame.js": {
+      "source": "integrations/gamemaker/extensions/OpenGame/opengame.js",
+      "sha256": "0245773bc391d68676769a3c74ee5353b4f4010767f924cdae6ce0819d0267aa",
+      "bytes": 7141
+    },
+    "gdevelop/runtime.js": {
+      "source": "integrations/gdevelop/runtime.js",
+      "sha256": "4de0ab0404b148fa7fa37a5c525d7a27c154f98e64453a9c9b64f3ec1bc5fdc4",
+      "bytes": 12934
+    },
+    "littlejs/opengame.js": {
+      "source": "integrations/littlejs/opengame.js",
+      "sha256": "96e6cecd04a403364ea5605e70f4c3c4e3661f788c0fc91a09aeba1e3ee3b96e",
+      "bytes": 4682
+    },
+    "react/OpenGameProvider.js": {
+      "source": "integrations/react/OpenGameProvider.js",
+      "sha256": "7d9a1f3f1f9a33ba181e865663ebf76c7f6ebe4cf50ec21602efc2f5b5ae7bd5",
+      "bytes": 2689
+    },
+    "react/context.js": {
+      "source": "integrations/react/context.js",
+      "sha256": "300891f657583567319c19a63ab4595f325c4b2e1579d10ebfebba28019af3fd",
+      "bytes": 84
+    },
+    "react/hooks.js": {
+      "source": "integrations/react/hooks.js",
+      "sha256": "4a3c616965e228db2461874bde789075adf2bec3f4571a2d50746b6fc54c542e",
+      "bytes": 5725
+    },
+    "react/index.js": {
+      "source": "integrations/react/index.js",
+      "sha256": "3684c386e69d6fa0f0a7bfc06f6c827737d210fd7096f90b57229cfe68fd6226",
+      "bytes": 150
+    },
+    "rpgmaker/js/plugins/OpenGame.js": {
+      "source": "integrations/rpgmaker/js/plugins/OpenGame.js",
+      "sha256": "9d94e5fcb6318cf388a7543cb99f464162ccd376e538efa6e2503a851cf01e8b",
+      "bytes": 16537
+    }
+  }
+}

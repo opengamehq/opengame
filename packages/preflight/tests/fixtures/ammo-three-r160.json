@@ -1,0 +1,6 @@
+{
+  "source": "three.js r160 examples/jsm/libs/ammo.wasm.js (https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/jsm/libs/ammo.wasm.js), read 5 Nov 2026. Each line of text is verbatim from that file; the rest of its 393,768 bytes is cut. The module is one function import, a.a, the shape of the real ammo.wasm.wasm, whose six imports all come from the module a.",
+  "sha256": "3fa63c584d4732f72b954c5ea105f1faca99559c95c57ce7bb738d3497f98228",
+  "text": "// This is ammo.js, a port of Bullet Physics to JavaScript. zlib licensed.\nvar Ammo = (function() {\n  var _scriptDir = typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : undefined;\nfunction oa(a){if(b.onAbort)b.onAbort(a);a+=\"\";pa(a);qa(a);va=!0;throw new WebAssembly.RuntimeError(\"abort(\"+a+\"). Build with -s ASSERTIONS=1 for more info.\");}\nfunction d(g){return Ua().then(function(n){return WebAssembly.instantiate(n,e)}).then(g,function(n){qa(\"failed to asynchronously prepare wasm: \"+n);oa(n)})}var e={a:Za};\nfetch(Qa,{credentials:\"same-origin\"}).then(function(g){return WebAssembly.instantiateStreaming(g,e).then(c,function(n){qa(\"wasm streaming compile failed: \"+n);qa(\"falling back to ArrayBuffer instantiation\");return d(c)})})\n})();",
+  "base64": "AGFzbQEAAAABBAFgAAACBwEBYQFhAAA="
+}

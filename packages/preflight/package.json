@@ -1,0 +1,33 @@
+{
+  "name": "@opengame/preflight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./platform": "./src/platform.ts",
+    "./engines": "./src/engines.ts",
+    "./text-evidence": "./src/text-evidence.ts",
+    "./node-compression": "./src/node-compression.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "sync:engines": "node scripts/sync-engine-registry.mjs"
+  },
+  "dependencies": {
+    "@opengame/shared": "*",
+    "acorn": "8.18.0",
+    "parse5": "7.3.0"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opengamehq/opengame.git",
+    "directory": "packages/preflight"
+  },
+  "homepage": "https://github.com/opengamehq/opengame/tree/main/packages/preflight#readme",
+  "bugs": {
+    "url": "https://github.com/opengamehq/opengame/issues"
+  }
+}

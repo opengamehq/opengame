@@ -1,0 +1,55 @@
+{
+  "name": "opengame",
+  "owner": {
+    "name": "OpenGame",
+    "email": "team@opengame.io"
+  },
+  "metadata": {
+    "description": "Agent skills for making browser games and putting them on OpenGame."
+  },
+  "plugins": [
+    {
+      "name": "opengame",
+      "description": "Put a browser game on OpenGame: the CLI, the API, the SDK, deploys and jams.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/opengame-api",
+        "./skills/opengame-cli",
+        "./skills/opengame-deploy",
+        "./skills/opengame-jam",
+        "./skills/opengame-router",
+        "./skills/opengame-sdk"
+      ]
+    },
+    {
+      "name": "opengame-craft",
+      "description": "Make a browser game good: look, lighting, feel, audio, performance, testing and the rest.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/opengame-accessibility",
+        "./skills/opengame-assets",
+        "./skills/opengame-audio",
+        "./skills/opengame-capture",
+        "./skills/opengame-characters",
+        "./skills/opengame-depth",
+        "./skills/opengame-enemies",
+        "./skills/opengame-front-end",
+        "./skills/opengame-game-feel",
+        "./skills/opengame-lighting",
+        "./skills/opengame-loading",
+        "./skills/opengame-look",
+        "./skills/opengame-mobile",
+        "./skills/opengame-performance",
+        "./skills/opengame-production",
+        "./skills/opengame-quality-bar",
+        "./skills/opengame-scene-audit",
+        "./skills/opengame-stability",
+        "./skills/opengame-verification",
+        "./skills/opengame-weapons",
+        "./skills/opengame-world-physics"
+      ]
+    }
+  ]
+}

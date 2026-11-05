@@ -1,0 +1,139 @@
+{
+  "skills": {
+    "opengame-accessibility": {
+      "version": "1.0.0",
+      "digest": "4931cf078438d687d0a3009a113906d6fc8d05ccdf13f93a6bb431f37e8854df",
+      "digestPublished": "4931cf078438d687d0a3009a113906d6fc8d05ccdf13f93a6bb431f37e8854df"
+    },
+    "opengame-api": {
+      "version": "1.0.3",
+      "digest": "e19ed80c5de057ae76a51e0b0dbb2f1622ad6e3097fe8a62b87f538b4ad65491",
+      "digestPublished": "e19ed80c5de057ae76a51e0b0dbb2f1622ad6e3097fe8a62b87f538b4ad65491"
+    },
+    "opengame-assets": {
+      "version": "1.0.0",
+      "digest": "6d31412517a0b72c07882981a7ce5384c4d8d71e02bb5b04655a063f2f6965c6",
+      "digestPublished": "6d31412517a0b72c07882981a7ce5384c4d8d71e02bb5b04655a063f2f6965c6"
+    },
+    "opengame-audio": {
+      "version": "1.0.0",
+      "digest": "ebeac4b9fa1bc24a35b9c0a496d409a3619b5b3e6f577d6dd022f39bbd8a3ac9",
+      "digestPublished": "ebeac4b9fa1bc24a35b9c0a496d409a3619b5b3e6f577d6dd022f39bbd8a3ac9"
+    },
+    "opengame-capture": {
+      "version": "1.0.0",
+      "digest": "04b190443785bc17308b1c0f3dbbe5fc7ceecc023f458b044d70477d0d45390d",
+      "digestPublished": "04b190443785bc17308b1c0f3dbbe5fc7ceecc023f458b044d70477d0d45390d"
+    },
+    "opengame-characters": {
+      "version": "1.1.0",
+      "digest": "c60c349f58483bfa633c40dd721f2d7e38a60394daf73965a161b22e6f768bcd",
+      "digestPublished": "c60c349f58483bfa633c40dd721f2d7e38a60394daf73965a161b22e6f768bcd"
+    },
+    "opengame-cli": {
+      "version": "1.0.3",
+      "digest": "958e64d3dbfe43ab00a93be8a284e580ea11c5ed3fd332e805667e4b15e6cdab",
+      "digestPublished": "376fea9a07d97510c9f56debeb8bf1a69f30a35e5ed2103b57599376645e5d64"
+    },
+    "opengame-deploy": {
+      "version": "1.0.7",
+      "digest": "7927a22523334cf81c066f8bc950b947d9c59a215b17d0478fc787ccd12c4858",
+      "digestPublished": "4cd1b9657b36e1a7a2320deb153c1904e78a907e64495602d9440d80b9fff3ce"
+    },
+    "opengame-depth": {
+      "version": "1.0.0",
+      "digest": "c2471c41b07e85b26244612d48bb5aad6cfea268026b6b5e9be17e89801c8f5d",
+      "digestPublished": "c2471c41b07e85b26244612d48bb5aad6cfea268026b6b5e9be17e89801c8f5d"
+    },
+    "opengame-enemies": {
+      "version": "1.0.0",
+      "digest": "ec31b5e016d55bb365a7103f7ff7243770ae74a146a3aa0628158aeadf4b4c13",
+      "digestPublished": "ec31b5e016d55bb365a7103f7ff7243770ae74a146a3aa0628158aeadf4b4c13"
+    },
+    "opengame-front-end": {
+      "version": "1.0.1",
+      "digest": "1c4b02da6ca61a703f565ddfda674d04d4e52756fdca9392debc39981951eb3d",
+      "digestPublished": "1c4b02da6ca61a703f565ddfda674d04d4e52756fdca9392debc39981951eb3d"
+    },
+    "opengame-game-feel": {
+      "version": "1.0.0",
+      "digest": "8ae60fb25a07919e8d38b75fdfeffa28d20cc328336a9784a23f65f9d26ad576",
+      "digestPublished": "8ae60fb25a07919e8d38b75fdfeffa28d20cc328336a9784a23f65f9d26ad576"
+    },
+    "opengame-jam": {
+      "version": "1.0.5",
+      "digest": "ad58fd3aa72b6a12f84bbb6e1028d2f5793e49a1026a938ae30c57dbc3c8fd22",
+      "digestPublished": "ad58fd3aa72b6a12f84bbb6e1028d2f5793e49a1026a938ae30c57dbc3c8fd22"
+    },
+    "opengame-lighting": {
+      "version": "1.0.0",
+      "digest": "37fb8c522e9c2bb95137be01abec5d9f416bed4bd1250057c0c288634334f4e1",
+      "digestPublished": "37fb8c522e9c2bb95137be01abec5d9f416bed4bd1250057c0c288634334f4e1"
+    },
+    "opengame-loading": {
+      "version": "1.0.0",
+      "digest": "c9e4f6763a4b17495a67a3c7850f6954dc6068a2a278175d677f5f6fcf6f4e0c",
+      "digestPublished": "c9e4f6763a4b17495a67a3c7850f6954dc6068a2a278175d677f5f6fcf6f4e0c"
+    },
+    "opengame-look": {
+      "version": "1.0.0",
+      "digest": "9d9fd30fe125e90c9c7d4b76173c83d8ea7d82d413ae6ba5823162befda413e1",
+      "digestPublished": "9d9fd30fe125e90c9c7d4b76173c83d8ea7d82d413ae6ba5823162befda413e1"
+    },
+    "opengame-mobile": {
+      "version": "1.0.0",
+      "digest": "b08a8a8490ddb7435339e16c6ff7bfc9caa3efce1707ed5560c17544a2c53af9",
+      "digestPublished": "b08a8a8490ddb7435339e16c6ff7bfc9caa3efce1707ed5560c17544a2c53af9"
+    },
+    "opengame-performance": {
+      "version": "1.0.0",
+      "digest": "8f0d110e3b0e8776747039587aa37a2fe9b511eff69541ed06dd12c2c6c6676d",
+      "digestPublished": "8f0d110e3b0e8776747039587aa37a2fe9b511eff69541ed06dd12c2c6c6676d"
+    },
+    "opengame-production": {
+      "version": "1.0.0",
+      "digest": "d1f91f001c4c1976cceea8d1c5244a7a589956d711f7903cf161821e50082a3a",
+      "digestPublished": "d1f91f001c4c1976cceea8d1c5244a7a589956d711f7903cf161821e50082a3a"
+    },
+    "opengame-quality-bar": {
+      "version": "1.0.1",
+      "digest": "7d75c2444706ba78c6f573700679cd00d7e5991f0116eeb49fa36c1c6bdfa853",
+      "digestPublished": "7d75c2444706ba78c6f573700679cd00d7e5991f0116eeb49fa36c1c6bdfa853"
+    },
+    "opengame-router": {
+      "version": "1.0.4",
+      "digest": "1fe138087354de5af57e4e450e24642a3ab58927755f0edf525797e43e984fa3",
+      "digestPublished": "1fe138087354de5af57e4e450e24642a3ab58927755f0edf525797e43e984fa3"
+    },
+    "opengame-scene-audit": {
+      "version": "1.0.0",
+      "digest": "565588b6e28661c20daf4db75e2a7d1a381b25149f9f411d0d83c7ec62a82338",
+      "digestPublished": "565588b6e28661c20daf4db75e2a7d1a381b25149f9f411d0d83c7ec62a82338"
+    },
+    "opengame-sdk": {
+      "version": "1.0.6",
+      "digest": "b896b83979b7c343c3f77d573f404dd888e6fafd0ecd9c7433e46a4a0e39ac1b",
+      "digestPublished": "68cea06c7a9dd1a82de98d0555748e1042f30d3d8a5c32719a8883d3dd6b4e9d"
+    },
+    "opengame-stability": {
+      "version": "1.0.0",
+      "digest": "fcd1857860527da82a35f3ea8f6a99c5265c3a248eddb1eaaf35bf46e280ce47",
+      "digestPublished": "fcd1857860527da82a35f3ea8f6a99c5265c3a248eddb1eaaf35bf46e280ce47"
+    },
+    "opengame-verification": {
+      "version": "1.0.1",
+      "digest": "80e7f4b96c1bc189737d0f8f73d1cdccabf49efc3fd06e6587f55781b3c628da",
+      "digestPublished": "80e7f4b96c1bc189737d0f8f73d1cdccabf49efc3fd06e6587f55781b3c628da"
+    },
+    "opengame-weapons": {
+      "version": "1.0.0",
+      "digest": "5b3a2670cbc7eb7152177f3fd98391ff98a832e897430be150d67d4e688136fd",
+      "digestPublished": "5b3a2670cbc7eb7152177f3fd98391ff98a832e897430be150d67d4e688136fd"
+    },
+    "opengame-world-physics": {
+      "version": "1.0.0",
+      "digest": "2bffb202ce77676fff958673a7c2ee5da01c255229f167d98be794e8405519d5",
+      "digestPublished": "2bffb202ce77676fff958673a7c2ee5da01c255229f167d98be794e8405519d5"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orb Run</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="hud" aria-live="polite">
+      <span id="score">0 sparks</span>
+      <span id="clock">60</span>
+    </div>
+    <div id="menu">
+      <h1>Orb Run</h1>
+      <p>WASD or arrow keys to move. Collect sparks for sixty seconds.</p>
+      <button id="play" type="button">Play</button>
+      <ol id="board" aria-label="Best scores"></ol>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

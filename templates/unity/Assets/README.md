@@ -1,0 +1,3 @@
+# Integrate with a real scene
+
+Install the OpenGame Unity package (`com.opengame.sdk`, built by `integrations/unity/package.py`) first. It carries the only `OpenGame.jslib` the build needs; do not add another. Then copy `OpenGameReady.cs` into your Unity project. Attach OpenGameReady only to a scene that is already playable when Start completes. Games with asynchronous loading must call `OG.Ready()` from their own loading-complete callback instead, after `OG.Init()` has returned. OpenGameReady still calls `OG.Ready()` when `OG.Init()` throws, and logs the failure, so a failed init does not leave the player on the loading screen. Export the actual project for Web into dist; these source files are not a Unity game on their own.

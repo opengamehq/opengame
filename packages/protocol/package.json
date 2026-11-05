@@ -1,0 +1,32 @@
+{
+  "name": "@opengame/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./manifest": "./src/manifest.ts",
+    "./jam-time": "./src/jam-time.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@opengame/shared": "*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opengamehq/opengame.git",
+    "directory": "packages/protocol"
+  },
+  "homepage": "https://github.com/opengamehq/opengame/tree/main/packages/protocol#readme",
+  "bugs": {
+    "url": "https://github.com/opengamehq/opengame/issues"
+  }
+}

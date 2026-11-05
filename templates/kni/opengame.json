@@ -1,0 +1,13 @@
+{
+  "title": "Kni target",
+  "description": "A small browser target game built from source. Select the moving square and collect points.",
+  "genre": "puzzle-casual",
+  "controls": [
+    "keyboard",
+    "mouse"
+  ],
+  "build": {
+    "command": "dotnet publish -c Release -o publish -p:CompressionEnabled=false",
+    "output": "publish/wwwroot"
+  }
+}

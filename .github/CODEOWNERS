@@ -1,0 +1,11 @@
+# Every path needs the owner's review. The lines below repeat it for the files that
+# decide what reaches npm, so they stay owned even if the catch-all is narrowed later.
+*                                    @rishipr
+/.github/                            @rishipr
+/scripts/release.mjs                 @rishipr
+/scripts/engine-integrations/        @rishipr
+/packages/cli/package.json           @rishipr
+/packages/sdk/package.json           @rishipr
+/packages/skills/package.json        @rishipr
+/packages/shared/npm-release.json    @rishipr
+/package-lock.json                   @rishipr

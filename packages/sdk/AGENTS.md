@@ -58,7 +58,7 @@ An error has `"type": "error"`, `"ok": false`, a `code`, a `message`, an `exitCo
 | 4 | An allowance is used up | Wait `retryAfterSeconds`, then run the same command. |
 | 5 | Our side or the network | Leave the game as it is. Run `next` when the error has one; otherwise wait and retry, at most a few times. |
 | 6 | The CLI is too old | Run `opengame upgrade --json`, then the npm command in `data.command`. |
-| 7 | OpenGame is not launched | Stop. Tell the creator their account cannot use OpenGame until launch. |
+| 7 | OpenGame is not open to creators yet | Stop. Tell the creator the CLI and uploads open on 18 November. |
 
 ## Sign in with the creator
 
@@ -123,6 +123,7 @@ opengame deploy . --json
 | `data.done` | `true` once the server has finished. |
 | `data.releaseId` | The release. Keep it for `submit`. |
 | `data.previewUrl` | The private preview link, once `state` is `ready`. It can be `null` on a ready release the server will not play; the deploy's page says why. |
+| `data.gameOrigin` | The origin the published game runs at, such as `https://k3v9q2m7x4ab.opengame.gg`. Give it to the creator when the game talks to their own servers. `null` when the server sent none, or sent one this CLI cannot read. |
 
 To follow the checks, run `status --watch`, which follows the deploy for up to 5 minutes. Set `--timeout <seconds>` for a short tool call; when it runs out the command exits 5 with `checks_pending` and the checks carry on.
 
@@ -180,6 +181,8 @@ opengame status --watch --json
 OpenGame hosts static browser exports. The build needs `index.html` at the root of its output folder.
 
 At runtime the game may call its own origin, `https://api.opengame.gg`, and any other `https:` or `wss:` host. Each call comes from the player's browser, so that host sees the player's IP address. Keep API keys on the creator's server, never in the bundle: players can read every file in it. The review sandbox has no internet, so the game must draw its first frame without its server.
+
+The published game runs at `https://<label>.opengame.gg`, one origin per game, and `opengame deploy` returns it as `data.gameOrigin`. While an experiment runs, players load each version taking part from a `v-` origin instead. If the creator's servers check `Origin` (WebSocket) or send CORS headers (HTTP), they reject the game's requests until that exact origin is on their list, and online play fails with a closed socket, a 401 or 403 on the upgrade, or a CORS error in the console. Tell the creator to add it, and to add a version's `v-` origin before starting an experiment with it. Never suggest allowing `*.opengame.gg`, `null` or any pattern on `opengame.gg`, because other people's games are served there too and a pattern lets them call the creator's server. Use a token in a header or the first socket message, not a cookie. A private preview runs on a temporary `p-` origin, not the game's. That address is a private link, so keep it out of committed config and logs. [Games that talk to your own servers](https://docs.opengame.io/guides/packaging#games-that-talk-to-your-own-servers) has server examples.
 
 A game may not take payments, use crypto, make players create an account or give an email address, show ads, or carry ad pixels or session recording. [Packaging](https://docs.opengame.io/guides/packaging) has every rule and every check.
 
@@ -246,9 +249,13 @@ Play the private preview before you tell the creator the game works.
 | `board_unavailable` | returned | no | This board is not declared in opengame.json, or the published game has no such board. |
 | `invalid_score` | returned | no | Scores are finite numbers. |
 | `invalid_meta` | returned | no | Score metadata takes only label, mode, level and character as strings, and duration_ms, accuracy and combo as numbers. Keep strings short. |
+| `invalid_run` | returned | no | A run's stats are finite numbers keyed by the board's columns, and its tags name one of the board's variants and one of its values. A career board takes no runs; submit to the board it is fed from. The reason names the field or the source board. |
 | `invalid_limit` | returned | no | A read limit is a positive integer. Values above the maximum are capped. |
-| `invalid_manifest` | returned | no | opengame.json has an invalid leaderboards list. Each board needs a unique key and an order of asc or desc. |
-| `gesture_required` | returned | yes | Call og.openLink directly from a click or key handler, then confirm the destination on the OpenGame page. |
+| `invalid_query` | returned | no | Sort by score or a sortable column, filter by the board's variants, and page top() with a whole-number offset. The reason names the part. |
+| `invalid_manifest` | returned | no | opengame.json has an invalid leaderboards list. The reason names the board and the field; opengame check says the same. |
+| `gesture_required` | returned | yes | Call og.openLink, or an og.radio control that makes sound, directly from a click or key handler. For a link, then confirm the destination on the OpenGame page. |
+| `muted` | returned | yes | The player has silenced this game on OpenGame, or another part of the page has the speakers, so the radio stays quiet. Offer Play again once og.audio.onHostMute reports false. |
+| `not_found` | returned | no | No station, genre or song by that id. Use the ids og.radio.stations() and og.radio.tracks() return. |
 | `invalid_request` | returned | no | The API could not read the request. Check the arguments against the README. |
 | `invalid_achievement` | returned | no | Use a declared achievement ID with lowercase letters, digits, hyphens or underscores within the shared length limit. |
 | `achievement_unavailable` | returned | yes | The achievement service refused the request. Check the published game and retry when it is available. |

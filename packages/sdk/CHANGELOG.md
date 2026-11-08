@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.3.0
+
+- OG Radio: `@opengamehq/sdk/radio`, also `OpenGame.radio` in the injected global. A game
+  lists stations and songs (A to Z, searched within all radios, a station or a station's
+  genre), sends play, pause, skip, shuffle, repeat and volume, and hears back what is
+  playing; the page plays the music at the player's radio volume, so the game never holds
+  an audio URL. `radio.mountPicker` draws a complete, themeable picker. Sound starts only
+  from a press in the game and stays off while the game is muted.
+- Leaderboards take stat columns, variant tags and a keep rule, declared in
+  `opengame.json`. `og.leaderboard(key).submitRun({ value, stats?, tags?, meta? })` submits
+  a run; `top`, `me` and `around` take `sort` and `filter`, and `top` takes `offset`.
+  Entries gain `stats` and `tags`; pages gain `total`, `offset`, `sort`, `filter` and
+  `shape`; receipts gain `ignored`. `submit(value, meta)` and `top({ limit })` send exactly
+  what they sent before.
+- New error codes: `invalid_run` (a stat or tag the run cannot carry) and `invalid_query`
+  (a sort, filter or offset a read cannot take).
+- The local mock reads `opengame.json` through the same board parser as og-api and the
+  manifest check, so a declaration it accepts is one a deploy accepts. It refuses keys
+  with hyphens, which the manifest never allowed, and boards stored by an earlier version
+  start fresh once.
+- The native bridge's `board.submit` takes `stats` and `tags`, and `board.top`, `board.me`
+  and `board.around` take `sort`, `filter` and (for `top`) `offset`.
+- The core is about 2.8 KB gzip larger, most of it the shared board parser.
+- Career boards (`keep: "career"`): a board fed from another board's accepted runs, whose
+  score and columns aggregate them. Pages describe one with `from`, `scoreAgg` and each
+  column's aggregate. `submit` and `submitRun` to one fail locally with `invalid_run`, and
+  og-api refuses them hosted. The local mock cross-checks a career board against its source
+  as the manifest check does. The core is about 400 bytes gzip larger again, most of it the
+  shared parser's career rules.
+
 ## 0.2.0
 
 - First release on npm. This version is published by hand and has no npm provenance

@@ -1,5 +1,9 @@
 # opengame-jam changelog
 
+## 1.0.6
+
+The site opens on one day and the CLI, uploads and the creator API on the next, the jam's kickoff. Until then an account outside the team is told that day, read from the launch clock.
+
 ## 1.0.5
 
 A build can be 1 GiB zipped and 1.5 GiB unpacked, from 500 MiB and 1 GiB.

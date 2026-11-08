@@ -2,13 +2,13 @@
 name: opengame-cli
 description: Drive the OpenGame command line tool from an agent. Covers installing it, signing in with the person, every command, JSON and JSONL output, exit codes, findings and how to retry. Use when the person mentions the opengame command, the OpenGame CLI, installing @opengamehq/cli, opengame login, check, dev, deploy, status, submit or token, or a command exited with an error you need to read.
 metadata:
-  version: "1.0.3"
+  version: "1.0.4"
 ---
 
 # Use the OpenGame CLI
 
-OpenGame opens on {{launch opens}}. Until OpenGame launches, every command except `version`, `help`, `login`, `logout` and `whoami` prints
-"OpenGame is not launched." for anybody outside the OpenGame team, and exits with the
+OpenGame opens on {{launch opens}}, and the CLI on {{launch kickoff}}. Until {{launch kickoff}}, every command except `version`, `help`, `login`, `logout` and `whoami` prints
+"OpenGame opens for creators on {{launch kickoff}}." for anybody outside the OpenGame team, and exits with the
 `not_launched` code (7) that `opengame help --json` lists. That is the platform's answer,
 not a broken install: tell the person, and do not retry, reinstall or look for a way round it.
 

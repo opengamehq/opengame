@@ -23,7 +23,7 @@ export function runPreflight(files: PreflightFile[], timeoutMs = LIMITS.platform
       if (error) reject(error);
       else resolve(result!);
     };
-    const unavailable = () => finish(new CliError("preflight_unavailable", "The local checker could not finish. Retry the check; if it continues, reinstall the current internal CLI.", 5));
+    const unavailable = () => finish(new CliError("preflight_unavailable", "The local checker could not finish. Retry the check; if it continues, reinstall the latest OpenGame CLI.", 5));
     const timer = setTimeout(unavailable, timeoutMs);
     worker.on("error", unavailable);
     worker.on("exit", () => { if (!finished) unavailable(); });

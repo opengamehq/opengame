@@ -22,8 +22,9 @@ Allow access. The CLI keeps the token in the macOS Keychain, and elsewhere in a 
 file under `~/.config/opengame`. In CI, pass a token through `OPENGAME_TOKEN` or
 `--token-stdin`, never as a command argument.
 
-When OpenGame has not opened for your account, a command that needs the platform prints
-`OpenGame is not launched.` and exits with code 7. Signing in works either way.
+When OpenGame has not opened to creators for your account, a command that needs the
+platform prints `OpenGame opens for creators on` the day the CLI and uploads open, and exits
+with code 7. Signing in works either way.
 
 ## Deploy a game
 
@@ -112,7 +113,7 @@ OpenCode, so a coding agent can do all of the above for you.
 | 4 | `rateLimited` | An allowance is used. Wait retryAfterSeconds when the error has it, then run the same command. |
 | 5 | `server` | Our side or the network, and the game is fine. Run the error's next command when it has one. With retry after-fix or never, waiting will not help; read the message. Otherwise wait (retryAfterSeconds when given) and run the same command. |
 | 6 | `upgrade` | This CLI is too old. Run opengame upgrade. |
-| 7 | `notLaunched` | OpenGame is not launched yet, so nothing ran. Nothing about the game, the command or the login is wrong. Retrying will not help before launch. |
+| 7 | `notLaunched` | OpenGame is not open to creators yet, so nothing ran. The message names the day the CLI and uploads open. Nothing about the game, the command or the login is wrong. Retrying will not help before then. |
 <!-- /generated:commands -->
 
 `opengame <command> --help` prints that command's flags and examples.

@@ -34,6 +34,10 @@ concurrency:
 jobs:
   build:
     if: github.ref == 'refs/heads/main' && inputs.approval == 'publish'
+    # GitHub's own machine, not Jog. This workflow publishes only from the public
+    # repository, opengamehq/opengame, and Jog is installed on this monorepo's organization
+    # and not on that one, so a job asking for jog there sits queued until GitHub cancels it
+    # a day later. A public repository's GitHub-hosted minutes cost nothing.
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -63,6 +67,9 @@ jobs:
 
   publish:
     needs: build
+    # Stays on GitHub's own machine for a second reason as well: npm publish --provenance
+    # signs with GitHub's OIDC token and npm accepts provenance only from GitHub-hosted
+    # runners, so on any other runner the release would fail at its last step.
     runs-on: ubuntu-latest
     # npm's trusted publisher for each package names this repository, this workflow file and
     # this environment, so a publish from anywhere else is refused by npm itself.

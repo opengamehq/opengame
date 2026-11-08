@@ -15,6 +15,7 @@ import {
   trustedAssetHosts,
 } from "@opengame/shared";
 import { blockedPackageForUrl, blockedPatternHits, blockedServiceForHost, policyRule, reviewSignalHits, type BlockedService, type PackageHit } from "@opengame/shared/game-policy";
+import { URL_START, ExpansionLimit, Mapped, compose, concat, cssUnescape, decodeReferences, dropUrlWhitespace, foldHosts, foldWindows, jsonUnescape, xmlExpand, xmlWalk, type ReferenceMode, type XmlDocument } from "./assembled";
 
 /**
  * The preflight. This runs in the browser, before a single byte is uploaded.
@@ -160,7 +161,7 @@ const FORBIDDEN_DIRS = [
 ];
 
 /** Extensions worth reading. Everything else is bytes we do not need to look at. */
-const SCANNABLE = /\.(?:html?|js|mjs|cjs|css|importmap)$/i;
+const SCANNABLE = /\.(?:html?|js|mjs|cjs|css|importmap|svg|xml)$/i;
 
 /**
  * Extensions worth reading *only* for a credential.
@@ -223,7 +224,7 @@ const isEncodedNamespace = (text: string, at: number, url: string) =>
  * way to tell `// see https://…` from `fetch("https://…")` is to know which
  * quotes and slashes are open at that byte.
  */
-const COMMENTABLE = /\.(?:html?|js|mjs|cjs|css)$/i;
+const COMMENTABLE = /\.(?:html?|js|mjs|cjs|css|svg|xml)$/i;
 
 /** Reading every byte of a 200 MB bundle in the main thread is not free. */
 const MAX_SCAN_BYTES_PER_FILE = 2 * 1024 * 1024;
@@ -704,7 +705,10 @@ export async function preflight(
     ...kept.map((f) => [f.path.toLowerCase(), f.path] as const)]);
   const exact = new Set([...externalPaths, ...kept.map((f) => f.path)]);
 
-  const scannable = kept.filter((f) => !external.has(f.path) && SCANNABLE.test(compressedBrowserAsset(f.path)?.path ?? f.path) && (options.authoritative || f.size <= MAX_SCAN_BYTES_PER_FILE));
+  /* Standalone SVG and XML documents last, so on the creator's machine, where the budget below binds, they can
+     never push the game's own pages and scripts out of it. */
+  const scannable = kept.filter((f) => !external.has(f.path) && SCANNABLE.test(compressedBrowserAsset(f.path)?.path ?? f.path) && (options.authoritative || f.size <= MAX_SCAN_BYTES_PER_FILE))
+    .sort((a, b) => Number(XML_DOCUMENT.test(compressedBrowserAsset(a.path)?.path ?? a.path)) - Number(XML_DOCUMENT.test(compressedBrowserAsset(b.path)?.path ?? b.path)));
   /* Everything else a credential could be sitting in. Kept as a second list rather
      than folded into the first because the origin and reference checks would produce
      nothing but noise over a YAML file, and because of the budget below. */
@@ -1025,18 +1029,39 @@ export async function preflight(
     if (i >= inBudget.length) {
       if (SHIPPED_SOURCE_FILE.test(file.path)) {
         const inert = inertRanges(file.path, text);
-        for (const finding of findOutboundOrigins(file.path, text, inert, undefined, new Map(), true))
+        const views = assembledViews(file.path, text);
+        for (const finding of findOutboundOrigins(file.path, text, inert, undefined, new Map(), true, views))
           if (finding.code === "blocked-service") policy.push(finding);
-        policy.push(...findPolicyPatterns(file.path, text, inert, true));
+        policy.push(...findPolicyPatterns(file.path, text, inert, true, views));
       }
       continue;
     }
 
     const sourcePath = compressedBrowserAsset(file.path)?.path ?? file.path;
     const inert = COMMENTABLE.test(sourcePath) ? inertRanges(sourcePath, text) : [];
-    for (const finding of findOutboundOrigins(sourcePath, text, inert, knownOrigin, externalHosts))
+    let views: AssembledView[] = [];
+    try {
+      views = assembledViews(sourcePath, text);
+    } catch (error) {
+      if (!(error instanceof ExpansionLimit)) throw error;
+      /* Judged on what it says as written, and held, as content.py holds it. */
+      findings.push({ code: "unreadable-file", severity: "blocker", title: `Could not read ${file.path}.`, path: file.path,
+        detail: "It declares XML entities that expand past what the check reads, so it is held. Write the text out instead of using entities, then check again." });
+    }
+    /* A standalone `.svg` or `.xml`, since 7 Nov 2026: a frame, an `<object>` or a navigation runs
+       one as a document, scripts and all, and until then nothing asked it the policy. The policy
+       is all it is asked: its namespaces are `http://` URLs that are no request, and its
+       references are an image's or a level's, not the game's. content.py asks the same. */
+    if (XML_DOCUMENT.test(sourcePath)) {
+      for (const finding of findOutboundOrigins(sourcePath, text, inert, undefined, new Map(), false, views))
+        if (finding.code === "blocked-service") policy.push({ ...finding, path: file.path });
+      policy.push(...findPolicyPatterns(sourcePath, text, inert, false, views).map(finding => ({ ...finding, path: file.path })));
+      findReviewSignals(sourcePath, text, inert, signals);
+      continue;
+    }
+    for (const finding of findOutboundOrigins(sourcePath, text, inert, knownOrigin, externalHosts, false, views))
       (finding.code === "blocked-service" ? policy : origins).push({ ...finding, path: file.path });
-    policy.push(...findPolicyPatterns(sourcePath, text, inert).map(finding => ({ ...finding, path: file.path })));
+    policy.push(...findPolicyPatterns(sourcePath, text, inert, false, views).map(finding => ({ ...finding, path: file.path })));
     findReviewSignals(sourcePath, text, inert, signals);
 
     for (const written of extractReferences(sourcePath, text, inert)) {
@@ -1435,6 +1460,7 @@ function findOutboundOrigins(
   knownOrigin: (url: string, site: Site) => EngineDefault | null = () => null,
   external: Map<string, string> = new Map(),
   shippedSource = false,
+  views: AssembledView[] = [],
 ): Finding[] {
   const lineAt = lineLocator(text);
   const allowed = gameConnectOrigins().map((u) => u.replace(/^\w+:\/\//, "").toLowerCase());
@@ -1452,20 +1478,20 @@ function findOutboundOrigins(
      up to the LAST `@`, the WHATWG rule limits.py's blocked_service_for_url follows. */
   const re = /(?:https?:)?\/\/(?:[^\s/\\?#"'`<>]*@)?([a-z0-9.-]+\.[a-z]{2,})(\/[^\s"'`)<>]*)?/gi;
 
-  for (const m of text.matchAll(re)) {
-    const url = m[0];
-    const host = m[1].toLowerCase();
-    const at = m.index ?? 0;
+  /* `url` reaches `host` from offset `at`, where the page has `written`: the same text for a URL
+     matched as written, and the encoded one for a URL decoded out of it, which is what the
+     heuristics below read beside its neighbours. */
+  const judge = (at: number, url: string, host: string, written: string): void => {
 
-    if (NOT_A_REQUEST.test(url) || isEncodedNamespace(text, at, url)) continue;
-    if (isInert(inert, at)) continue;
-    if (isPackageMetadata(text, at)) continue;
-    if (host === "opengame.io" || host === "opengame.gg" || host.endsWith(".opengame.io")) continue;
-    if (allowed.some((a) => host === a)) continue;
+    if (NOT_A_REQUEST.test(url) || isEncodedNamespace(text, at, url)) return;
+    if (isInert(inert, at)) return;
+    if (isPackageMetadata(text, at)) return;
+    if (host === "opengame.io" || host === "opengame.gg" || host.endsWith(".opengame.io")) return;
+    if (allowed.some((a) => host === a)) return;
     /* Trusted asset hosts -- stylesheets and fonts -- from limits.json, which is also
        where every contract's `style-src` and `font-src` get them. They are allowed on the
        strict contracts too, so they are not news to a reviewer and stay out of the note. */
-    if (trusted.has(host)) continue;
+    if (trusted.has(host)) return;
     /* `.invalid` is reserved by RFC 6761 so that it never resolves, anywhere. A name under
        it is not a host the game can reach and not one an attacker can register, so
        nothing leaves the frame. Engines use one as a key that must not collide with a real
@@ -1473,7 +1499,7 @@ function findOutboundOrigins(
        Storage, and failed this check for a request it never makes (27 Oct 2026). Only this
        TLD: `.test`, `.example` and `.localhost` are reserved too, but a machine can be set
        up to answer them, so they stay findings. */
-    if (host.endsWith(".invalid")) continue;
+    if (host.endsWith(".invalid")) return;
 
     const line = lineAt(at);
     const isImport = isImportSpecifier(text, at);
@@ -1500,7 +1526,7 @@ function findOutboundOrigins(
      * `allow-popups` it is the same nothing. A link to a blocked service is a warning for
      * the same reason, with the rule beside it, because it is still a door somebody meant
      * to open. */
-    const anchorHref = isAnchorHref(text, at) || isAnchorText(text, at, url);
+    const anchorHref = isAnchorHref(text, at) || isAnchorText(text, at, written);
 
     /* `og.openLink(url)` IS HOW A GAME LINKS OUT.
      *
@@ -1518,17 +1544,17 @@ function findOutboundOrigins(
          warning an anchor gets rather than the blocker a load gets. */
       if (pkg && room("blocked-service", "warning")) out.push(packageFinding(path, line, host, pkg, "warning",
         shippedSource ? SHIPPED_SOURCE : "og.openLink opens this outside the game. It is a page of source code rather than the service, so nothing is refused. Remove the link unless the game needs it."));
-      continue;
+      return;
     }
-    if (!isImport && !anchorHref && script && isProseUrl(text, at)) continue;
-    if (!isImport && script && isProseAnchor(text, at, url)) continue;
+    if (!isImport && !anchorHref && script && isProseUrl(text, at)) return;
+    if (!isImport && script && isProseAnchor(text, at, written)) return;
 
     /* An exact URL the detected engine ships as a default, at the line of engine code
        that writes it, in a script, and not as something imported. engines.ts has the
        table, the evidence behind each row, and the argument for why this cannot be used
        to hide a request. No row is on a blocked host, so it cannot launder one. */
     const known = !anchorHref && !isImport && script
-      ? knownOrigin(url, { before: text.slice(Math.max(0, at - 160), at), after: text.slice(at + url.length, at + url.length + 80) })
+      ? knownOrigin(url, { before: text.slice(Math.max(0, at - 160), at), after: text.slice(at + written.length, at + written.length + 80) })
       : null;
     if (known) {
       if (room("engine-default", "note")) out.push({
@@ -1541,7 +1567,7 @@ function findOutboundOrigins(
         path,
         line,
       });
-      continue;
+      return;
     }
 
     const runtime = !anchorHref && engineRuntimeUrl(url);
@@ -1550,7 +1576,7 @@ function findOutboundOrigins(
        knows: there the table has measured which values the engine fetches (Babylon's KTX2
        decoder is a config value it requests the moment a .ktx2 is loaded). */
     const data = !anchorHref && !runtime && !isImport && script
-      && !ENGINE_DEFAULT_HOSTS.has(host) && isDataValue(text, at, url);
+      && !ENGINE_DEFAULT_HOSTS.has(host) && isDataValue(text, at, written);
 
     if (blocked) {
       const passive = anchorHref || data;
@@ -1562,7 +1588,7 @@ function findOutboundOrigins(
           : data
           ? "It is written as a value, and nothing this check can see requests it. If the game does use it, that breaks the rule above, so remove it."
           : "Remove it and the code that uses it, then check again."));
-      continue;
+      return;
     }
 
     /* Not `continue`d: the CDN itself is an allowed host, and the note below still names
@@ -1570,7 +1596,7 @@ function findOutboundOrigins(
        exclusion in `data` is not applied, because no engine default is a blocked package
        and content.py has no copy of that table to agree with. */
     if (pkg) {
-      const passive = anchorHref || (!isImport && script && isDataValue(text, at, url));
+      const passive = anchorHref || (!isImport && script && isDataValue(text, at, written));
       const severity = policySeverity(passive ? "warning" : pkg.severity);
       if (room("blocked-service", severity)) out.push(packageFinding(path, line, host, pkg, severity,
         shippedSource ? SHIPPED_SOURCE
@@ -1592,7 +1618,7 @@ function findOutboundOrigins(
         path,
         line,
       });
-      continue;
+      return;
     }
 
     if (plain) {
@@ -1610,7 +1636,7 @@ function findOutboundOrigins(
         path,
         line,
       });
-      continue;
+      return;
     }
 
     if (runtime) {
@@ -1626,11 +1652,58 @@ function findOutboundOrigins(
 
     /* Allowed: an API, a model, a game server, a CDN. Named once, in the note. */
     if (!external.has(host)) external.set(host, `${path} line ${line}`);
+    };
+
+  for (const m of text.matchAll(re)) judge(m.index ?? 0, m[0], m[1].toLowerCase(), m[0]);
+
+  /* THE TEXTS THE BROWSER ASSEMBLES (`assembledViews`). A URL found in one is judged at the byte
+     of the page it was read from, by the same rules as a URL written plainly there, and only
+     where the page as written had no blocked URL beginning between its start and its host:
+     `&#104;ttps://js.stripe.com` is the `//js.stripe.com` already matched, and
+     `https://js.stripe&#46;com` is a URL nothing matched before. Only blocked services and
+     packages are asked of a view, as content.py asks them; an allowed host decoded out of an
+     attribute is the CSP's business and the sandbox run's. */
+  const blocking = (url: string, host: string) => blockedServiceForHost(host) !== null || blockedPackageForUrl(url) !== null;
+  /* Only a URL written plainly and live answers for one assembled over it. Until the review of
+     7 Nov 2026 an inert one did too, and `https:/<!--//api.stripe.com-->/api.str<!---->ipe.com`
+     in an SVG script was answered for by the copy in its comment. */
+  const writtenStarts = [...text.matchAll(re)].filter((m) => blocking(m[0], m[1].toLowerCase()) && !isInert(inert, m.index ?? 0)).map((m) => m.index ?? 0);
+  const seen = new Set<string>();
+  const located = new RegExp(re.source, "gid");
+  const loose = new RegExp(LOOSE_URL.source, "gid");
+  const passes: [AssembledView, RegExp][] = [[{ text: Mapped.of(text), inert: null, code: false }, loose],
+    ...views.flatMap((view): [AssembledView, RegExp][] => [[view, located], [view, loose]])];
+  for (const [view, pattern] of passes) {
+    const assembled = view.text;
+    for (const m of assembled.text.matchAll(pattern)) {
+      const host = m[1].toLowerCase();
+      if (!blocking(m[0], host)) continue;
+      const start = m.index ?? 0;
+      const at = assembled.rawAt(start)[0];
+      const hostAt = assembled.rawAt(m.indices![1]![0])[0];
+      let lo = 0;
+      let hi = writtenStarts.length;
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (writtenStarts[mid] < at) lo = mid + 1; else hi = mid; }
+      if (lo < writtenStarts.length && writtenStarts[lo] <= hostAt) continue;
+      /* A view's own inert ranges first: two readings can join an SVG script differently, and the
+         URL one of them has in a comment must not mark the other's live copy seen. */
+      if (view.inert && isInert(view.inert, at)) continue;
+      if (seen.has(`${at}:${host}`)) continue;
+      seen.add(`${at}:${host}`);
+      judge(at, m[0], host, text.slice(at, assembled.rawAt(start + m[0].length - 1)[1]));
+    }
   }
 
   out.push(...findIceServers(path, text, inert));
   return out;
 }
+
+/* The URL parser's other spellings of a special scheme's authority: any run of `/` and `\` after
+   `https:` or `wss:` (`https:\\js.stripe.com`, `https:/js.stripe.com`, and none at all from a
+   page of another scheme), and `\\` or `/\` for `//`. Chromium and Firefox both loaded Stripe
+   through the first two on 7 Nov 2026. Asked of the page and of every assembled text, beside the
+   URL pattern above, and reported only where that found nothing. content.py's LOOSE_URL_RE. */
+const LOOSE_URL = /(?:(?:https?|wss?):[\\/]*|[\\/][\\/])(?:[^\s/\\?#"'`<>]*@)?([a-z0-9.-]+\.[a-z]{2,})([/\\][^\s"'`)<>]*)?/i;
 
 /**
  * A `.ts`, `.tsx` or `.jsx` file shipped in the bundle, which the browser never runs: the
@@ -1684,11 +1757,24 @@ function packageFinding(path: string, line: number, host: string, pkg: PackageHi
  * authorize page) drops to a warning for the reason a link to a blocked host does: the
  * frame does not open links. Passed to og.openLink, it stays what the table says.
  */
-function findPolicyPatterns(path: string, text: string, inert: Span[], shippedSource = false): Finding[] {
+function findPolicyPatterns(path: string, text: string, inert: Span[], shippedSource = false, views: AssembledView[] = []): Finding[] {
   const lineAt = lineLocator(text);
   const out: Finding[] = [];
   const seen = new Set<string>();
-  for (const hit of blockedPatternHits(text)) {
+  /* A signature in a text the browser assembles that is code (an event handler, an SVG script),
+     at the byte it was read from: `onclick="Stripe(&quot;pk_live_..."` is the call. */
+  const hits = blockedPatternHits(text);
+  const written = new Set(hits.map((hit) => `${hit.index}:${hit.service}`));
+  for (const view of views) {
+    if (!view.code) continue;
+    for (const hit of blockedPatternHits(view.text.text)) {
+      const at = view.text.rawAt(hit.index)[0];
+      if (written.has(`${at}:${hit.service}`) || (view.inert && isInert(view.inert, at))) continue;
+      written.add(`${at}:${hit.service}`);
+      hits.push({ ...hit, index: at });
+    }
+  }
+  for (const hit of hits) {
     if (isInert(inert, hit.index) || isPackageMetadata(text, hit.index)) continue;
     const severity = shippedSource ? "warning" : hit.severity === "blocker" && isAnchorHref(text, hit.index) ? "warning" : hit.severity;
     const key = `${hit.service}:${severity}`;
@@ -2104,152 +2190,939 @@ function isAnchorHref(text: string, at: number): boolean {
  * that showed the template and regex derailments below for what they were.
  */
 export function inertRanges(path: string, text: string): Span[] {
-  const ranges: [number, number][] = [];
   const html = /\.html?$/i.test(path);
   const css = /\.css$/i.test(path);
 
-  /* HTML is scanned for `<!-- -->` and then for the script elements inside it,
-     because a URL cited in a comment in an inline script is the same false
-     positive arriving by a different door. */
+  /* HTML is walked once, in the order the browser's tokenizer reads it (`htmlReadings`,
+     below), for its comments and its script elements, because a URL cited in a
+     comment in an inline script is the same false positive arriving by a different
+     door. */
   if (html) {
-    /* THE MASK IS GONE, AND ITS REMOVAL IS THE FIX. It blanked comments and the
+    /* THE MASK IS GONE, AND ITS REMOVAL WAS THE FIX. It blanked comments and the
        raw-text elements before both walks, to stop a decoy `<script ... ld+json>`
        opening a range from somewhere it is only text. It closed that, and broke two
-       things that were working -- in an advisory check whose real boundary is the
-       CSP, which is a bad trade twice over.
-       
-       A raw-text tag inside a real script body is just characters there, and the
-       mask blanked it anyway. Put a `<title>` inside a JavaScript block comment and
-       its closer inside a string on the next line, and the mask blanks from the one
-       to the other -- taking the comment's closing delimiter with it. `scanCode`
-       then runs off the end and marks the live `fetch` below inert: a hidden
-       request, which is the bug the mask was closing, arriving by a new route.
-       (Writing that example out literally here would end this comment early, which
-       is the same hazard one level up.) And the mirror case
-       refused a good bundle -- an open tag inside a script string with its closer
-       later in the document blanked across the real `</script>`, the code walk
-       matched nothing, and `// https://threejs.org/manual` became a blocker.
-       
-       So comments are skipped by RANGE rather than by rewriting the text, which
-       cannot corrupt the scanner because it does not touch what the scanner reads.
-       That closes the HTML-comment decoy, the one with real reach: a file with five
-       fetches to five origins went to zero blockers on one added comment.
-       
-       `<textarea>`, `<title>`, `<style>` and the rest stay open, and so do bogus
-       comments, `</script >`, SVG foreign content and a decoy inside an attribute
-       value. A regex is not an HTML parser and this one is not going to become one.
-       What made that tolerable was `connect-src` on the games origin refusing
-       anything this missed. Under 2027-03 it refuses only plain http, so a missed
-       blocked service is now the sandbox run's `net` verdict and the reviewer's to
-       catch (findOutboundOrigins). A parser here would be the honest fix; shipping a
-       regression to avoid one is not. */
-    const comments: Span[] = [];
-    for (const m of text.matchAll(/<!--[\s\S]*?(?:-->|$)/g)) {
-      comments.push([m.index, m.index + m[0].length]);
-      ranges.push([m.index, m.index + m[0].length]);
-    }
-    for (const m of text.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) {
-      const from = m.index + m[0].indexOf(m[1]);
-      for (const [a, b] of scanScript(m[1])) ranges.push([from + a, from + b]);
-    }
+       things that were working. A raw-text tag inside a real script body is just
+       characters there, and the mask blanked it anyway, taking a JavaScript block
+       comment's closing delimiter with it, so `scanCode` ran off the end and marked a
+       live `fetch` inert. The mirror case refused a good bundle. So comments are
+       skipped by RANGE rather than by rewriting the text, which cannot corrupt the
+       scanner because it does not touch what the scanner reads.
 
-    /* SOCIAL METADATA IS NOT A REQUEST, AND THIS IS THE THIRD DOOR.
-     *
-     * `<meta property="og:image" content="https://example.com/card.jpg">` is fetched by
-     * a crawler, on a crawler's server, from a copy of the page it already has. The
-     * player's browser never asks for it: it is not a subresource, it is not governed by
-     * `connect-src`, and no CSP directive in the runtime contract mentions it. The same
-     * goes for `og:url`, `twitter:*`, and a `<link rel="canonical">`.
-     *
-     * Both OpenGame Originals were refused for exactly this. Der Koloss's own index.html
-     * -- the entry point of a game live in production -- was blocked three times on
-     * `og:url`, `og:image` and `og:image:secure_url`, and Modern Claudefare the same way.
-     * Neither bundle can reach either host at runtime, and neither was trying to; they
-     * were declaring where their share card lives, which is what a shipped game does.
-     *
-     * A blocker refuses the upload outright, so this was the wizard's most consequential
-     * code rejecting the only two games the platform has ever published, for metadata
-     * that cannot make a request. The comment above about a false positive "arriving by a
-     * different door" applies unchanged.
-     *
-     * Only `content` and `href` ON A META OR LINK ELEMENT. A `<link rel="preload"
-     * href="https://cdn...">` IS a request and must keep failing, so `rel` is checked
-     * rather than the tag name alone. Where it is inexact it is inexact toward blocking. */
-    for (const m of text.matchAll(/<meta\b[^>]*>/gi)) {
-      if (!/\b(?:property|name)\s*=\s*["']?(?:og:|twitter:|fb:)/i.test(m[0])) continue;
-      ranges.push([m.index, m.index + m[0].length]);
-    }
-    for (const m of text.matchAll(/<link\b[^>]*>/gi)) {
-      /* EVERY TOKEN IN THE REL LIST, NOT THE FIRST ONE. `rel` is a space-separated
-         set, and the first draft matched on the leading token -- so
-         `rel="me preload"` and `rel="alternate stylesheet"` both went inert while
-         the browser honoured `preload` and `stylesheet` and fetched the URL. That
-         is a hole in exactly the direction this whole allowance had to avoid, and
-         the test written to prevent it pinned the literal string `rel="preload"`,
-         which is the one spelling that was never the problem.
+       THE REGEXES THAT REPLACED IT ARE GONE TOO, 6 Nov 2026. `/<!--[\s\S]*?(?:-->|$)/`
+       over the whole document opened a range at every `<!--`, inside a `<script>`
+       as well, where the browser reads it as script data and runs the code after it
+       (security audit run 2: `<script><!--` on its own line, or `var m = "<!--"` in an
+       inlined library, hid a Stripe call up to the next `-->`). The same regex opened
+       one inside an attribute value, a `<title>` or a `<style>`, and closed one later
+       than the browser does. Under 2027-03 connect-src refuses only plain http, so
+       each of those was a blocked service hidden from this check rather than a
+       missed warning. `htmlReadings` opens a range only where the tokenizer, in the data
+       state, would; `content.py`'s `inert.py` has the same walk as `html_readings`, and
+       the bundles in game-policy-probes.json hold the two to one answer.
+
+       Inline SVG and MathML change what a `<script>` start tag means, and until 7 Nov
+       2026 this read them as HTML: seven pages ran a `fetch` in Chromium and Firefox that
+       both checkers read as a comment. The walk now carries the foreign-content part of the
+       tree builder's stack (FOREIGN CONTENT, below). A `<frameset>` still reads as HTML,
+       which only makes it check more: nothing after one runs. */
+    const { readings, clip } = htmlReadings(text);
+    /* Readings share their scripts, so each body is walked once. */
+    const bodies = new Map<string, Span[]>();
+    const walked = (key: string, scan: () => Span[]) => {
+      let found = bodies.get(key);
+      if (!found) { found = scan(); bodies.set(key, found); }
+      return found;
+    };
+    const spansOf = (reading: HtmlReading): Span[] => {
+      const ranges: Span[] = [...reading.comments];
+      for (const script of reading.scripts) {
+        const body = text.slice(script.body, script.close);
+        pushAll(ranges, walked(`${script.body}:${script.close}`, () => scanScript(body).map(([a, b]): Span => [script.body + a, script.body + b])));
+        /* A body the browser does not run (a template, a shader) keeps reading `<!--` as a
+           comment, as it was read before, so a template that parks a URL in one does not
+           start failing. Not one read as JSON: an import map's `"<!--"` is a string, and the
+           URL after it is fetched. */
+        const type = scriptType(script.attrs);
+        if (JS_TYPES.has(type)) continue;
+        if (!RUN_LATER_TYPES.has(type) && type !== "importmap" && type !== "speculationrules" && !type.endsWith("json")) {
+          pushAll(ranges, walked(`c${script.body}:${script.close}`, () => commentSpans(body).map(([a, b]): Span => [script.body + a, script.body + b])));
+        }
+        /* JSON-LD is a document about the game, not a fetch list. Its `@id` and `url` are
+           identifiers, often the game's marketing site, and a search engine reads them
+           from its own copy. Taken from the walk and the element's own parsed `type`,
+           never from a regex over the raw text: matching `<script ... ld+json>` to the
+           next `</script>` let a decoy opening tag in a comment, a string or a raw-text
+           element turn everything up to the next `</script>` inert, `fetch` calls
+           included, and `data-type=" type=application/ld+json"` read as the type. A range
+           an author can open at will is not a range, it is an off switch. Only a closed
+           element counts, as only a closed one ever did. */
+        if (type === "application/ld+json" && script.close < text.length) ranges.push([script.start, script.close]);
+      }
+      /* A script inside SVG, read as the JavaScript the browser runs. In SVG a script of the
+         JSON-LD type is markup, not a document about the game, so it has no allowance. */
+      for (const script of reading.svgScripts) {
+        pushAll(ranges, walked(`s${script.segs.flat().join(",")}`, () => svgScriptSpans(text, script.segs)));
+      }
+
+      /* SOCIAL METADATA IS NOT A REQUEST, AND THIS IS THE THIRD DOOR.
+       *
+       * `<meta property="og:image" content="https://example.com/card.jpg">` is fetched by
+       * a crawler, on a crawler's server, from a copy of the page it already has. The
+       * player's browser never asks for it: it is not a subresource, it is not governed by
+       * `connect-src`, and no CSP directive in the runtime contract mentions it. The same
+       * goes for `og:url`, `twitter:*`, and a `<link rel="canonical">`.
+       *
+       * Both OpenGame Originals were refused for exactly this. Der Koloss's own index.html
+       * -- the entry point of a game live in production -- was blocked three times on
+       * `og:url`, `og:image` and `og:image:secure_url`, and Modern Claudefare the same way.
+       * Neither bundle can reach either host at runtime, and neither was trying to; they
+       * were declaring where their share card lives, which is what a shipped game does.
+       *
+       * A blocker refuses the upload outright, so this was the wizard's most consequential
+       * code rejecting the only two games the platform has ever published, for metadata
+       * that cannot make a request. The comment above about a false positive "arriving by a
+       * different door" applies unchanged.
+       *
+       * Only `content` and `href` ON A META OR LINK ELEMENT. A `<link rel="preload"
+       * href="https://cdn...">` IS a request and must keep failing, so `rel` is checked
+       * rather than the tag name alone. Where it is inexact it is inexact toward blocking.
+       *
+       * Both tags come from `htmlReadings`, as the start tags it reaches in the data state, with
+       * their parsed attributes. Matched off the raw text, `var s = "<meta property=og:a "`
+       * or `"<link rel=canonical "` in a script made every byte up to the next `>` inert,
+       * the request between them included. */
+      for (const tag of reading.tags) {
+        /* A meta carrying `http-equiv` is a pragma, and `refresh` is a navigation, whatever
+           card it also claims to be. */
+        if (tag.name !== "meta" || tag.attrs.has("http-equiv")) continue;
+        if (!["property", "name"].some((key) => /^(?:og:|twitter:|fb:)/i.test(tag.attrs.get(key) ?? ""))) continue;
+        ranges.push([tag.start, tag.end]);
+      }
+      for (const tag of reading.tags) {
+        if (tag.name !== "link") continue;
+        /* EVERY TOKEN IN THE REL LIST, NOT THE FIRST ONE. `rel` is a space-separated
+           set, and the first draft matched on the leading token -- so
+           `rel="me preload"` and `rel="alternate stylesheet"` both went inert while
+           the browser honoured `preload` and `stylesheet` and fetched the URL. That
+           is a hole in exactly the direction this whole allowance had to avoid, and
+           the test written to prevent it pinned the literal string `rel="preload"`,
+           which is the one spelling that was never the problem.
          
-         `alternate` is only safe alone: paired with `stylesheet` it IS a fetch. So
-         the rule is that the whole set must be safe, not that any member is. */
-      /* `(?:^|\s)` and not `\b`. A hyphen is a word boundary, so `\brel=` matched
-         inside `data-rel=` -- and `.match` returns the FIRST hit, so
-         `<link data-rel="canonical" rel="preload" href="https://evil...">` read the
-         decoy, went inert, and the browser preloaded the script. Reversing the
-         attribute order flagged correctly, which is what made it look fixed. */
-      const rel = m[0].match(/(?:^|\s)rel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
-      const tokens = (rel?.[1] ?? rel?.[2] ?? rel?.[3] ?? "")
-        .toLowerCase().split(/\s+/).filter(Boolean);
-      if (tokens.length === 0) continue;
-      const INERT_REL = ["canonical", "alternate", "me", "author", "license"];
-      if (!tokens.every((t) => INERT_REL.includes(t))) continue;
-      ranges.push([m.index, m.index + m[0].length]);
-    }
+           `alternate` is only safe alone: paired with `stylesheet` it IS a fetch. So
+           the rule is that the whole set must be safe, not that any member is. */
+        /* The parsed `rel`, the first one on the tag, as the browser reads it. A pattern
+           over the tag was caught twice: `\brel=` matched inside `data-rel=`, so
+           `<link data-rel="canonical" rel="preload" href="https://evil...">` read the
+           decoy, went inert, and the browser preloaded the script. Reversing the
+           attribute order flagged correctly, which is what made it look fixed. */
+        /* Split on ASCII whitespace, as the browser splits it. */
+        const tokens = (tag.attrs.get("rel") ?? "").toLowerCase().split(/[\t\n\f\r ]+/).filter(Boolean);
+        if (tokens.length === 0) continue;
+        const INERT_REL = ["canonical", "alternate", "me", "author", "license"];
+        if (!tokens.every((t) => INERT_REL.includes(t))) continue;
+        ranges.push([tag.start, tag.end]);
+      }
 
-    /* JSON-LD is a document about the game, not a fetch list. Its `@id` and `url` are
-       identifiers -- often the game's marketing site -- and a search engine reads them
-       from its own copy. The script element itself is already skipped as code above only
-       when it parses as code; `application/ld+json` does not, so it is named here. */
-    /* JSON-LD, and ONLY where the scan already agrees a script element opens.
-     *
-     * Matching `<script ... ld+json>` to the next `</script>` on the raw text let a
-     * bundle blind the scanner for a whole region: put that opening tag inside a
-     * comment in an ordinary script -- `/* <script type="application/ld+json"> *\/`
-     * -- and everything up to the next `</script>` went inert, `fetch` calls
-     * included. A range that can be opened by a string the author controls is not a
-     * range, it is an off switch.
-     *
-     * So the ld+json blocks are taken from the same `<script>` walk the code scan
-     * uses, which starts from a real element boundary, and the type is read off
-     * that element's own attributes. */
-    /* Regions where a `<script ... ld+json>` cannot actually open one: an HTML
-       comment, and the raw-text elements. The decoy only has to appear inside one
-       of these for the range to swallow everything to the next `</script>` -- so
-       `<!-- <script type="application/ld+json"> -->` silenced the origin scanner
-       for the rest of the file, and a file with five `fetch` calls to five evil
-       origins went from five blockers to zero on one added comment. Moving the
-       match off JavaScript comments closed one door of four. */
-    /* MASKED, NOT SKIPPED, AND THE DIFFERENCE IS THE WHOLE FIX. Skipping a decoy
-       range still lets the lazy `</script>` match reach past it and consume the
-       real script after it -- so `<textarea><script type="ld+json"></textarea>`
-       swallowed the following `<script>fetch(...)</script>` whole and the origin
-       scanner never saw the call. Blanking these regions first, preserving length
-       so every index still lines up, means a decoy inside one cannot open
-       anything at all.
-       
-       Comments and the raw-text elements, because those are the places a
-       `<script ...>` is text rather than an element. A file with five fetches to
-       five evil origins went to zero blockers on one added HTML comment. */
-    for (const m of text.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
-      /* `(?:^|\s)type=`, not `type=`: without a boundary this matched `data-type`,
-         which the browser executes as classic JavaScript. */
-      if (!/(?:^|\s)type\s*=\s*["']?application\/ld\+json/i.test(m[1])) continue;
-      if (isInert(comments, m.index)) continue;
-      ranges.push([m.index, m.index + m[0].length]);
-    }
-
-    return ranges;
+      return ranges;
+    };
+    /* Where the walk read the page more than one way, a byte is inert only where every
+       reading says so. */
+    return combineReadings(readings, clip, spansOf);
   }
 
+  if (XML_DOCUMENT.test(path)) {
+    try {
+      return svgInert(text);
+    } catch (error) {
+      /* Nothing is inert; `assembledViews` throws the same, and the file is held. */
+      if (error instanceof ExpansionLimit) return [];
+      throw error;
+    }
+  }
   return css ? scanCode(text, true) : scanScript(text);
+}
+
+/* `htmlReadings` and its parts: `html_readings` in the pipeline's `inert.py`, line for
+   line. The tokenizer's whitespace, plus CR, which the browser has already made LF. The
+   `/i` patterns have no `u` flag, so U+017F does not fold to `s`, as the browser's does not. */
+const HTML_WS = "\t\n\f\r ";
+const ASCII_ALPHA = /^[A-Za-z]$/;
+const TAG_NAME_RE = /[A-Za-z][^\t\n\f\r />]*/y;
+const ATTR_NAME_RE = /[^\t\n\f\r />][^\t\n\f\r />=]*/y;
+const WS_RUN_RE = /[\t\n\f\r ]*/y;
+const UNQUOTED_RE = /[^\t\n\f\r >]*/y;
+/* From just past `<!--`: `<!-->` and `<!--->` close at once, then `-->` or `--!>`. */
+const COMMENT_END_RE = /-?>|[\s\S]*?(?:--!?>|$)/y;
+const SCRIPT_DATA_RE = /<!--|<\/script(?=[\t\n\f\r \/>])/gi;
+const SCRIPT_ESCAPED_RE = /-->|<\/script(?=[\t\n\f\r \/>])|<script(?=[\t\n\f\r \/>])/gi;
+const SCRIPT_DOUBLE_RE = /-->|<\/script(?=[\t\n\f\r \/>])/gi;
+const RAW_TEXT_END = new Map(["style", "xmp", "iframe", "noembed", "noframes", "noscript", "textarea", "title"]
+  .map((name) => [name, new RegExp(`</${name}(?=[\\t\\n\\f\\r />])`, "gi")]));
+/* The JavaScript MIME type essences, from the HTML standard's list. */
+/* Script types a library on the page runs as JavaScript after the browser has passed them by:
+   Babel's standalone build compiles and runs `text/babel` and `text/jsx`, and a consent manager
+   (Cookiebot, OneTrust, Klaro, CookieYes and the rest) parks a tracker as `text/plain` and swaps
+   the type once a player agrees. Their bodies are JavaScript to whatever runs them, so `<!--` in
+   one is not an HTML comment over what follows. Until 7 Nov 2026 it was read as one, and `<!--`
+   on the line above a `fetch` hid it. */
+const RUN_LATER_TYPES = new Set(["text/babel", "text/jsx", "text/plain"]);
+const JS_TYPES = new Set([
+  "", "module", "application/ecmascript", "application/javascript", "application/x-ecmascript",
+  "application/x-javascript", "text/ecmascript", "text/javascript", "text/javascript1.0",
+  "text/javascript1.1", "text/javascript1.2", "text/javascript1.3", "text/javascript1.4",
+  "text/javascript1.5", "text/jscript", "text/livescript", "text/x-ecmascript", "text/x-javascript",
+]);
+
+function stickyEnd(re: RegExp, text: string, at: number): number {
+  re.lastIndex = at;
+  const m = re.exec(text);
+  return m ? at + m[0].length : at;
+}
+
+function searchFrom(re: RegExp, text: string, at: number): RegExpExecArray | null {
+  re.lastIndex = at;
+  return re.exec(text);
+}
+
+/* Where a tag whose name ends at `i` ends, its attributes, first one of a name wins, and
+   whether it closed itself. A quote opens a value only straight after `=`, so a `>` inside
+   one does not end the tag, and a `/` before the `>` closes it only outside an unquoted
+   value. Null when the file ends inside the tag, where the browser drops it. */
+function htmlTag(text: string, i: number): [number, Map<string, string>, boolean] | null {
+  const attrs = new Map<string, string>();
+  const n = text.length;
+  const keep = (name: string, value: string) => { if (!attrs.has(name)) attrs.set(name, value); };
+  while (i < n) {
+    const c = text[i];
+    if (c === ">") return [i + 1, attrs, false];
+    if (c === "/" && i + 1 < n && text[i + 1] === ">") return [i + 2, attrs, true];
+    if (HTML_WS.includes(c) || c === "/") { i += 1; continue; }
+    const nameEnd = stickyEnd(ATTR_NAME_RE, text, i);
+    const name = text.slice(i, nameEnd).toLowerCase();
+    const j = stickyEnd(WS_RUN_RE, text, nameEnd);
+    if (j >= n || text[j] !== "=") { keep(name, ""); i = j; continue; }
+    i = stickyEnd(WS_RUN_RE, text, j + 1);
+    if (i >= n) return null;
+    if (text[i] === '"' || text[i] === "'") {
+      const close = text.indexOf(text[i], i + 1);
+      if (close === -1) return null;
+      keep(name, text.slice(i + 1, close));
+      i = close + 1;
+    } else {
+      const end = stickyEnd(UNQUOTED_RE, text, i);
+      keep(name, text.slice(i, end));
+      i = end;
+    }
+  }
+  return null;
+}
+
+/* Where the `</script` that closes a script element whose body starts at `i` is. After
+   `<!--`, a `<script` makes the next `</script` text until a `-->`; stopping at that one
+   would walk the rest of the live script as HTML, where its next `<!--` would open a
+   comment again. */
+function scriptClose(text: string, i: number): number {
+  const n = text.length;
+  for (;;) {
+    const m = searchFrom(SCRIPT_DATA_RE, text, i);
+    if (!m) return n;
+    if (m[0][1] === "/") return m.index;
+    i = m.index + m[0].length - 2; // the escape's own dashes count toward `-->`
+    for (;;) {
+      const e = searchFrom(SCRIPT_ESCAPED_RE, text, i);
+      if (!e) return n;
+      if (e[0] === "-->") { i = e.index + 3; break; }
+      if (e[0][1] === "/") return e.index;
+      const d = searchFrom(SCRIPT_DOUBLE_RE, text, e.index + e[0].length + 1);
+      if (!d) return n;
+      i = d.index + d[0].length + (d[0] === "-->" ? 0 : 1);
+      if (d[0] === "-->") break;
+    }
+  }
+}
+
+/* FOREIGN CONTENT: `html_readings` in the pipeline's `inert.py`, line for line, and the
+   reasoning is there in full. In short: inside `<svg>` and `<math>` a `<script>`, `<style>`
+   or `<title>` start tag does not switch the tokenizer, `<![CDATA[` holds text, and
+   `</script>` closes the element wherever it stands; the integration points let HTML back
+   in; forty-odd start tags break out. So the walk carries the open SVG and MathML elements
+   and the HTML elements opened inside an integration point, and where the stack the browser
+   holds depends on something it does not model it reads the page each way from that token
+   on, up to MAX_HTML_READINGS, and keeps a byte inert only where every reading does. */
+const NS_SVG = "svg", NS_MATH = "math", NS_HTML = "html", NS_UNKNOWN = "?";
+const HTML_IP = 1, TEXT_IP = 2, SPECIAL = 4;
+const MAX_HTML_READINGS = 16;
+/* What the readings may spend between them, in open elements looked at, per character: an end
+   tag costs the stack's depth, and nested `<g>`s with stray end tags went quadratic in the first
+   draft (71 s for 28 KB). Past it, or past MAX_FOREIGN_DEPTH, nothing after that point is inert. */
+const HTML_BUDGET_PER_CHAR = 4;
+const HTML_BUDGET_FLOOR = 1 << 16;
+const MAX_FOREIGN_DEPTH = 256;
+const words = (s: string) => new Set(s.split(" "));
+const BREAKOUT = words(
+  "b big blockquote body br center code dd div dl dt em embed h1 h2 h3 h4 h5 h6 head hr i img " +
+  "li listing menu meta nobr ol p pre ruby s small span strong strike sub sup table tt u ul var");
+const FONT_BREAKOUT = ["color", "face", "size"];
+const SVG_HTML_IP = words("foreignobject desc title");
+const MATH_TEXT_IP = words("mi mo mn ms mtext");
+const HTML_SPECIAL = words(
+  "address applet area article aside base basefont bgsound blockquote body br button caption " +
+  "center col colgroup dd details dir div dl dt embed fieldset figcaption figure footer form " +
+  "frame frameset h1 h2 h3 h4 h5 h6 head header hgroup hr html iframe img input keygen li link " +
+  "listing main marquee menu meta nav noembed noframes noscript object ol p param plaintext pre " +
+  "script search section select source style summary table tbody td template textarea tfoot th " +
+  "thead title tr track ul wbr xmp");
+const VOID = words(
+  "area base basefont bgsound br col embed frame hr image img input keygen link meta param " +
+  "source track wbr");
+const HEADINGS = words("h1 h2 h3 h4 h5 h6");
+const FORMATTING = words("a b big code em font i nobr s small strike strong tt u");
+const CLOSES_P = words(
+  "address article aside blockquote center details dialog dir div dl fieldset figcaption " +
+  "figure footer header hgroup main menu nav ol p search section summary ul h1 h2 h3 h4 h5 h6 " +
+  "pre listing form hr xmp plaintext li dd dt");
+const TABLE_PARTS = words("table caption colgroup col tbody thead tfoot tr td th");
+const RUBY = words("ruby rb rp rt rtc");
+/* ASCII only, as the tokenizer lowercases a tag name: `toLowerCase` makes the Kelvin sign a `k`. */
+const asciiLower = (s: string) => s.replace(/[A-Z]/g, (c) => c.toLowerCase());
+
+type Seg = [number, number, boolean];
+class FNode {
+  constructor(public ns: string, public name: string, public flags = 0, public start = -1,
+              public segs: Seg[] | null = null) {}
+  copy(): FNode { return new FNode(this.ns, this.name, this.flags, this.start, this.segs ? [...this.segs] : null); }
+}
+type Stack = FNode[];
+const unknown = () => new FNode(NS_UNKNOWN, "");
+
+function htmlRun(stack: Stack): number {
+  let k = stack.length;
+  while (k && stack[k - 1].ns === NS_HTML) k -= 1;
+  return k;
+}
+
+function dirty(stack: Stack): Stack {
+  const k = htmlRun(stack);
+  if (k && stack[k - 1].ns === NS_UNKNOWN) return stack.slice(0, k);
+  return [...stack.slice(0, k), unknown()];
+}
+
+function dedupeStacks(stacks: Stack[]): Stack[] {
+  const out: Stack[] = [];
+  for (const st of stacks) {
+    if (!out.some((o) => o.length === st.length && o.every((nd, i) => nd === st[i]))) out.push(st);
+  }
+  return out;
+}
+
+const sameEnd = (entry: string, name: string) => entry === name || (HEADINGS.has(entry) && HEADINGS.has(name));
+
+function htmlEnd(stack: Stack, name: string): Stack[] {
+  if (name === "template") {
+    const out: Stack[] = [stack];
+    stack.forEach((nd, k) => { if (nd.ns === NS_HTML && nd.name === "template") out.push(stack.slice(0, k)); });
+    stack.forEach((nd, k) => { if (nd.ns === NS_UNKNOWN) out.push(stack.slice(0, k + 1)); });
+    out.push([]);
+    return dedupeStacks(out);
+  }
+  /* In a table or a template these pop back to the table, through any SVG on the way. */
+  const table: Stack[] = TABLE_PARTS.has(name) ? [[]] : [];
+  for (let k = stack.length - 1; k >= 0; k -= 1) {
+    const nd = stack[k];
+    if (nd.ns === NS_UNKNOWN) return dedupeStacks([stack, ...(k + 1 < stack.length ? [stack.slice(0, k + 1)] : []), ...table]);
+    if (nd.ns === NS_HTML) {
+      if (sameEnd(nd.name, name)) {
+        /* A formatting element popped on the way is opened again by the next text or start
+           tag, which keeps a later `</foreignObject>` from closing (`<p><b></p>x`). */
+        if (stack.slice(k + 1).some((above) => above.ns === NS_HTML && FORMATTING.has(above.name))) return [dirty(stack.slice(0, k))];
+        return [stack.slice(0, k)];
+      }
+      if (HTML_SPECIAL.has(nd.name)) {
+        const rs = htmlRun(stack.slice(0, k + 1));
+        let deeper = -1;
+        for (let j = k - 1; j >= rs; j -= 1) if (sameEnd(stack[j].name, name)) { deeper = j; break; }
+        if (deeper >= 0) return dedupeStacks([stack, stack.slice(0, deeper), [...stack.slice(0, rs), unknown(), ...stack.slice(k + 1)], ...table]);
+        return dedupeStacks([stack, ...table]);
+      }
+      continue;
+    }
+    if (nd.flags & SPECIAL) return dedupeStacks([stack, ...table]);
+  }
+  if (name === "body" || name === "html" || name === "br" || name === "p") return [stack];
+  return [stack, []];
+}
+
+function foreignEnd(stack: Stack, name: string, top?: number): Stack[] {
+  if (name === "br" || name === "p") {
+    let k = stack.length;
+    while (k && (stack[k - 1].ns === NS_SVG || stack[k - 1].ns === NS_MATH) && !(stack[k - 1].flags & (HTML_IP | TEXT_IP))) k -= 1;
+    return htmlEnd(stack.slice(0, k), name);
+  }
+  for (let k = top ?? stack.length - 1; k >= 0; k -= 1) {
+    const nd = stack[k];
+    if (nd.ns === NS_HTML) return htmlEnd(stack, name);
+    if (nd.ns === NS_UNKNOWN) {
+      return dedupeStacks([...htmlEnd(stack, name), ...foreignEnd([...stack.slice(0, k), ...stack.slice(k + 1)], name, k - 1)]);
+    }
+    if (nd.name === name) return [stack.slice(0, k)];
+  }
+  return htmlEnd(stack, name);
+}
+
+function endTag(stack: Stack, name: string): Stack[] {
+  if (!stack.length) return [stack];
+  const top = stack[stack.length - 1];
+  if (top.ns === NS_HTML) return htmlEnd(stack, name);
+  if (top.ns === NS_UNKNOWN) return dedupeStacks([...htmlEnd(stack, name), ...foreignEnd(stack.slice(0, -1), name)]);
+  return foreignEnd(stack, name);
+}
+
+function dirties(name: string, run: string[]): boolean {
+  const last = run[run.length - 1];
+  return (CLOSES_P.has(name) && run.includes("p"))
+    || (name === "li" && run.includes("li"))
+    || ((name === "dd" || name === "dt") && (run.includes("dd") || run.includes("dt")))
+    || (HEADINGS.has(name) && HEADINGS.has(last))
+    || ((name === "a" || name === "nobr" || name === "button") && run.includes(name))
+    || ((name === "option" || name === "optgroup") && (last === "option" || last === "optgroup"))
+    || (RUBY.has(name) && run.some((r) => RUBY.has(r)));
+}
+
+function htmlStart(stack: Stack, name: string, sc: boolean, at: number): Stack[] {
+  if (name === NS_SVG || name === NS_MATH) return [sc ? stack : [...stack, new FNode(name, name, 0, at)]];
+  if (!stack.length) return [stack];
+  if (TABLE_PARTS.has(name) || name === "frameset") return [name === "table" ? dirty(stack) : stack, []];
+  if (name === "template" || name === "select" || name === "form") return [dirty(stack)];
+  if (name === "body" || name === "html" || name === "head" || name === "frame") return [stack];
+  const k = htmlRun(stack);
+  if (k && stack[k - 1].ns === NS_UNKNOWN) return [stack];
+  const run = stack.slice(k).map((nd) => nd.name);
+  if (run.length && dirties(name, run)) return [dirty(stack)];
+  if (VOID.has(name) || RAW_TEXT_END.has(name) || name === "script" || name === "plaintext") return [stack];
+  return [[...stack, new FNode(NS_HTML, name, 0, at)]];
+}
+
+function foreignPush(stack: Stack, name: string, attrs: Map<string, string>, sc: boolean, at: number): Stack[] {
+  const ns = stack[stack.length - 1].ns;
+  if (sc) return [stack];
+  if (ns === NS_SVG) {
+    return [[...stack, new FNode(ns, name, SVG_HTML_IP.has(name) ? HTML_IP | SPECIAL : 0, at, name === "script" || name === "style" ? [] : null)]];
+  }
+  if (MATH_TEXT_IP.has(name)) return [[...stack, new FNode(ns, name, TEXT_IP | SPECIAL, at)]];
+  if (name === "annotation-xml" && attrs.has("encoding")) {
+    const encoding = attrs.get("encoding") ?? "";
+    const html = ["text/html", "application/xhtml+xml"].includes(asciiLower(encoding));
+    /* A character reference the walk does not decode could spell either. */
+    if (encoding.includes("&")) return [[...stack, new FNode(ns, name, HTML_IP | SPECIAL, at)], [...stack, new FNode(ns, name, SPECIAL, at)]];
+    return [[...stack, new FNode(ns, name, (html ? HTML_IP : 0) | SPECIAL, at)]];
+  }
+  return [[...stack, new FNode(ns, name, name === "annotation-xml" ? SPECIAL : 0, at)]];
+}
+
+function startTag(stack: Stack, name: string, attrs: Map<string, string>, sc: boolean, at: number): [Stack, boolean][] {
+  const html = (st: Stack): [Stack, boolean][] => htmlStart(st, name, sc, at).map((s) => [s, true]);
+  if (!stack.length || stack[stack.length - 1].ns === NS_HTML) return html(stack);
+  const top = stack[stack.length - 1];
+  if (top.ns === NS_UNKNOWN) {
+    if (stack[stack.length - 2].flags & TEXT_IP && (name === "mglyph" || name === "malignmark")) {
+      return [...html(stack), ...foreignPush(stack.slice(0, -1), name, attrs, sc, at).map((s): [Stack, boolean] => [s, false])];
+    }
+    return html(stack);
+  }
+  if ((top.flags & TEXT_IP && name !== "mglyph" && name !== "malignmark") || top.flags & HTML_IP
+      || (top.ns === NS_MATH && top.name === "annotation-xml" && name === NS_SVG)) return html(stack);
+  if (BREAKOUT.has(name) || (name === "font" && FONT_BREAKOUT.some((a) => attrs.has(a)))) {
+    let k = stack.length;
+    while (k && (stack[k - 1].ns === NS_SVG || stack[k - 1].ns === NS_MATH) && !(stack[k - 1].flags & (HTML_IP | TEXT_IP))) k -= 1;
+    return html(stack.slice(0, k));
+  }
+  return foreignPush(stack, name, attrs, sc, at).map((s) => [s, false]);
+}
+
+type HtmlScript = { start: number; attrs: Map<string, string>; body: number; close: number };
+type HtmlTag = { start: number; end: number; name: string; attrs: Map<string, string> };
+type SvgScript = { start: number; segs: Seg[] };
+/* One reading of a page, and the bytes [start, end) it is answerable for. The last three are for
+   `assembledViews`, which reads what the browser decodes rather than what is written: every start
+   tag as [start, end of its name, end], each HTML `<style>` body, and the text directly in each
+   SVG `<style>`. */
+type HtmlReading = { comments: Span[]; scripts: HtmlScript[]; svgScripts: SvgScript[]; tags: HtmlTag[];
+  startTags: [number, number, number][]; styles: Span[]; svgStyles: SvgScript[]; start: number; end: number };
+
+const newReading = (): HtmlReading => ({ comments: [], scripts: [], svgScripts: [], tags: [], startTags: [], styles: [], svgStyles: [], start: 0, end: 0 });
+const forkReading = (r: HtmlReading, start: number): HtmlReading =>
+  ({ comments: [...r.comments], scripts: [...r.scripts], svgScripts: [...r.svgScripts], tags: [...r.tags],
+     startTags: [...r.startTags], styles: [...r.styles], svgStyles: [...r.svgStyles], start, end: 0 });
+
+/* Past the end tag that starts at `at`, or the end of the file. */
+function endOf(text: string, at: number): number {
+  const tag = htmlTag(text, stickyEnd(TAG_NAME_RE, text, at + 2));
+  return tag ? tag[0] : text.length;
+}
+
+/* Every reading of a page the walk could not choose between, and the offset past which none
+   of them is trusted. */
+function htmlReadings(text: string): { readings: HtmlReading[]; clip: number } {
+  const n = text.length;
+  const readings: HtmlReading[] = [];
+  const pending: [number, Stack, HtmlReading, number, number][] = [];
+  const settled = new Set<number>();
+  let forked = false;
+  let clip = n;
+  let budget = Math.max(HTML_BUDGET_FLOOR, HTML_BUDGET_PER_CHAR * n);
+
+  const close = (r: HtmlReading, old: Stack, next: Stack) => {
+    /* Every outcome keeps the foreign elements it does not pop, so a stack no shorter than
+       before has closed no SVG script. */
+    if (next.length >= old.length) return;
+    const kept = new Set(next);
+    for (const nd of old) {
+      if (nd.segs && !kept.has(nd)) (nd.name === "script" ? r.svgScripts : r.svgStyles).push({ start: nd.start, segs: [...nd.segs] });
+    }
+  };
+
+  const choose = (r: HtmlReading, at: number, old: Stack, count: number, force: [number, number]): number => {
+    if (force[0] === at) return force[1];
+    if (count > 1) {
+      forked = true;
+      const begin = Math.min(at, ...old.filter((nd) => nd.segs && nd.name === "script").map((nd) => nd.start));
+      for (let k = 1; k < count; k += 1) {
+        if (readings.length + pending.length >= MAX_HTML_READINGS) { clip = Math.min(clip, begin); break; }
+        pending.push([at, old.map((nd) => nd.copy()), forkReading(r, begin), at, k]);
+      }
+    }
+    return 0;
+  };
+
+  const run = (start: number, initial: Stack, r: HtmlReading, force: [number, number]) => {
+    let i = start;
+    let mark = start;
+    let stack = initial;
+    const textTo = (at: number) => {
+      const top = stack[stack.length - 1];
+      if (mark < at && top?.segs) top.segs.push([mark, at, false]);
+    };
+    const finish = (at: number) => { r.end = at; close(r, stack, []); };
+    /* Out of budget or depth: nothing from here is inert, in any reading, and an SVG script
+       still open is left unread, so its text stays live. It and an open SVG style are still
+       handed on, with the rest of the file as their last piece, so `assembledViews` reads them:
+       past the clip their inert ranges count for nothing, and what they decode to only adds to
+       what is checked. */
+    const giveUp = (at: number) => {
+      clip = Math.min(clip, at, ...stack.filter((nd) => nd.segs && nd.name === "script").map((nd) => nd.start));
+      r.end = at;
+      for (const nd of stack) {
+        if (nd.segs) (nd.name === "script" ? r.svgScripts : r.svgStyles).push({ start: nd.start, segs: [...nd.segs, [mark, n, false]] });
+      }
+    };
+    for (;;) {
+      if (i >= clip) return giveUp(i);
+      if (!stack.length && forked && i !== force[0]) {
+        if (settled.has(i)) return finish(i);
+        settled.add(i);
+      }
+      const j = text.indexOf("<", i);
+      if (j === -1 || j + 1 >= n) { textTo(n); return finish(n); }
+      const c = text[j + 1];
+      budget -= 1 + stack.length;
+      if (budget < 0 || stack.length > MAX_FOREIGN_DEPTH) return giveUp(j);
+      if (text.startsWith("<!--", j)) {
+        textTo(j);
+        const end = stickyEnd(COMMENT_END_RE, text, j + 4);
+        r.comments.push([j, end]);
+        i = mark = end;
+      } else if (text.startsWith("<![CDATA[", j) && stack.length && stack[stack.length - 1].ns !== NS_HTML) {
+        /* The standard opens a CDATA section wherever the current node is not HTML, and
+           Firefox does; Chromium does not at an integration point, so there it is read both
+           ways. An unknown run of HTML is a section only if it is empty. */
+        textTo(j);
+        let top = stack[stack.length - 1];
+        const both = top.ns === NS_UNKNOWN || Boolean(top.flags & (HTML_IP | TEXT_IP));
+        if (choose(r, j, stack, both ? 2 : 1, force) === 1) {
+          const end = text.indexOf(">", j + 2);
+          if (end === -1) return finish(n);
+          i = mark = end + 1;
+          continue;
+        }
+        if (top.ns === NS_UNKNOWN) { stack = stack.slice(0, -1); top = stack[stack.length - 1]; }
+        const end = text.indexOf("]]>", j + 9);
+        const inner = end === -1 ? n : end;
+        if (top.segs && j + 9 < inner) top.segs.push([j + 9, inner, true]);
+        if (end === -1) return finish(n);
+        i = mark = end + 3;
+      } else if (c === "!" || c === "?" || (c === "/" && j + 2 < n && !ASCII_ALPHA.test(text[j + 2]) && text[j + 2] !== ">")) {
+        /* A bogus comment, a doctype, or `<![CDATA[` outside foreign content: to the next `>`. */
+        textTo(j);
+        const end = text.indexOf(">", j + 2);
+        if (end === -1) return finish(n);
+        i = mark = end + 1;
+      } else if (c === "/" || ASCII_ALPHA.test(c)) {
+        const tagStart = c === "/" ? j + 2 : j + 1;
+        if (tagStart >= n) { textTo(n); return finish(n); }
+        if (c === "/" && text[tagStart] === ">") { textTo(j); i = mark = tagStart + 1; continue; }
+        const nameEnd = stickyEnd(TAG_NAME_RE, text, tagStart);
+        const tag = htmlTag(text, nameEnd);
+        textTo(j);
+        if (!tag) return finish(n);
+        const [tagEnd, attrs, sc] = tag;
+        i = mark = tagEnd;
+        const name = asciiLower(text.slice(tagStart, nameEnd));
+        if (c === "/") {
+          const outs = endTag(stack, name);
+          const next = outs[choose(r, j, stack, outs.length, force)];
+          close(r, stack, next);
+          stack = next;
+          continue;
+        }
+        const starts = startTag(stack, name, attrs, sc, j);
+        const [next, asHtml] = starts[choose(r, j, stack, starts.length, force)];
+        close(r, stack, next);
+        stack = next;
+        r.startTags.push([j, nameEnd, i]);
+        if (name === "link" || name === "meta") r.tags.push({ start: j, end: i, name, attrs });
+        if (!asHtml) continue;
+        const raw = RAW_TEXT_END.get(name);
+        if (name === "script") {
+          const bodyEnd = scriptClose(text, i);
+          r.scripts.push({ start: j, attrs, body: i, close: bodyEnd });
+          i = mark = bodyEnd < n ? endOf(text, bodyEnd) : n;
+        } else if (raw) {
+          const found = searchFrom(raw, text, i);
+          if (name === "style") r.styles.push([i, found ? found.index : n]);
+          if (!found) return finish(n);
+          i = mark = endOf(text, found.index);
+        } else if (name === "plaintext") {
+          return finish(n);
+        }
+      } else {
+        i = j + 1;
+      }
+    }
+  };
+
+  pending.push([0, [], newReading(), -1, 0]);
+  while (pending.length) {
+    const [at, stack, reading, token, outcome] = pending.pop()!;
+    readings.push(reading);
+    run(at, stack, reading, [token, outcome]);
+  }
+  return { readings, clip };
+}
+
+/* `target.push(...items)` passes every item as an argument, and past about 120,000 spans V8
+   throws: a 1 MB inline script of comments did, in this walk's first draft. */
+function pushAll<T>(target: T[], items: T[]): void {
+  for (const item of items) target.push(item);
+}
+
+function mergedSpans(spans: Span[]): Span[] {
+  const out: Span[] = [];
+  for (const [a, b] of [...spans].sort((x, y) => x[0] - y[0] || x[1] - y[1])) {
+    if (b <= a) continue;
+    const last = out[out.length - 1];
+    if (last && a <= last[1]) last[1] = Math.max(last[1], b);
+    else out.push([a, b]);
+  }
+  return out;
+}
+
+/* Merged `spans` less merged `cut`. */
+function subtractSpans(spans: Span[], cut: Span[]): Span[] {
+  const out: Span[] = [];
+  let k = 0;
+  for (let [a, b] of spans) {
+    while (k < cut.length && cut[k][1] <= a) k += 1;
+    let j = k;
+    while (a < b) {
+      if (j >= cut.length || cut[j][0] >= b) { out.push([a, b]); break; }
+      if (cut[j][0] > a) out.push([a, cut[j][0]]);
+      a = Math.max(a, cut[j][1]);
+      j += 1;
+    }
+  }
+  return out;
+}
+
+/* What every reading agrees cannot be a request: inert where some reading says so and no
+   reading answerable for the byte says otherwise, and nothing past `clip`. */
+function combineReadings(readings: HtmlReading[], clip: number, spansOf: (r: HtmlReading) => Span[]): Span[] {
+  let out: Span[];
+  if (readings.length === 1) out = mergedSpans(spansOf(readings[0]));
+  else {
+    const inert: Span[] = [];
+    const live: Span[] = [];
+    for (const r of readings) {
+      const mine = mergedSpans(spansOf(r));
+      pushAll(inert, mine);
+      pushAll(live, subtractSpans([[r.start, r.end]], mine));
+    }
+    out = subtractSpans(mergedSpans(inert), mergedSpans(live));
+  }
+  return out.filter(([a]) => a < clip).map(([a, b]): Span => [a, Math.min(b, clip)]);
+}
+
+/* The text an SVG script or style runs: the pieces directly in it, joined, with the character
+   references outside CDATA decoded, as the tree builder hands them over. `mode` is "xml" in a
+   standalone SVG, and `base` maps that document's offsets onto the file. */
+function svgText(text: string, segs: Seg[], mode: ReferenceMode = "text", base: Mapped = Mapped.of(text)): Mapped {
+  return concat(segs.map(([a, b, cdata]) => {
+    const piece = compose(base, Mapped.of(text, a, b));
+    return cdata ? piece : decodeReferences(piece, mode);
+  }));
+}
+
+/* The inert ranges of an SVG script, read as the JavaScript the browser runs (`svgText`), mapped
+   back onto the page piece by piece, so the comment it was joined across is never covered.
+   Until this read character references, a script holding one kept no inert range, which only
+   ever checked more; now `/* &#42;/ fetch(...)` is read as the browser runs it. */
+function svgScriptSpans(text: string, segs: Seg[], mode: ReferenceMode = "text", base?: Mapped): Span[] {
+  if (!segs.length) return [];
+  const source = svgText(text, segs, mode, base);
+  return source.rawSpans(scanScript(source.text));
+}
+
+/* The type a browser decides a script element by, read toward JavaScript: a value with a
+   character reference in it, or parameters, is not decoded and is taken as script. */
+function scriptType(attrs: Map<string, string>): string {
+  let value: string;
+  if (attrs.has("type")) value = attrs.get("type") ?? "";
+  else if (attrs.get("language")) value = `text/${attrs.get("language")}`;
+  else return "";
+  if (value.includes("&")) return "";
+  return value.split(";", 1)[0].replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g, "").toLowerCase();
+}
+
+function commentSpans(text: string): Span[] {
+  const out: Span[] = [];
+  let i = text.indexOf("<!--");
+  while (i !== -1) {
+    const end = stickyEnd(COMMENT_END_RE, text, i + 4);
+    out.push([i, end]);
+    i = text.indexOf("<!--", end);
+  }
+  return out;
+}
+
+/* --- what the browser assembles ---------------------------------------------------------------
+ *
+ * Everything above reads the page as written. What follows reads it as the browser decodes it
+ * (assembled.ts says why), and hands `findOutboundOrigins` each decoded text as a view: the text,
+ * mapped onto the page, with any inert ranges only that reading of it has, and whether it is code
+ * a policy signature such as `Stripe('pk_live_` can be found in. A view never removes anything the
+ * page as written was judged on; a URL is reported from one only where the page as written had no
+ * blocked URL beginning between its start and its host. `assembled_views` in the pipeline's
+ * inert.py is the same, function for function.
+ */
+/* A standalone SVG or XML file, read as the XML document a frame, an `<object>` or a navigation
+   runs it as. og-games serves `.xml` as application/xml, where an XHTML `<script>` runs. */
+const XML_DOCUMENT = /\.(?:svg|xml)$/i;
+type AssembledView = { text: Mapped; inert: Span[] | null; code: boolean };
+
+/* What can make an attribute value read differently from how it is written: a character
+   reference, a percent escape or a character the host parser folds, the tab, LF and CR the URL
+   parser drops, and in a `style`, a CSS escape. */
+const VALUE_TRIGGER = /[&%\t\n\r\\]|[^\x00-\x7f]/;
+const CSS_TRIGGER = /[\\%]|[^\x00-\x7f]/;
+const TAIL_MARKUP = /<!--[\s\S]*?(?:-->|$)|<!\[CDATA\[|\]\]>/g;
+const MAX_SRCDOC_DEPTH = 3;
+/* Every level of nesting is one more `&amp;`, and a decoding that changes anything shortens the
+   text, so this bound is the nesting of a page some thousand frames deep. */
+const MAX_SRCDOC_DECODINGS = 1024;
+/* What the URL parser takes for a `javascript:` URL once tabs and line breaks are gone: leading C0
+   controls and spaces stripped, the scheme in any case. */
+const JAVASCRIPT_URL = /^[\x00-\x20]*javascript:/i;
+const triggered = (re: RegExp, text: string, a: number, b: number) => re.test(text.slice(a, b));
+
+/* Every attribute of the tag whose name ends at `i`, as [name, value start, value end], read by
+   the tokenizer states `htmlTag` reads, duplicates included: the browser keeps the first, and
+   decoding all of them only reads more. */
+function attrValues(text: string, i: number): [string, number, number][] {
+  const out: [string, number, number][] = [];
+  const n = text.length;
+  while (i < n) {
+    const c = text[i];
+    if (c === ">" || (c === "/" && i + 1 < n && text[i + 1] === ">")) break;
+    if (HTML_WS.includes(c) || c === "/") { i += 1; continue; }
+    const nameEnd = stickyEnd(ATTR_NAME_RE, text, i);
+    const name = text.slice(i, nameEnd).toLowerCase();
+    const j = stickyEnd(WS_RUN_RE, text, nameEnd);
+    if (j >= n || text[j] !== "=") { i = j; continue; }
+    i = stickyEnd(WS_RUN_RE, text, j + 1);
+    if (i >= n) break;
+    if (text[i] === '"' || text[i] === "'") {
+      const close = text.indexOf(text[i], i + 1);
+      if (close === -1) break;
+      out.push([name, i + 1, close]);
+      i = close + 1;
+    } else {
+      const end = stickyEnd(UNQUOTED_RE, text, i);
+      out.push([name, i, end]);
+      i = end;
+    }
+  }
+  return out;
+}
+
+/* An attribute value as the browser reads it: references decoded by the attribute rules, and
+   then, for a URL, the tab and line breaks the URL parser drops and the host folded. A `style`
+   is CSS, so its escapes are read too. A `srcdoc` is a whole page, read again. */
+function valueViews(doc: Mapped, name: string, a: number, b: number, depth: number, xml: boolean): AssembledView[] {
+  let value = compose(doc, Mapped.of(doc.text, a, b));
+  /* XML normalises a literal tab or line break in an attribute to a space before it decodes
+     references; one written as `&#10;` stays a line break. */
+  if (xml) value = value.withText(value.text.replace(/[\t\n\r]/g, " "));
+  value = decodeReferences(value, xml ? "xml" : "attribute");
+  const out: AssembledView[] = [];
+  if (name === "srcdoc" && !xml) pushAll(out, nestedPage(value, depth));
+  const url = dropUrlWhitespace(name === "style" ? cssUnescape(value) : value);
+  /* Code is an event handler or a `javascript:` URL, and only code is searched for a signature.
+     A URL needs a start (`URL_START`), which no folding makes, so a value without one after
+     decoding (most of them: `title="Tom &amp; Jerry"`) is no view at all. Until mutation testing
+     on 7 Nov 2026 that asked for `//`, and `https:&#92;&#92;` got past. */
+  const code = name.startsWith("on") || JAVASCRIPT_URL.test(url.text);
+  if (code || URL_START.test(url.text)) out.push({ text: foldHosts(url), inert: null, code });
+  return out;
+}
+
+/* A `srcdoc` page, which the frame parses and decodes again. Past MAX_SRCDOC_DEPTH it is decoded
+   until it stops changing and read as one text, which only reads more. Until the review of
+   7 Nov 2026 that stopped after eight more decodings, and Chromium ran a script nested in twelve
+   frames. */
+function nestedPage(page: Mapped, depth: number): AssembledView[] {
+  if (depth >= MAX_SRCDOC_DEPTH) {
+    for (let k = 0; k < MAX_SRCDOC_DECODINGS; k += 1) {
+      const again = decodeReferences(page, "text");
+      if (again.text === page.text) break;
+      page = again;
+    }
+    return [{ text: foldHosts(dropUrlWhitespace(page)), inert: null, code: true }];
+  }
+  const nestedInert = page.rawSpans(mergedSpans(inertRanges("srcdoc.html", page.text)));
+  const out: AssembledView[] = [{ text: page, inert: nestedInert, code: true }];
+  for (const view of htmlViews(page, depth + 1)) out.push({ ...view, inert: [...nestedInert, ...(view.inert ?? [])] });
+  return out;
+}
+
+/* Past the walk's clip it trusts no structure, so the rest is read every way that could assemble
+   a URL: references decoded and line breaks dropped, and again with comments and CDATA markers
+   taken out, as an SVG script's text would be. */
+function tailViews(doc: Mapped, start: number): AssembledView[] {
+  const text = doc.text;
+  const tail = compose(doc, Mapped.of(text, start, text.length));
+  const pieces: Mapped[] = [];
+  let run = start;
+  TAIL_MARKUP.lastIndex = start;
+  for (let m = TAIL_MARKUP.exec(text); m; m = TAIL_MARKUP.exec(text)) {
+    pieces.push(compose(doc, Mapped.of(text, run, m.index)));
+    run = m.index + m[0].length;
+    if (m[0].length === 0) TAIL_MARKUP.lastIndex += 1;
+  }
+  pieces.push(compose(doc, Mapped.of(text, run, text.length)));
+  return [{ text: foldHosts(dropUrlWhitespace(decodeReferences(tail, "text"))), inert: null, code: true },
+          { text: foldHosts(decodeReferences(concat(pieces), "text")), inert: null, code: true }];
+}
+
+const windowViews = (doc: Mapped): AssembledView[] =>
+  foldWindows(doc.text).map((w) => ({ text: compose(doc, w), inert: null, code: false }));
+
+function htmlViews(doc: Mapped, depth = 0): AssembledView[] {
+  const text = doc.text;
+  const { readings, clip } = htmlReadings(text);
+  const views = windowViews(doc);
+  const seenTags = new Set<number>();
+  const seenTexts = new Set<string>();
+  for (const r of readings) {
+    for (const [start, nameEnd, end] of r.startTags) {
+      if (seenTags.has(start)) continue;
+      seenTags.add(start);
+      if (!triggered(VALUE_TRIGGER, text, nameEnd, end)) continue;
+      for (const [name, a, b] of attrValues(text, nameEnd)) {
+        if (triggered(VALUE_TRIGGER, text, a, b)) pushAll(views, valueViews(doc, name, a, b, depth, false));
+      }
+    }
+    for (const script of r.svgScripts) {
+      const key = `s${script.segs.flat().join(",")}`;
+      if (seenTexts.has(key)) continue;
+      seenTexts.add(key);
+      const source = svgText(text, script.segs, "text", doc);
+      views.push({ text: foldHosts(source), inert: source.rawSpans(scanScript(source.text)), code: true });
+    }
+    for (const style of r.svgStyles) {
+      const key = `c${style.segs.flat().join(",")}`;
+      if (seenTexts.has(key)) continue;
+      seenTexts.add(key);
+      views.push({ text: foldHosts(cssUnescape(svgText(text, style.segs, "text", doc))), inert: null, code: false });
+    }
+    for (const script of r.scripts) {
+      const type = scriptType(script.attrs);
+      if ((type !== "importmap" && type !== "speculationrules") || seenTexts.has(`j${script.body}`)) continue;
+      seenTexts.add(`j${script.body}`);
+      if (text.slice(script.body, script.close).includes("\\")) {
+        views.push({ text: foldHosts(jsonUnescape(compose(doc, Mapped.of(text, script.body, script.close)))), inert: null, code: false });
+      }
+    }
+    for (const [a, b] of r.styles) {
+      const key = `h${a},${b}`;
+      if (seenTexts.has(key)) continue;
+      seenTexts.add(key);
+      if (triggered(CSS_TRIGGER, text, a, b)) views.push({ text: foldHosts(cssUnescape(compose(doc, Mapped.of(text, a, b)))), inert: null, code: false });
+    }
+  }
+  if (clip < text.length) pushAll(views, tailViews(doc, clip));
+  return views;
+}
+
+function svgDocument(text: string): [Mapped, XmlDocument] {
+  const doc = xmlExpand(text);
+  return [doc, xmlWalk(doc.text)];
+}
+
+function svgInert(text: string): Span[] {
+  const [doc, walk] = svgDocument(text);
+  const spans = doc.rawSpans(walk.comments);
+  for (const segs of walk.scripts) pushAll(spans, svgScriptSpans(doc.text, segs, "xml", doc));
+  if (walk.clip >= doc.text.length) return spans;
+  return spans.filter(([a]) => a < walk.clip).map(([a, b]): Span => [a, Math.min(b, walk.clip)]);
+}
+
+/* A standalone SVG, which a frame, an `<object>` or a navigation runs as a document: its entities
+   expanded, its attribute values and script and style text decoded by XML's rules. */
+function svgViews(text: string): AssembledView[] {
+  const [doc, walk] = svgDocument(text);
+  const t = doc.text;
+  const views = windowViews(Mapped.of(text));
+  if (t !== text) views.push({ text: doc, inert: null, code: true });
+  for (const [a, b] of walk.values) {
+    if (triggered(VALUE_TRIGGER, t, a, b)) pushAll(views, valueViews(doc, "", a, b, 0, true));
+  }
+  for (const segs of walk.scripts) {
+    const source = svgText(t, segs, "xml", doc);
+    views.push({ text: foldHosts(source), inert: source.rawSpans(scanScript(source.text)), code: true });
+  }
+  for (const segs of walk.styles) views.push({ text: foldHosts(cssUnescape(svgText(t, segs, "xml", doc))), inert: null, code: false });
+  if (walk.clip < t.length) pushAll(views, tailViews(doc, walk.clip));
+  return views;
+}
+
+/** Every text the browser assembles out of this file that is not the file as written. An honest
+    page written in ASCII, with no character reference in an attribute, no escape in a stylesheet
+    and no SVG script split by a comment, has none, or only views whose URLs are the ones already
+    matched. */
+export function assembledViews(path: string, text: string): AssembledView[] {
+  if (/\.html?$/i.test(path)) return htmlViews(Mapped.of(text));
+  if (XML_DOCUMENT.test(path)) return svgViews(text);
+  if (/\.css$/i.test(path)) {
+    const views = windowViews(Mapped.of(text));
+    if (text.includes("\\")) views.push({ text: foldHosts(cssUnescape(Mapped.of(text))), inert: null, code: false });
+    return views;
+  }
+  if (/\.importmap$/i.test(path)) {
+    const views = windowViews(Mapped.of(text));
+    if (text.includes("\\")) views.push({ text: foldHosts(jsonUnescape(Mapped.of(text))), inert: null, code: false });
+    return views;
+  }
+  if (/\.(?:[cm]?js|jsx|tsx?)$/i.test(path)) return windowViews(Mapped.of(text));
+  return [];
 }
 
 /**

@@ -1,5 +1,9 @@
 # opengame-api changelog
 
+## 1.0.4
+
+The site opens on one day and the CLI, uploads and the creator API on the next, the jam's kickoff. Until then an account outside the team is told that day, read from the launch clock.
+
 ## 1.0.3
 
 Names the day OpenGame opens, read from the launch clock.

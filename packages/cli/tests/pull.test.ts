@@ -14,6 +14,7 @@ import { Output } from "../src/output";
 import type { GameManifest } from "@opengame/protocol";
 import { unzipSync } from "fflate";
 import { LIMITS } from "@opengame/shared";
+import { replyBootstrap, startupInformation } from "./bootstrap-fixture";
 const run = promisify(execFile), binary = fileURLToPath(new URL("../dist/cli.mjs", import.meta.url));
 const id = "11111111-1111-4111-8111-111111111111", token = "ogt_" + "a".repeat(16) + "_" + "b".repeat(43);
 const metadata: GameManifest = { title: "Website title", description: "Survive until dawn with a light and a dwindling battery.", genre: "shooter-survival", controls: ["keyboard"] };
@@ -99,6 +100,63 @@ test("pull brings the website's kind down, and a game there removes the checkout
     current = JSON.parse(await readFile(join(root, "opengame.json"), "utf8"));
     assert.equal(current.kind, undefined);
     assert.equal(current.basedOn, undefined);
+  } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(root, { recursive: true, force: true }); }
+});
+
+/* The CLI half of a server change that keeps an online game's players on its head. The
+   website lists this game as online multiplayer for four, and its head now says so as
+   opengame.json can: p2p for four (before, it held nothing, and the pull below wrote a
+   checkout with no `multiplayer`). This pins that the pull keeps what the head says and the
+   default preserve deploy sends it at the pulled revision; the server's own tests pin what it
+   freezes and publishes from it. A player count the manifest cannot hold is refused by name. */
+test("pull then deploy of an online multiplayer game keeps its players in the manifest it sends", async () => {
+  const root = await mkdtemp(join(tmpdir(), "og-pull-online-"));
+  const players = { mode: "p2p", maxPlayers: 4 } as const;
+  let websitePlayers: Record<string, unknown> = players;
+  const deploys: Record<string, unknown>[] = [];
+  const server = createServer(async (req, res) => {
+    if (replyBootstrap(req, res, token)) return;
+    res.setHeader("content-type", "application/json");
+    if (req.url === "/api/v1/limits") { res.end(JSON.stringify(startupInformation())); return; }
+    if (req.url === `/api/v1/games/${id}`) { res.end(JSON.stringify({ game: { id, publicId: "littleorbit", title: "Website title", visibility: "published", latestOperation: null } })); return; }
+    if (req.url === `/api/v1/games/${id}/metadata`) {
+      res.end(JSON.stringify({ gameId: id, revision: 7, metadata: { ...metadata, multiplayer: websitePlayers }, controllerSupport: false, compatibility: {}, cover: null }));
+      return;
+    }
+    assert.equal(req.url, "/api/v1/deploys");
+    let body = ""; for await (const chunk of req) body += chunk;
+    deploys.push(JSON.parse(body));
+    res.end(JSON.stringify({ operation: { id: "11111111-1111-4111-8111-000000000001", state: "ready", gameId: id,
+      releaseId: "22222222-2222-4222-8222-000000000001", error: null } }));
+  });
+  server.listen(0, "127.0.0.1"); await once(server, "listening");
+  const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  const env = { ...process.env, OPENGAME_API_URL: origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" };
+  try {
+    await writeFile(join(root, "index.html"), "<!doctype html><title>Game</title>");
+    await writeFile(join(root, "opengame.json"), JSON.stringify({ ...metadata, multiplayer: players }));
+    await withProject(root, origin, async (state, save) => { state.gameId = id; await save(); });
+    const pulled = JSON.parse((await run(process.execPath, [binary, "pull", root, "--json"], { env })).stdout);
+    assert.deepEqual(pulled.data.changes, [], "nothing about the players changed on the website");
+    assert.deepEqual(JSON.parse(await readFile(join(root, "opengame.json"), "utf8")).multiplayer, players);
+    await run(process.execPath, [binary, "deploy", root, "--jsonl"], { env });
+    assert.equal(deploys.length, 1);
+    assert.equal(deploys[0]!.metadata, "preserve");
+    assert.equal(deploys[0]!.metadataRevision, 7, "in sync, so the server takes this manifest as it stands");
+    assert.deepEqual((deploys[0]!.manifest as Record<string, unknown>).multiplayer, players);
+    // Listed for more than a lobby holds: the pull names the field and the way past it, and
+    // leaves the checkout as it was.
+    const before = await readFile(join(root, "opengame.json"), "utf8");
+    websitePlayers = { mode: "p2p", maxPlayers: LIMITS.rtc.peersPerLobbyMax + 1 };
+    await assert.rejects(run(process.execPath, [binary, "pull", root, "--jsonl"], { env }), (error: unknown) => {
+      const { stdout } = error as { stdout: string };
+      const last = JSON.parse(stdout.trim().split("\n").at(-1)!);
+      assert.equal(last.code, "metadata_conversion_required");
+      assert.match(last.message, /player count/);
+      assert.match(last.message, /--metadata=local/);
+      return true;
+    });
+    assert.equal(await readFile(join(root, "opengame.json"), "utf8"), before);
   } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(root, { recursive: true, force: true }); }
 });
 

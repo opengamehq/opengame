@@ -2,13 +2,13 @@
 name: opengame-api
 description: Call the OpenGame creator API directly over HTTPS. Covers the base URL, creator tokens and scopes, the OpenAPI document, the error shape and retry fields, deploying without the CLI, and checking whether OpenGame is open. Use when the person wants to deploy from their own tool or CI without the CLI, asks about the OpenGame REST API, api/v1, openapi.json or a creator token, or an API call returned an error code you need to read.
 metadata:
-  version: "1.0.3"
+  version: "1.0.4"
 ---
 
 # Call the OpenGame creator API
 
-OpenGame opens on {{launch opens}}. Until OpenGame launches, every route except the status route and sign-in answers 403
-with the error `not_launched` and the message "OpenGame is not launched." for any account
+OpenGame opens on {{launch opens}}, and the creator API on {{launch kickoff}}. Until {{launch kickoff}}, every route except the status route and sign-in answers 403
+with the error `not_launched` and the message "OpenGame opens for creators on {{launch kickoff}}." for any account
 outside the OpenGame team. Check before anything else:
 
 ```bash

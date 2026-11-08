@@ -317,10 +317,10 @@ async function report(op: Operation, command: string, api: Api, output: Output,
     const deployedAs = op.metadata?.keptFields.includes("kind") ? null : kindPhrase(options.kind?.kind, options.kind?.basedOn);
     const lines = options.review ? emitReview(options.review, output) : [];
     output.emit({ type: "result", command, data: { operationId: op.id, state: op.state, done: true, gameId: op.gameId, publicId: op.publicId ?? null,
-      releaseId: op.releaseId, previewUrl: preview, url, deploymentUrl: deploymentLink, uploadUrl, next: review?.next ?? null, ...(op.progress ? { progress: op.progress } : {}), findings,
+      releaseId: op.releaseId, previewUrl: preview, url, deploymentUrl: deploymentLink, uploadUrl, gameOrigin: op.gameOrigin ?? null, next: review?.next ?? null, ...(op.progress ? { progress: op.progress } : {}), findings,
       ...(options.timingsMs ? { timingsMs: options.timingsMs } : {}), ...(op.metadata ? { metadata: op.metadata } : {}),
       ...(options.review !== undefined ? { submission: options.review, review } : {}),
-      message: [preview ? `Private preview ready. Play it at ${url}` : `Release ready, but the server sent no preview link. Open ${url} to see why.`, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []),
+      message: [preview ? `Private preview ready. Play it at ${url}` : `Release ready, but the server sent no preview link. Open ${url} to see why.`, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []), ...originLine(op),
         ...(review ? [review.message, ...lines] : [])].join("\n") } });
     return;
   }
@@ -331,10 +331,10 @@ async function report(op: Operation, command: string, api: Api, output: Output,
   }
   const next = op.state === "uploading" && options.resumable === false ? null : operationNext(op, findings);
   output.emit({ type: "result", command, data: { operationId: op.id, state: op.state, done: false, gameId: op.gameId, publicId: op.publicId ?? null,
-    releaseId: op.releaseId, previewUrl: null, url: deploymentLink, deploymentUrl: deploymentLink, uploadUrl, next, ...(op.progress ? { progress: op.progress } : {}), findings,
+    releaseId: op.releaseId, previewUrl: null, url: deploymentLink, deploymentUrl: deploymentLink, uploadUrl, gameOrigin: op.gameOrigin ?? null, next, ...(op.progress ? { progress: op.progress } : {}), findings,
     ...(options.timingsMs ? { timingsMs: options.timingsMs } : {}), ...(op.metadata ? { metadata: op.metadata } : {}),
     message: op.state === "uploading" ? `${options.resumable === false ? "An upload is pending in another checkout. Resume it there, or run opengame deploy here to upload this folder." : "Upload pending. Run opengame deploy to resume."}\n${deploymentLink}`
-      : command === "deploy" ? `Uploaded. The checks run on our side, so you can close this terminal.\n${stage}\nWatch them, and play the preview once it is ready, at ${deploymentLink}\nOr follow them here with opengame status --watch.`
+      : command === "deploy" ? [`Uploaded. The checks run on our side, so you can close this terminal.\n${stage}\nWatch them, and play the preview once it is ready, at ${deploymentLink}\nOr follow them here with opengame status --watch.`, ...originLine(op)].join("\n")
       : `${stage}\nFollow it at ${deploymentLink}, or with opengame status --watch.` } });
 }
 
@@ -784,6 +784,14 @@ async function reviewContinues(api: Api, token: string, root: string, op: Operat
       ? `${current.ref} is publishing release ${current.releaseId.slice(0, 8)}. This ${op.releaseId ? "release" : "deploy"} goes to review by itself once that has finished.`
       : `${current.ref} has release ${current.releaseId.slice(0, 8)} in review (${RELEASE_STATUS[submissionStatus(current)].label}). This ${op.releaseId ? "release goes" : "deploy goes, once it is ready,"} to review by itself and replaces it.` });
   } catch { /* the deploy's own result is what matters here */ }
+}
+
+/** Printed on a deploy because a game that talks to its creator's own servers fails there
+ * without it: World at War's game servers allowed only https://waw.fun and answered
+ * https://wawzombies.opengame.gg with a 403 before reading a ticket (6 Nov 2026). Only the
+ * origin comes from the server. When an older server sends none, the CLI prints no line. */
+function originLine(op: Operation): string[] {
+  return op.gameOrigin ? [`Once published, the game runs at ${op.gameOrigin}. If your own servers check Origin or send CORS headers, allow that exact origin, not a pattern on opengame.gg.`] : [];
 }
 
 /** One line for `status`: the release that is live, whether it is listed and the link to share. */

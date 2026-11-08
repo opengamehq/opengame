@@ -148,6 +148,36 @@ export function resolveContentType(path: string): ResolvedType {
 }
 
 /**
+ * Generated art on the media host: the one place a stored type is read, and only to choose
+ * among three inert raster types this file already names.
+ *
+ * The platform names a generated cover and its share card by job id, with no extension
+ * (`media/<owner>/generated-cover/<id>`, `.../generated-share/<id>`), so the table above
+ * has nothing to go on and both went out as `application/octet-stream`. Measured on 7 Nov
+ * 2026: the R2 objects in og-public carried `image/png` and `image/webp`, matching their
+ * bytes, and media.opengame.gg answered octet-stream for both, which link unfurlers refuse.
+ * A creator chose none of those bytes or types: the Studio Worker's cover pipeline (which
+ * stores the image provider's type), `lib/platform/art.ts` and `scripts/keyart-backfill.mjs`
+ * are the only writers.
+ *
+ * Why the stored value can be consulted here without reopening the hole the header above
+ * describes: the key shape is exact, the answer is one of png, jpeg or webp and nothing
+ * else, and every media response carries `nosniff`. The worst a wrong stored value can do
+ * is label bytes as a picture they are not, which a browser then fails to decode. Anything
+ * outside the three, or any other key, gets `null` and the caller keeps the table's answer.
+ * Never svg, which is a document with script in it.
+ */
+const GENERATED_ART =
+  /^media\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/generated-(?:cover|share)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const GENERATED_ART_TYPES = new Set([TYPES.png, TYPES.jpg, TYPES.webp]);
+
+export function generatedArtType(path: string, stored: string | undefined): string | null {
+  if (!GENERATED_ART.test(path)) return null;
+  const type = stored?.split(";")[0]?.trim().toLowerCase() ?? "";
+  return GENERATED_ART_TYPES.has(type) ? type : null;
+}
+
+/**
  * Whether this path is a document the browser will navigate to, which is the only kind of
  * request the top-level-navigation gate applies to. Subresources are never gated.
  *

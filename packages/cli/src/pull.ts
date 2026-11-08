@@ -61,7 +61,21 @@ export async function pullCommand(root: string, flags: Record<string, string | b
         metadata.controls = [...controls, ...(snapshot.controllerSupport ? ["gamepad"] : [])];
       }
       const merged = manifestSchema.safeParse({ ...Object.fromEntries(Object.entries(local).filter(([key]) => !METADATA_FIELDS.includes(key as typeof METADATA_FIELDS[number]))), ...metadata });
-      if (!merged.success) throw new CliError("manifest_invalid", "The website metadata and local build settings do not form a valid manifest. Check build, sdk and controls in opengame.json, then pull again.");
+      if (!merged.success) {
+        /* A multiplayer game whose player count opengame.json cannot hold (none recorded, or
+           more than a lobby takes) comes down as a `multiplayer` the manifest refuses. That is
+           the website's value, not the checkout's build settings, so say which field it is and
+           the way past it, as a conversion is said above. */
+        const website = metadata.multiplayer === undefined ? [] : merged.error.issues.filter(issue => issue.path[0] === "multiplayer");
+        if (website.length) {
+          const count = website.some(issue => issue.path[1] === "maxPlayers");
+          throw new CliError("metadata_conversion_required", (count
+            ? `This game's player count on the website cannot be written in opengame.json, which takes 2 to ${LIMITS.rtc.peersPerLobbyMax} players.`
+            : "This game's multiplayer settings on the website cannot be written in opengame.json.")
+            + " Set multiplayer in opengame.json, check its other fields against the website, then use deploy --metadata=local to replace them.");
+        }
+        throw new CliError("manifest_invalid", "The website metadata and local build settings do not form a valid manifest. Check build, sdk and controls in opengame.json, then pull again.");
+      }
       const next: GameManifest = merged.data;
       /* Nothing about a cover comes down any more. Until 30 Oct 2026 this downloaded the
          website's cover into opengame-assets/ and wrote its path into the file; OpenGame

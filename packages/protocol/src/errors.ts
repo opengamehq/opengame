@@ -22,7 +22,7 @@
  * is a finding about the caller rather than about a game.
  */
 import { LIMITS, TEXT } from "@opengame/shared/browser";
-import { ENTRIES_CLOSED_MESSAGE } from "@opengame/shared/launch-clock";
+import { ENTRIES_CLOSED_MESSAGE, KICKOFF_COPY } from "@opengame/shared/launch-clock";
 import { studioExperimentRefusals } from "./experiments";
 import { ANALYTICS_CLI_OUTDATED, ANALYTICS_FILTERS_REMOVED } from "./analytics";
 
@@ -133,13 +133,15 @@ export const ERRORS: Readonly<Record<string, Row>> = {
      (docs/deploying.md, "Opening opengame.io"). Exit 3 because it is about what this
      account may do, and `later` because waiting is the whole fix: nothing about the game,
      the token or the login is wrong. The server names the day where it knows it. */
-  /* The launch switch is shut. The server
+  /* The creator platform is not open yet: the CLI, tokens, uploads and the creator API open
+     at the jam's kickoff, a day after the site (the owner, 8 Nov 2026), so the sentence names
+     that day, KICKOFF_COPY, and never the site's. The server
      answers it on every creator API route but status and sign-in, for any account it does
      not let through, and the CLI says it before a command starts. An exit of its own,
      because nothing an agent can change fixes it: not the game (1), not a flag (2), not the
      login (3), and not a wait it could time (4). Signing in as somebody OpenGame lets
      through early does, which is why the sentence is the whole message and names no fix. */
-  not_launched: say({ exit: 7, retry: "later" }, "OpenGame is not launched.", 403),
+  not_launched: say({ exit: 7, retry: "later" }, `OpenGame opens for creators on ${KICKOFF_COPY}.`, 403),
   uploads_closed: say({ exit: 3, retry: "later" }, "Uploads are not open yet, so this upload did not start. Your login and your games still work. Try again once uploads open.", 403),
   /* The jam's close, which is also the platform's: after entriesCloseAt every deploy path
      refuses every deploy, fixes included (plan, `freeze`). `never`, because no wait and no

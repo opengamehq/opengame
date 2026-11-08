@@ -34,11 +34,16 @@ const config = {
     responseBytesMax: limits.platform.sdk.scoreResponseBytesMax, manifestBytesMax: limits.platform.manifest.bytesMax,
     keyCharsMax: limits.platform.manifest.boardKeyCharsMax, boardCountMax: limits.platform.manifest.boardCountMax,
     readMax: limits.platform.sdk.scoreReadMax, readDefault: limits.platform.sdk.scoreReadDefault,
-    radius: limits.platform.sdk.scoreAroundRadius, clampTolerance: limits.play.scoreClampTolerance,
+    radius: limits.platform.sdk.scoreAroundRadius, offsetMax: limits.platform.sdk.scoreReadOffsetMax,
+    clampTolerance: limits.play.scoreClampTolerance, statsBytesMax: limits.play.scoreMeta.statsBytesMax,
+    // The caps parseBoardShape reads, and only those: the rest of platform.manifest is the
+    // CLI's business, and every key here is bytes in every game's bundle.
+    boardCaps: Object.fromEntries(Object.entries(limits.platform.manifest).filter(([key]) => /^board[A-Z]/.test(key) && key !== 'boardCountMax')),
     // Only policy fields belong in the game bundle. Shared-file explanations
     // otherwise become runtime strings even though validation never reads them.
     metaPolicy: { keys: limits.play.scoreMeta.keys, maxStringLength: limits.play.scoreMeta.maxStringLength,
-      maxBytes: limits.play.scoreMeta.maxBytes, digitRunMin: limits.play.frameEventDigitRunMin } },
+      maxBytes: limits.play.scoreMeta.maxBytes, digitRunMin: limits.play.frameEventDigitRunMin,
+      reservedLabels: limits.play.scoreMeta.reservedLabels } },
   parentOrigins: limits.platform.sdk.parentOrigins,
   developmentParentOrigins: limits.platform.sdk.developmentParentOrigins,
   rateWindowMs: limits.platform.sdk.rateWindowMs,
@@ -76,8 +81,14 @@ const sdkDefines = {};
     }
   }
 })('', config);
+/* og.radio's bounds (src/radio.ts), from the same limits.json keys the OpenGame page that
+   answers it reads. Defined only for the radio entry and the
+   global, the two builds that read it: an extra define on the core's build renamed its
+   minified locals and changed og-platform.js, which Studio ships byte for byte. */
+const radioConfig = { ...withoutNotes(limits.platform.sdk.radio), handshakeTimeoutMs: limits.platform.sdk.handshakeTimeoutMs };
 const options = { entryPoints: ['src/index.ts'], bundle: true, platform: 'browser', target: 'es2022', minify: true,
   define: { __SDK_MAJOR__: String(Number(config.version.split('.')[0])), ...sdkDefines }, legalComments: 'none' };
+const radioDefine = { ...options.define, __RADIO_CONFIG__: JSON.stringify(radioConfig) };
 // External legal comments may be absent even when dependencies need notices.
 // Keep any esbuild extracts and append the installed dependency license texts;
 // write:false prevents an old sidecar from masquerading as this build's output.
@@ -132,15 +143,24 @@ if (!Number.isSafeInteger(limits.platform.sdk.avatarGzipBytesMax)) throw new Err
 if (avatarBytes > limits.platform.sdk.avatarGzipBytesMax) throw new Error(`avatar.js exceeds its gzip budget: ${avatarBytes} > ${limits.platform.sdk.avatarGzipBytesMax}`);
 console.log(`avatar.js: ${avatarBytes} bytes gzip`);
 
+/* og.radio and its picker: its own entry beside the core, sharing the core's client through
+   ./index.js as bridge.js does, so one page has one radio and one set of trusted listeners. */
+await build({ ...options, entryPoints: ['src/radio.ts'], format: 'esm', outfile: 'dist/radio.js', external: ['./index.js'], define: radioDefine });
+const radioBytes = gzipSync(await readFile('dist/radio.js')).byteLength;
+if (!Number.isSafeInteger(sdk.radioGzipBytesMax)) throw new Error(`Set platform.sdk.radioGzipBytesMax in limits.json from the measured radio entry: ${radioBytes} bytes gzip`);
+if (radioBytes > sdk.radioGzipBytesMax) throw new Error(`radio.js exceeds its gzip budget: ${radioBytes} > ${sdk.radioGzipBytesMax}`);
+console.log(`radio.js: ${radioBytes} bytes gzip`);
+
 /* Native exports and the platform's /_og/sdk.js use the complete global. */
 await build({ ...options, entryPoints: ['src/bridge.ts'], format: 'esm', outfile: 'dist/bridge.js',
   external: ['./index.js'],
   define: { ...options.define, __BRIDGE_CONFIG__: JSON.stringify({ argsBytesMax: limits.platform.manifest.bytesMax }) } });
 await buildWithNotices({ ...options, entryPoints: ['src/global/bridge.ts'], format: 'iife', outfile: 'dist/opengame-global.js',
-  define: { ...options.define, __BRIDGE_CONFIG__: JSON.stringify({ argsBytesMax: limits.platform.manifest.bytesMax }) } });
+  define: { ...radioDefine, __BRIDGE_CONFIG__: JSON.stringify({ argsBytesMax: limits.platform.manifest.bytesMax }) } });
 const bridgeBytes = gzipSync(await readFile('dist/opengame-global.js')).byteLength;
 await writeFile('dist/size.json', JSON.stringify({ gzipBytes: bytes, esmGzipBytes: esmBytes, budget: sdk.coreGzipBytesMax,
-  bridgeGzipBytes: bridgeBytes, bridgeBudget: sdk.bridgeGzipBytesMax ?? null, avatarGzipBytes: avatarBytes, avatarBudget: sdk.avatarGzipBytesMax })+'\n');
+  bridgeGzipBytes: bridgeBytes, bridgeBudget: sdk.bridgeGzipBytesMax ?? null, avatarGzipBytes: avatarBytes, avatarBudget: sdk.avatarGzipBytesMax,
+  radioGzipBytes: radioBytes, radioBudget: sdk.radioGzipBytesMax })+'\n');
 console.log(`SDK full global: ${bridgeBytes} bytes gzip`);
 // Leave the measured artifact and size available for the first integration, but
 // never report a successful build without a shared, positive budget in place.

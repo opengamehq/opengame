@@ -167,7 +167,7 @@ const EXIT_CODES = [
   { name: "rateLimited", code: EXIT.rateLimited, description: "An allowance is used. Wait retryAfterSeconds when the error has it, then run the same command." },
   { name: "server", code: EXIT.server, description: "Our side or the network, and the game is fine. Run the error's next command when it has one. With retry after-fix or never, waiting will not help; read the message. Otherwise wait (retryAfterSeconds when given) and run the same command." },
   { name: "upgrade", code: EXIT.upgrade, description: "This CLI is too old. Run opengame upgrade." },
-  { name: "notLaunched", code: EXIT.notLaunched, description: "OpenGame is not launched yet, so nothing ran. Nothing about the game, the command or the login is wrong. Retrying will not help before launch." },
+  { name: "notLaunched", code: EXIT.notLaunched, description: "OpenGame is not open to creators yet, so nothing ran. The message names the day the CLI and uploads open. Nothing about the game, the command or the login is wrong. Retrying will not help before then." },
 ];
 /* The commands that answer before launch (launch.ts says why each one). help and version
    are answered before this is reached. A docs commit on 3 Nov 2026 (a9fa6ab49) took this
@@ -262,7 +262,7 @@ function help(target?: string) {
       .map(only => ({ only, rows: allFlags.filter(flag => flag.only === only).map(row) }));
     const width = Math.max(...named.map(flag => flag.text.length), ...scoped.flatMap(group => group.rows.map(flag => flag.text.length)));
     // Flags are named as typed (--json), so a reader can copy them.
-    return { version: CLI_VERSION, internal: true, command: target, usage, description: spec.description,
+    return { version: CLI_VERSION, command: target, usage, description: spec.description,
       flags: allFlags.map(flag => ({ ...flag, name: `--${flag.name}` })), examples: spec.examples ?? [],
       message: [usage, "", spec.description, "", "Options", ...named.map(flag => `  ${flag.text.padEnd(width)}  ${flag.description}`),
         ...scoped.flatMap(group => ["", `For ${group.only} only`, ...group.rows.map(flag => `  ${flag.text.padEnd(width)}  ${flag.description}`)]),
@@ -271,7 +271,7 @@ function help(target?: string) {
   }
   const primary = ["deploy", "submit", "status", "open", "login"];
   const listed = Object.fromEntries(Object.entries(commands).map(([name, spec]) => [name, { ...spec, usage: commandUsage(name), flags: commandFlags(spec.flags).map(flag => ({ ...flag, name: `--${flag.name}` })) }]));
-  return { version: CLI_VERSION, internal: true, commands: listed, globalFlags: GLOBAL.map(name => `--${name}`), exitCodes: EXIT_CODES, env: ENV,
+  return { version: CLI_VERSION, commands: listed, globalFlags: GLOBAL.map(name => `--${name}`), exitCodes: EXIT_CODES, env: ENV,
     events: ["progress", "notice", "finding", "result", "error"], findingSchema: z.toJSONSchema(repairFindingSchema),
     agentMode: `When stdout is not a terminal, or CI or ${AGENT_MARKERS.slice(0, -1).join(", ")} or ${AGENT_MARKERS.at(-1)} is set to anything but 0, false or no, output defaults to one formatted JSON result or error. In a terminal, --human ignores those variables and prints text. Use --jsonl to stream events. With either JSON mode there are no command prompts or browser opens, and login prints the approval URL and code instead of waiting.`,
     limits: LIMITS.bundle,

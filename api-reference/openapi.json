@@ -296,6 +296,7 @@
               "not_found",
               "method_not_allowed",
               "not_configured",
+              "unavailable",
               "upstream_error",
               "internal_error",
               "analytics_unavailable",
@@ -1591,6 +1592,260 @@
                 },
                 "max": {
                   "type": "number"
+                },
+                "scoreLabel": {
+                  "description": "What the score column is called on the board, such as Round. The board's label is the heading above it.",
+                  "type": "string",
+                  "pattern": "^(?:\\S(?:[\\s\\S]*\\S)?)?(?![\\s\\S])",
+                  "minLength": 1,
+                  "maxLength": 24
+                },
+                "format": {
+                  "type": "string",
+                  "enum": [
+                    "number",
+                    "integer",
+                    "duration_ms",
+                    "duration_s",
+                    "percent",
+                    "distance_m"
+                  ],
+                  "description": "How the value reads: number, integer, duration_ms, duration_s, percent (0 to 100) or distance_m."
+                },
+                "keep": {
+                  "description": "best (the default) keeps each player's best run for each combination of tags. runs keeps every run, up to runsPerPlayer. career keeps one row per player that adds up their accepted runs on the board named by from; nothing is submitted to it.",
+                  "type": "string",
+                  "enum": [
+                    "best",
+                    "runs",
+                    "career"
+                  ]
+                },
+                "from": {
+                  "description": "Required when keep is career, and refused otherwise: the key of the board of this game whose accepted runs feed this one. It keeps best or runs, not career.",
+                  "type": "string",
+                  "maxLength": 48,
+                  "pattern": "^[a-z][a-z0-9_]*(?![\\s\\S])"
+                },
+                "scoreAgg": {
+                  "description": "Required when keep is career, and refused otherwise: how a source run's score adds into this board's score. sum, count, max or min.",
+                  "type": "string",
+                  "enum": [
+                    "sum",
+                    "count",
+                    "max",
+                    "min"
+                  ]
+                },
+                "runsPerPlayer": {
+                  "description": "Required when keep is runs, and refused otherwise: how many runs one player keeps on the board for each combination of tags.",
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "columns": {
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9_]*(?![\\s\\S])"
+                      },
+                      "label": {
+                        "type": "string",
+                        "pattern": "^(?:\\S(?:[\\s\\S]*\\S)?)?(?![\\s\\S])",
+                        "minLength": 1,
+                        "maxLength": 24
+                      },
+                      "format": {
+                        "type": "string",
+                        "enum": [
+                          "number",
+                          "integer",
+                          "duration_ms",
+                          "duration_s",
+                          "percent",
+                          "distance_m"
+                        ],
+                        "description": "How the value reads: number, integer, duration_ms, duration_s, percent (0 to 100) or distance_m."
+                      },
+                      "order": {
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      },
+                      "sortable": {
+                        "type": "boolean"
+                      },
+                      "min": {
+                        "type": "number"
+                      },
+                      "max": {
+                        "type": "number"
+                      },
+                      "decimals": {
+                        "description": "How many decimals every value in the column is drawn with, 0 to 4, so a column of rates or averages lines up. A career average or ratio draws one when left out.",
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 4
+                      },
+                      "agg": {
+                        "description": "Career boards only: count, sum, max, min or avg of of over the player's runs, or ratio of two earlier columns.",
+                        "type": "string",
+                        "enum": [
+                          "count",
+                          "sum",
+                          "max",
+                          "min",
+                          "avg",
+                          "ratio"
+                        ]
+                      },
+                      "of": {
+                        "description": "Career boards only: score or a column of the source board (a count may leave it out), or for a ratio [numerator, denominator], two earlier columns of this board.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 32,
+                            "pattern": "^[a-z][a-z0-9_]*(?![\\s\\S])"
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "maxLength": 32,
+                                "pattern": "^[a-z][a-z0-9_]*(?![\\s\\S])"
+                              },
+                              {
+                                "type": "string",
+                                "maxLength": 32,
+                                "pattern": "^[a-z][a-z0-9_]*(?![\\s\\S])"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "where": {
+                        "description": "Career boards only, not on a ratio: count or aggregate only the runs where of compares to value, such as placement eq 1.",
+                        "type": "object",
+                        "properties": {
+                          "of": {
+                            "type": "string",
+                            "maxLength": 32,
+                            "pattern": "^[a-z][a-z0-9_]*(?![\\s\\S])"
+                          },
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "lt",
+                              "lte",
+                              "gt",
+                              "gte"
+                            ]
+                          },
+                          "value": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "of",
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "scale": {
+                        "description": "Ratio only: what the ratio is multiplied by, such as 100 for a percentage. 1 when left out.",
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 1000000
+                      },
+                      "requires": {
+                        "description": "Ratio only: the ratio is shown only once that earlier column is at least atLeast, such as 5 matches.",
+                        "type": "object",
+                        "properties": {
+                          "column": {
+                            "type": "string",
+                            "maxLength": 32,
+                            "pattern": "^[a-z][a-z0-9_]*(?![\\s\\S])"
+                          },
+                          "atLeast": {
+                            "type": "number",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "column",
+                          "atLeast"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "label"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "variants": {
+                  "maxItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9_]*(?![\\s\\S])"
+                      },
+                      "label": {
+                        "type": "string",
+                        "pattern": "^(?:\\S(?:[\\s\\S]*\\S)?)?(?![\\s\\S])",
+                        "minLength": 1,
+                        "maxLength": 24
+                      },
+                      "values": {
+                        "minItems": 1,
+                        "maxItems": 12,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "maxLength": 32,
+                              "pattern": "^[a-z0-9][a-z0-9_-]*(?![\\s\\S])"
+                            },
+                            "label": {
+                              "type": "string",
+                              "pattern": "^(?:\\S(?:[\\s\\S]*\\S)?)?(?![\\s\\S])",
+                              "minLength": 1,
+                              "maxLength": 24
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "label"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "label",
+                      "values"
+                    ],
+                    "additionalProperties": false
+                  }
                 }
               },
               "required": [
@@ -1598,7 +1853,141 @@
                 "order",
                 "label"
               ],
-              "additionalProperties": false
+              "additionalProperties": false,
+              "allOf": [
+                {
+                  "if": {
+                    "required": [
+                      "keep"
+                    ],
+                    "properties": {
+                      "keep": {
+                        "const": "runs",
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "runsPerPlayer"
+                    ]
+                  },
+                  "else": {
+                    "not": {
+                      "required": [
+                        "runsPerPlayer"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "required": [
+                      "keep"
+                    ],
+                    "properties": {
+                      "keep": {
+                        "const": "career",
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "from",
+                      "scoreAgg"
+                    ],
+                    "not": {
+                      "anyOf": [
+                        {
+                          "required": [
+                            "min"
+                          ]
+                        },
+                        {
+                          "required": [
+                            "max"
+                          ]
+                        }
+                      ]
+                    },
+                    "properties": {
+                      "columns": {
+                        "items": {
+                          "required": [
+                            "agg"
+                          ],
+                          "not": {
+                            "anyOf": [
+                              {
+                                "required": [
+                                  "min"
+                                ]
+                              },
+                              {
+                                "required": [
+                                  "max"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "not": {
+                      "anyOf": [
+                        {
+                          "required": [
+                            "from"
+                          ]
+                        },
+                        {
+                          "required": [
+                            "scoreAgg"
+                          ]
+                        }
+                      ]
+                    },
+                    "properties": {
+                      "columns": {
+                        "items": {
+                          "not": {
+                            "anyOf": [
+                              {
+                                "required": [
+                                  "agg"
+                                ]
+                              },
+                              {
+                                "required": [
+                                  "of"
+                                ]
+                              },
+                              {
+                                "required": [
+                                  "where"
+                                ]
+                              },
+                              {
+                                "required": [
+                                  "scale"
+                                ]
+                              },
+                              {
+                                "required": [
+                                  "requires"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
             }
           },
           "achievements": {
@@ -2006,6 +2395,12 @@
           "leaderboard keys are unique",
           "achievement ids are unique",
           "each leaderboard min is no greater than max",
+          "each leaderboard column, variant and variant value key is declared once, and no column is keyed score, rank, player, name or all",
+          "each leaderboard's variants make at most 48 tag combinations, counting a run that leaves a variant out",
+          "each column's min is no greater than its max",
+          "a career board's from names another board of this game that keeps best or runs, every of and where.of is score or one of that board's columns, and its variants and values are that board's",
+          "a career column's ratio divides two columns declared before it that are not ratios, and its requires names one of them; a ratio has no where, and only a ratio has scale or requires",
+          "a count may leave of out; every other aggregate names it",
           "room setting keys and choice IDs are unique",
           "each room default names an available choice",
           "room metadata fits the shared UTF-8 byte limit",
@@ -3395,6 +3790,17 @@
               }
             ]
           },
+          "gameOrigin": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^https:\\/\\/[0-9a-z]{8,24}(\\.[a-z0-9-]+)+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "progress": {
             "type": "object",
             "properties": {
@@ -3745,6 +4151,14 @@
             ],
             "description": "The owner-only playable page for this release, set once `state` is `ready`. `null` on a ready release means there is no preview to offer: a hold, a take-down or cleaned files, or an availability check that could not be read this time. A bare path when OpenGame could not build the full address."
           },
+          "gameOrigin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^https:\\/\\/[0-9a-z]{8,24}(\\.[a-z0-9-]+)+$",
+            "description": "The origin the published game is served from, such as `https://k3v9q2m7x4ab.opengame.gg`: one per game, the same for every version. Allow this exact origin on your own servers that check `Origin` or send CORS headers, never `null` or a pattern on `opengame.gg`, because other people's games are served there too. While an experiment runs, each version taking part plays on a `v-` origin of its own, and a private preview plays on a temporary `p-` origin. Null until the game exists."
+          },
           "progress": {
             "type": "object",
             "properties": {
@@ -3974,6 +4388,7 @@
           "createdAt",
           "statusUrl",
           "publicId",
+          "gameOrigin",
           "previewUrl",
           "progress",
           "findings",
@@ -4527,6 +4942,17 @@
                     "anyOf": [
                       {
                         "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "gameOrigin": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^https:\\/\\/[0-9a-z]{8,24}(\\.[a-z0-9-]+)+$"
                       },
                       {
                         "type": "null"
@@ -5492,6 +5918,8 @@
         "required": [
           "player_name",
           "score",
+          "stats",
+          "tags",
           "meta",
           "created_at",
           "rank"
@@ -5502,10 +5930,30 @@
               "string",
               "null"
             ],
-            "description": "The name the session carried, or Guest and four characters when the player hides their handle in games or has none. Never free text from the game."
+            "description": "The name the session carried, or Guest and four characters when the player hides their handle in games or has none, or, on an imported row, the name a person typed into the game's old site: filtered, masked and free of < > & \" and `, but still typed text, so render it as text and never as HTML. Never text the game sent."
+          },
+          "imported": {
+            "type": "boolean",
+            "description": "True for a score brought over from the game's own leaderboard from before it was on OpenGame, which no session posted. Older responses leave it out; read that as false."
           },
           "score": {
             "type": "number"
+          },
+          "stats": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "maxProperties": 8,
+            "description": "The run's number for each of the board's columns that it sent, keyed by column. Each is the game's claim, as the score is. Empty on a board with no columns."
+          },
+          "tags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 3,
+            "description": "The run's value for each of the board's variants that it sent, such as `{\"mode\":\"coop\"}`. A variant the run left out is absent."
           },
           "meta": {
             "$ref": "#/components/schemas/ScoreMeta"
@@ -5523,9 +5971,188 @@
           },
           "is_me": {
             "type": "boolean",
-            "description": "`me` and `around` only."
+            "description": "`me` and `around` only. On a board that keeps runs, it marks the one run the view is anchored on."
           }
         }
+      },
+      "BoardShape": {
+        "type": "object",
+        "required": [
+          "label",
+          "scoreLabel",
+          "format",
+          "keep",
+          "columns",
+          "variants"
+        ],
+        "description": "What the board declares in `opengame.json`, for drawing it. Column bounds are left out: they decide which runs stay off the board, and are not published.",
+        "properties": {
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scoreLabel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What the score column is called, such as Round."
+          },
+          "format": {
+            "$ref": "#/components/schemas/BoardFormat"
+          },
+          "keep": {
+            "type": "string",
+            "enum": [
+              "best",
+              "runs",
+              "career"
+            ],
+            "description": "`best` shows each player once, by their best run for the sorted column. `runs` shows every kept run. `career` shows each player once, adding up their accepted runs on the board named `from`; nothing is posted to it."
+          },
+          "from": {
+            "type": "string",
+            "description": "Career boards only: the key of the board whose accepted runs feed this one."
+          },
+          "scoreAgg": {
+            "type": "string",
+            "enum": [
+              "sum",
+              "count",
+              "max",
+              "min"
+            ],
+            "description": "Career boards only: how a source run's score adds into this board's score."
+          },
+          "columns": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "required": [
+                "key",
+                "label",
+                "format",
+                "order",
+                "sortable"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "format": {
+                  "$ref": "#/components/schemas/BoardFormat"
+                },
+                "order": {
+                  "type": "string",
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ]
+                },
+                "sortable": {
+                  "type": "boolean",
+                  "description": "Whether `sort` may name this column."
+                },
+                "decimals": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4,
+                  "description": "How many decimals every value in the column is drawn with, when the board declares them."
+                },
+                "agg": {
+                  "type": "string",
+                  "enum": [
+                    "count",
+                    "sum",
+                    "max",
+                    "min",
+                    "avg",
+                    "ratio"
+                  ],
+                  "description": "Career boards only: how the column adds up the player's runs."
+                },
+                "of": {
+                  "description": "Career boards only: `score` or a source column, null for a count of every run, or for a ratio [numerator, denominator]."
+                },
+                "where": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "Career boards only: the runs counted, as `{ of, op, value }`."
+                },
+                "scale": {
+                  "type": "number",
+                  "description": "Ratio only: what the ratio is multiplied by, such as 100."
+                },
+                "requires": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "Ratio only: `{ column, atLeast }`, below which the ratio is left out."
+                }
+              }
+            }
+          },
+          "variants": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "required": [
+                "key",
+                "label",
+                "values"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "maxItems": 12,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "key",
+                      "label"
+                    ],
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "BoardFormat": {
+        "type": "string",
+        "enum": [
+          "number",
+          "integer",
+          "duration_ms",
+          "duration_s",
+          "percent",
+          "distance_m"
+        ],
+        "description": "How a value reads: `duration_ms` and `duration_s` as a time, `percent` as 0 to 100, `distance_m` in metres."
       },
       "ScoreMeta": {
         "type": "object",
@@ -9147,6 +9774,14 @@
                 ],
                 "description": "The owner-only playable page for this release, set once `state` is `ready`. `null` on a ready release means there is no preview to offer: a hold, a take-down or cleaned files, or an availability check that could not be read this time. A bare path when OpenGame could not build the full address."
               },
+              "gameOrigin": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^https:\\/\\/[0-9a-z]{8,24}(\\.[a-z0-9-]+)+$",
+                "description": "The origin the published game is served from, such as `https://k3v9q2m7x4ab.opengame.gg`: one per game, the same for every version. Allow this exact origin on your own servers that check `Origin` or send CORS headers, never `null` or a pattern on `opengame.gg`, because other people's games are served there too. While an experiment runs, each version taking part plays on a `v-` origin of its own, and a private preview plays on a temporary `p-` origin. Null until the game exists."
+              },
               "progress": {
                 "type": "object",
                 "properties": {
@@ -9376,6 +10011,7 @@
               "createdAt",
               "statusUrl",
               "publicId",
+              "gameOrigin",
               "previewUrl",
               "progress",
               "findings",
@@ -10420,7 +11056,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -10538,8 +11174,8 @@
           },
           {}
         ],
-        "summary": "Check whether OpenGame is launched",
-        "description": "Returns whether OpenGame is launched, whether the account behind the credential may use it, and when deploys stop. OpenGame opens by itself at a set time and stops taking deploys at another. Works with no credential, and before launch, when every other creator route answers 403 `not_launched` to an account outside the team. `deploysFrozen` is true once entries have closed, after which every deploy is refused with `entries_closed`. The CLI calls this before every command except `version`, `help`, `login`, `logout` and `whoami`, stops with exit code 7 when neither `launched` nor `access` is `true`, and stops `deploy` when `deploysFrozen` is true.",
+        "summary": "Check whether OpenGame is open to creators",
+        "description": "Returns whether OpenGame is open to creators, whether the account behind the credential may use it, and when deploys stop. The site opens by itself at `opensAt`; the CLI, uploads and every other creator route open a day later, at `creatorsOpenAt`, the jam's kickoff; deploys stop at `entriesCloseAt`. Works with no credential, and before `creatorsOpenAt`, when every other creator route answers 403 `not_launched` to an account outside the team. `deploysFrozen` is true once entries have closed, after which every deploy is refused with `entries_closed`. The CLI calls this before every command except `version`, `help`, `login`, `logout` and `whoami`, stops with exit code 7 when neither `launched` nor `access` is `true`, and stops `deploy` when `deploysFrozen` is true.",
         "responses": {
           "200": {
             "description": "The launch state, and this caller's access.",
@@ -10551,25 +11187,34 @@
                     "launched",
                     "access",
                     "opensAt",
+                    "creatorsOpenAt",
                     "entriesCloseAt",
                     "deploysFrozen"
                   ],
                   "properties": {
                     "launched": {
                       "type": "boolean",
-                      "description": "`true` once OpenGame is launched for everyone."
+                      "description": "`true` once the creator platform is open to everyone, from `creatorsOpenAt`."
                     },
                     "access": {
                       "type": [
                         "boolean",
                         "null"
                       ],
-                      "description": "`true` when this account may use the creator API now, which before launch is the OpenGame team. `null` when the request has no credential, or one that is unknown, revoked or expired."
+                      "description": "`true` when this account may use the creator API now, which before `creatorsOpenAt` is the OpenGame team. `null` when the request has no credential, or one that is unknown, revoked or expired."
                     },
                     "opensAt": {
                       "type": "string",
                       "format": "date-time",
-                      "description": "When OpenGame opens, or opened. Later than the scheduled time only while an owner holds the launch, and that includes a hold set before the scheduled time.",
+                      "description": "When the site and sign-in open, or opened. Later than the scheduled time only while an owner holds the launch, and that includes a hold set before the scheduled time.",
+                      "examples": [
+                        "2026-10-21T14:32:08Z"
+                      ]
+                    },
+                    "creatorsOpenAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the CLI, uploads and the creator API open to everyone, or opened: the jam's kickoff, or `opensAt` when a hold runs past it. Never before `opensAt`.",
                       "examples": [
                         "2026-10-21T14:32:08Z"
                       ]
@@ -10601,6 +11246,7 @@
                   "launched": false,
                   "access": true,
                   "opensAt": "2026-11-17T08:00:00.000Z",
+                  "creatorsOpenAt": "2026-11-18T08:00:00.000Z",
                   "entriesCloseAt": "2026-12-19T08:00:00.000Z",
                   "deploysFrozen": false
                 }
@@ -10698,7 +11344,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11016,7 +11662,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11295,7 +11941,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11644,6 +12290,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "upload",
@@ -11700,7 +12347,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: this token is pinned to another game, lacks the Deploy permission, or a browser request came from another site. Use a token for this game. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: this token is pinned to another game, lacks the Deploy permission, or a browser request came from another site. Use a token for this game. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11908,6 +12555,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "upload",
@@ -11978,7 +12626,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the token cannot deploy this game, or a browser request came from another site. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the token cannot deploy this game, or a browser request came from another site. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12183,6 +12831,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "upload",
@@ -12253,7 +12902,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12449,6 +13098,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "upload",
@@ -12500,7 +13150,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12681,6 +13331,7 @@
                       "source": "local"
                     },
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": "https://opengame.io/g/tq7m4x2k9p?preview=c6f19a03-5b8e-4d27-9e4a-2b70d1f8c345",
                     "progress": {
                       "code": "ready",
@@ -12725,6 +13376,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "queued",
@@ -12757,7 +13409,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12934,6 +13586,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "upload",
@@ -13020,7 +13673,7 @@
             }
           },
           "403": {
-            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1` or `large-game-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1` or `large-game-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13253,6 +13906,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "upload",
@@ -13339,7 +13993,7 @@
             }
           },
           "403": {
-            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1` or `large-game-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1` or `large-game-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13544,6 +14198,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "upload",
@@ -13630,7 +14285,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13826,6 +14481,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "upload",
@@ -13877,7 +14533,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14058,6 +14714,7 @@
                       "source": "local"
                     },
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": "https://opengame.io/g/tq7m4x2k9p?preview=c6f19a03-5b8e-4d27-9e4a-2b70d1f8c345",
                     "progress": {
                       "code": "ready",
@@ -14102,6 +14759,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "queued",
@@ -14148,7 +14806,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14361,6 +15019,7 @@
                       "source": "local"
                     },
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": "https://opengame.io/g/tq7m4x2k9p?preview=c6f19a03-5b8e-4d27-9e4a-2b70d1f8c345",
                     "progress": {
                       "code": "ready",
@@ -14408,7 +15067,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: this credential cannot read this deploy, because it has neither `deploy` nor `read` for the operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: this credential cannot read this deploy, because it has neither `deploy` nor `read` for the operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14637,7 +15296,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14835,6 +15494,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "upload",
@@ -14891,7 +15551,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15086,6 +15746,7 @@
                       "source": "local"
                     },
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": "https://opengame.io/g/tq7m4x2k9p?preview=c6f19a03-5b8e-4d27-9e4a-2b70d1f8c345",
                     "progress": {
                       "code": "ready",
@@ -15130,6 +15791,7 @@
                     "createdAt": "2026-10-21T14:29:47Z",
                     "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                     "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "queued",
@@ -15176,7 +15838,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15446,7 +16108,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15705,7 +16367,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15888,7 +16550,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope, or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope, or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16095,7 +16757,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential has neither `read` nor `deploy`, or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the credential has neither `read` nor `deploy`, or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16280,7 +16942,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the request used a token rather than a browser session, or came from a page that is not OpenGame. Open the game page while signed in. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the request used a token rather than a browser session, or came from a page that is not OpenGame. Open the game page while signed in. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16506,7 +17168,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the request used a token rather than a browser session, or came from a page that is not OpenGame. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`forbidden`: the request used a token rather than a browser session, or came from a page that is not OpenGame. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16758,7 +17420,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks `read` or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks `read` or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -17449,7 +18111,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -18038,7 +18700,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -18260,7 +18922,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -18558,7 +19220,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -18773,7 +19435,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the credential has no `read` scope for this game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the credential has no `read` scope for this game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19037,7 +19699,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the credential has no `deploy` scope for this game. `forbidden`: a browser change came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the credential has no `deploy` scope for this game. `forbidden`: a browser change came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19240,7 +19902,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19441,7 +20103,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks `deploy`, or lacks `read` for the answer after a save that already happened, or is pinned to another game. `forbidden`: a browser change came from another site. `embed_unavailable`: the settings were saved but could not be read back for the edge, so read them again. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks `deploy`, or lacks `read` for the answer after a save that already happened, or is pinned to another game. `forbidden`: a browser change came from another site. `embed_unavailable`: the settings were saved but could not be read back for the edge, so read them again. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19752,7 +20414,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19929,7 +20591,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the scope this operation names, or is pinned to another game. `forbidden`: a browser change came from another site. `not_launched`: before launch, an account outside the team cannot use the creator API. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`.",
+            "description": "`insufficient_scope`: the token lacks the scope this operation names, or is pinned to another game. `forbidden`: a browser change came from another site. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -20268,7 +20930,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the scope this operation names, or is pinned to another game. `forbidden`: a browser change came from another site. `not_launched`: before launch, an account outside the team cannot use the creator API. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `entries_closed`: entries have closed, so `start` changed nothing, and `retry` is `never`.",
+            "description": "`insufficient_scope`: the token lacks the scope this operation names, or is pinned to another game. `forbidden`: a browser change came from another site. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `entries_closed`: entries have closed, so `start` changed nothing, and `retry` is `never`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -20495,6 +21157,7 @@
                       "source": "local"
                     },
                     "publicId": "r8w2n5c7",
+                    "gameOrigin": "https://w8n2c5r7t3ef.opengame.gg",
                     "previewUrl": "https://opengame.io/g/r8w2n5c7?preview=e6a2c8f4-0b7d-4e19-9c3a-5f1d8b6e2a70",
                     "progress": {
                       "code": "ready",
@@ -20536,6 +21199,7 @@
                     "createdAt": "2026-10-21T15:06:12Z",
                     "statusUrl": "/api/v1/operations/3e8c1a6f-7d2b-4f95-b0e4-9a5c2d8f1b67",
                     "publicId": "r8w2n5c7",
+                    "gameOrigin": "https://w8n2c5r7t3ef.opengame.gg",
                     "previewUrl": null,
                     "progress": {
                       "code": "queued",
@@ -20582,7 +21246,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token is limited to one game or has no `deploy` scope. `forbidden`: the game does not allow remixing under a supported license, or a browser request came from another site. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token is limited to one game or has no `deploy` scope. `forbidden`: the game does not allow remixing under a supported license, or a browser request came from another site. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -20871,7 +21535,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the credential has no `deploy` scope for this game. `forbidden`: a browser change came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the credential has no `deploy` scope for this game. `forbidden`: a browser change came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -21375,7 +22039,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -21609,7 +22273,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -21883,7 +22547,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -22080,7 +22744,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -22653,7 +23317,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -22889,7 +23553,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `forbidden`: a browser change did not come from the OpenGame site. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `forbidden`: a browser change did not come from the OpenGame site. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -23517,7 +24181,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -23722,7 +24386,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -23930,7 +24594,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -24107,7 +24771,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -24289,7 +24953,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -24498,7 +25162,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -24674,7 +25338,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -25328,7 +25992,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -25561,7 +26225,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -25829,7 +26493,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -25991,7 +26655,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -26834,7 +27498,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: use an account-wide token with the `read` scope. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: use an account-wide token with the `read` scope. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27072,7 +27736,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: use an account-wide token with the `read` scope. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: use an account-wide token with the `read` scope. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27288,8 +27952,6 @@
                       "genre",
                       "kind",
                       "controls",
-                      "multiplayer",
-                      "maxPlayers",
                       "engine",
                       "termsAccepted",
                       "sponsorDetails"
@@ -27298,15 +27960,15 @@
                       "title": {
                         "type": "string",
                         "minLength": 1,
-                        "maxLength": 200
+                        "maxLength": 40
                       },
                       "description": {
                         "type": "string",
-                        "maxLength": 10000
+                        "maxLength": 500
                       },
                       "tagline": {
                         "type": "string",
-                        "maxLength": 240
+                        "maxLength": 140
                       },
                       "genre": {
                         "type": "string",
@@ -27323,18 +27985,6 @@
                           "type": "string",
                           "maxLength": 40
                         }
-                      },
-                      "multiplayer": {
-                        "type": "string",
-                        "enum": [
-                          "none",
-                          "p2p"
-                        ]
-                      },
-                      "maxPlayers": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 64
                       },
                       "engine": {
                         "type": [
@@ -27539,7 +28189,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks `submit` on this game. `qa_destination_not_permitted`: the account has no QA grant. `forbidden`: a browser request came from another origin. `entries_closed`: the jam has closed and this game is entered in it, so it can make no version live but its entry's own and nothing was submitted. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`insufficient_scope`: the token lacks `submit` on this game. `qa_destination_not_permitted`: the account has no QA grant. `forbidden`: a browser request came from another origin. `entries_closed`: the jam has closed and this game is entered in it, so it can make no version live but its entry's own and nothing was submitted. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27780,7 +28430,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27999,7 +28649,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -28241,7 +28891,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: before launch, an account outside the team cannot use the creator API.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -29004,7 +29654,7 @@
           }
         ],
         "summary": "Read a leaderboard",
-        "description": "`top` needs no session, is cached 30 seconds, and is readable in a browser only from a live game host. `me` returns the player's own entry and `around` returns 10 entries either side of it; both need the game's session from that game's own host and are not cached. `limit` applies to `top` only. Only scores with `state` `ok` appear, so a player whose best was clamped gets an empty `me`. From a private preview, every view needs the preview session, `host` may be left out, and only that preview's scores are returned.",
+        "description": "`top` needs no session, is cached 30 seconds, and is readable in a browser only from a live game host. `me` returns the player's entry and `around` returns 10 entries either side of it; both need the game's session from that game's host and are not cached. `limit` and `offset` apply to `top` only. `sort` ranks by the score or by a sortable column, each in the order the board sets for it, and `filter` limits the board to runs with those tags. With no filter, the page ranks all the board's runs. On a `keep: \"best\"` board, each player appears once, by their best run for the sorted column; on a `keep: \"runs\"` board, each stored run is a row. Only runs with `state` `ok` appear, so a player whose best was clamped gets an empty `me`. From a private preview, every view needs the preview session, `host` may be left out, and only that preview's scores are returned.",
         "parameters": [
           {
             "name": "host",
@@ -29057,6 +29707,43 @@
               "default": 50
             },
             "description": "Never refused: a value that is not a whole number of 1 or more uses the default, and a larger one is clamped."
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000,
+              "default": 0
+            },
+            "description": "Rows to skip before the page, for `top` only. Anything else is refused with `invalid_score_query`."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "score",
+              "examples": [
+                "kills"
+              ]
+            },
+            "description": "`score`, or the key of a column the board declares sortable. Each sorts in its own declared order."
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "mode:solo"
+              ]
+            },
+            "description": "Tags to narrow the board to, written `key:value` and joined with commas, such as `mode:coop`. Each key and value must be declared by the board."
           }
         ],
         "responses": {
@@ -29071,7 +29758,13 @@
                     "direction",
                     "source",
                     "disclaimer",
-                    "entries"
+                    "entries",
+                    "total",
+                    "offset",
+                    "sort",
+                    "sortDirection",
+                    "filter",
+                    "shape"
                   ],
                   "properties": {
                     "board": {
@@ -29082,7 +29775,8 @@
                       "enum": [
                         "asc",
                         "desc"
-                      ]
+                      ],
+                      "description": "The score's order, which the board declares."
                     },
                     "source": {
                       "const": "game_reported",
@@ -29100,6 +29794,40 @@
                       "items": {
                         "$ref": "#/components/schemas/ScoreEntry"
                       }
+                    },
+                    "total": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "description": "Rows on the board under this filter, counted the way the page ranks them. Null from a game API older than this release, which cannot count them."
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "sort": {
+                      "type": "string",
+                      "description": "`score` or the column the page is ranked by."
+                    },
+                    "sortDirection": {
+                      "type": "string",
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ],
+                      "description": "The order of the sorted column."
+                    },
+                    "filter": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "The tags the page is narrowed to. Empty is every run."
+                    },
+                    "shape": {
+                      "$ref": "#/components/schemas/BoardShape"
                     }
                   }
                 },
@@ -29112,30 +29840,116 @@
                     {
                       "player_name": "marlowe",
                       "score": 14,
+                      "stats": {
+                        "kills": 212,
+                        "downs": 1,
+                        "revives": 0,
+                        "points": 18420,
+                        "time": 1284
+                      },
+                      "tags": {
+                        "mode": "solo"
+                      },
                       "meta": {
-                        "mode": "solo",
-                        "duration_ms": 1284220
+                        "character": "nikolai"
                       },
                       "created_at": "2026-10-20T21:14:03Z",
+                      "imported": false,
                       "rank": 1
                     },
                     {
                       "player_name": "Guest 7c3a",
                       "score": 12,
+                      "stats": {
+                        "kills": 167,
+                        "downs": 3,
+                        "revives": 0,
+                        "points": 13905,
+                        "time": 1047
+                      },
+                      "tags": {
+                        "mode": "solo"
+                      },
                       "meta": {
-                        "mode": "solo",
-                        "duration_ms": 1284220
+                        "character": "nikolai"
                       },
                       "created_at": "2026-10-21T08:47:55Z",
+                      "imported": false,
                       "rank": 2
                     }
-                  ]
+                  ],
+                  "total": 2,
+                  "offset": 0,
+                  "sort": "score",
+                  "sortDirection": "desc",
+                  "filter": {
+                    "mode": "solo"
+                  },
+                  "shape": {
+                    "label": "Rounds survived",
+                    "scoreLabel": "Round",
+                    "format": "integer",
+                    "keep": "runs",
+                    "columns": [
+                      {
+                        "key": "kills",
+                        "label": "Kills",
+                        "format": "integer",
+                        "order": "desc",
+                        "sortable": true
+                      },
+                      {
+                        "key": "downs",
+                        "label": "Downs",
+                        "format": "integer",
+                        "order": "asc",
+                        "sortable": true
+                      },
+                      {
+                        "key": "revives",
+                        "label": "Revives",
+                        "format": "integer",
+                        "order": "desc",
+                        "sortable": true
+                      },
+                      {
+                        "key": "points",
+                        "label": "Points",
+                        "format": "integer",
+                        "order": "desc",
+                        "sortable": true
+                      },
+                      {
+                        "key": "time",
+                        "label": "Time",
+                        "format": "duration_s",
+                        "order": "asc",
+                        "sortable": true
+                      }
+                    ],
+                    "variants": [
+                      {
+                        "key": "mode",
+                        "label": "Mode",
+                        "values": [
+                          {
+                            "key": "solo",
+                            "label": "Solo"
+                          },
+                          {
+                            "key": "coop",
+                            "label": "Co-op"
+                          }
+                        ]
+                      }
+                    ]
+                  }
                 }
               }
             }
           },
           "400": {
-            "description": "`host and board are required`, `board is required` on a preview, or `invalid_score_query`.",
+            "description": "`host and board are required`, `board is required` on a preview, or `invalid_score_query` for a bad view, board, offset, sort or filter.",
             "content": {
               "application/json": {
                 "schema": {
@@ -29241,7 +30055,7 @@
             }
           },
           "503": {
-            "description": "`not_configured` or `rate_limit_unavailable`. Not caused by the request. Retry later.",
+            "description": "`not_configured` or `rate_limit_unavailable`, or `unavailable` with `reason` `board_query_unavailable` for a read with a filter, a sort or an offset that storage cannot answer yet. Not caused by the request. Retry later.",
             "content": {
               "application/json": {
                 "schema": {
@@ -29273,7 +30087,7 @@
           }
         ],
         "summary": "Submit a score",
-        "description": "Call it from a live game frame with the session token. Who, which game and which version all come from the token. The body carries the board, the value and optional `meta`; any other top-level key is dropped and named in `ignored`. One best score is kept per player per board. A value above the board's `plausible_max` is stored as `plausible_max`, with `state` `clamped` when it is within 10 times the bound and `rejected` beyond that. Values below `plausible_min` are handled the same way. Only scores with `state` `ok` appear on the board. From a private preview, the score goes to that preview's own boards and the answer carries `preview: true`.",
+        "description": "Call it from a live game frame with the session token. Who, which game and which version all come from the token. The body carries the board, the value, and optionally `meta`, the run's `stats` and its `tags`; any other top-level key, and any stat the board does not declare, is dropped and named in `ignored`. A tag the board does not declare is refused. A `keep: \"best\"` board stores one run per player for each combination of tags; a `keep: \"runs\"` board stores each run, up to `runsPerPlayer` per player for each combination, and after that replaces that player's lowest-ranked run. Each stat is checked with the column's bounds as the value is with the board's, and the run gets the lower state. A value above the board's `plausible_max` is stored as `plausible_max`, with `state` `clamped` when it is within 10 times the bound and `rejected` beyond that. Values below `plausible_min` are handled the same way. Only scores with `state` `ok` appear on the board. From a private preview, the score goes to that preview's boards and the response includes `preview: true`.",
         "requestBody": {
           "required": true,
           "content": {
@@ -29303,6 +30117,32 @@
                   },
                   "meta": {
                     "$ref": "#/components/schemas/ScoreMeta"
+                  },
+                  "stats": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "number"
+                    },
+                    "examples": [
+                      {
+                        "kills": 167,
+                        "downs": 3,
+                        "time": 1047
+                      }
+                    ],
+                    "description": "The run's number for any of the board's columns, keyed by column. Each value is a finite number from -1e15 to 1e15, and 0 or at least 1e-6 from it; at most 512 bytes as JSON."
+                  },
+                  "tags": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "examples": [
+                      {
+                        "mode": "solo"
+                      }
+                    ],
+                    "description": "The run's value for any of the board's variants, such as `{\"mode\":\"solo\"}`."
                   }
                 }
               }
@@ -29343,21 +30183,22 @@
                     },
                     "best": {
                       "type": "boolean",
-                      "description": "Whether this became the player's best."
+                      "description": "Whether the run was kept on the board: the player's new best on a board that keeps the best, one of their kept runs on a board that keeps runs."
                     },
                     "ignored": {
                       "type": "array",
-                      "maxItems": 9,
+                      "maxItems": 17,
                       "items": {
                         "type": "string",
                         "maxLength": 32
                       },
                       "examples": [
                         [
-                          "run"
+                          "run",
+                          "stats.headshots"
                         ]
                       ],
-                      "description": "Top-level body keys that were dropped, each cut to 32 characters. At most 8 are named; when there were more, a ninth item reads `…`."
+                      "description": "Top-level body keys, then undeclared stats (as `stats.<key>`), that were dropped, each cut to 32 characters. At most 8 body keys are named, with a ninth item reading `…` when there were more, then at most 8 stats."
                     },
                     "preview": {
                       "type": "boolean"
@@ -29375,7 +30216,7 @@
             }
           },
           "400": {
-            "description": "`invalid_body`: not a JSON object, or over 2 KB. `rejected`: `reason` names the bad field (`board`, `value` or a `meta` key).",
+            "description": "`invalid_body`: not a JSON object, or over 2 KB. `rejected`: `reason` names the bad field (`board`, `value`, a `meta` key, a stat that is not a finite number, or a tag the board does not declare).",
             "content": {
               "application/json": {
                 "schema": {
@@ -29483,7 +30324,7 @@
             }
           },
           "503": {
-            "description": "`not_configured`, `rate_limit_unavailable` or `embed_unavailable`. Not caused by the request. Retry later.",
+            "description": "`not_configured`, `rate_limit_unavailable` or `embed_unavailable`, or `unavailable` with `reason` `runs_unavailable` for a run with stats or tags that storage cannot take yet. Not caused by the request. Retry later.",
             "content": {
               "application/json": {
                 "schema": {
@@ -29500,7 +30341,7 @@
           {
             "lang": "bash",
             "label": "cURL",
-            "source": "curl --request POST \\\n  --url 'https://api.opengame.gg/v1/scores' \\\n  --header \"Authorization: Bearer $OPENGAME_SESSION\" \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"board\": \"rounds\",\n  \"value\": 12\n}'"
+            "source": "curl --request POST \\\n  --url 'https://api.opengame.gg/v1/scores' \\\n  --header \"Authorization: Bearer $OPENGAME_SESSION\" \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"board\": \"rounds\",\n  \"value\": 12,\n  \"stats\": {\n    \"kills\": 167,\n    \"downs\": 3,\n    \"time\": 1047\n  },\n  \"tags\": {\n    \"mode\": \"solo\"\n  }\n}'"
           }
         ]
       }

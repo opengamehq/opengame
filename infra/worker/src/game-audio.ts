@@ -28,6 +28,10 @@ const SCREENSHOT = (({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, d
   ({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }))(limits.studio.preview.screenshot);
 
 export const GAME_AUDIO_RUNTIME = String.raw`(() => {
+  // The parent as it is before any game script runs, captured first: a report can go out the
+  // moment the parent is named below, and a game's own top-level 'var parent' would replace
+  // the name for every script after it.
+  const host = parent;
   const allowed = __OG_AUDIO_PARENTS__;
   const trusted = (origin) => allowed.some((value) => {
     if (origin === value) return true;
@@ -37,6 +41,18 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // The parent cover waits for parsing, not every image or audio download. This
   // signal changes presentation only; it never means gameplay or a counted play.
   let documentParent = null;
+  // WHO THE PARENT IS, FROM THE FIRST BYTE, where the browser says. Every report below waited
+  // for the page's once-a-second probe to name the parent, so a first paint was told to the
+  // page up to a second after it happened, and the page's cover sat that long over a drawn
+  // game (5 Nov 2026). Chromium and WebKit name the parent's origin first in
+  // location.ancestorOrigins; it is read here, before any game script can replace it, and
+  // used only when it is an allowed parent. Firefox has no such list and keeps the probe. A
+  // post addressed to the wrong origin is dropped by the browser, so this can only make a
+  // report earlier, never send one anywhere new.
+  try {
+    const named = location.ancestorOrigins ? location.ancestorOrigins[0] : null;
+    if (named && trusted(named)) documentParent = named;
+  } catch { /* No list: the probe names the parent. */ }
   let lastInput = -Infinity;
   let inputSuspended = false;
   const reportInput = () => {
@@ -659,7 +675,6 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // A game that renders outside requestAnimationFrame can still come back blank, and
   // the answer then says so rather than sending an empty picture.
   const shot = __OG_CAPTURE__;
-  const host = parent;
   const nextFrame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame.bind(globalThis) : (callback) => setTimeout(callback, 16);
   const makeCanvas = document.createElement.bind(document, 'canvas');
   const HTML_NS = 'http://www.w3.org/1999/xhtml';

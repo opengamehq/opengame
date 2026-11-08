@@ -38,13 +38,17 @@ import { sha256Hex } from "./sha256";
 export const COMMITTED_LAUNCH_AT = new Date(launch.launchAt);
 export const COMMITTED_ENTRIES_CLOSE_AT = new Date(launch.entriesCloseAt);
 /**
- * When the launch jam takes its first entry: 18 Nov 2026 12:00 am PT, a day after the site,
- * the platform, the CLI and uploads open at launchAt. The launch team's decision of 5 Nov
- * 2026, so that "18 November" is true everywhere it is printed and the rule that work begun
- * before kickoff is not eligible has a kickoff a day clear of the opening. The jam's row
- * carries the same instant in `config.kickoff_at` (20261105120200), and the launch-clock
- * test fails if the two part. The close is shared: entries and deploys both stop at
- * entriesCloseAt.
+ * When the launch jam takes its first entry, and when the creator platform opens to
+ * everybody: 18 Nov 2026 12:00 am PT, a day after the site opens at launchAt.
+ *
+ * The launch team's decision of 5 Nov 2026 put the jam's first entry here and left the CLI
+ * and uploads at launchAt. The owner, 8 Nov 2026, moved those too: "the jam entries open on
+ * nov 18th 12am PST 2026 and thats when cli and uploading etc will be unlocked". So from
+ * launchAt anybody can sign in, claim a handle, make a profile and play, and from this
+ * instant they can connect the CLI, mint a token, upload and enter. The jam's row carries the same instant in
+ * `config.kickoff_at` and the database's clock carries it as `jamKickoffAt`
+ * (20261108120000); the launch-clock test fails if any of them part. The close is shared:
+ * entries and deploys both stop at entriesCloseAt.
  */
 export const COMMITTED_JAM_KICKOFF_AT = new Date(launch.jamKickoffAt);
 
@@ -183,10 +187,19 @@ export const LAUNCH_COPY = launch.launchCopy;
 export const CLOSE_COPY = launch.closeCopy;
 /** The close as a day alone, for a badge with no room for a time. */
 export const CLOSE_DAY_COPY = launch.closeDayCopy;
-/** The day the winners are announced, "22 December", a day with no time like the kickoff.
+/** The day the winners are announced, "30 December", a day with no time like the kickoff.
  * Here since 5 Nov 2026, because the welcome mail sent after the close names it as well as
- * /jam and /rules, and those read a copy of it kept in the web app until then. */
+ * /jam and /rules, and those read a copy of it kept in the web app until then. The owner moved
+ * it from 22 to 30 December on 7 Nov 2026, which is when the instant below joined it. */
 export const ANNOUNCE_COPY = launch.announceCopy;
+/**
+ * When the winners are announced: 30 Dec 2026, 9:00 am PT. Not a gate on anything; nothing
+ * opens or closes at it. It is here so the jam page's fallback instant and the migration that
+ * sets the jam row's `announce_at` (20261107160000) read one value, and the launch-clock test
+ * fails when either parts from it. Before 7 Nov 2026 the instant was written in the web app
+ * and the day here, and moving the announcement meant finding both.
+ */
+export const COMMITTED_ANNOUNCE_AT = new Date(launch.announceAt);
 
 /** When the site actually opens: launchAt, or a later owner hold. Never earlier. */
 export function opensAt(heldUntil: Date | null = null, clock: LaunchClock = launchClock()): Date {
@@ -216,6 +229,18 @@ const PACIFIC_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "l
 export function opensAtCopy(heldUntil: Date | null = null, clock: LaunchClock = launchClock()): string {
   const opens = opensAt(heldUntil, clock);
   if (opens.getTime() === COMMITTED_LAUNCH_AT.getTime()) return LAUNCH_COPY;
+  return PACIFIC_DAY.format(opens);
+}
+
+/**
+ * The kickoff as a sentence says it: KICKOFF_COPY, or the held day in Pacific time while an
+ * owner hold pushes the site's opening past the kickoff. For every sentence that says when
+ * the CLI, uploads or entries open, so none of them names a day that has passed during a
+ * long hold. On a rehearsal the moment is the rehearsed opening, named in Pacific time.
+ */
+export function jamOpensAtCopy(heldUntil: Date | null = null, clock: LaunchClock = launchClock()): string {
+  const opens = jamOpensAt(heldUntil, clock);
+  if (opens.getTime() === COMMITTED_JAM_KICKOFF_AT.getTime()) return KICKOFF_COPY;
   return PACIFIC_DAY.format(opens);
 }
 

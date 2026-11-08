@@ -403,7 +403,7 @@ test("a login the server has not let in yet ends with not_launched and exit 7, n
     res.setHeader("content-type", "application/json");
     if (req.url === "/api/v1/auth/device") res.end(JSON.stringify({ device_code: "A".repeat(43), user_code: "KQ7P-M3XD", verification_uri: `${origin}/cli`, expires_in: 600, interval: 5 }));
     else if (req.url === "/api/v1/auth/token") res.end(JSON.stringify({ access_token: token }));
-    else if (req.url === "/api/v1/auth/me") { res.statusCode = 403; res.end('{"error":"not_launched","message":"OpenGame is not launched."}'); }
+    else if (req.url === "/api/v1/auth/me") { res.statusCode = 403; res.end('{"error":"not_launched","message":"OpenGame opens for creators on 18 November."}'); }
     else { res.statusCode = 404; res.end('{"error":"not_found"}'); }
   });
   server.listen(0, "127.0.0.1"); await once(server, "listening");

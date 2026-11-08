@@ -31,6 +31,14 @@ export const operationSummarySchema = z.object({
   publicId: z.string().regex(/^[0-9a-z]{6,16}$/).nullable().optional(),
   /** The owner-only playable page, `/g/<publicId>`, once the release is ready. */
   previewUrl: z.string().nullable().optional(),
+  /** Where the published game runs, `https://<label>.opengame.gg`: one origin per game, the
+   * same for every version, and the value a creator's own server has to allow when it checks
+   * `Origin` or sends CORS headers. A private preview plays on a temporary origin of its own, so
+   * this is not the preview's. Additive: older servers omit it. The pattern is the schema's
+   * label (`games_host_label_format`) under any domain without a port, because a development
+   * server can serve games from somewhere other than opengame.gg. `.catch`: when this copy
+   * cannot read the value, it drops the origin line and the status read still succeeds. */
+  gameOrigin: z.string().regex(/^https:\/\/[0-9a-z]{8,24}(\.[a-z0-9-]+)+$/).nullable().optional().catch(undefined),
   // `stage` above is the raw check the deploy waits on. `progress` is the same
   // thing said for a person: whose move it is and whether the fault is ours.
   progress: operationStageSchema.optional(),

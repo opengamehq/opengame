@@ -224,6 +224,7 @@ export const MASCOT_SHAPES = [
   { id: "sidepart", label: "Side part" },
   { id: "pompadour", label: "Pompadour" },
   { id: "sculpt", label: "Sculpted head" },
+  { id: "pyramid", label: "Brick pyramid" },
   { id: "quiff", label: "Swept quiff" },
   { id: "fullbeard", label: "Full beard" },
   { id: "waves", label: "Wavy hair" },
@@ -290,8 +291,8 @@ export type MascotShapeId = (typeof MASCOT_SHAPES)[number]["id"];
  * Only heads without facial hair, since 2 Nov 2026, when facial hair became its own part
  * (`facial-hair.ts`) to mix with any of these. The swept quiff, wavy hair, the moustache, the
  * full beard and the shaved and bearded head each carry a judge's own beard, so they stay in
- * the Shape grid, as do the bearded bust and the sculpted head, which are one person's
- * portrait, not a haircut.
+ * the Shape grid, as do the bearded bust, the sculpted head and the brick pyramid, which are
+ * one person's portrait, not a haircut.
  */
 export const MASCOT_HAIRSTYLES = [
   // Short, from bald up.
@@ -320,6 +321,7 @@ const RAY = [[-0.88, 0.12], [-0.3, -0.38], [0.3, -0.38], [0.88, 0.12], [0, 0.58]
 const CAKE = [[-0.84, 0.82], [0.8, 0.82], [0.8, -0.24], [-0.84, 0.36]] as const;
 const BOBA_CUP = [[-0.58, -0.1], [0.58, -0.1], [0.44, 0.8], [-0.44, 0.8]] as const;
 const PIZZA = [[-0.78, -0.5], [0.78, -0.5], [0, 0.8]] as const;
+const PYRAMID = [[0, -0.84], [0.84, 0.86], [-0.84, 0.86]] as const;
 const POPCORN = [[-0.6, -0.06], [0.6, -0.06], [0.46, 0.81], [-0.46, 0.81]] as const;
 const FRIES_BOX = [[-0.62, -0.08], [0.62, -0.08], [0.5, 0.8], [-0.5, 0.8]] as const;
 const CANDY_WRAP = [[0.4, 0.3], [0.94, -0.06], [0.94, 0.66]] as const;
@@ -2106,6 +2108,12 @@ export function sdShape(shape: MascotShapeId, x: number, y: number, t: number): 
       }
       return smin(head, hair, 0.05);
     }
+    case "pyramid": {
+      // SuperTrip64's picture: a pyramid of green bricks with one great eye, its point a
+      // little blunt, the way the drawing has it. The bricks are the markings below, so
+      // any colour keeps them.
+      return smax(sdPoly(x, y, PYRAMID) - 0.08, y - 0.76, 0.04);
+    }
     case "bust": {
       // A carved head with a rounded hairline and a long beard, without ears or limbs.
       const head = sdEllipse(x, y + 0.19, 0.61, 0.61);
@@ -2876,6 +2884,7 @@ export const FACE: Record<MascotShapeId, { x: number; y: number; s: number; w?: 
   silkfringe: { x: -0.025, y: 0.29, s: 0.98, w: 1.03 },
   pompadour: { x: 0, y: 0.22, s: 0.94 },
   sculpt: { x: 0.08, y: -0.3, s: 0.7 },
+  pyramid: { x: 0, y: 0.14, s: 1.04 },
   quiff: { x: 0, y: 0.12, s: 0.92 },
   fullbeard: { x: 0, y: 0.0, s: 0.9 },
   waves: { x: 0, y: 0.02, s: 0.86 },
@@ -3049,6 +3058,22 @@ export const MARKINGS: Partial<Record<MascotShapeId, { sd: (x: number, y: number
   moptop: {
     // Everything that is not the face is hair: dark whatever the skin, as hair is.
     sd: (x, y) => -mopFace(x, y),
+    tone: "dark",
+  },
+  pyramid: {
+    // Courses of brick: a mortar line every 0.2 down the body and a joint every 0.34
+    // across, each course offset half a brick from the one above, as in his picture.
+    // None round the eye line (FACE puts it at y 0.015): eyes that land on a dark mark
+    // swap to the body's ink, which cut two classic eyes into pieces wherever the mortar
+    // crossed them. His one eye fills that space anyway.
+    sd: (x, y) => {
+      if (sdEllipse(x, y - 0.015, 0.5, 0.3) < 0) return Infinity;
+      const course = Math.floor((y + 0.9) / 0.2);
+      const bed = Math.abs((y + 0.9) - course * 0.2 - 0.1);
+      const shift = course & 1 ? 0.17 : 0;
+      const joint = Math.abs((((x + shift + 1.7) % 0.34) + 0.34) % 0.34 - 0.17);
+      return Math.min(0.1 - bed, 0.17 - joint) - 0.022;
+    },
     tone: "dark",
   },
   bust: {

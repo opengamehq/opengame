@@ -1,20 +1,13 @@
+import { foldChar, LEET, readings } from "./confusables.js";
+
 /** Lexical checks for product metadata. This word list supplements moderation;
  * it cannot determine intent, context or whether an unfamiliar word is a slur. */
 const SLURS = new Set(["nigger", "niggers", "nigga", "niggas", "faggot", "faggots", "kike", "kikes", "spic", "spics", "chink", "chinks", "tranny", "trannies"]);
 const PROFANITY = new Set(["fuck", "fucks", "fucked", "fucking", "fucker", "fuckers", "motherfucker", "motherfuckers", "shit", "shits", "shitty", "bullshit", "bitch", "bitches", "bitching", "bastard", "bastards", "asshole", "assholes", "cunt", "cunts", "dickhead", "dickheads"]);
-const CONFUSABLES: Record<string, string> = {
-  "а": "a", "ɑ": "a", "е": "e", "ε": "e", "і": "i", "ι": "i", "ı": "i", "ӏ": "l", "ɡ": "g",
-  "о": "o", "ο": "o", "р": "p", "ρ": "p", "с": "c", "ϲ": "c", "ѕ": "s",
-  "т": "t", "τ": "t", "у": "y", "х": "x", "χ": "x", "κ": "k", "п": "n",
-};
-const LEET: Record<string, string> = { "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s" };
-
-/** Normalize only for matching. The creator's original writing remains stored. */
+/** Normalize only for matching. The creator's original writing remains stored. The table
+ *  behind it is `confusables.js`, shared with the reserved score label's check. */
 export function normalizePolicyWord(value: string): string[] {
-  const normalized = value.normalize("NFKC").toLowerCase().normalize("NFD")
-    .replace(/[\p{M}\p{Cf}]/gu, "").replace(/./gu, char => CONFUSABLES[char] ?? char);
-  const primary = normalized.replace(/[013457@$]/g, char => LEET[char]!);
-  return normalized.includes("1") ? [primary, normalized.replace(/[013457@$]/g, char => char === "1" ? "l" : LEET[char]!)] : [primary];
+  return readings(value);
 }
 
 // Include invisible format characters inside a word so inserting a zero-width
@@ -34,8 +27,7 @@ export function slurTextSpans(value: string): { start: number; end: number }[] {
   let offset = 0;
   for (const char of value) {
     const end = offset + char.length;
-    const normalized = char.normalize("NFKC").toLowerCase().normalize("NFD")
-      .replace(/[\p{M}\p{Cf}]/gu, "").replace(/./gu, unit => CONFUSABLES[unit] ?? unit);
+    const normalized = foldChar(char);
     parts.push(normalized);
     for (let index = 0; index < normalized.length; index++) { starts.push(offset); ends.push(end); }
     if (!normalized && ends.length) ends[ends.length - 1] = end;

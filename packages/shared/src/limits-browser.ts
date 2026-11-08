@@ -46,17 +46,11 @@ export const LIMITS = raw;
 export const BUNDLE = raw.bundle;
 export const VIEWPORTS = raw.viewports as Viewport[];
 export const CHECKS = raw.checks as CheckDefinition[];
-export const AUTH = raw.auth;
 export const PLAY = raw.play;
 export const HANDLE = raw.handle;
-export const SHARING = raw.sharing;
-export const RETENTION = raw.retention;
 export const JAM = raw.jam;
 /** The studio's run, session and global caps. See docs/studio-plan-2026-09-12.md section 10. */
 export const STUDIO = raw.studio;
-export const ESTATE = raw.estate;
-export const SOCIAL = raw.social;
-export const PHOTO_OG = raw.photoOg;
 
 /**
  * The ledger operations the platform pays for rather than the creator. The Worker's ledger

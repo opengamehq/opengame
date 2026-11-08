@@ -54,6 +54,128 @@ test("boards need distinct keys, finite scores and ordered bounds", () => {
   }
 });
 
+/* Der Koloss's own board, as the brief describes it: rounds as the score, five stats beside
+   it, solo and co-op, every run kept. */
+const kolossBoard = () => ({ key: "rounds", label: "Rounds survived", order: "desc", min: 1, max: 500, scoreLabel: "Round", format: "integer",
+  keep: "runs", runsPerPlayer: 50,
+  columns: [{ key: "kills", label: "Kills", format: "integer" }, { key: "downs", label: "Downs", format: "integer", order: "asc" },
+    { key: "revives", label: "Revives", format: "integer" }, { key: "points", label: "Points", format: "integer" },
+    { key: "time", label: "Time", format: "duration_s", order: "asc", sortable: true, min: 0, max: 86400 }],
+  variants: [{ key: "mode", label: "Mode", values: [{ key: "solo", label: "Solo" }, { key: "coop", label: "Co-op" }] }] });
+
+test("a board declares columns, variants and a keep rule, and the shared parser reads it the same way", async () => {
+  const { parseBoardShape } = await import("@opengame/shared/game-boards");
+  const board = kolossBoard();
+  assert.deepEqual(parseManifest({ ...game(), leaderboards: [board] }).leaderboards, [board]);
+  assert.equal(parseBoardShape(board, LIMITS.platform.manifest).ok, true);
+  // A board written before columns existed is still a board.
+  assert.deepEqual(parseManifest({ ...game(), leaderboards: [{ key: "wins", label: "Wins", order: "desc" }] }).leaderboards,
+    [{ key: "wins", label: "Wins", order: "desc" }]);
+  const validate = new Ajv2020({ strict: false }).compile(manifestJsonSchema());
+  assert.equal(validate({ ...game(), leaderboards: [board] }), true, JSON.stringify(validate.errors));
+});
+
+test("a board's semantic rules are the shared parser's, said once", () => {
+  const cap = LIMITS.platform.manifest;
+  const { runsPerPlayer: _runs, ...noRuns } = kolossBoard();
+  const values = (n: number, prefix: string) => Array.from({ length: n }, (_, i) => ({ key: `${prefix}${i}`, label: `Value ${i}` }));
+  const refused: [unknown, RegExp][] = [
+    [noRuns, /sets runsPerPlayer/],
+    [{ ...kolossBoard(), keep: "best" }, /sets runsPerPlayer/],
+    [{ ...kolossBoard(), runsPerPlayer: cap.boardRunsPerPlayerMax + 1 }, /runsPerPlayer|less than or equal/],
+    [{ ...kolossBoard(), columns: [{ key: "score", label: "Score" }] }, /score is reserved/],
+    [{ ...kolossBoard(), columns: [{ key: "all", label: "All" }] }, /all is reserved/],
+    [{ ...kolossBoard(), columns: [{ key: "kills", label: "Kills" }, { key: "kills", label: "Again" }] }, /declared twice/],
+    [{ ...kolossBoard(), columns: [{ key: "time", label: "Time", min: 10, max: 1 }] }, /min is greater than max/],
+    [{ ...kolossBoard(), variants: [{ key: "mode", label: "Mode", values: [{ key: "all", label: "All" }] }] }, /each value needs a lowercase key/],
+    [{ ...kolossBoard(), variants: [{ key: "mode", label: "Mode", values: [{ key: "solo", label: "Solo" }, { key: "solo", label: "Again" }] }] }, /declared twice/],
+    // Two dimensions of 6 values each make 7 x 7 = 49 combinations once "left out" counts.
+    [{ ...kolossBoard(), variants: [{ key: "a", label: "A", values: values(6, "a") }, { key: "b", label: "B", values: values(6, "b") }] },
+      new RegExp(`more than ${cap.boardVariantCombosMax}`)],
+    [{ ...kolossBoard(), columns: Array.from({ length: cap.boardColumnsMax + 1 }, (_, i) => ({ key: `c${i}`, label: `C${i}` })) }, /at most|Too big/i],
+    [{ ...kolossBoard(), format: "seconds" }, /Invalid option|expected one of/],
+    [{ ...kolossBoard(), columns: [{ key: "kills", label: "Kills", unit: "kills" }] }, /Unrecognized key/],
+  ];
+  for (const [board, reason] of refused) {
+    assert.throws(() => parseManifest({ ...game(), leaderboards: [board] }), reason, JSON.stringify(board).slice(0, 120));
+  }
+  // A structural refusal is said by the field, not repeated in the parser's words.
+  try { parseManifest({ ...game(), leaderboards: [{ ...kolossBoard(), columns: [{ key: "kills", label: "k".repeat(cap.boardColumnLabelCharsMax + 1) }] }] }); assert.fail("accepted"); }
+  catch (error) { assert.equal(JSON.parse((error as Error).message).length, 1); }
+  for (const [path, board] of [["columns", { ...kolossBoard(), columns: [{ key: "kills", label: "f@gg0t" }] }],
+    ["variants", { ...kolossBoard(), variants: [{ key: "mode", label: "Mode", values: [{ key: "solo", label: "f@gg0t" }] }] }]] as const) {
+    assert.throws(() => parseManifest({ ...game(), leaderboards: [board] }), /contact support for a review/, path);
+  }
+  // The editor schema holds the keep rule too, so an editor flags it before a check does.
+  const validate = new Ajv2020({ strict: false }).compile(manifestJsonSchema());
+  assert.equal(validate({ ...game(), leaderboards: [noRuns] }), false);
+  assert.equal(validate({ ...game(), leaderboards: [{ key: "wins", label: "Wins", order: "desc", runsPerPlayer: 3 }] }), false);
+});
+
+/* Smash Royale's career board (CAREER.md): fed from its per-match board, eliminations summed,
+   five columns that aggregate the matches, filterable by map. */
+const maps = [{ key: "map", label: "Map", values: [{ key: "sunreach", label: "Sunreach Shores" }, { key: "riftwild", label: "Riftwild" }] }];
+const matchBoard = () => ({ key: "kills", label: "KOs in a match", order: "desc", min: 0, max: 89, format: "integer",
+  columns: [{ key: "placement", label: "Place", format: "integer", order: "asc", min: 1, max: 90 }], variants: maps });
+const careerBoard = () => ({ key: "career", label: "Career", order: "desc", keep: "career", from: "kills", scoreAgg: "sum",
+  scoreLabel: "Eliminations", format: "integer",
+  columns: [
+    { key: "matches", label: "Matches", agg: "count", format: "integer" },
+    { key: "wins", label: "Wins", agg: "count", where: { of: "placement", op: "eq", value: 1 }, format: "integer" },
+    { key: "win_rate", label: "Win rate", agg: "ratio", of: ["wins", "matches"], scale: 100, requires: { column: "matches", atLeast: 5 }, format: "percent" },
+    { key: "avg_place", label: "Avg. place", agg: "avg", of: "placement", order: "asc", format: "number" },
+    { key: "best", label: "Best match", agg: "max", of: "score", format: "integer" }],
+  variants: maps });
+
+test("a career board is declared beside its source and read by the shared parser and the editor schema alike", async () => {
+  const { crossCheckBoards, parseBoardShape } = await import("@opengame/shared/game-boards");
+  const leaderboards = [matchBoard(), careerBoard()];
+  assert.deepEqual(parseManifest({ ...game(), leaderboards }).leaderboards, leaderboards);
+  const shapes = leaderboards.map(board => parseBoardShape(board, LIMITS.platform.manifest));
+  assert.ok(shapes.every(shape => shape.ok));
+  assert.equal(crossCheckBoards(shapes.map(shape => (shape as { shape: never }).shape)), null);
+  const validate = new Ajv2020({ strict: false }).compile(manifestJsonSchema());
+  assert.equal(validate({ ...game(), leaderboards }), true, JSON.stringify(validate.errors));
+});
+
+test("a career board's rules are the shared parser's and the cross-check's, each said once", () => {
+  const career = careerBoard();
+  const column = (patch: Record<string, unknown>, index = 0) => ({ ...career, columns: career.columns.map((item, i) => i === index ? { ...item, ...patch } : item) });
+  const refused: [unknown[], RegExp][] = [
+    [[matchBoard(), { ...career, from: undefined }], /names the board it is fed from/],
+    [[matchBoard(), { ...career, keep: "best" }], /names the board it is fed from/],
+    [[matchBoard(), { ...career, min: 0 }], /no bounds of its own/],
+    [[matchBoard(), column({ min: 0 })], /career column has no bounds/],
+    [[matchBoard(), column({ agg: undefined })], /agg must be one of/],
+    [[{ ...matchBoard(), columns: [{ key: "placement", label: "Place", agg: "count" }] }, career], /belong to career boards/],
+    [[matchBoard(), column({ of: ["wins", "best"] }, 2)], /a ratio divides two columns declared before it/],
+    [[matchBoard(), column({ agg: "sum" }, 0)], /of names what is aggregated/],
+    [[matchBoard(), column({ scale: 10 }, 0)], /scale and requires belong to a ratio/],
+    [[matchBoard(), { ...career, scoreAgg: "avg" }], /Invalid option|expected one of/],
+    [[matchBoard(), column({ where: { of: "placement", op: "ne", value: 1 } }, 1)], /Invalid option|expected one of/],
+    // What only the cross-check sees, on the career board's own path.
+    [[career], /fed from kills, which this game does not declare/],
+    [[matchBoard(), column({ of: "headshots" }, 3)], /headshots is not kills's score or one of its columns/],
+    [[matchBoard(), column({ where: { of: "deaths", op: "eq", value: 0 } }, 1)], /deaths is not kills's score/],
+    [[matchBoard(), { ...career, variants: [{ key: "map", label: "Map", values: [{ key: "dunes", label: "Dunes" }] }] }], /variant map must be one of kills's/],
+    [[matchBoard(), career, { ...career, key: "again", from: "career" }], /not by career, another career board/],
+  ];
+  for (const [leaderboards, reason] of refused) {
+    assert.throws(() => parseManifest({ ...game(), leaderboards }), reason, String(reason));
+  }
+  try { parseManifest({ ...game(), leaderboards: [career, matchBoard()].map((board, i) => i === 0 ? column({ of: "headshots" }, 3) : board) }); assert.fail("accepted"); }
+  catch (error) {
+    const issues = JSON.parse((error as Error).message) as { path: unknown[] }[];
+    assert.equal(issues.length, 1); assert.deepEqual(issues[0]!.path, ["leaderboards", 0]);
+  }
+  // The editor holds the structural half of the keep rule.
+  const validate = new Ajv2020({ strict: false }).compile(manifestJsonSchema());
+  for (const leaderboards of [[matchBoard(), { ...career, scoreAgg: undefined }], [matchBoard(), { ...career, max: 9 }], [matchBoard(), column({ agg: undefined })],
+    [{ ...matchBoard(), from: "career" }, career], [{ ...matchBoard(), columns: [{ key: "placement", label: "Place", where: { of: "score", op: "eq", value: 1 } }] }, career]]) {
+    assert.equal(validate(JSON.parse(JSON.stringify({ ...game(), leaderboards }))), false, JSON.stringify(leaderboards).slice(0, 160));
+  }
+});
+
 test("achievements take the API's id rule and limits, and each id once", () => {
   const cap = LIMITS.analytics;
   const declared = [{ id: "first_win", title: "First win", description: "Win a round." }, { id: "1-boss", title: "Beat the first boss" }];

@@ -2,15 +2,15 @@
 name: opengame-sdk
 description: Integrate a browser game with OpenGame through @opengamehq/sdk, the injected global or a native engine bridge. Covers start-up, the player and their OG at load, names, leaderboards, achievements, events, pause, mute, fullscreen, keys inside the frame and threaded builds. Use when the person says integrate with OpenGame, add the SDK, show the player's name or OG, add a leaderboard or achievement, track events, fix fullscreen or keys in the game frame, or asks how a game talks to OpenGame.
 metadata:
-  version: "1.0.6"
+  version: "1.0.9"
 ---
 
 # Integrate a game with OpenGame
 
 Inside an OpenGame page the SDK works as described here. Under `opengame dev` it runs a
-local stand-in that keeps scores and events in the browser. Until OpenGame launches, the CLI
-that deploys the game prints "OpenGame is not launched." for anybody outside the OpenGame
-team; write the SDK calls now, and they are exercised on OpenGame once it opens.
+local stand-in that keeps scores and events in the browser. Until {{launch kickoff}}, the CLI
+that deploys the game prints "OpenGame opens for creators on {{launch kickoff}}." for anybody
+outside the OpenGame team; write the SDK calls now, and they are exercised on OpenGame once it opens.
 
 The SDK is what ends up inside the game. It talks only to the OpenGame page around
 the game and to `{{raw allowedGameOrigins.api}}`.
@@ -197,6 +197,22 @@ time are measured by the page; do not track them yourself.
 
 Focus, the poster, pause, mute, fullscreen, keys, scrolling and opening an outside link
 with `og.openLink`: [references/frame.md](references/frame.md).
+
+## OG Radio
+
+Players can pick OG Radio stations and songs in the game's menu and listen while they
+play. The OpenGame page plays the music; the game only asks. `OpenGame.radio` in the
+injected SDK, or `import { radio } from '@opengamehq/sdk/radio'`:
+
+```js
+const picker = OpenGame.radio.mountPicker(menuElement, { theme: { accent: '#ff3b30' } })
+```
+
+**HIGH: call `play`, `next`, `previous`, `setShuffle`, `setRepeat` and a louder
+`setVolume` from the player's click or key press.** From a timer, a load handler or a game
+event they return `gesture_required`, and while the player has the game muted they return
+`muted`. Songs are always A to Z by title, and `q` searches within the scope it is given.
+Calls, scopes, theming and codes: [references/radio.md](references/radio.md).
 
 ## Offline and local development
 

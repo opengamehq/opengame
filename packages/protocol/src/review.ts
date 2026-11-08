@@ -125,6 +125,11 @@ export interface ReviewPolicy {
   /** Nobody is waiting to answer what the engine would otherwise leave for a person, so
    * the engine answers it itself (`answerForAPerson`). limits.json, review.autonomous. */
   autonomous?: boolean;
+  /** Whether limits.json lets a passing answer publish without a person
+   * (review.automaticPublishing). The engine does not read it; it is recorded so the
+   * database can tell a release it held from one the switch held, which decides whether
+   * the team is mailed (20261106001500_review_person_notify). */
+  automaticPublishing?: boolean;
   /** The review's target, from the upload. Measured and alerted on, never a verdict: the
    * engine does not read it (`recommend`). Carried so a recorded recommendation names the
    * target it was made under. limits.json, review.decisionDeadlineSeconds. */

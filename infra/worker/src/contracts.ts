@@ -304,6 +304,66 @@ function contract2027_04(): RuntimeContract {
   };
 }
 
+/**
+ * 2027-05: 2027-03 with `camera=(self)` in place of `camera=()`, and nothing else.
+ *
+ * WHY. World at War Zombies' lobby offers video chat, and on 7 Nov 2026 the owner reported a
+ * guest who could not turn it on. Every contract before this one says `camera=()`, which
+ * denies the camera to the game's own origin whatever the page around it delegates, so
+ * getUserMedia({ video }) failed before the browser ever asked the player. Microphone has
+ * been `(self)` since 2026-10, for the same reason voice chat needs it.
+ *
+ * WHY A CONTRACT AND NOT A FLAG ON THE HOST RECORD. A host record is rewritten by every
+ * promotion, and a flag there would be one more thing a writer could set without the
+ * database agreeing. A contract is pinned to a version by the database's own guard
+ * (guard_runtime_contract_binding), never moves after that, and is the one thing og-games,
+ * the runner and the site already agree on. So the site's `allow="camera"` and this header
+ * read the same fact, and a game that did not declare video chat cannot get one half
+ * without the other. The cost is that each base needs its camera twin, which is why there
+ * are two here (2027-06 is 2027-04's) rather than one.
+ *
+ * WHAT IT GRANTS. Permission to ASK. The site delegates `camera` only to these contracts'
+ * frames and the console never delegates it at all. The browser's answer is NOT per game:
+ * Chrome and Firefox record a camera allowed inside a frame against the top site,
+ * opengame.io, so a player who allowed one camera game may not be asked again by the next
+ * (from how the browsers delegate; not measured here). That is the reason a version reaches
+ * these contracts only by an owner's named decision, and the reason a creator path needs a
+ * per-game consent on the site before it exists. Nothing else differs from 2027-03: the CSP, the
+ * sandbox, the sign-in prompts and every other permission are 2027-03's verbatim, which
+ * `npm run check:contracts` and engine-contract.test.ts both hold.
+ *
+ * WHO REACHES IT. Not default-eligible. A version is pinned here only by the owner camera
+ * pin in the database's contract guard, which
+ * scripts/publish-game.mjs reaches with `--camera` and `--audit-actor` and nothing else: a
+ * manifest saying `"camera": true` without the flag is refused, because the manifest ships
+ * inside the bundle. A later version keeps a camera contract only through that same pin,
+ * never by the "keep this game's contract" rule every other contract has
+ * (20261108100000_camera_contract_reissue.sql). 2027-03 and 2027-04 are not edited.
+ */
+function contract2027_05(): RuntimeContract {
+  const base = contract2027_03();
+  return { ...base, version: "2027-05", permissionsPolicy: withCamera(base.permissionsPolicy) };
+}
+
+/** 2027-06: 2027-04 with `camera=(self)`, and nothing else. The camera twin of the threaded
+ *  open contract, which is where World at War Zombies is pinned. */
+function contract2027_06(): RuntimeContract {
+  const base = contract2027_04();
+  return { ...base, version: "2027-06", permissionsPolicy: withCamera(base.permissionsPolicy) };
+}
+
+/** A base policy with the camera allowed to the game's own origin.
+ *
+ *  It does not throw when the base stops opening with `camera=()`, and this used to. The
+ *  contracts are built when this module loads, so a throw here is og-games failing to start
+ *  and every game on opengame.gg going down with it, for a drift in one contract. Unchanged
+ *  instead: the camera twin then sends camera=() and its video fails closed, and
+ *  engine-contract.test.ts and `npm run check:contracts` each name the drift
+ *  (security review of #1118). */
+function withCamera(policy: string): string {
+  return policy.replace(/^camera=\(\)(?=, |$)/, "camera=(self)");
+}
+
 /** The trusted hosts for one directive, from limits.json, space separated. */
 function limitsTrusted(kind: "style" | "font"): string {
   const trusted = (limits as unknown as {
@@ -319,6 +379,8 @@ const CONTRACTS: Record<string, RuntimeContract> = {
   "2027-02": contract2027_02(),
   "2027-03": contract2027_03(),
   "2027-04": contract2027_04(),
+  "2027-05": contract2027_05(),
+  "2027-06": contract2027_06(),
 };
 
 /** The contract new versions are published under. */

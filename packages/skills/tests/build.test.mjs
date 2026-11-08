@@ -360,8 +360,9 @@ test("every platform skill tells an agent that OpenGame is not open yet", async 
   const { skills } = await collectSkills();
   for (const skill of skills.filter((s) => s.family === "platform")) {
     const text = skill.files["SKILL.md"];
-    assert.match(text, /Until OpenGame launches/, skill.name);
-    assert.match(text, /OpenGame is not launched\./, skill.name);
+    /* The refusal names the kickoff, the day the CLI and uploads open (the owner, 8 Nov 2026),
+       through {{launch kickoff}}, so the built text carries launch.json's own words. */
+    assert.ok(text.includes(`OpenGame opens for creators on ${loadContext().launch.kickoffCopy}.`), skill.name);
   }
 });
 

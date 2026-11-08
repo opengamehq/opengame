@@ -2,13 +2,13 @@
 name: opengame-router
 description: Build, test and submit a browser game on OpenGame. Routes game work to the deploy guide, whole-game review and relevant craft skills. Use when someone asks to make a game, improve a game, check it, deploy it or enter an OpenGame jam.
 metadata:
-  version: "1.0.4"
+  version: "1.0.5"
 ---
 
 # Work on an OpenGame game
 
-OpenGame opens on {{launch opens}}, and jam entries open on {{launch kickoff}}.
-Until OpenGame launches, the CLI and the creator API answer "OpenGame is not launched."
+OpenGame opens on {{launch opens}}. The CLI, uploads and jam entries open on {{launch kickoff}}.
+Until then, the CLI and the creator API answer "OpenGame opens for creators on {{launch kickoff}}."
 to everybody outside the OpenGame team. That is the platform's answer, not a fault in the
 game: tell the person, and keep working on the game itself, which they can still build and
 play in a browser.

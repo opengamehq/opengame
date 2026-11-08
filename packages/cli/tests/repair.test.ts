@@ -248,7 +248,7 @@ for (const [error, message, said] of [
   ["account_banned", "OpenGame's moderators have banned this account.", /moderators have banned/],
   // /api/v1/auth/me asks the launch switch before membership, so not_launched arrives
   // here instead of not_member. login is allowed before launch; the saved account is not.
-  ["not_launched", "OpenGame is not launched.", /not let in yet/],
+  ["not_launched", "OpenGame opens for creators on 18 November.", /not let in yet/],
 ] as const) test(`a saved login for an account refused as ${error} is replaced, and says why`, async () => {
   const deviceCode = "d".repeat(43);
   let closed = false;
@@ -305,6 +305,39 @@ test("a ready deploy prints the playable private preview", async () => {
     assert.equal(result.previewUrl, `${h.origin}/g/nightshift`);
     assert.equal(result.done, true);
     assert.match(result.message, /^Private preview ready\. Play it at http:\/\/127\.0\.0\.1:\d+\/g\/nightshift$/);
+  } finally { await h.close(); }
+});
+
+/* World at War's own game servers allowed https://waw.fun and answered the game's
+   opengame.gg origin with a 403 (6 Nov 2026), and no screen a creator saw showed that
+   origin. When an older server sends no gameOrigin, the CLI drops the line and the deploy
+   still succeeds. */
+test("a deploy names the origin the published game runs at, for the creator's own servers", async () => {
+  let state = "ready", origin: unknown = "https://k3v9q2m7x4ab.opengame.gg";
+  const h = await harness((req, res) => {
+    if (req.url === "/api/v1/deploys") return json(res, 200, { operation: op(1, state, { publicId: "nightshift", previewUrl: state === "ready" ? "/g/nightshift" : null, findings: [],
+      ...(origin === undefined ? {} : { gameOrigin: origin }) }), uploaded: true });
+  });
+  try {
+    const line = "Once published, the game runs at https://k3v9q2m7x4ab.opengame.gg. If your own servers check Origin or send CORS headers, allow that exact origin, not a pattern on opengame.gg.";
+    const ready = await h.cli("deploy", h.root);
+    assert.equal(ready.code, 0, JSON.stringify(ready.events));
+    assert.equal(ready.events.at(-1).data.gameOrigin, "https://k3v9q2m7x4ab.opengame.gg");
+    assert.match(ready.events.at(-1).data.message, /^Private preview ready\. Play it at \S+\n/);
+    assert.equal(ready.events.at(-1).data.message.split("\n").at(-1), line);
+    state = "queued";
+    const queued = await h.cli("deploy", h.root, "--no-wait", "--idempotency-key", "origin-queued");
+    assert.equal(queued.code, 0, JSON.stringify(queued.events));
+    assert.match(queued.events.at(-1).data.message, /^Uploaded\./);
+    assert.equal(queued.events.at(-1).data.message.split("\n").at(-1), line);
+    // With an older server, or a value this copy cannot read, the deploy succeeds without the line.
+    for (const sent of [undefined, "http://k3v9q2m7x4ab.opengame.gg", "https://k3v9q2m7x4ab.opengame.gg/x", "https://k3v9q2m7x4ab.opengame.gg:8443"]) {
+      state = "ready"; origin = sent;
+      const old = await h.cli("deploy", h.root, "--idempotency-key", `origin-${String(sent).length}`);
+      assert.equal(old.code, 0, JSON.stringify(old.events));
+      assert.equal(old.events.at(-1).data.gameOrigin, null);
+      assert.doesNotMatch(old.events.at(-1).data.message, /Once published/);
+    }
   } finally { await h.close(); }
 });
 

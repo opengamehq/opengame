@@ -17,7 +17,7 @@ function fixture() {
     init: async options => { calls.push(['init', options]); return client.env; },
     ready: () => calls.push(['ready']), track: (...args) => { calls.push(['track', ...args]); return ok(null); },
     openLink: async url => { calls.push(['openLink', url]); return ok(null); },
-    leaderboard: key => Object.fromEntries(['submit', 'top', 'me', 'around'].map(method => [method, async (...args) => {
+    leaderboard: key => Object.fromEntries(['submit', 'submitRun', 'top', 'me', 'around'].map(method => [method, async (...args) => {
       calls.push([`board.${method}`, key, ...args]); return ok(method);
     }])),
     achievements: {
@@ -53,6 +53,22 @@ test('achievement operations reach the client the JavaScript global uses, with t
   assert.deepEqual(f.calls.at(-1), ['achievements.unlock', 'Not An Id']);
 });
 
+
+test('a native board call reaches the same methods, and one written before runs makes the call it always made', async () => {
+  const f = fixture();
+  await f.request('board.submit', { key: 'rounds', score: 14, meta: { mode: 'hard' } });
+  assert.deepEqual(f.calls.at(-1), ['board.submit', 'rounds', 14, { mode: 'hard' }]);
+  await f.request('board.submit', { key: 'rounds', score: 14, stats: { kills: 212 }, tags: { mode: 'coop' } });
+  assert.deepEqual(f.calls.at(-1), ['board.submitRun', 'rounds', { value: 14, meta: undefined, stats: { kills: 212 }, tags: { mode: 'coop' } }]);
+  await f.request('board.top', { key: 'rounds', limit: 10, offset: 20, sort: 'kills', filter: { mode: 'solo' } });
+  assert.deepEqual(f.calls.at(-1), ['board.top', 'rounds', { sort: 'kills', filter: { mode: 'solo' }, limit: 10, offset: 20 }]);
+  await f.request('board.top', { key: 'rounds' });
+  assert.deepEqual(f.calls.at(-1), ['board.top', 'rounds', {}]);
+  await f.request('board.around', { key: 'rounds', filter: { mode: 'coop' } });
+  assert.deepEqual(f.calls.at(-1), ['board.around', 'rounds', { filter: { mode: 'coop' } }]);
+  // A stats value that is not an object never reaches the core.
+  assert.deepEqual((await f.request('board.submit', { key: 'rounds', score: 14, stats: [1] })).value, { ok: false, error: 'invalid_request' });
+});
 
 test('a thrown code the SDK does not catalogue reaches a native game as invalid_request, never as itself', async () => {
   const f = fixture();

@@ -2,14 +2,14 @@
 name: opengame-deploy
 description: Put a browser game online with OpenGame, the marketplace and game jam for browser games. Packages the game, checks it locally, uploads it to a private preview only the owner can play, reads and fixes findings, then submits one exact release for review. Use when the person says deploy my game, put it online, host it, share it, upload it, publish it, get me a link, make it playable for friends, or asks where to put a browser game or a Three.js game.
 metadata:
-  version: "1.0.7"
+  version: "1.0.9"
 ---
 
 # Deploy a browser game to OpenGame
 
-OpenGame opens on 17 November 2026, and jam entries open on 18 November.
-Until OpenGame launches, every CLI command except `version`, `help`, `login`, `logout` and `whoami`
-prints "OpenGame is not launched." for anybody outside the OpenGame team, and the API
+OpenGame opens on 17 November 2026. The CLI, uploads and jam entries open on 18 November.
+Until then, every CLI command except `version`, `help`, `login`, `logout` and `whoami`
+prints "OpenGame opens for creators on 18 November." for anybody outside the OpenGame team, and the API
 refuses with `not_launched`. Nothing is wrong with the game or the install: tell the
 person, and do not retry, reinstall or work around it.
 
@@ -65,7 +65,7 @@ An error has `"type": "error"`, `"ok": false`, a `code`, a `message`, an `exitCo
 | 4 | An allowance is used up | Wait `retryAfterSeconds`, then run the same command. |
 | 5 | Our side or the network | Leave the game as it is. Run `next` when the error has one; otherwise wait and retry, at most a few times. |
 | 6 | The CLI is too old | Run `opengame upgrade --json`, then the npm command in `data.command`. |
-| 7 | OpenGame is not launched | Stop. Tell the creator their account cannot use OpenGame until launch. |
+| 7 | OpenGame is not open to creators yet | Stop. Tell the creator the CLI and uploads open on 18 November. |
 
 ## Sign in with the creator
 
@@ -130,6 +130,7 @@ opengame deploy . --json
 | `data.done` | `true` once the server has finished. |
 | `data.releaseId` | The release. Keep it for `submit`. |
 | `data.previewUrl` | The private preview link, once `state` is `ready`. It can be `null` on a ready release the server will not play; the deploy's page says why. |
+| `data.gameOrigin` | The origin the published game runs at, such as `https://k3v9q2m7x4ab.opengame.gg`. Give it to the creator when the game talks to their own servers. `null` when the server sent none, or sent one this CLI cannot read. |
 
 To follow the checks, run `status --watch`, which follows the deploy for up to 300 seconds. Set `--timeout <seconds>` for a short tool call; when it runs out the command exits 5 with `checks_pending` and the checks carry on.
 
@@ -187,6 +188,8 @@ opengame status --watch --json
 OpenGame hosts static browser exports. The build needs `index.html` at the root of its output folder.
 
 At runtime the game may call its own origin, `https://api.opengame.gg`, and any other `https:` or `wss:` host. Each call comes from the player's browser, so that host sees the player's IP address. Keep API keys on the creator's server, never in the bundle: players can read every file in it. The review sandbox has no internet, so the game must draw its first frame without its server.
+
+The published game runs at `https://<label>.opengame.gg`, one origin per game, and `opengame deploy` returns it as `data.gameOrigin`. While an experiment runs, players load each version taking part from a `v-` origin instead. If the creator's servers check `Origin` (WebSocket) or send CORS headers (HTTP), they reject the game's requests until that exact origin is on their list, and online play fails with a closed socket, a 401 or 403 on the upgrade, or a CORS error in the console. Tell the creator to add it, and to add a version's `v-` origin before starting an experiment with it. Never suggest allowing `*.opengame.gg`, `null` or any pattern on `opengame.gg`, because other people's games are served there too and a pattern lets them call the creator's server. Use a token in a header or the first socket message, not a cookie. A private preview runs on a temporary `p-` origin, not the game's. That address is a private link, so keep it out of committed config and logs. [Games that talk to your own servers](https://docs.opengame.io/guides/packaging#games-that-talk-to-your-own-servers) has server examples.
 
 A game may not take payments, use crypto, make players create an account or give an email address, show ads, or carry ad pixels or session recording. [Packaging](https://docs.opengame.io/guides/packaging) has every rule and every check.
 

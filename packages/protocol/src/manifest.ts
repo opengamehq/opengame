@@ -1,6 +1,7 @@
 import { z } from "./zod";
 import { LIMITS, GENRE_SLUGS, GAME_KINDS, GAME_KIND_SLUGS, compiledCredentialPatterns, parseGameKind, slurTextProblem } from "@opengame/shared/browser";
 import { lobbyAllowlist } from "@opengame/shared/lobby-configuration";
+import { BOARD_FORMATS, BOARD_KEEPS, COLUMN_AGGS, SCORE_AGGS, WHERE_OPS, crossCheckBoards, parseBoardShape, type BoardShape } from "@opengame/shared/game-boards";
 
 const cap = LIMITS.platform.manifest;
 // Achievement definitions are capped where the API that stores them is, so a manifest
@@ -17,6 +18,13 @@ function text(min: number, max: number) {
   }, `Use ${min} to ${max} characters, without surrounding spaces.`)
     .meta({ minLength: min, maxLength: max });
 }
+
+const boardFormat = z.enum(BOARD_FORMATS)
+  .meta({ description: "How the value reads: number, integer, duration_ms, duration_s, percent (0 to 100) or distance_m." });
+const boardColumnKey = z.string().regex(/^[a-z][a-z0-9_]*(?![\s\S])/).max(cap.boardColumnKeyCharsMax);
+/* What a career column reads from its source board: `score`, or one of that board's columns.
+   Whether the column exists is crossCheckBoards', below, since one board cannot see another. */
+const boardField = z.string().regex(/^[a-z][a-z0-9_]*(?![\s\S])/).max(cap.boardColumnKeyCharsMax);
 
 export function isBundlePath(value: string): boolean {
   return [...value].length <= cap.pathCharsMax && BUNDLE_PATH.test(value);
@@ -137,6 +145,60 @@ export function manifestOwnerIs(claimed: string, handle: string | null | undefin
   return typeof handle === "string" && handle.length > 0 && claimed.trim().replace(/^@/, "").toLowerCase() === handle.trim().toLowerCase();
 }
 
+/* The structure an editor can check is spelled out here, with the caps from limits.json.
+   What a board MEANS (a column key that is reserved, a key declared twice, a keep rule and
+   its runsPerPlayer, how many tag combinations the variants make) is parseBoardShape's,
+   called in the superRefine below, because og-api, the SDK's local mode, the deploy and
+   the page all ask that one function and a second reading here would drift from it. */
+const boardSchema = z.strictObject({
+  key: z.string().regex(/^[a-z][a-z0-9_]*(?![\s\S])/).max(cap.boardKeyCharsMax),
+  order: z.enum(["asc", "desc"]),
+  label: text(1, cap.boardLabelCharsMax),
+  min: z.number().finite().optional(),
+  max: z.number().finite().optional(),
+  scoreLabel: text(1, cap.boardColumnLabelCharsMax).optional()
+    .meta({ description: "What the score column is called on the board, such as Round. The board's label is the heading above it." }),
+  format: boardFormat.optional(),
+  keep: z.enum(BOARD_KEEPS).optional()
+    .meta({ description: "best (the default) keeps each player's best run for each combination of tags. runs keeps every run, up to runsPerPlayer. career keeps one row per player that adds up their accepted runs on the board named by from; nothing is submitted to it." }),
+  from: z.string().regex(/^[a-z][a-z0-9_]*(?![\s\S])/).max(cap.boardKeyCharsMax).optional()
+    .meta({ description: "Required when keep is career, and refused otherwise: the key of the board of this game whose accepted runs feed this one. It keeps best or runs, not career." }),
+  scoreAgg: z.enum(SCORE_AGGS).optional()
+    .meta({ description: "Required when keep is career, and refused otherwise: how a source run's score adds into this board's score. sum, count, max or min." }),
+  runsPerPlayer: z.number().int().min(1).max(cap.boardRunsPerPlayerMax).optional()
+    .meta({ description: "Required when keep is runs, and refused otherwise: how many runs one player keeps on the board for each combination of tags." }),
+  columns: z.array(z.strictObject({
+    key: boardColumnKey,
+    label: text(1, cap.boardColumnLabelCharsMax),
+    format: boardFormat.optional(),
+    order: z.enum(["asc", "desc"]).optional(),
+    sortable: z.boolean().optional(),
+    min: z.number().finite().optional(),
+    max: z.number().finite().optional(),
+    decimals: z.number().int().min(0).max(4).optional()
+      .meta({ description: "How many decimals every value in the column is drawn with, 0 to 4, so a column of rates or averages lines up. A career average or ratio draws one when left out." }),
+    // Career boards only, and required on every column of one (parseBoardShape says so).
+    agg: z.enum(COLUMN_AGGS).optional()
+      .meta({ description: "Career boards only: count, sum, max, min or avg of of over the player's runs, or ratio of two earlier columns." }),
+    of: z.union([boardField, z.tuple([boardField, boardField])]).optional()
+      .meta({ description: "Career boards only: score or a column of the source board (a count may leave it out), or for a ratio [numerator, denominator], two earlier columns of this board." }),
+    where: z.strictObject({ of: boardField, op: z.enum(WHERE_OPS), value: z.number().finite() }).optional()
+      .meta({ description: "Career boards only, not on a ratio: count or aggregate only the runs where of compares to value, such as placement eq 1." }),
+    scale: z.number().finite().positive().max(1e6).optional()
+      .meta({ description: "Ratio only: what the ratio is multiplied by, such as 100 for a percentage. 1 when left out." }),
+    requires: z.strictObject({ column: boardField, atLeast: z.number().finite().min(0) }).optional()
+      .meta({ description: "Ratio only: the ratio is shown only once that earlier column is at least atLeast, such as 5 matches." }),
+  })).max(cap.boardColumnsMax).optional(),
+  variants: z.array(z.strictObject({
+    key: boardColumnKey,
+    label: text(1, cap.boardColumnLabelCharsMax),
+    values: z.array(z.strictObject({
+      key: z.string().regex(/^[a-z0-9][a-z0-9_-]*(?![\s\S])/).max(cap.boardColumnKeyCharsMax),
+      label: text(1, cap.boardColumnLabelCharsMax),
+    })).min(1).max(cap.boardVariantValuesMax),
+  })).max(cap.boardVariantsMax).optional(),
+});
+
 export const manifestSchema = z.strictObject({
   $schema: z.literal("https://opengame.io/schema/opengame.json").optional(),
   /* The OpenGame account this project deploys as, written `@handle`. A deploy from the
@@ -181,7 +243,8 @@ export const manifestSchema = z.strictObject({
      lobbies and the playtest's multiplayer check were taken out for launch, so no value
      here turns anything on. Refusing `p2p` would still break things that exist: checkouts
      written before the removal, stored releases, and the metadata head the database
-     rebuilds from a games row with private lobbies, which writes {"mode":"p2p"} back.
+     rebuilds from a games row with private or online lobbies, which writes {"mode":"p2p"}
+     back (online since 20261106180000, so a pull keeps an online game multiplayer).
      `opengame check` and every deploy
      from those would fail on a field that now does nothing. So it parses as it did, under
      its old shape rules, and nothing that documents the manifest should offer it: "none"
@@ -192,13 +255,7 @@ export const manifestSchema = z.strictObject({
     maxPlayers: z.number().int().min(1).max(LIMITS.rtc.peersPerLobbyMax),
     lobby: lobbyConfigurationSchema.optional(),
   }).optional(),
-  leaderboards: z.array(z.strictObject({
-    key: z.string().regex(/^[a-z][a-z0-9_]*(?![\s\S])/).max(cap.boardKeyCharsMax),
-    order: z.enum(["asc", "desc"]),
-    label: text(1, cap.boardLabelCharsMax),
-    min: z.number().finite().optional(),
-    max: z.number().finite().optional(),
-  })).max(cap.boardCountMax).optional(),
+  leaderboards: z.array(boardSchema).max(cap.boardCountMax).optional(),
   /* Declared here and saved through PUT /api/v1/games/{id}/achievements when a deploy is
      ready, the same route a creator could call by hand. The id rule is the SDK's and the
      API's, so an id this accepts is one og.achievements.unlock will send. */
@@ -238,14 +295,35 @@ export const manifestSchema = z.strictObject({
   const credentialIssue = manifestCredentialIssue(value);
   if (credentialIssue) ctx.addIssue({ code: "custom", message: credentialIssue });
   const keys = new Set<string>();
+  const shapes: BoardShape[] = [];
+  let shaped = true;
   for (const [index, board] of (value.leaderboards ?? []).entries()) {
-    const problem = slurTextProblem(board.label);
-    if (problem) ctx.addIssue({ code: "custom", path: ["leaderboards", index, "label"], message: problem });
+    // Every label a player reads on the board, not only its heading: a column or a mode is
+    // drawn on the game page as large as the board's own label.
+    const labels: [(string | number)[], string | undefined][] = [[["label"], board.label], [["scoreLabel"], board.scoreLabel],
+      ...(board.columns ?? []).map((column, i): [(string | number)[], string] => [["columns", i, "label"], column.label]),
+      ...(board.variants ?? []).flatMap((variant, i) => [[["variants", i, "label"], variant.label] as [(string | number)[], string],
+        ...variant.values.map((item, j): [(string | number)[], string] => [["variants", i, "values", j, "label"], item.label])])];
+    for (const [path, label] of labels) {
+      const problem = slurTextProblem(label ?? "");
+      if (problem) ctx.addIssue({ code: "custom", path: ["leaderboards", index, ...path], message: problem });
+    }
     if (keys.has(board.key)) ctx.addIssue({ code: "custom", path: ["leaderboards", index, "key"], message: "Use a different board key." });
     keys.add(board.key);
-    if (board.min !== undefined && board.max !== undefined && board.min > board.max) {
-      ctx.addIssue({ code: "custom", path: ["leaderboards", index, "max"], message: "The maximum must be at least the minimum." });
-    }
+    // Only once the structure has parsed, so a label that is too long is said once, by the
+    // field that holds it, rather than again in parseBoardShape's words.
+    const shape = boardSchema.safeParse(board).success ? parseBoardShape(board, cap) : null;
+    if (shape && !shape.ok) ctx.addIssue({ code: "custom", path: ["leaderboards", index], message: shape.reason });
+    if (shape?.ok) shapes.push(shape.shape); else shaped = false;
+  }
+  /* What one board cannot check about another: a career board's source exists and is not a
+     career board, what its columns read is the source's score or a column of it, and its
+     variants are the source's. Only once every board has parsed, so a broken source is said
+     once, by its own field. The reason opens with the career board's key, which finds it. */
+  const crossed = shaped ? crossCheckBoards(shapes) : null;
+  if (crossed) {
+    const index = shapes.findIndex(shape => shape.keep === "career" && (crossed.startsWith(`${shape.key}:`) || crossed.startsWith(`${shape.key}.`)));
+    ctx.addIssue({ code: "custom", path: index < 0 ? ["leaderboards"] : ["leaderboards", index], message: crossed });
   }
   const ids = new Set<string>();
   for (const [index, achievement] of (value.achievements ?? []).entries()) {
@@ -276,6 +354,10 @@ export function manifestJsonSchema() {
   if (!runtimeSchema || typeof runtimeSchema !== "object") {
     throw new Error("The runtime settings JSON Schema must be an object.");
   }
+  const boardsSchema = schema.properties?.leaderboards as { items?: Record<string, unknown> } | undefined;
+  if (!boardsSchema?.items || typeof boardsSchema.items !== "object") {
+    throw new Error("The leaderboards JSON Schema must describe its items.");
+  }
   return {
     ...schema, $id: "https://opengame.io/schema/opengame.json",
     properties: {
@@ -289,6 +371,24 @@ export function manifestJsonSchema() {
           minContains: 0,
           maxContains: 1,
         })),
+      },
+      leaderboards: {
+        ...boardsSchema,
+        // parseBoardShape's keep rules, which an editor can check: a board that keeps every
+        // run says how many, and a board that keeps the best has nothing to count; a career
+        // board names its source and score aggregate, has no bounds, and every column of it
+        // aggregates, while no other board's column does.
+        items: { ...boardsSchema.items, allOf: [{
+          if: { required: ["keep"], properties: { keep: { const: "runs" } } },
+          then: { required: ["runsPerPlayer"] },
+          else: { not: { required: ["runsPerPlayer"] } },
+        }, {
+          if: { required: ["keep"], properties: { keep: { const: "career" } } },
+          then: { required: ["from", "scoreAgg"], not: { anyOf: [{ required: ["min"] }, { required: ["max"] }] },
+            properties: { columns: { items: { required: ["agg"], not: { anyOf: [{ required: ["min"] }, { required: ["max"] }] } } } } },
+          else: { not: { anyOf: [{ required: ["from"] }, { required: ["scoreAgg"] }] },
+            properties: { columns: { items: { not: { anyOf: ["agg", "of", "where", "scale", "requires"].map(key => ({ required: [key] })) } } } } },
+        }] },
       },
     },
     allOf: [{
@@ -307,7 +407,13 @@ export function manifestJsonSchema() {
     // The remaining sibling-value and shared text-policy checks run through
     // parseManifest in the CLI and API before accepting a manifest. Editors get
     // the structural constraints and the finite runtime ID uniqueness rules.
-    "x-opengame-semantic-checks": ["leaderboard keys are unique", "achievement ids are unique", "each leaderboard min is no greater than max", "room setting keys and choice IDs are unique", "each room default names an available choice", "room metadata fits the shared UTF-8 byte limit", "metadata passes the shared lexical slur check"],
+    "x-opengame-semantic-checks": ["leaderboard keys are unique", "achievement ids are unique", "each leaderboard min is no greater than max",
+      "each leaderboard column, variant and variant value key is declared once, and no column is keyed score, rank, player, name or all",
+      `each leaderboard's variants make at most ${cap.boardVariantCombosMax} tag combinations, counting a run that leaves a variant out`,
+      "each column's min is no greater than its max",
+      "a career board's from names another board of this game that keeps best or runs, every of and where.of is score or one of that board's columns, and its variants and values are that board's",
+      "a career column's ratio divides two columns declared before it that are not ratios, and its requires names one of them; a ratio has no where, and only a ratio has scale or requires",
+      "a count may leave of out; every other aggregate names it", "room setting keys and choice IDs are unique", "each room default names an available choice", "room metadata fits the shared UTF-8 byte limit", "metadata passes the shared lexical slur check"],
   };
 }
 

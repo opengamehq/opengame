@@ -1,5 +1,13 @@
 # opengame-deploy changelog
 
+## 1.0.9
+
+The site opens on one day and the CLI, uploads and the creator API on the next, the jam's kickoff. Until then an account outside the team is told that day, read from the launch clock.
+
+## 1.0.8
+
+`opengame deploy` returns the origin the published game runs at as `data.gameOrigin`, such as `https://k3v9q2m7x4ab.opengame.gg`. When the creator's own servers check `Origin` or send CORS headers, the agent tells them to allow that exact origin, never `null` or a pattern on `opengame.gg`, to add a version's `v-` origin before an experiment, and to send a token rather than rely on a cookie. A private preview runs on a temporary origin of its own. That address is a private link, so the agent keeps it out of committed config and logs.
+
 ## 1.0.7
 
 `opengame.json` no longer takes a `cover`. OpenGame makes the cover, banner and share image after review approves the game, so leave the field out; a file that still names one passes `check`, and the CLI does not upload it.

@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { KICKOFF_COPY } from "@opengame/shared/launch-clock";
 import { cleanEnv, events, fakeApi, reply, spawnCli, tempDir, token } from "./shell";
 
 /**
- * "OpenGame is not launched." before every command but version, help and signing in
+ * "OpenGame opens for creators on" the kickoff day before every command but version, help and signing in
  * (src/launch.ts). The suite skips the check everywhere else with
  * OPENGAME_TEST_SKIP_LAUNCH_CHECK, so every case here clears it and points the CLI at a
  * local API that answers GET /api/v1/status the way the site does.
@@ -20,7 +21,8 @@ test("shut, a local command says OpenGame is not launched and exits 7 without ru
     assert.equal(run.code, 7, run.stdout + run.stderr);
     const error = last(run.stdout);
     assert.equal(error.code, "not_launched");
-    assert.equal(error.message, "OpenGame is not launched.");
+    /* The day the CLI opens, the jam's kickoff, a day after the site (the owner, 8 Nov 2026). */
+    assert.equal(error.message, `OpenGame opens for creators on ${KICKOFF_COPY}.`);
     assert.equal(error.retry, "later");
     assert.deepEqual(api.seen.map(row => `${row.method} ${row.url}`), ["GET /api/v1/status"]);
     assert.equal(api.seen[0]!.headers.authorization, undefined, "a request with no login sent a credential");
@@ -87,7 +89,7 @@ test("version, help and signing out never ask, and help --json lists exit 7", as
 test("the server's own not_launched on a creator route exits 7 too, not the auth exit", async () => {
   const api = await fakeApi((req, res) => {
     if (req.url === "/api/v1/status") return reply(res, 200, { launched: false, access: true });
-    if (req.url?.startsWith("/api/v1/jams")) return reply(res, 403, { error: "not_launched", message: "OpenGame is not launched.", retry: "later" });
+    if (req.url?.startsWith("/api/v1/jams")) return reply(res, 403, { error: "not_launched", message: `OpenGame opens for creators on ${KICKOFF_COPY}.`, retry: "later" });
   });
   const home = await tempDir("og-launch-");
   try {
@@ -131,4 +133,14 @@ test("after the close, deploy stops on the server's word and nothing else does",
         "a deploy after the close reached the API beyond the status route");
     } finally { await project.remove(); }
   } finally { await api.close(); await home.remove(); }
+});
+
+/* The day comes from the server's status when it reports one, so an owner hold past the
+   kickoff is named rather than the day this release was built with. */
+test("the not-launched sentence names the server's day, and the bundled one without it", async () => {
+  const { notLaunchedMessage } = await import("../src/launch");
+  const { COMMITTED_JAM_KICKOFF_AT } = await import("@opengame/shared/launch-clock");
+  assert.equal(notLaunchedMessage(COMMITTED_JAM_KICKOFF_AT.toISOString()), `OpenGame opens for creators on ${KICKOFF_COPY}.`);
+  assert.equal(notLaunchedMessage("2026-11-20T08:00:00Z"), "OpenGame opens for creators on 20 November.");
+  for (const missing of [undefined, null, "soon", 7]) assert.equal(notLaunchedMessage(missing), `OpenGame opens for creators on ${KICKOFF_COPY}.`);
 });

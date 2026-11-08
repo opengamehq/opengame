@@ -1,7 +1,6 @@
 // The public subset of @opengame/shared: the modules the CLI and SDK are built from.
 export * from "./limits-browser";
 export * from "./contact";
-export * from "./media";
 export * from "./studio-progress";
 export * from "./genres";
 export * from "./game-kinds";

@@ -313,13 +313,16 @@ test("packaged SDK loading retains exact notice bytes and refuses missing or emp
 // which has no such file, so every local score failed "unavailable" until dev served the
 // manifest it had validated (stranger walk, 22 Oct 2026).
 test("dev serves the validated manifest where the SDK's local mode looks for it, unless the export ships one", async () => {
-  const declared = { ...manifest, leaderboards: [{ key: "points", order: "desc" }] } as unknown as import("@opengame/protocol").GameManifest;
+  // Columns, variants and the keep rule ride along whole: the SDK's mock reads them too.
+  const boards = [{ key: "points", order: "desc", label: "Points", keep: "runs", runsPerPlayer: 5,
+    columns: [{ key: "kills", label: "Kills", format: "integer" }], variants: [{ key: "mode", label: "Mode", values: [{ key: "solo", label: "Solo" }] }] }];
+  const declared = { ...manifest, leaderboards: boards } as unknown as import("@opengame/protocol").GameManifest;
   const running = await startDevServer({ snapshot: new Map([["index.html", Buffer.from("<title>Game</title>")]]), manifest: declared });
   try {
     const served = await get(running.url, "/opengame.json");
     assert.equal(served.status, 200);
     assert.match(String(served.headers["content-type"]), /json/);
-    assert.deepEqual(JSON.parse(served.body).leaderboards, [{ key: "points", order: "desc" }]);
+    assert.deepEqual(JSON.parse(served.body).leaderboards, boards);
   } finally { await running.close(); }
   const own = await startDevServer({ snapshot: new Map([["index.html", Buffer.from("<title>Game</title>")], ["opengame.json", Buffer.from('{"own":true}')]]), manifest: declared });
   try { assert.equal((await get(own.url, "/opengame.json")).body, '{"own":true}'); }

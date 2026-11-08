@@ -1852,6 +1852,1148 @@
         "index.html": "<!doctype html><script src=\"game.js\"></script>",
         "game.js": "var of=2,s=`${of/2}x/ //`;fetch(\"https://coinhive.com/lib/x.js\");`}`;"
       }
+    },
+    {
+      "id": "s01_inline_legacy_comment_wrapper",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: the old <!-- //--> wrapper round an inline script. The tokenizer reads <!-- there as script data and the browser runs the code under it; the comment regex hid it to the -->",
+      "files": {
+        "index.html": "<!doctype html><html><body><script type=\"text/javascript\"><!--\nfetch(\"https://api.stripe.com/v1/charges\");\n//-->\n</script></body></html>"
+      }
+    },
+    {
+      "id": "s02_inline_comment_marker_in_a_string",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: an inlined library holding the string <!-- hid everything after it to the end of the file",
+      "files": {
+        "index.html": "<!doctype html><html><body><script>const m = \"<!--\"; function h() { return m; }\nfetch(\"https://api.stripe.com/v1/charges\");\n</script></body></html>"
+      }
+    },
+    {
+      "id": "s03_inline_double_escaped_script",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: after <!-- a <script makes the next </script text, so the element runs on; stopping at that one read the rest of the live script as HTML, where its <!-- opened a comment",
+      "files": {
+        "index.html": "<!doctype html><html><body><script><!--<script>\n//</script>\nvar q = \"<!--\";\nfetch(\"https://api.stripe.com/v1/charges\");\n</script></body></html>"
+      }
+    },
+    {
+      "id": "s04_script_tag_quoted_gt",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: a > inside a quoted attribute does not end the tag, so the body is not /* and the request is not in a comment",
+      "files": {
+        "index.html": "<!doctype html><html><body><script data-x=\"a>/*\">fetch(\"https://api.stripe.com/v1/charges\");//*/</script></body></html>"
+      }
+    },
+    {
+      "id": "s05_comment_marker_in_an_attribute",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: <!-- inside an attribute value is the value, not a comment",
+      "files": {
+        "index.html": "<!doctype html><html><body><div title=\"<!--\"></div><script>fetch(\"https://api.stripe.com/v1/charges\");</script><!-- --></body></html>"
+      }
+    },
+    {
+      "id": "s06_comment_marker_in_a_title",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: <!-- inside a <title> is text, not a comment",
+      "files": {
+        "index.html": "<!doctype html><html><head><title><!--</title></head><body><script>fetch(\"https://api.stripe.com/v1/charges\");</script><!-- --></body></html>"
+      }
+    },
+    {
+      "id": "s07_comment_closed_by_bang",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: --!> closes a comment, so the script after it loads",
+      "files": {
+        "index.html": "<!doctype html><html><body><!-- note --!><script src=\"https://js.stripe.com/v3/\"></script><!-- --></body></html>"
+      }
+    },
+    {
+      "id": "s08_empty_comment_closes_at_once",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: <!--> is a whole comment, so the script after it loads",
+      "files": {
+        "index.html": "<!doctype html><html><body><!--><script src=\"https://js.stripe.com/v3/\"></script><!-- --></body></html>"
+      }
+    },
+    {
+      "id": "s09_jsonld_type_in_another_attribute",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: a type= inside another attribute's value is not the element's type, so this is a classic script and not JSON-LD",
+      "files": {
+        "index.html": "<!doctype html><html><body><script data-x=\" type=application/ld+json\">fetch(\"https://api.stripe.com/v1/charges\");</script></body></html>"
+      }
+    },
+    {
+      "id": "s10_type_with_a_character_reference",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: text&#x2F;javascript is text/javascript once the reference is decoded, so the <!-- in it is script data",
+      "files": {
+        "index.html": "<!doctype html><html><body><script type=\"text&#x2F;javascript\">var m = \"<!--\";\nfetch(\"https://api.stripe.com/v1/charges\");\n</script></body></html>"
+      }
+    },
+    {
+      "id": "s11_nul_before_the_request",
+      "verdict": "blocker",
+      "why": "Security audit run 2, 6 Nov 2026: a NUL near the top of a script made the jam scan skip the file; NUL is legal in a comment and the browser runs it",
+      "files": {
+        "game.js": "/*\u0000*/fetch(\"https://api.stripe.com/v1/charges\");",
+        "index.html": "<!doctype html><html><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "s12_html_comment_round_a_script",
+      "verdict": "pass",
+      "why": "Security audit run 2, 6 Nov 2026: the control: a real comment outside any script is still a comment",
+      "files": {
+        "game.js": "start();",
+        "index.html": "<!doctype html><html><body><!-- old checkout: <script src=\"https://js.stripe.com/v3/\"></script> --><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "s13_template_script_keeps_its_comment",
+      "verdict": "pass",
+      "why": "Security audit run 2, 6 Nov 2026: a script the browser does not run keeps reading <!-- as a comment, as it always was",
+      "files": {
+        "game.js": "start();",
+        "index.html": "<!doctype html><html><body><script type=\"text/x-template\"><!-- <script src=\"https://js.stripe.com/v3/\"></script> --></script><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "s14_link_allowance_opened_from_a_string",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: the <link rel=canonical> allowance was a pattern over the raw text, so a string in a script holding the opening made every byte to the next > inert",
+      "files": {
+        "index.html": "<!doctype html><html><body><script>var s = \"<link rel=canonical \"; fetch(\"https://api.stripe.com/v1/charges\"); if (1 > 0) start();</script></body></html>"
+      }
+    },
+    {
+      "id": "s15_meta_allowance_opened_from_a_string",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: the same for the social <meta> allowance",
+      "files": {
+        "index.html": "<!doctype html><html><body><script>var s = \"<meta property=og:image \"; fetch(\"https://api.stripe.com/v1/charges\"); if (1 > 0) start();</script></body></html>"
+      }
+    },
+    {
+      "id": "s16_social_card_is_still_metadata",
+      "verdict": "pass",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: the control: a real og:image and canonical link in the head are still a declaration",
+      "files": {
+        "game.js": "start();",
+        "index.html": "<!doctype html><html><head><meta property=\"og:image\" content=\"https://js.stripe.com/card.png\"><link rel=\"canonical\" href=\"https://js.stripe.com/game\"></head><body><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "s17_comment_marker_in_a_bogus_comment",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: <? opens a bogus comment that ends at the first >, so a <!-- inside it opens nothing",
+      "files": {
+        "index.html": "<!doctype html><html><body><?x <!-- ?><script>fetch(\"https://api.stripe.com/v1/charges\");</script><!-- --></body></html>"
+      }
+    },
+    {
+      "id": "s18_long_s_does_not_close_a_script",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: the tokenizer matches </script by ASCII case only; Python's re.I folds U+017F into s, which would end the body at </ſcript and read the rest of the live script as HTML",
+      "files": {
+        "index.html": "<!doctype html><html><body><script>var a = \"</ſcript>\"; var m = \"<!--\";\nfetch(\"https://api.stripe.com/v1/charges\");\n</script></body></html>"
+      }
+    },
+    {
+      "id": "s19_a_longer_end_tag_does_not_close_a_script",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: </scriptx is not </script, so the body runs on and its <!-- is still script data",
+      "files": {
+        "index.html": "<!doctype html><html><body><script>var a = \"</scriptx>\"; var m = \"<!--\";\nfetch(\"https://api.stripe.com/v1/charges\");\n</script></body></html>"
+      }
+    },
+    {
+      "id": "s20_a_custom_element_is_not_a_script",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: <script-x> is an element named script-x, so the // after it is text and the script after that loads",
+      "files": {
+        "index.html": "<!doctype html><html><body><script-x>// <script src=\"https://js.stripe.com/v3/\"></script></script-x></body></html>"
+      }
+    },
+    {
+      "id": "s21_inlined_library_with_both_markers",
+      "verdict": "pass",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: an inlined library holding both \"<!--\" and \"-->\" leaves the script's escape where it opened, so the script still ends at its </script> and a real comment after it is still a comment",
+      "files": {
+        "game.js": "start();",
+        "index.html": "<!doctype html><html><body><script>var open = \"<!--\", close = \"-->\";</script><!--\n<script src=\"https://js.stripe.com/v3/\"></script>\n--><script src=\"./game.js\"></script></body></html>"
+      }
+    },
+    {
+      "id": "s22_meta_refresh_is_a_navigation",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: the <link rel> allowance is for a link: a <meta> carrying rel=\"me\" and a refresh is still a navigation",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta rel=\"me\" http-equiv=\"refresh\" content=\"0; url=https://checkout.stripe.com/pay\"></head><body></body></html>"
+      }
+    },
+    {
+      "id": "s23_a_link_with_a_social_property_is_still_a_stylesheet",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: the social <meta> allowance is for a meta: a stylesheet <link> carrying property=\"og:image\" is still fetched",
+      "files": {
+        "index.html": "<!doctype html><html><head><link rel=\"stylesheet\" property=\"og:image\" href=\"https://js.stripe.com/v3/x.css\"></head><body></body></html>"
+      }
+    },
+    {
+      "id": "s24_import_map_string_is_not_a_comment",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: an import map is JSON, so \"<!--\" in it is a string and the Stripe URL after it is fetched (Chromium and Firefox both requested it)",
+      "files": {
+        "index.html": "<!doctype html><html><body><script type=\"importmap\">{\"imports\":{\"a\":\"<!--\",\"pay\":\"https://js.stripe.com/v3/x.js\"},\"z\":\"-->\"}</script><script type=\"module\">import \"pay\";</script></body></html>"
+      }
+    },
+    {
+      "id": "s25_a_refresh_is_not_a_social_card",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: a meta with http-equiv is a pragma, and refresh navigates, whatever og: property it also carries",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta property=\"og:url\" http-equiv=\"refresh\" content=\"0; url=https://checkout.stripe.com/pay\"></head><body></body></html>"
+      }
+    },
+    {
+      "id": "s26_rel_splits_on_ascii_whitespace_only",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix review, 6 Nov 2026: the browser splits rel on ASCII whitespace, so canonical\\u00a0me is one token, none of the safe ones, and the link is judged; both checkers split it on Unicode whitespace, and with U+001C only Python did",
+      "files": {
+        "index.html": "<!doctype html><html><head><link rel=\"canonical me\" href=\"https://js.stripe.com/game\"></head><body></body></html>"
+      }
+    },
+    {
+      "id": "fc01_svg_script_comment",
+      "verdict": "blocker",
+      "why": "Security audit run 2 fix, 6 Nov 2026, present before it, and pinned there as known_miss_svg_script_comment: inside inline SVG a <script> is markup, so --!> closes the comment and </script> the element, and the HTML script after </svg> loads. The walk read the SVG script as HTML script data to the end of the file, where the Annex B <!-- covered the src.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script><!--<script>--!></script></svg>// <script src=\"https://js.stripe.com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "fc02_svg_title_lets_html_back_in",
+      "verdict": "blocker",
+      "why": "Review of #1053, 6 Nov 2026, present before it: an SVG <title> is an HTML integration point, not raw text, so the <script> in it is an HTML script and the <!-- after </title> is its data. The walk skipped the title as raw text. Was known_miss_svg_title_breakout. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><title><script>/*</title><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></title></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc03_svg_script_cdata_holds_its_end_tag",
+      "verdict": "blocker",
+      "why": "Review of #1053, 6 Nov 2026, present before it: an SVG script's CDATA section holds a </script> that does not close it; the walk closed there and read the rest as a comment. Was known_miss_svg_script_cdata. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script><![CDATA[/*</script><!--*/fetch('https://api.stripe.com/v1/charges')//]]>--></script></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc04_math_xmp_is_markup_and_p_breaks_out",
+      "verdict": "blocker",
+      "why": "Review of #1053, 6 Nov 2026, present before it: in MathML an <xmp> is an element, and a <p> breaks out of foreign content, so the <script> after it is HTML. The walk skipped the xmp as raw text to </xmp>. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><math><xmp><p><script>/*</xmp><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc05_svg_style_is_markup",
+      "verdict": "blocker",
+      "why": "Review of #1053, 6 Nov 2026, present before it: an SVG <style> is not raw text, so the <p> in it breaks out and the <script> after it is HTML. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><style><p><script>/*</style><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc06_svg_noscript_is_markup",
+      "verdict": "blocker",
+      "why": "Review of #1053, 6 Nov 2026, present before it: an SVG <noscript> is not raw text either. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><noscript><p><script>/*</noscript><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc07_math_title_is_markup",
+      "verdict": "blocker",
+      "why": "Review of #1053, 6 Nov 2026, present before it: a MathML <title> is an ordinary element and not an integration point, so the <p> in it breaks out. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><math><title><p><script>/*</title><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc08_svg_template_script_is_markup",
+      "verdict": "blocker",
+      "why": "Review of #1053, 6 Nov 2026, present before it: an SVG <script> of a template type is still markup, so the <p> in it breaks out and the HTML script after it runs; the walk read the template body as text and its <!-- as a comment over the request. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script type=text/template><p><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc09_svg_script_numeric_reference",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: an SVG script's text has its character references decoded before it runs, so &#42;/ closes the comment and the request runs. The JavaScript walk reads raw text and saw one comment, so a script with a reference in it keeps no inert range. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script>/* &#42;/fetch('https://api.stripe.com/v1/charges');/* */</script></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc10_svg_script_named_reference",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: the same with a named reference, &ast;. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script>/* &ast;/fetch('https://api.stripe.com/v1/charges');/* */</script></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc11_foreign_object_closes_back_into_svg",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: once </foreignObject> closes the integration point the page is SVG again, so the <style> after it is markup and the <p> breaks out. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><foreignObject><div></div></foreignObject><style><p><script>/*</style><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc12_end_p_breaks_out",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: </p> breaks out of foreign content as <p> does. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><style></p><script>/*</style><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc13_self_closed_svg_script_has_no_body",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: <script/> in SVG closes itself, so </svg> ends the SVG and the HTML script after it runs; the walk read <script/> as an HTML script whose body ran on over the request. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script/></svg><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc14_cdata_at_an_integration_point_in_chromium",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: Chromium does not open a CDATA section at an integration point (the standard and Firefox do), so there <![CDATA[> is a bogus comment and the <script> after it runs, while in Firefox the <!-- after </title> is a comment. The walk reads it both ways. Ran in headless Chromium, 7 Nov 2026; Firefox does not run it.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><title><![CDATA[><script>/*]]></title><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc15_misnested_html_in_foreign_object",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: a <p> closed under a <b> inside a <foreignObject> leaves the stack something the walk does not compute exactly, and it reads the page both ways from there; </foreignObject> may close the integration point, so the <title> after it is SVG and its <script> HTML. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><foreignObject><p><b></p></foreignObject><title><script>/*</title><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></title></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc16_cdata_holds_a_tag",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: in SVG a <title> inside CDATA is text, so the <title> after it is the real one. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><![CDATA[<title>]]><title><script>/*</title><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></title></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc17_svg_desc_script_is_html",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: an SVG <desc> is an integration point, so its <script> is HTML and the <!-- in it is script data. Pins that tracking foreign content does not read it as SVG. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><desc><script>/*</desc><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></desc></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc18_foreign_object_script_is_html",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: a <script> in a <foreignObject> is HTML. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><foreignObject><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></foreignObject></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc19_mathml_text_point_script_is_html",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: a <script> in a MathML <mi> is HTML. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><math><mi><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></mi></math></body></html>"
+      }
+    },
+    {
+      "id": "fc20_annotation_xml_html_script",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: an <annotation-xml> of encoding text/html is an integration point. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><math><annotation-xml encoding=\"text/html\"><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></annotation-xml></math></body></html>"
+      }
+    },
+    {
+      "id": "fc21_annotation_xml_encoding_reference",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: an encoding spelled with a character reference is decoded before it is read, so this is an integration point too; the walk does not decode and reads it both ways. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><math><annotation-xml encoding=\"text&#47;html\"><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></annotation-xml></math></body></html>"
+      }
+    },
+    {
+      "id": "fc22_script_after_a_closed_svg_is_html",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: after </svg> the page is HTML again. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><path d=\"M0 0\"/></svg><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc23_svg_left_open_in_a_div",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: </div> closes an <svg> left open inside the div, and the walk does not track the div, so it reads the page both ways and the HTML reading keeps the request live. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><div><svg><path d=\"M0 0\"></div><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc24_font_with_color_breaks_out",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: <font> breaks out of foreign content when it carries color, face or size. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><font color=red><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></font></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc25_inline_icons_before_a_commented_script",
+      "verdict": "pass",
+      "why": "Fix review, 7 Nov 2026: honest inline icons do not change how the page after them is read; a URL in a comment after them is still a comment.",
+      "files": {
+        "index.html": "<!doctype html><html><body><button><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg>Next</button><svg class=\"i\" aria-hidden=\"true\"><use href=\"#coin\"></use></svg><script>// card form adapted from https://js.stripe.com/v3/ docs; none of it ships\nconsole.log('ok')</script><!-- payments: https://js.stripe.com/v3/ is not used --></body></html>"
+      }
+    },
+    {
+      "id": "fc26_icon_with_title_desc_defs_and_style",
+      "verdict": "pass",
+      "why": "Fix review, 7 Nov 2026: an icon with its own <title>, <desc>, <defs> and <style>, and a comment inside it.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg viewBox=\"0 0 10 10\" role=\"img\"><title>Coin</title><desc>A gold coin</desc><defs><linearGradient id=\"g\"><stop offset=\"0\"/></linearGradient><style>.a{fill:url(#g)}</style></defs><circle class=\"a\" cx=\"5\" cy=\"5\" r=\"4\"/><!-- drawn after https://js.stripe.com/v3/ logo guidelines --></svg><script>/* https://js.stripe.com/v3/ */ start()</script></body></html>"
+      }
+    },
+    {
+      "id": "fc27_foreign_object_label",
+      "verdict": "pass",
+      "why": "Fix review, 7 Nov 2026: HTML inside a <foreignObject>, well nested, is tracked exactly and costs no second reading.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg width=\"200\" height=\"50\"><foreignObject width=\"200\" height=\"50\"><div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Score <b>10</b></p><span>HP</span></div></foreignObject></svg><script>// https://js.stripe.com/v3/ was considered\nrun()</script></body></html>"
+      }
+    },
+    {
+      "id": "fc28_mathml_formula",
+      "verdict": "pass",
+      "why": "Fix review, 7 Nov 2026: a MathML formula with an annotation that is not HTML.",
+      "files": {
+        "index.html": "<!doctype html><html><body><p><math><mi>x</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><annotation-xml encoding=\"application/x-tex\">x=\\frac12</annotation-xml></math></p><script>// https://js.stripe.com/v3/\nrun()</script></body></html>"
+      }
+    },
+    {
+      "id": "fc29_svg_script_comment_is_a_comment",
+      "verdict": "pass",
+      "why": "Fix review, 7 Nov 2026: an SVG script is read as the JavaScript it runs, so a URL in its comment, plain or in CDATA, is a comment as in an HTML script.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script>// docs at https://js.stripe.com/v3/\nconsole.log(1)</script><script><![CDATA[\n/* https://js.stripe.com/v3/ */ console.log(2)\n]]></script></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc30_sixty_icons",
+      "verdict": "pass",
+      "why": "Fix review, 7 Nov 2026: sixty icons in a row cost no second reading, and the comment after them stays a comment.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg viewBox=\"0 0 24 24\"><g><path d=\"M0 0L0 0\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M1 0L0 1\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M2 0L0 2\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M3 0L0 3\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M4 0L0 4\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M5 0L0 5\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M6 0L0 6\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M7 0L0 7\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M8 0L0 8\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M9 0L0 9\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M10 0L0 10\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M11 0L0 11\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M12 0L0 12\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M13 0L0 13\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M14 0L0 14\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M15 0L0 15\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M16 0L0 16\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M17 0L0 17\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M18 0L0 18\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M19 0L0 19\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M20 0L0 20\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M21 0L0 21\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M22 0L0 22\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M23 0L0 23\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M24 0L0 24\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M25 0L0 25\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M26 0L0 26\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M27 0L0 27\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M28 0L0 28\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M29 0L0 29\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M30 0L0 30\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M31 0L0 31\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M32 0L0 32\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M33 0L0 33\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M34 0L0 34\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M35 0L0 35\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M36 0L0 36\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M37 0L0 37\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M38 0L0 38\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M39 0L0 39\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M40 0L0 40\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M41 0L0 41\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M42 0L0 42\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M43 0L0 43\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M44 0L0 44\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M45 0L0 45\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M46 0L0 46\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M47 0L0 47\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M48 0L0 48\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M49 0L0 49\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M50 0L0 50\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M51 0L0 51\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M52 0L0 52\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M53 0L0 53\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M54 0L0 54\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M55 0L0 55\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M56 0L0 56\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M57 0L0 57\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M58 0L0 58\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><svg viewBox=\"0 0 24 24\"><g><path d=\"M59 0L0 59\"/><circle cx=\"1\" cy=\"1\" r=\"1\"></circle></g></svg><script>// https://js.stripe.com/v3/\nrun()</script></body></html>"
+      }
+    },
+    {
+      "id": "fc31_self_closed_title_has_no_body",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: <title/> in SVG closes itself, so the <script> after it is an SVG script whose CDATA holds a </title> and a </script>. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><title/><script><![CDATA[/*</title></script><!--*/fetch('https://api.stripe.com/v1/charges')//]]>--></script></svg></body></html>"
+      }
+    },
+    {
+      "id": "fc32_li_closes_li_in_foreign_object",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: a second <li> closes the first, so the walk stops tracking the HTML in the foreignObject by name and reads </foreignObject> both ways; it does close, and the <style> after it is SVG. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><foreignObject><li><li></li></foreignObject><style><p><script>/*</style><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc33_climb_through_unknown_html",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: an end tag climbing out of an inner <svg> through HTML the walk no longer tracks by name may find that HTML empty and close the foreignObject under it. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><foreignObject><li><li></li></li><svg></foreignObject><style><p><script>/*</style><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc34_svg_in_annotation_xml_is_svg",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: an <svg> start tag in a MathML <annotation-xml> makes SVG, even where the annotation is not HTML, so the <title> in it lets HTML back in. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><math><annotation-xml><svg><title><script>/*</title><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc35_mglyph_in_mi_is_mathml",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: <mglyph> and <malignmark> are the two start tags a MathML <mi> keeps as MathML, so the <style> under one is markup and the <p> breaks out. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><math><mi><mglyph><style><p><script>/*</style><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc36_scoped_end_tag_reads_past_a_div",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: </section> closes a section with a <div> open in it, where an ordinary end tag stops at the div, so the foreignObject then closes. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><foreignObject><section><div></section></foreignObject><style><p><script>/*</style><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc37_formatting_element_reopens",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: </p> pops the <b> in it, the next text opens the b again, and the b keeps </foreignObject> from closing, so the script is HTML. Found in this branch's own first draft, which read it as SVG. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><foreignObject><p><b></p>x</foreignObject><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc38_html_in_foreign_object_keeps_it_open",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: an open <b> keeps </foreignObject> from closing. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><foreignObject><b></foreignObject><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc39_table_end_tag_pops_the_svg",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: an <svg> foster-parented out of a table is still above it on the stack, and </table> pops it from inside a foreignObject. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><table><svg><foreignObject><div></table></div></foreignObject><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc40_table_cell_pops_the_svg",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: a <td> in a table pops back to the table through the svg. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><table><svg><foreignObject><div><td></div></foreignObject><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc41_template_end_tag_pops_the_svg",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: </template> pops to the template wherever it is. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><template><svg><foreignObject><div></template></div></foreignObject><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc42_self_closed_svg_root",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: <svg/> opens nothing. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg/><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc43_end_tag_stops_at_an_inner_foreign_object",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: an end tag read by the HTML rules stops at the nearest integration point, so </span> does not reach the outer span, and </foreignObject> does not close past the custom element. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><foreignObject><span><svg><foreignObject><x-y></span></foreignObject><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc44_more_readings_than_the_cap",
+      "verdict": "blocker",
+      "why": "Guard, passes on #1053 too: twenty <svg>s each closed by an HTML end tag the walk does not track need more readings than MAX_HTML_READINGS, so nothing from the first token past the cap is inert. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><x-a><svg></x-a><script>var a='<!--';fetch('https://api.stripe.com/v1/charges');//--></script></body></html>"
+      }
+    },
+    {
+      "id": "fc45_unclosed_svg_in_a_div",
+      "verdict": "pass",
+      "why": "Fix review, 7 Nov 2026: an <svg> left open in a div is read both ways, and a comment in the script after it is a comment in both.",
+      "files": {
+        "index.html": "<!doctype html><html><body><div><svg viewBox=\"0 0 1 1\"><path d=\"M0 0\"></div><script>// https://js.stripe.com/v3/\nrun()</script></body></html>"
+      }
+    },
+    {
+      "id": "fc46_hr_closes_p_then_inner_svg",
+      "verdict": "blocker",
+      "why": "Fix review, 7 Nov 2026: <hr> closes the <p> and leaves nothing open in the foreignObject, so the end tag that climbs out of the inner <svg> finds the foreignObject next and closes it; the walk, no longer tracking that HTML by name, reads it both ways. Ran the fetch in headless Chromium and Firefox, 7 Nov 2026.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><foreignObject><p><hr><svg></foreignObject><style><p><script>/*</style><!--*/fetch('https://api.stripe.com/v1/charges')//--></script></body></html>"
+      }
+    },
+    {
+      "id": "ud01_script_src_numeric_reference",
+      "verdict": "blocker",
+      "why": "#1068's review: an attribute value has its character references decoded before the browser fetches it, so &#46; is a dot and this loads Stripe; both checkers matched the page as written. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https://js.stripe&#46;com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "ud02_script_src_hex_reference",
+      "verdict": "blocker",
+      "why": "The same with a hexadecimal reference, &#x2E;. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https://js&#x2E;stripe.com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "ud03_script_src_named_reference",
+      "verdict": "blocker",
+      "why": "The same with a named reference from the standard's table, &period;. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https://js.stripe&period;com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "ud04_soft_hyphen_reference_in_a_host",
+      "verdict": "blocker",
+      "why": "&shy; decodes to a soft hyphen, which the URL parser drops from a host under UTS 46, so decoding without folding the host would still have missed it. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https://js.str&shy;ipe.com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "ud05_line_break_in_a_src",
+      "verdict": "blocker",
+      "why": "The URL parser removes tab and line breaks from anywhere in a URL, so a src split across two lines is one host. No reference at all; the page as written held two halves. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https://js.str\nipe.com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "ud06_tab_reference_in_a_src",
+      "verdict": "blocker",
+      "why": "&Tab; decodes to a tab, which the URL parser then drops. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https://js.stripe.&Tab;com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "ud07_percent_escape_in_an_img_host",
+      "verdict": "blocker",
+      "why": "The host parser percent-decodes, so %2E is a dot; an img src is not one of content.py's structured kinds, so neither checker followed it. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><img src=\"https://www.google-analytics%2Ecom/collect?v=1\"></body></html>"
+      }
+    },
+    {
+      "id": "ud08_fullwidth_letter_in_a_src",
+      "verdict": "blocker",
+      "why": "A fullwidth letter in a host is folded to ASCII by UTS 46. No reference; the page as written is not ASCII. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https://js.ｓtripe.com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "ud09_percent_escaped_fullwidth_letter",
+      "verdict": "blocker",
+      "why": "A percent-escaped fullwidth letter is decoded and then folded. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><img src=\"https://www.google-analytics.%EF%BD%83om/collect?v=1\"></body></html>"
+      }
+    },
+    {
+      "id": "ud10_unquoted_value_with_a_reference",
+      "verdict": "blocker",
+      "why": "An unquoted attribute value decodes references too. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><img src=https://www.google-analytics&#46;com/collect?v=1></body></html>"
+      }
+    },
+    {
+      "id": "ud11_reference_in_an_event_handler",
+      "verdict": "blocker",
+      "why": "An event handler is an attribute, decoded before it runs, so &quot; is a quote and the fetch is a request. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><img src=\"x.png\" onerror=\"fetch(&quot;https://api.stripe&#46;com/v1/charges&quot;)\"></body></html>",
+        "x.png": ""
+      }
+    },
+    {
+      "id": "ud12_signature_in_an_event_handler",
+      "verdict": "blocker",
+      "why": "The code signature in an event handler, decoded: both browsers' getAttribute returned Stripe(\"pk_live_abc\"), which is what runs. The handler fails for want of Stripe.js, so no request is expected; the signature is the rule.",
+      "files": {
+        "index.html": "<!doctype html><html><body><img src=\"x.png\" onerror=\"Stripe(&quot;pk_live_abc&quot;)\"></body></html>",
+        "x.png": ""
+      }
+    },
+    {
+      "id": "ud13_srcdoc_decoded_twice",
+      "verdict": "blocker",
+      "why": "A srcdoc is a page the frame parses again, so &amp;#46; is &#46; in it and then a dot. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><iframe srcdoc=\"&lt;script src=https://js.stripe&amp;#46;com/v3/&gt;&lt;/script&gt;\"></iframe></body></html>"
+      }
+    },
+    {
+      "id": "ud14_style_attribute_css_escape",
+      "verdict": "blocker",
+      "why": "A style attribute is CSS, so \\2e is a dot once the attribute is decoded. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><div style=\"background:url(https://www.google-analytics\\2e com/collect)\">x</div></body></html>"
+      }
+    },
+    {
+      "id": "ud15_link_in_an_anchor_is_still_a_link",
+      "verdict": "warning",
+      "why": "Guard: a decoded URL in an anchor's href is a link, a warning, as a link written plainly is; the heuristics read the page as written beside it. Neither browser asked for anything.",
+      "files": {
+        "index.html": "<!doctype html><html><body><a href=\"https://buy.stripe&#46;com/x\">Buy</a></body></html>"
+      }
+    },
+    {
+      "id": "ud16_svg_script_split_by_a_comment",
+      "verdict": "blocker",
+      "why": "#1068's review: an SVG script's text is its text nodes joined, so the comment splitting the host is taken out before it runs. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script>fetch('https://api.str<!--x-->ipe.com/v1/charges')</script></svg></body></html>"
+      }
+    },
+    {
+      "id": "ud17_svg_script_reference_in_the_host",
+      "verdict": "blocker",
+      "why": "#1068's review: an SVG script's text has its references decoded. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script>fetch('https://api.stripe&#46;com/v1/charges')</script></svg></body></html>"
+      }
+    },
+    {
+      "id": "ud18_svg_script_split_by_cdata",
+      "verdict": "blocker",
+      "why": "An SVG script's CDATA is part of its text, joined to the pieces around it. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script>fetch('https://api.str<![CDATA[ipe.com/v1/charges')]]></script></svg></body></html>"
+      }
+    },
+    {
+      "id": "ud19_svg_style_reference_in_the_host",
+      "verdict": "blocker",
+      "why": "An SVG style is markup, so its text has its references decoded before it is read as CSS. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><style>svg{background:url(https://www.google-analytics&#46;com/collect)}</style></svg></body></html>"
+      }
+    },
+    {
+      "id": "ud20_style_css_escape",
+      "verdict": "blocker",
+      "why": "An HTML style body has no references, but CSS has its own escapes, and \\2e followed by a space is a dot. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><style>body{background:url(https://www.google-analytics\\2e com/collect)}</style></body></html>"
+      }
+    },
+    {
+      "id": "ud21_stylesheet_css_escape",
+      "verdict": "blocker",
+      "why": "The same in a stylesheet file, with \\. as the escape. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><link rel=\"stylesheet\" href=\"a.css\"></body></html>",
+        "a.css": "body{background:url(\"https://www.google-analytics\\.com/collect\")}"
+      }
+    },
+    {
+      "id": "ud22_script_ideographic_full_stop",
+      "verdict": "blocker",
+      "why": "U+3002, the ideographic full stop, is a dot to the host parser, in a script as anywhere else. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"game.js\"></script></body></html>",
+        "game.js": "fetch('https://api.stripe。com/v1/charges');\n"
+      }
+    },
+    {
+      "id": "ud23_text_babel_is_run_as_script",
+      "verdict": "blocker",
+      "why": "#1053's note: Babel's standalone build runs a text/babel body as JavaScript, so '<!--' in a string is a string, and both checkers read it to the next --> as an HTML comment over the fetch. Ran with @babel/standalone 7.29.13. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"babel.min.js\"></script><script type=\"text/babel\">const open = '<!--';\nfetch('https://api.stripe.com/v1/charges');\nconst close = '-->';</script></body></html>"
+      }
+    },
+    {
+      "id": "ud24_consent_text_plain_is_run_as_script",
+      "verdict": "blocker",
+      "why": "#1053's note: a consent manager runs a text/plain script once a player agrees, here by copying its text into a new script, where <!-- is a one-line comment and the fetch runs. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script type=\"text/plain\" data-consent=\"analytics\"><!--\nfetch('https://api.stripe.com/v1/charges')\n--></script><script>for (const s of document.querySelectorAll('script[data-consent]')) { const n = document.createElement('script'); n.text = s.text; document.body.append(n); }</script></body></html>"
+      }
+    },
+    {
+      "id": "ud25_svg_file_script",
+      "verdict": "blocker",
+      "why": "#1068's note: a standalone .svg was never asked the policy, and a navigation to one runs its script (the CSP has frame-src 'none', so this page navigates). Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><meta http-equiv=\"refresh\" content=\"0;url=pay.svg\"></body></html>",
+        "pay.svg": "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>fetch('https://api.stripe.com/v1/charges')</script></svg>"
+      }
+    },
+    {
+      "id": "ud26_svg_file_entity",
+      "verdict": "blocker",
+      "why": "An entity declared in a standalone SVG's internal subset is expanded where it is used. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><meta http-equiv=\"refresh\" content=\"0;url=pay.svg\"></body></html>",
+        "pay.svg": "<?xml version=\"1.0\"?>\n<!DOCTYPE svg [<!ENTITY s \"stripe\">]>\n<svg xmlns=\"http://www.w3.org/2000/svg\"><script>fetch('https://api.&s;.com/v1/charges')</script></svg>"
+      }
+    },
+    {
+      "id": "ud27_svg_file_script_split",
+      "verdict": "blocker",
+      "why": "A standalone SVG's script text is joined across its comment and its CDATA, as inline. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><meta http-equiv=\"refresh\" content=\"0;url=pay.svg\"></body></html>",
+        "pay.svg": "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>fetch('https://api.str<!--x-->ipe.com/v1/'<![CDATA[+'charges')]]></script></svg>"
+      }
+    },
+    {
+      "id": "ud28_svg_file_image_reference",
+      "verdict": "blocker",
+      "why": "An attribute in a standalone SVG decodes references by XML's rules, and an <image> in an SVG navigated to is fetched. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><meta http-equiv=\"refresh\" content=\"0;url=pay.svg\"></body></html>",
+        "pay.svg": "<svg xmlns=\"http://www.w3.org/2000/svg\"><image href=\"https://www.google-analytics&#46;com/collect?v=1\" width=\"1\" height=\"1\"/></svg>"
+      }
+    },
+    {
+      "id": "ud29_html_script_body_has_no_references",
+      "verdict": "pass",
+      "why": "Guard: an HTML script body is raw text with no references, so this asks for a host that is not Stripe's. No blanket decoding. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script>fetch('https://api.stripe&#46;com/v1/charges')</script></body></html>"
+      }
+    },
+    {
+      "id": "ud30_script_file_has_no_references",
+      "verdict": "pass",
+      "why": "Guard: a script file has no references either. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"game.js\"></script></body></html>",
+        "game.js": "fetch('https://api.stripe&#46;com/v1/charges');\n"
+      }
+    },
+    {
+      "id": "ud31_reference_in_a_comment",
+      "verdict": "pass",
+      "why": "Guard: a decoded URL inside an HTML comment is still inert. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><!-- <script src=\"https://js.stripe&#46;com/v3/\"></script> --></body></html>"
+      }
+    },
+    {
+      "id": "ud32_social_card_with_a_reference",
+      "verdict": "pass",
+      "why": "Guard: the social card and canonical allowances hold for a decoded URL, judged at the byte it was read from. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta property=\"og:image\" content=\"https://js.stripe&#46;com/card.png\"><link rel=\"canonical\" href=\"https://buy.stripe&#46;com/\"></head><body></body></html>"
+      }
+    },
+    {
+      "id": "ud33_svg_script_comment_with_a_reference",
+      "verdict": "pass",
+      "why": "Guard: a decoded URL in an SVG script's comment is inert, because the script is walked as the decoded text it runs. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script>/* docs: https://api.stripe&#46;com/v1 */ console.log(1)</script></svg></body></html>"
+      }
+    },
+    {
+      "id": "ud34_legacy_reference_before_a_letter_in_an_attribute",
+      "verdict": "pass",
+      "why": "Guard: in an attribute a legacy reference such as &copy or &amp written without its semicolon and followed by = or a letter is not decoded, so a query keeps its names. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><a href=\"/search?q=1&copy=2&ampstripe.com\">Search</a></body></html>"
+      }
+    },
+    {
+      "id": "ud35_honest_page_with_references",
+      "verdict": "pass",
+      "why": "Honest page: entities in text, attributes, a title and an inline icon, CSS escapes in a style, and a script with Japanese text and a percent-encoded path. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Tom &amp; Jerry&rsquo;s Run</title><style>.n::before{content:\"\\2014\\00a0\";font-family:\"Noto Sans\\20 JP\"}</style></head><body><h1>Tom &amp; Jerry&nbsp;&mdash; Run</h1><a href=\"/scores?page=2&amp;sort=desc\">Scores &rarr;</a><img src=\"img/hero.png\" alt=\"&quot;Hero&quot; &copy; 2026\"><svg viewBox=\"0 0 10 10\"><title>Coin &amp; star</title><path d=\"M0 0h10\"/></svg><p>Caf&eacute; &#x1F3AE; &#169;</p><script src=\"game.js\"></script></body></html>",
+        "game.js": "const s = 'スコア: ' + (score % 100);\nfetch('/api/save?x=%2Fa%20b');\n",
+        "img/hero.png": ""
+      }
+    },
+    {
+      "id": "ud36_honest_inkscape_svg",
+      "verdict": "pass",
+      "why": "Honest Inkscape SVG with its namespaces, metadata, a comment naming inkscape.org and a reference in its text. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><img src=\"logo.svg\" alt=\"\"></body></html>",
+        "logo.svg": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n<svg width=\"64\" height=\"64\" viewBox=\"0 0 64 64\" version=\"1.1\" xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\" xmlns:sodipodi=\"http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:cc=\"http://creativecommons.org/ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\"><sodipodi:namedview id=\"n\" pagecolor=\"#ffffff\"/><defs><style>.a{fill:#f00}</style></defs><title>Logo &amp; mark</title><metadata><rdf:RDF><cc:Work rdf:about=\"\"><dc:format>image/svg+xml</dc:format><dc:type rdf:resource=\"http://purl.org/dc/dcmitype/StillImage\"/></cc:Work></rdf:RDF></metadata><g inkscape:label=\"Layer 1\"><path class=\"a\" d=\"M0 0h64v64z\"/><text x=\"2\" y=\"60\">Caf&#233;</text></g></svg>"
+      }
+    },
+    {
+      "id": "ud37_honest_illustrator_svg",
+      "verdict": "pass",
+      "why": "Honest Illustrator SVG, whose namespaces are internal entities. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><img src=\"art.svg\" alt=\"\"></body></html>",
+        "art.svg": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- Generator: Adobe Illustrator 27.0.0, SVG Export Plug-In  -->\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\" [\n\t<!ENTITY ns_extend \"http://ns.adobe.com/Extensibility/1.0/\">\n\t<!ENTITY ns_ai \"http://ns.adobe.com/AdobeIllustrator/10.0/\">\n\t<!ENTITY ns_svg \"http://www.w3.org/2000/svg\">\n\t<!ENTITY ns_xlink \"http://www.w3.org/1999/xlink\">\n]>\n<svg version=\"1.1\" xmlns:x=\"&ns_extend;\" xmlns:i=\"&ns_ai;\" xmlns=\"&ns_svg;\" xmlns:xlink=\"&ns_xlink;\" x=\"0px\" y=\"0px\" viewBox=\"0 0 10 10\"><style type=\"text/css\">.st0{fill:#2B2B2B;}</style><path class=\"st0\" d=\"M0 0h10v10z\"/></svg>"
+      }
+    },
+    {
+      "id": "ud38_honest_stylesheet_escapes",
+      "verdict": "pass",
+      "why": "Honest stylesheet: escapes in a font name and in content, and a decoded URL in a comment, which stays inert. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><link rel=\"stylesheet\" href=\"a.css\"></body></html>",
+        "a.css": "@font-face{font-family:\"Pixel\\20 Font\";src:url(fonts/pixel.woff2)}\n.icon::after{content:\"\\e900\"}\n.q::before{content:\"\\201C\"}\n/* see https://www.google-analytics\\2e com in the docs */\n",
+        "fonts/pixel.woff2": ""
+      }
+    },
+    {
+      "id": "known_miss_js_string_concatenation",
+      "verdict": "pass",
+      "why": "Known limit, pinned at pass so a fix flips it on purpose: a URL a script assembles at run time is evaluation, not decoding, and neither checker evaluates JavaScript. Both browsers asked for api.stripe.com. The sandbox run's net verdict and the reviewer stand behind this.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"game.js\"></script></body></html>",
+        "game.js": "fetch('https://api.' + 'stripe.com/v1/charges');\n"
+      }
+    },
+    {
+      "id": "known_miss_js_string_escape",
+      "verdict": "pass",
+      "why": "Known limit, pinned at pass: a JavaScript string escape (\\x2e) is decoded by the script, which neither checker reads as a string. Both browsers asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"game.js\"></script></body></html>",
+        "game.js": "fetch('https://api.stripe\\x2ecom/v1/charges');\n"
+      }
+    },
+    {
+      "id": "ud39_template_content_is_parsed",
+      "verdict": "blocker",
+      "why": "A <template>'s content is parsed as HTML, so its attributes are decoded and cloning it fetches the image. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><template id=\"t\"><img src=\"https://www.google-analytics&#46;com/collect?v=1\"></template><script>document.body.append(document.getElementById('t').content.cloneNode(true))</script></body></html>"
+      }
+    },
+    {
+      "id": "known_miss_markup_written_by_script",
+      "verdict": "pass",
+      "why": "Known limit, pinned at pass: markup a script writes into innerHTML is decoded by the parser at run time, out of a JavaScript string neither checker decodes. Both browsers asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><div id=\"d\"></div><script src=\"game.js\"></script></body></html>",
+        "game.js": "document.getElementById('d').innerHTML = '<img src=\"https://www.google-analytics&#46;com/collect?v=1\">';\n"
+      }
+    },
+    {
+      "id": "ud40_a_plain_link_later_does_not_answer_for_a_decoded_script",
+      "verdict": "blocker",
+      "why": "Guard on the rule that keeps a decoded URL from being reported twice: a blocked link written plainly further on does not answer for the decoded script before it. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https://js.stripe&#46;com/v3/\"></script><a href=\"https://buy.stripe.com/x\">Buy</a></body></html>"
+      }
+    },
+    {
+      "id": "ud41_srcdoc_comment_is_inert",
+      "verdict": "pass",
+      "why": "Guard: a comment inside a srcdoc page is inert in the page it is, so a URL decoded out of it is no request. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><iframe srcdoc=\"&lt;!-- https://js.stripe&amp;#46;com/v3/ --&gt;&lt;p&gt;hi&lt;/p&gt;\"></iframe></body></html>"
+      }
+    },
+    {
+      "id": "ud42_value_with_a_percent_escaped_host",
+      "verdict": "warning",
+      "why": "Guard: a URL decoded out of a script is judged beside its neighbours as written, so a percent-escaped Stripe address written as a value in an object is the warning a plain one is, not a request. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"game.js\"></script></body></html>",
+        "game.js": "const links = { pay: \"https://js.stripe%2Ecom/v3\" };\nconsole.log(links);\n"
+      }
+    },
+    {
+      "id": "ud43_a_commented_copy_does_not_answer_for_the_live_url",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: a blocked URL in an SVG script's comment answered for the live one joined across it, because an inert URL counted as written. Only a live one does now. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><svg><script>fetch('https:/<!--//api.stripe.com-->/api.str<!---->ipe.com/v1/charges')</script></svg></body></html>"
+      }
+    },
+    {
+      "id": "ud44_invisible_operator_reference_in_a_host",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: &it; is U+2062 INVISIBLE TIMES, which both browsers drop from a host and the first fold table, written from Node 22 alone, did not. The table is now the union of Node, Chromium and Firefox. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https://js.str&it;ipe.com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "ud45_hangul_filler_in_a_host",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: U+3164, the Hangul filler, is dropped from a host by both browsers. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https://js.strㅤipe.com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "ud46_unicode_16_letter_in_a_script",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: U+A7F1, a Unicode 16 letter, folds to s in both browsers. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"game.js\"></script></body></html>",
+        "game.js": "fetch('https://api.꟱tripe.com/v1/charges');\n"
+      }
+    },
+    {
+      "id": "ud47_srcdoc_twelve_deep",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: srcdoc nested twelve deep, past eight extra decodings; a srcdoc past the nesting the walk follows is now decoded until it stops changing. Ran in headless Chromium under the 2027-03 CSP, 7 Nov 2026, which asked for js.stripe.com; Firefox stops nesting at ten.",
+      "files": {
+        "index.html": "<!doctype html><html><body><iframe srcdoc=\"&lt;iframe srcdoc=&quot;&amp;lt;iframe srcdoc=&amp;quot;&amp;amp;lt;iframe srcdoc=&amp;amp;quot;&amp;amp;amp;lt;iframe srcdoc=&amp;amp;amp;quot;&amp;amp;amp;amp;lt;iframe srcdoc=&amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;lt;iframe srcdoc=&amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;lt;iframe srcdoc=&amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;amp;lt;iframe srcdoc=&amp;amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;amp;amp;lt;iframe srcdoc=&amp;amp;amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;amp;amp;amp;lt;iframe srcdoc=&amp;amp;amp;amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;lt;iframe srcdoc=&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;lt;script src=&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;quot;https://js.stripe&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;#46;com/v3/&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;lt;/script&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;lt;/iframe&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;amp;amp;amp;lt;/iframe&amp;amp;amp;amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;amp;amp;lt;/iframe&amp;amp;amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;amp;lt;/iframe&amp;amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;amp;lt;/iframe&amp;amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;quot;&amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;amp;lt;/iframe&amp;amp;amp;amp;amp;gt;&amp;amp;amp;amp;quot;&amp;amp;amp;amp;gt;&amp;amp;amp;amp;lt;/iframe&amp;amp;amp;amp;gt;&amp;amp;amp;quot;&amp;amp;amp;gt;&amp;amp;amp;lt;/iframe&amp;amp;amp;gt;&amp;amp;quot;&amp;amp;gt;&amp;amp;lt;/iframe&amp;amp;gt;&amp;quot;&amp;gt;&amp;lt;/iframe&amp;gt;&quot;&gt;&lt;/iframe&gt;\"></iframe></body></html>"
+      }
+    },
+    {
+      "id": "ud48_svg_doctype_after_a_commented_one",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: a DOCTYPE inside an earlier comment was taken for the document's, so the real one's entity went undeclared. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"0;url=pay.svg\"></head><body></body></html>",
+        "pay.svg": "<!-- <!DOCTYPE x> --><!DOCTYPE svg [<!ENTITY s \"stripe\">]><svg xmlns=\"http://www.w3.org/2000/svg\"><script>fetch('https://api.&s;.com/v1/charges')</script></svg>"
+      }
+    },
+    {
+      "id": "ud49_svg_entity_with_a_non_ascii_name",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: an entity named with a non-ASCII letter is one the parser honours. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"0;url=pay.svg\"></head><body></body></html>",
+        "pay.svg": "<!DOCTYPE svg [<!ENTITY é \"stripe\">]><svg xmlns=\"http://www.w3.org/2000/svg\"><script>fetch('https://api.&é;.com/v1/charges')</script></svg>"
+      }
+    },
+    {
+      "id": "ud50_svg_subset_instruction_holding_a_bracket",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: a processing instruction in the internal subset holding ]> ended the subset early. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"0;url=pay.svg\"></head><body></body></html>",
+        "pay.svg": "<!DOCTYPE svg [<?x ]>?><!ENTITY s \"stripe\">]><svg xmlns=\"http://www.w3.org/2000/svg\"><script>fetch('https://api.&s;.com/v1/charges')</script></svg>"
+      }
+    },
+    {
+      "id": "ud51_svg_parameter_entity",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: a parameter entity that writes the declaration. Ran in headless Firefox under the 2027-03 CSP, 7 Nov 2026, which asked for api.stripe.com; Chromium does not expand it.",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"0;url=pay.svg\"></head><body></body></html>",
+        "pay.svg": "<!DOCTYPE svg [<!ENTITY % p \"&#60;!ENTITY s 'stripe'>\"> %p;]><svg xmlns=\"http://www.w3.org/2000/svg\"><script>fetch('https://api.&s;.com/v1/charges')</script></svg>"
+      }
+    },
+    {
+      "id": "ud52_svg_comment_inside_an_entity",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: an entity holding a comment and a call: one piece of &a; covered by the comment made all of it inert. A span of the page is inert now only where every character read from it is. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"0;url=pay.svg\"></head><body></body></html>",
+        "pay.svg": "<!DOCTYPE svg [<!ENTITY a \"/**/fetch('https://api.stripe&#38;#x2e;com/v1/charges')\">]><svg xmlns=\"http://www.w3.org/2000/svg\"><script>&a;</script></svg>"
+      }
+    },
+    {
+      "id": "ud53_xml_document_script",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: og-games serves .xml as application/xml, and an XHTML script in an XML document runs when it is navigated to; nothing asked .xml the policy. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"0;url=pay.xml\"></head><body></body></html>",
+        "pay.xml": "<?xml version=\"1.0\"?><root><script xmlns=\"http://www.w3.org/1999/xhtml\">fetch(\"https://api.stripe.com/v1/charges\")</script></root>"
+      }
+    },
+    {
+      "id": "ud54_backslashes_for_slashes",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: the URL parser reads \\\\ as // after a special scheme. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"https:\\\\js.stripe.com/v3/\"></script></body></html>"
+      }
+    },
+    {
+      "id": "ud55_one_slash",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: and takes any run of slashes after one, https:/ included. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><img src=\"https:/www.google-analytics.com/collect?v=1\"></body></html>"
+      }
+    },
+    {
+      "id": "ud56_import_map_json_escape",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: an import map is JSON, whose parser reads \\u002e as a dot. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for js.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script type=\"importmap\">{\"imports\":{\"pay\":\"https://js\\u002estripe.com/v3/\"}}</script><script type=\"module\">import \"pay\";</script></body></html>"
+      }
+    },
+    {
+      "id": "ud57_byte_order_mark_in_a_script_host",
+      "verdict": "blocker",
+      "why": "Review of this change, 7 Nov 2026: U+FEFF, which a host drops, broke the TypeScript fold window and not the Python one, so the two disagreed. Windows break on ASCII only now. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"game.js\"></script></body></html>",
+        "game.js": "fetch('https://api.str﻿ipe.com/v1/charges');\n"
+      }
+    },
+    {
+      "id": "ud58_honest_xml_atlas",
+      "verdict": "pass",
+      "why": "Honest XML: a TexturePacker atlas with a comment naming its tool's site and a reference in a name. Neither browser asked a blocked host.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"game.js\"></script></body></html>",
+        "game.js": "load('atlas.xml');\n",
+        "atlas.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!-- Created with TexturePacker http://www.codeandweb.com/texturepacker -->\n<TextureAtlas imagePath=\"sprites.png\" width=\"256\" height=\"256\">\n\t<SubTexture name=\"hero_01.png\" x=\"0\" y=\"0\" width=\"32\" height=\"32\"/>\n\t<SubTexture name=\"café &amp; bar.png\" x=\"32\" y=\"0\" width=\"32\" height=\"32\"/>\n</TextureAtlas>\n"
+      }
+    },
+    {
+      "id": "ud59_tab_inside_a_script_string_host",
+      "verdict": "blocker",
+      "why": "Fuzzed parity, 7 Nov 2026: a tab is legal inside a JavaScript string and the URL parser drops it, so a host split by one is whole; Python's structured matcher caught it only beside fetch(. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><script src=\"game.js\"></script></body></html>",
+        "game.js": "const u = 'https://api.str\tipe.com/v1/charges';\nnew Image().src = u;\n"
+      }
+    },
+    {
+      "id": "ud60_backslashes_written_as_references",
+      "verdict": "blocker",
+      "why": "Mutation testing, 7 Nov 2026: a backslash written as a reference is a backslash once the attribute is decoded, and the URL parser reads https:\\\\ as https://. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><body><img src=\"https:&#92;&#92;www.google-analytics.com/collect?v=1\"></body></html>"
+      }
+    },
+    {
+      "id": "ud61_xml_document_entity",
+      "verdict": "blocker",
+      "why": "Mutation testing, 7 Nov 2026: an .xml document is read as XML, its entities expanded, not only as text. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for api.stripe.com.",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"0;url=pay.xml\"></head><body></body></html>",
+        "pay.xml": "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY s \"stripe\">]><root><script xmlns=\"http://www.w3.org/1999/xhtml\">fetch(\"https://api.&s;.com/v1/charges\")</script></root>"
+      }
+    },
+    {
+      "id": "ud62_svg_first_parameter_entity_binds",
+      "verdict": "blocker",
+      "why": "Second review of this change, 7 Nov 2026: of two declarations of one parameter entity the first binds, as for a general one, and both checkers had kept the last. Ran in headless Firefox under the 2027-03 CSP, 7 Nov 2026, which asked for api.stripe.com; Chromium does not expand parameter entities.",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"0;url=pay.svg\"></head><body></body></html>",
+        "pay.svg": "<!DOCTYPE svg [<!ENTITY % p \"&#60;!ENTITY s 'stripe'>\"><!ENTITY % p \"&#60;!ENTITY s 'xx'>\"> %p;]><svg xmlns=\"http://www.w3.org/2000/svg\"><script>fetch('https://api.&s;.com/v1/charges')</script></svg>"
+      }
+    },
+    {
+      "id": "ud63_xml_stylesheet_instruction",
+      "verdict": "blocker",
+      "why": "Second review of this change, 7 Nov 2026: an xml-stylesheet instruction's href is fetched with its references decoded, and both checkers passed over processing instructions. Ran in headless Chromium and Firefox under the 2027-03 CSP, 7 Nov 2026, and both asked for www.google-analytics.com.",
+      "files": {
+        "index.html": "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"0;url=pay.xml\"></head><body></body></html>",
+        "pay.xml": "<?xml version=\"1.0\"?><?xml-stylesheet type=\"text/css\" href=\"https://www.google-analytics&#46;com/x.css\"?><r>x</r>"
+      }
     }
   ]
 }

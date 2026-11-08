@@ -1015,7 +1015,11 @@
         "combo": "number"
       },
       "maxStringLength": 24,
-      "maxBytes": 384
+      "maxBytes": 384,
+      "statsBytesMax": 512,
+      "reservedLabels": [
+        "Before OpenGame"
+      ]
     }
   },
   "jam": {
@@ -1073,6 +1077,25 @@
       "min": 1,
       "max": 4000
     },
+    "studioWaitlistEmail": {
+      "min": 3,
+      "max": 320
+    },
+    "studioWaitlistMessage": {
+      "max": 500
+    },
+    "certifiedBuilderEmail": {
+      "min": 3,
+      "max": 320
+    },
+    "certifiedBuilderLink": {
+      "min": 12,
+      "max": 500
+    },
+    "certifiedBuilderMessage": {
+      "min": 1,
+      "max": 1000
+    },
     "gameTitle": {
       "min": 1,
       "productMin": 3,
@@ -1102,6 +1125,7 @@
     },
     "profileDisplayName": {
       "min": 1,
+      "productMin": 3,
       "max": 32
     },
     "profileBio": {
@@ -1889,7 +1913,8 @@
       "threadedContract": "2027-02",
       "threadedMoves": {
         "2026-11": "2027-02",
-        "2027-03": "2027-04"
+        "2027-03": "2027-04",
+        "2027-05": "2027-06"
       },
       "versions": {
         "2026-10": {
@@ -1897,42 +1922,64 @@
           "unsafeEval": false,
           "derivedServingTree": false,
           "sdkInjection": "none",
-          "openNetwork": false
+          "openNetwork": false,
+          "camera": false
         },
         "2026-11": {
           "crossOriginIsolated": false,
           "unsafeEval": false,
           "derivedServingTree": false,
           "sdkInjection": "none",
-          "openNetwork": false
+          "openNetwork": false,
+          "camera": false
         },
         "2027-01": {
           "crossOriginIsolated": true,
           "unsafeEval": true,
           "derivedServingTree": true,
           "sdkInjection": "derived",
-          "openNetwork": false
+          "openNetwork": false,
+          "camera": false
         },
         "2027-02": {
           "crossOriginIsolated": true,
           "unsafeEval": false,
           "derivedServingTree": false,
           "sdkInjection": "edge",
-          "openNetwork": false
+          "openNetwork": false,
+          "camera": false
         },
         "2027-03": {
           "crossOriginIsolated": false,
           "unsafeEval": true,
           "derivedServingTree": false,
           "sdkInjection": "none",
-          "openNetwork": true
+          "openNetwork": true,
+          "camera": false
         },
         "2027-04": {
           "crossOriginIsolated": true,
           "unsafeEval": true,
           "derivedServingTree": false,
           "sdkInjection": "edge",
-          "openNetwork": true
+          "openNetwork": true,
+          "camera": false
+        },
+        "2027-05": {
+          "crossOriginIsolated": false,
+          "unsafeEval": true,
+          "derivedServingTree": false,
+          "sdkInjection": "none",
+          "openNetwork": true,
+          "camera": true
+        },
+        "2027-06": {
+          "crossOriginIsolated": true,
+          "unsafeEval": true,
+          "derivedServingTree": false,
+          "sdkInjection": "edge",
+          "openNetwork": true,
+          "camera": true
         }
       }
     },
@@ -2158,16 +2205,35 @@
       "boardCountMax": 10,
       "boardKeyCharsMax": 48,
       "boardLabelCharsMax": 60,
+      "boardColumnsMax": 8,
+      "boardColumnKeyCharsMax": 32,
+      "boardColumnLabelCharsMax": 24,
+      "boardVariantsMax": 3,
+      "boardVariantValuesMax": 12,
+      "boardVariantCombosMax": 48,
+      "boardRunsPerPlayerMax": 100,
       "pathCharsMax": 512,
       "buildCommandCharsMax": 1000
     },
     "sdk": {
       "handshakeTimeoutMs": 4000,
       "handshakeRetryMs": 500,
-      "coreGzipBytesMax": 12300,
+      "coreGzipBytesMax": 15980,
       "bridgeGzipBytesMax": 71680,
-      "adapterGzipBytesMax": 14400,
+      "adapterGzipBytesMax": 17210,
       "avatarGzipBytesMax": 3072,
+      "radioGzipBytesMax": 8192,
+      "radio": {
+        "requestsPerMinuteMax": 120,
+        "tracksPageMax": 200,
+        "queryCharsMax": 64,
+        "idCharsMax": 160,
+        "requestTimeoutMs": 5000,
+        "stateIntervalMs": 250,
+        "volumeStep": 0.05,
+        "outsidePauseHoldMs": 6000,
+        "offsetMax": 100000
+      },
       "versionCharsMax": 64,
       "externalLinkUrlCharsMax": 2048,
       "externalLinkConfirmationMs": 30000,
@@ -2193,6 +2259,7 @@
       "scoreReadMax": 100,
       "scoreReadDefault": 50,
       "scoreAroundRadius": 10,
+      "scoreReadOffsetMax": 10000,
       "scoreCacheSeconds": 30,
       "analyticsGroupMin": 5,
       "eventsRequestBytesMax": 65536,

@@ -199,3 +199,46 @@ for (const rel of ['node_modules/three/build/three.webgpu.min.js', 'node_modules
     assert.ok(inert / text.length < 0.05, `${rel}: ${inert} of ${text.length} characters inert`);
   });
 }
+
+/* AN SVG SCRIPT IS READ AS THE TEXT IT RUNS, as `test_comments_are_not_requests.py`
+   pins it for the pipeline: the text directly in the script, CDATA opened, joined, and the
+   JavaScript walk's ranges mapped back onto the page. */
+test('an SVG script is read as the text it runs, and its ranges land where they were', () => {
+  const page = '<svg><script>/*a*/x<!--c-->y<![CDATA[/*b*/]]>z</script></svg>';
+  const merged = inertRanges('index.html', page).slice().sort((a, b) => a[0] - b[0]);
+  assert.deepEqual(merged, [[13, 18], [19, 27], [37, 42]]);
+});
+
+/* `&#42;/` closes the comment once decoded, so `go()` runs. Until 7 Nov 2026 the walk did not
+   decode and such a script kept no inert range at all; the reference itself is now the end of
+   the first comment, and `&ast;` and an `&amp;` without its semicolon decode the same way, by the
+   rules for text rather than for attributes. */
+test('an SVG script is read after its references are decoded', () => {
+  const sorted = (page: string) => inertRanges('index.html', page).slice().sort((a, b) => a[0] - b[0]);
+  assert.deepEqual(sorted('<svg><script>/* &#42;/ go() /* */</script></svg>'), [[13, 22], [28, 33]]);
+  assert.deepEqual(sorted('<svg><script>/* &ast;/ go() //&ampx\n</script></svg>'), [[13, 22], [28, 35]]);
+});
+
+test('deep foreign content gives up rather than going quadratic, and leaves the rest live', () => {
+  /* The `<b>` stops each climb at the HTML rules, so no end tag forks and only the depth and
+     the budget bound the walk. */
+  const deep = `<svg><foreignObject><b><svg>${'<g>'.repeat(266)}${'</x>'.repeat(20000)}`;
+  const page = `${deep}<script>// https://js.stripe.com/v3/\n</script>`;
+  const started = Date.now();
+  const at = page.indexOf('https://');
+  assert.ok(!inertRanges('index.html', page).some(([a, b]) => a <= at && at < b));
+  assert.ok(Date.now() - started < 10_000);
+});
+
+test('a page with more inert spans than a call can take as arguments still answers', () => {
+  /* `push(...spans)` throws past about 120,000 arguments, and the first draft of this walk
+     spread a script's spans that way: a 1 MB inline script of comments threw. */
+  const html = `<script>${'/*a*/'.repeat(200_000)}</script>`;
+  assert.ok(inertRanges('index.html', html).length > 0);
+  const svg = `<svg><script>${'/*a*/<!---->'.repeat(128_000)}</script></svg>`;
+  const started = Date.now();
+  assert.ok(inertRanges('index.html', svg).length > 0);
+  /* Mapping an SVG script's spans back onto its pieces walked from the first piece for every
+     span, so this took seconds at a third of the size. */
+  assert.ok(Date.now() - started < 10_000);
+});

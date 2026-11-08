@@ -1,6 +1,6 @@
 {
   "name": "@opengamehq/sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "The OpenGame SDK for browser games: players, leaderboards, achievements and events.",
   "keywords": [
@@ -48,6 +48,10 @@
     "./og-platform": {
       "types": "./dist/og-platform.d.ts",
       "import": "./dist/og-platform.js"
+    },
+    "./radio": {
+      "types": "./dist/radio.d.ts",
+      "import": "./dist/radio.js"
     }
   },
   "files": [

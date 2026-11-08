@@ -356,6 +356,7 @@ In 3D the head is the outline inflated. At a point inside the outline `d` from t
 | ![Side part](https://opengame.io/api/avatars/sidepart.classic.tangerine/portrait?size=64&theme=light&v=1) | `sidepart` | Side part | yes | grey | 0.89 | 1.10 |
 | ![Pompadour](https://opengame.io/api/avatars/pompadour.classic.tangerine/portrait?size=64&theme=light&v=1) | `pompadour` |  | yes | dark | 0.78 | 1.11 |
 | ![Sculpted head](https://opengame.io/api/avatars/sculpt.classic.tangerine/portrait?size=64&theme=light&v=1) | `sculpt` | Sculpted head |  |  | 0.77 | 1.03 |
+| ![Brick pyramid](https://opengame.io/api/avatars/pyramid.classic.tangerine/portrait?size=64&theme=light&v=1) | `pyramid` | Brick pyramid |  | dark | 1.03 | 1.00 |
 | ![Swept quiff](https://opengame.io/api/avatars/quiff.classic.tangerine/portrait?size=64&theme=light&v=1) | `quiff` | Swept quiff |  | dark | 0.83 | 1.09 |
 | ![Full beard](https://opengame.io/api/avatars/fullbeard.classic.tangerine/portrait?size=64&theme=light&v=1) | `fullbeard` | Full beard |  | brown | 0.81 | 0.95 |
 | ![Wavy hair](https://opengame.io/api/avatars/waves.classic.tangerine/portrait?size=64&theme=light&v=1) | `waves` | Wavy hair |  | dark | 0.98 | 1.03 |
@@ -620,6 +621,7 @@ In 3D the head is the outline inflated. At a point inside the outline `d` from t
 | `sidepart` | -0.01 | -0.04 | 0.38 | 0.00 | 0.94 |
 | `pompadour` | 0.00 | -0.02 | 0.35 | 0.00 | 0.94 |
 | `sculpt` | 0.02 | -0.02 | 0.68 | 0.05 | 0.70 |
+| `pyramid` | 0.00 | 0.05 | 0.36 | 0.00 | 1.04 |
 | `quiff` | 0.00 | 0.00 | 0.39 | 0.00 | 0.92 |
 | `fullbeard` | 0.00 | -0.01 | 0.54 | 0.00 | 0.90 |
 | `waves` | 0.00 | -0.01 | 0.48 | 0.00 | 0.86 |
@@ -1223,6 +1225,7 @@ Each shape places accessories and facial hair by these points, in portrait units
 | `sidepart` | 0.00 | -0.88 | -0.78 | 0.57 | 0.08 | 0.69 | 0.94 | 0.00 | 0.09 | 0.90 | 0.54 |
 | `pompadour` | 0.00 | -0.96 | -0.86 | 0.53 | 0.10 | 0.65 | 0.94 | 0.00 | 0.11 | 0.88 | 0.51 |
 | `sculpt` | 0.08 | -0.81 | -0.71 | 0.53 | -0.39 | 0.63 | 0.80 | 0.08 | -0.38 | 0.88 | 0.51 |
+| `pyramid` | 0.00 | -0.65 | -0.55 | 0.29 | 0.00 | 0.50 | 1.04 | 0.00 | 0.02 | 0.76 | 0.74 |
 | `quiff` | 0.00 | -0.90 | -0.80 | 0.50 | 0.00 | 0.69 | 0.92 | 0.00 | 0.01 | 0.85 | 0.57 |
 | `fullbeard` | 0.00 | -0.64 | -0.54 | 0.53 | -0.12 | 0.67 | 0.90 | 0.00 | -0.11 | 0.87 | 0.59 |
 | `waves` | 0.00 | -0.80 | -0.70 | 0.70 | -0.09 | 0.79 | 0.86 | 0.00 | -0.08 | 0.87 | 0.54 |

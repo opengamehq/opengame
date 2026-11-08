@@ -138,7 +138,11 @@ export function sdkSurface() {
     "@opengamehq/sdk/avatar": valueExports(sdkSource("avatar.ts")),
     "@opengamehq/sdk/bridge": valueExports(sdkSource("bridge.ts")),
     "@opengamehq/sdk/og-platform": valueExports(sdkSource("og-platform.ts")),
+    "@opengamehq/sdk/radio": valueExports(sdkSource("radio.ts")),
   };
+  // og.radio's methods and fields, from its `Radio` type: `radio.x` and `OpenGame.radio.x`.
+  const radioType = /export type Radio = \{([\s\S]*?)\n\};/.exec(sdkSource("radio.ts"))?.[1] ?? "";
+  const radio = new Set([...radioType.matchAll(/^  (?:readonly )?([A-Za-z_$][\w$]*)\s*[(:]/gm)].map((m) => m[1]));
   // The global is the core itself plus what global/bridge.ts assigns onto it.
   const assigned = /Object\.assign\(og, \{([^}]+)\}\)/.exec(sdkSource("global/bridge.ts"));
   const global = new Set([...og.keys(), ...(assigned?.[1] ?? "").split(",").map((name) => name.trim()).filter(Boolean)]);
@@ -171,7 +175,7 @@ export function sdkSurface() {
   });
   const vocabulary = new Set([...errorCodes, ...returned,
     ...limits.play.frameEventPropertyKeys, ...Object.keys(limits.play.scoreMeta.keys)]);
-  return { og, nested, leaderboard, room, multiplayer, peer, entries, global, text, declared, options, events, env, avatar, bridge, vocabulary };
+  return { og, nested, leaderboard, room, multiplayer, peer, entries, global, text, declared, options, events, env, avatar, bridge, radio, vocabulary };
 }
 
 /** Every code span and fenced block in the rendered skills, with where it came from. */
@@ -249,6 +253,9 @@ export function unknownNames(surface, code) {
     for (const match of text.matchAll(/(?<![\w$'"/@-])(?:OpenGame\.)?bridge\.([A-Za-z_$][\w$]*)/g)) {
       if (!surface.bridge.has(match[1])) report(where, `bridge.${match[1]}`, "is not a bridge member");
     }
+    for (const match of text.matchAll(/(?<![\w$.'"/@-])(?:OpenGame\.)?radio\.([A-Za-z_$][\w$]*)/g)) {
+      if (!surface.radio.has(match[1])) report(where, `radio.${match[1]}`, "is not a member of the radio");
+    }
     for (const call of optionCalls(text)) {
       for (const key of call.keys) if (!surface.options.has(key)) report(where, `multiplayer.${call.method}({ ${key} })`, "is not an option");
     }
@@ -302,6 +309,7 @@ export function unnamedSurface(surface, code, unnamed = UNNAMED) {
     if (member.internal) continue;
     need(`multiplayer.${name}`, new RegExp(`(?<![\\w$])multiplayer\\.${name}(?![\\w$])`));
   }
+  for (const name of surface.radio) need(`radio.${name}`, new RegExp(`(?<![\\w$])radio\\.${name}(?![\\w$])`));
   for (const name of surface.room) need(`room.${name}`, new RegExp(`(?<![\\w$])room\\.${name}(?![\\w$])`));
   // An event counts as named only as a room listener, `room.on('message'`, so a CLI
   // field, a method that shares its word, or Playwright's page.on('close') does not.
@@ -324,7 +332,7 @@ test("the extraction finds the surface it is meant to, so a blind parse cannot p
   assert.equal(surface.og.get("connect")?.internal, true, "og.connect is @internal and must read as internal");
   assert.ok(surface.nested.player.has("onChange") && surface.nested.player.has("requestSignIn"));
   assert.ok(surface.nested.achievements.has("unlock"));
-  assert.deepEqual([...surface.leaderboard].sort(), ["around", "me", "submit", "top"]);
+  assert.deepEqual([...surface.leaderboard].sort(), ["around", "me", "submit", "submitRun", "top"]);
   assert.equal(surface.room.size, 0, "the SDK has no room");
   assert.equal(surface.multiplayer.size, 0, "multiplayer is not part of the SDK");
   assert.equal(surface.entries["@opengamehq/sdk/multiplayer"], undefined);
@@ -335,6 +343,9 @@ test("the extraction finds the surface it is meant to, so a blind parse cannot p
   assert.deepEqual([...surface.env].sort(), ["capabilities", "connected", "embedded", "preview", "sdkVersion"]);
   assert.deepEqual([...surface.avatar].sort(), ["character", "look", "palette", "seed"]);
   for (const name of ["setHandler", "request", "env", "player", "ready"]) assert.ok(surface.bridge.has(name), `bridge.${name}`);
+  for (const name of ["available", "state", "onChange", "stations", "tracks", "play", "pause", "setVolume", "mountPicker"]) assert.ok(surface.radio.has(name), `radio.${name}`);
+  assert.ok(surface.entries["@opengamehq/sdk/radio"].has("radio"));
+  assert.ok(surface.global.has("radio"));
   assert.equal(surface.bridge.has("send"), false, "the bridge has no room send");
   for (const code of ["invalid_event", "gesture_required", "duration_ms"]) assert.ok(surface.vocabulary.has(code), code);
   assert.ok(code.length > 200, `only ${code.length} code snippets were read from the skills`);

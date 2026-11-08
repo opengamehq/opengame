@@ -263,6 +263,32 @@ with an error when the page changes account, withdraws the capability or the cli
 disposed. The capability is available only in a parent that renders this confirmation;
 standalone local mode does not simulate browser navigation.
 
+## OG Radio
+
+`@opengamehq/sdk/radio` lets players pick OG Radio stations and songs from your game's
+menu and listen while they play. The OpenGame page plays the music at the player's own
+radio volume; the game sends play, pause and skip and hears back what is playing. The
+injected global has the same object as `OpenGame.radio`.
+
+```js
+import { radio } from '@opengamehq/sdk/radio'
+
+// A complete picker: All radios and each station, search, genres, an A to Z song list
+// and the controls. Theme it with `{ theme }` or --og-radio-* custom properties.
+const picker = radio.mountPicker(document.querySelector('#music'), { theme: { accent: '#ff3b30' } })
+
+// Or your own controls. Songs are always A to Z by title, searched within the scope.
+const page = await radio.tracks({ station: 'pixel', genre: '8bit', q: 'dawn' })
+playButton.addEventListener('click', () => radio.play({ track: page.value.items[0].id }))
+radio.onChange(state => { nowPlaying.textContent = state.track?.title ?? '' })
+```
+
+Anything that makes sound must be called from the player's click or key press
+(`gesture_required` otherwise) and is refused as `muted` while the player has the game's
+sound off. Pausing and turning the volume down always work. Outside OpenGame, the local
+mock included, every call returns `unavailable`. See
+[Let players listen to OG Radio in your game](https://docs.opengame.io/guides/radio).
+
 ## Leaderboards
 
 Declare each board in `opengame.json` (up to ten), then use the same calls locally and on
@@ -270,8 +296,8 @@ OpenGame:
 
 ```js
 const board = og.leaderboard('points')
-await board.submit(42.5, { mode: 'hard' })   // { score, state, best, preview }
-await board.top({ limit: 10 })               // { entries, order, preview, source }
+await board.submit(42.5, { mode: 'hard' })   // { score, state, best, preview, ignored }
+await board.top({ limit: 10 })               // { entries, order, total, shape, ... }
 await board.me()                             // your entry, or null before one is accepted
 await board.around()                         // ten either side of you
 ```
@@ -290,9 +316,81 @@ otherwise `Guest` and the first four characters of their `og.player.id`; a few o
 are null. `isMe` marks yours; label guests however suits the game. Private previews have
 their own boards.
 
+### Columns, variants and runs
+
+A board can declare stat columns next to its score, variants a run is tagged with, and
+whether it keeps each player's best run or every run:
+
+```json
+{
+  "key": "rounds", "label": "Rounds survived", "order": "desc", "min": 1, "max": 500,
+  "scoreLabel": "Round", "format": "integer", "keep": "runs", "runsPerPlayer": 50,
+  "columns": [
+    { "key": "kills", "label": "Kills", "format": "integer" },
+    { "key": "time", "label": "Time", "format": "duration_s", "order": "asc" }
+  ],
+  "variants": [
+    { "key": "mode", "label": "Mode", "values": [{ "key": "solo", "label": "Solo" }, { "key": "coop", "label": "Co-op" }] }
+  ]
+}
+```
+
+```js
+await board.submitRun({ value: 14, stats: { kills: 212, time: 1284.5 }, tags: { mode: 'coop' } })
+await board.top({ sort: 'kills', filter: { mode: 'solo' }, limit: 25, offset: 25 })
+await board.me({ filter: { mode: 'coop' } })
+```
+
+`submit(value, meta)` is `submitRun({ value, meta })`, and sends the request it always
+sent. A stat the board does not declare is dropped and named in the receipt's `ignored`,
+such as `stats.headshots`; a tag the board does not declare fails. Each stat is checked
+against its column's `min` and `max` the same way as the score, and the run gets the lower state.
+Entries have `stats` and `tags`; a page has `total` (rows under the filter), `offset`,
+`sort`, `filter` and `shape`, the board's labels, formats, columns and variants for drawing
+it. From an older API `total` and `shape` are null and `stats` and `tags` are empty, and a
+page that did not apply the requested sort, filter or offset fails with
+`invalid_response`, so a filtered view does not show every run. `keep: "best"`
+shows each player once, by their best run for the sorted column; `keep: "runs"` shows every
+run, up to `runsPerPlayer` per player for each combination of tags. Stats are the game's
+claim, the same as scores.
+
+A board with `keep: "career"` adds up each player's accepted runs on another board, named by
+`from`: its score with `scoreAgg` (`sum`, `count`, `max` or `min`) and each column with an
+`agg`. It is read like any board, with sort and filter, and its `shape` carries `from`,
+`scoreAgg` and each column's `agg`, `of`, `where`, `scale` and `requires`. Nothing submits
+to it. Locally `submit` and `submitRun` fail with `invalid_run` and name the source board;
+hosted, og-api refuses the run with a 400, which reads as `invalid_request`. In local play a
+career board reads as empty, because only OpenGame adds runs up. The docs guide
+"Leaderboard runs" has the declaration.
+
+#### From a game's `js/og-platform.js`
+
+The Originals and Studio games ship `dist/og-platform.js` as `js/og-platform.js`, and it
+exports this same `og`. A game submits a run at game over with:
+
+```js
+import { og } from './og-platform.js'
+
+const saved = await og.leaderboard('rounds').submitRun({
+  value: round,                                         // the score: a finite number
+  stats: { kills, downs, revives, points, time },       // column key -> finite number
+  tags: { mode: coop ? 'coop' : 'solo' },               // variant key -> declared value key
+  meta: { character: persona },                         // optional, as for submit
+})
+if (!saved.ok) console.warn(saved.error, saved.reason)  // invalid_run names the field
+else if (saved.value.ignored.length) console.warn('not on this board:', saved.value.ignored)
+```
+
+On the wire that is `POST https://api.opengame.gg/v1/scores` with the session token and the
+body `{ board, value, meta, stats, tags }`, with `stats` and `tags` left out when the run has
+none. A copy of `og-platform.js` built before this release has no `submitRun`; copy the file
+again rather than posting the body by hand, so the session and the checks stay the SDK's.
+
 Locally, boards live in `localStorage` per page directory, read `./opengame.json` on first
-use, and start fresh when a board's bounds change. A hosted failure never falls back to
-local scores.
+use through the same parser og-api uses, and start fresh when a board's bounds, order,
+keep rule, columns or variants change. A local board keeps one entry, this browser's best
+score, whatever its keep rule. A filter shows that entry or hides it, sorting does not move
+it, and any offset is past it. A hosted failure never falls back to local scores.
 
 ## No build step
 
@@ -361,9 +459,9 @@ limit before parsing.
 | `track` | `{ name, props? }` | Void |
 | `openLink` | `{ url }` | Void |
 | `fullscreen`, `signIn` | `{}` | Void |
-| `board.submit` | `{ key, score, meta? }` | Score receipt |
-| `board.top` | `{ key, limit? }` | Leaderboard page |
-| `board.me`, `board.around` | `{ key }` | Score entry/null, or page |
+| `board.submit` | `{ key, score, meta?, stats?, tags? }` | Score receipt; with `stats` or `tags` it is `submitRun` |
+| `board.top` | `{ key, limit?, offset?, sort?, filter? }` | Leaderboard page |
+| `board.me`, `board.around` | `{ key, sort?, filter? }` | Score entry/null, or page |
 | `achievements.unlock` | `{ id }` | Unlock receipt, the same as `og.achievements.unlock(id)` |
 | `achievements.list` | `{}` | The player's achievements, the same as `og.achievements.list()` |
 
@@ -383,9 +481,13 @@ Core, events and leaderboards return `{ ok: false, error, reason? }` instead of 
 | `board_unavailable` | returned | no | This board is not declared in opengame.json, or the published game has no such board. |
 | `invalid_score` | returned | no | Scores are finite numbers. |
 | `invalid_meta` | returned | no | Score metadata takes only label, mode, level and character as strings, and duration_ms, accuracy and combo as numbers. Keep strings short. |
+| `invalid_run` | returned | no | A run's stats are finite numbers keyed by the board's columns, and its tags name one of the board's variants and one of its values. A career board takes no runs; submit to the board it is fed from. The reason names the field or the source board. |
 | `invalid_limit` | returned | no | A read limit is a positive integer. Values above the maximum are capped. |
-| `invalid_manifest` | returned | no | opengame.json has an invalid leaderboards list. Each board needs a unique key and an order of asc or desc. |
-| `gesture_required` | returned | yes | Call og.openLink directly from a click or key handler, then confirm the destination on the OpenGame page. |
+| `invalid_query` | returned | no | Sort by score or a sortable column, filter by the board's variants, and page top() with a whole-number offset. The reason names the part. |
+| `invalid_manifest` | returned | no | opengame.json has an invalid leaderboards list. The reason names the board and the field; opengame check says the same. |
+| `gesture_required` | returned | yes | Call og.openLink, or an og.radio control that makes sound, directly from a click or key handler. For a link, then confirm the destination on the OpenGame page. |
+| `muted` | returned | yes | The player has silenced this game on OpenGame, or another part of the page has the speakers, so the radio stays quiet. Offer Play again once og.audio.onHostMute reports false. |
+| `not_found` | returned | no | No station, genre or song by that id. Use the ids og.radio.stations() and og.radio.tracks() return. |
 | `invalid_request` | returned | no | The API could not read the request. Check the arguments against the README. |
 | `invalid_achievement` | returned | no | Use a declared achievement ID with lowercase letters, digits, hyphens or underscores within the shared length limit. |
 | `achievement_unavailable` | returned | yes | The achievement service refused the request. Check the published game and retry when it is available. |

@@ -36,6 +36,10 @@ export interface ContractCapabilities {
    *  OpenGame's own (2027-03, 2027-04). What such a game still may not reach is
    *  `gamePolicy.blockedServices`, which the checks refuse because a CSP cannot. */
   openNetwork: boolean;
+  /** `camera=(self)` rather than `camera=()`, and the site delegates `camera` to the frame
+   *  (2027-05, 2027-06). Only an owner's named decision pins a version to one. The browser's
+   *  answer is per site rather than per game, which is why only an owner opts a game in. */
+  camera: boolean;
 }
 export type CapabilityTable = Record<string, ContractCapabilities>;
 
@@ -85,6 +89,12 @@ export function edgeSdkContract(version: unknown): boolean {
 /** Whether a game on this contract may reach hosts beyond OpenGame's own. */
 export function openNetworkContract(version: unknown): boolean {
   return contractCapabilities(version)?.openNetwork === true;
+}
+
+/** Whether a game on this contract may ask for the camera, so its frame is given `camera`.
+ *  False for a version this table does not know, like every other power here. */
+export function cameraContract(version: unknown): boolean {
+  return contractCapabilities(version)?.camera === true;
 }
 
 /** Whether og-games may serve this contract only through its version's exact serving inventory. */

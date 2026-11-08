@@ -3,6 +3,7 @@ import { og, OpenGameClient, trustedParent } from '../index.js';
 import { bridge, type OpenGameBridge } from '../bridge.js';
 import { errorCatalogue } from '../errors.js';
 import { legacyMultiplayer } from '../legacy-multiplayer.js';
+import { radio, type Radio } from '../radio.js';
 
 export type OpenGameGlobal = OpenGameClient & {
   readonly og: OpenGameClient;
@@ -14,13 +15,17 @@ export type OpenGameGlobal = OpenGameClient & {
    * multiplayer module it used to be exported from, and their tests kept passing on a fake
    * (code review, 5 Nov 2026). */
   readonly errorCatalogue: typeof errorCatalogue;
+  /** OG Radio: browse the stations and songs and play them for the player. See `@opengamehq/sdk/radio`. */
+  readonly radio: Radio;
 };
 declare global {
   var OpenGame: OpenGameGlobal;
   interface Window { OpenGame: OpenGameGlobal }
 }
 const scope = globalThis as typeof globalThis & { OpenGame?: OpenGameGlobal };
-const value = Object.assign(og, { og, bridge, OpenGameClient, trustedParent, errorCatalogue });
+/* `radio` rides on the client as well, so a game holding `OpenGame.og` reaches
+   `OpenGame.og.radio` the same as `OpenGame.radio`. */
+const value = Object.assign(og, { og, bridge, OpenGameClient, trustedParent, errorCatalogue, radio });
 /* Not part of the SDK, so not in the object above or in OpenGameGlobal: an inert stand-in
    that keeps games published before multiplayer was removed starting at all. Not
    enumerable, so nothing that lists the global presents it as surface. Writable, and left

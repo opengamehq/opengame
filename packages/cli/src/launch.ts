@@ -6,8 +6,10 @@ import { readProject } from "./project";
 import { resumesSavedDeploy } from "./deploy";
 
 /**
- * Before launch, the first thing a stranger who installed this sees is one sentence:
- * "OpenGame is not launched." (the platform launch switch).
+ * Before the creator platform opens, the first thing a stranger who installed this sees is
+ * one sentence, "OpenGame opens for creators on" the kickoff day (the `not_launched` row in
+ * @opengame/protocol, which reads the day from the launch clock). Since 8 Nov 2026 that is
+ * the jam's kickoff, a day after the site opens: the owner moved the CLI and uploads there.
  *
  * THE SERVER IS THE GATE, NOT THIS. This file is public code on npm, and anybody can delete
  * the line that calls it. What keeps people out is the API, which refuses every creator
@@ -45,9 +47,21 @@ export async function requireLaunched(tokenStdin: boolean): Promise<{ deploysFro
     let status: Record<string, unknown>;
     try { status = await api.json("/api/v1/status", { token: active?.token, anyVersion: true }); }
     catch (error) { if (error instanceof ApiError && error.status === 404) return { deploysFrozen: false }; throw error; }
-    if (status.launched !== true && status.access !== true) throw new CliError("not_launched", ERRORS.not_launched!.message!);
+    if (status.launched !== true && status.access !== true) throw new CliError("not_launched", notLaunchedMessage(status.creatorsOpenAt));
     return { deploysFrozen: status.deploysFrozen === true };
   } finally { await api.close(); }
+}
+
+const PACIFIC_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "America/Los_Angeles" });
+
+/**
+ * The sentence with the day the server reports, so an owner hold past the kickoff is not
+ * answered with the day bundled into this release. A server too old to report it, or an
+ * answer that does not parse, gets the bundled sentence.
+ */
+export function notLaunchedMessage(creatorsOpenAt: unknown): string {
+  const at = typeof creatorsOpenAt === "string" ? Date.parse(creatorsOpenAt) : NaN;
+  return Number.isFinite(at) ? `OpenGame opens for creators on ${PACIFIC_DAY.format(new Date(at))}.` : ERRORS.not_launched!.message!;
 }
 
 /**

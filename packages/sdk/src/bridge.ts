@@ -51,6 +51,10 @@ function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error();
   return value as Record<string, unknown>;
 }
+function optional(value: unknown): Record<string, unknown> | undefined { return value === undefined ? undefined : object(value); }
+function query(args: Record<string, unknown>): { sort?: string; filter?: Record<string, string> } {
+  return { ...(args.sort === undefined ? {} : { sort: string(args.sort) }), ...(args.filter === undefined ? {} : { filter: object(args.filter) as Record<string, string> }) };
+}
 
 export function createBridge(client: OpenGameClient): OpenGameBridge {
   let handler: BridgeHandler | null = null, generation = 0, requestId = 0;
@@ -74,10 +78,16 @@ export function createBridge(client: OpenGameClient): OpenGameBridge {
       case 'openLink': return client.openLink(string(args.url));
       case 'fullscreen': return client.fullscreen.request();
       case 'signIn': return client.player.requestSignIn();
-      case 'board.submit': return client.leaderboard(string(args.key)).submit(number(args.score), args.meta === undefined ? undefined : object(args.meta) as ScoreMeta);
-      case 'board.top': return client.leaderboard(string(args.key)).top(args.limit === undefined ? undefined : { limit: number(args.limit) });
-      case 'board.me': return client.leaderboard(string(args.key)).me();
-      case 'board.around': return client.leaderboard(string(args.key)).around();
+      /* A native export written before runs sends `{ key, score, meta? }` and gets the call it
+         always got. `stats` and `tags` make it a run; the core checks what they hold. */
+      case 'board.submit': return args.stats === undefined && args.tags === undefined
+        ? client.leaderboard(string(args.key)).submit(number(args.score), optional(args.meta) as ScoreMeta | undefined)
+        : client.leaderboard(string(args.key)).submitRun({ value: number(args.score), meta: optional(args.meta) as ScoreMeta | undefined,
+          stats: optional(args.stats) as Record<string, number> | undefined, tags: optional(args.tags) as Record<string, string> | undefined });
+      case 'board.top': return client.leaderboard(string(args.key)).top({ ...query(args), ...(args.limit === undefined ? {} : { limit: number(args.limit) }),
+        ...(args.offset === undefined ? {} : { offset: number(args.offset) }) });
+      case 'board.me': return client.leaderboard(string(args.key)).me(query(args));
+      case 'board.around': return client.leaderboard(string(args.key)).around(query(args));
       case 'achievements.unlock': return client.achievements.unlock(string(args.id));
       case 'achievements.list': return client.achievements.list();
       default: return invalid();

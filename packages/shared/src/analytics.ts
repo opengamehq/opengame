@@ -25,6 +25,24 @@ export type AnalyticsEvent = {
   provenance: "live" | "legacy";
 };
 
+/** One creator's profile opened by somebody else, as the warehouse receives it. Its own
+ * shape rather than an AnalyticsEvent, because that one is a game's from end to end: a
+ * game id, a game-scoped player, a session, and a collector that routes it to the game's
+ * Durable Object. This has no game and, on purpose, no visitor at all: the creator by
+ * handle and OG number, read by the database when it counted the visit, the time, and the
+ * referrer in one of three words. Written by record_profile_visit
+ * (20261107120000_profile_visits.sql) and accepted by og-analytics' /ingest/profile-views. */
+export const PROFILE_VIEW_REFERRER_CLASSES = ["direct", "opengame", "external"] as const;
+export type ProfileViewEvent = {
+  schemaVersion: 1;
+  eventId: string;
+  name: "profile_viewed";
+  occurredAt: string;
+  creatorHandle: string;
+  ogNumber: number;
+  referrerClass: typeof PROFILE_VIEW_REFERRER_CLASSES[number];
+};
+
 /** The query parameters creator reports used to be filtered by, named so every
  * reader can refuse them by name. Caller-chosen filters were removed on 23 Oct 2026
  * ("no creator filters"): each filtered read was one more figure of a

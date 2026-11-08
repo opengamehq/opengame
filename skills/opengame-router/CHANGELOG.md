@@ -1,5 +1,9 @@
 # opengame-router changelog
 
+## 1.0.5
+
+The site opens on one day and the CLI, uploads and the creator API on the next, the jam's kickoff. Until then an account outside the team is told that day, read from the launch clock.
+
 ## 1.0.4
 
 Sends an agent filling a call sign, player name or any other name field to `opengame-sdk`.

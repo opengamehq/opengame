@@ -1,3 +1,4 @@
+import { readings } from './confusables.js';
 import { sanitizeGameEventProps } from './game-events.js';
 
 /** Shared by the API and offline SDK. Small fields still accept addresses, so
@@ -33,4 +34,20 @@ export function classifyGameScore(value, board, tolerance) {
   if (max !== null && value > max) return { state: value > max * tolerance ? 'rejected' : 'clamped', stored: max };
   if (min !== null && value < min) return { state: value * tolerance < min ? 'rejected' : 'clamped', stored: min };
   return { state: 'ok', stored: value };
+}
+
+/** Whether a meta label is reserved (`play.scoreMeta.reservedLabels`): no game may write it and,
+ * since 7 Nov 2026, no board shows it. Compared as it reads, through the same table the word
+ * policy uses (`confusables.js`): compatibility forms, case, accents, invisible characters,
+ * look-alike letters from other scripts and digit spellings, then everything that is not a
+ * letter or a digit, so "BEFORE  OPENGAME", "Bеfore OpenGame" with a Cyrillic е and "Before
+ * 0penGame" are all the label they spell. og-api refuses it on a write and drops it from every
+ * row a read returns; the SDK refuses it before a write leaves the game, so
+ * local play agrees with hosted. A missing list is not "nothing reserved": og-api refuses to
+ * start without one (`meta.ts`). */
+export function isReservedScoreLabel(value, reserved) {
+  if (typeof value !== 'string' || !Array.isArray(reserved) || reserved.length === 0) return false;
+  const fold = text => readings(text).map(reading => reading.replace(/[^\p{L}\p{N}]/gu, ''));
+  const labels = new Set(fold(value));
+  return reserved.some(item => typeof item === 'string' && fold(item).some(reading => labels.has(reading)));
 }

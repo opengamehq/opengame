@@ -1,5 +1,9 @@
 # opengame-cli changelog
 
+## 1.0.4
+
+The site opens on one day and the CLI, uploads and the creator API on the next, the jam's kickoff. Until then an account outside the team is told that day, read from the launch clock.
+
 ## 1.0.3
 
 Until the CLI is on npm, the install step tells the agent to stop when `opengame` is missing and send the creator to team@opengame.io for a copy, rather than writing in itself.

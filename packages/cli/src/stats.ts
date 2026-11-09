@@ -1,3 +1,4 @@
+import { open, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { CREATOR_TOKEN_PATTERN, gameIdentifierSchema, analyticsReportSchema, windowLabel, windowRange } from "@opengame/protocol";
 import type { AnalyticsReport } from "@opengame/shared/analytics";
@@ -71,6 +72,64 @@ export async function readAnalytics(options: AnalyticsOptions & { game?: string 
   } finally { await api.close(); }
 }
 
+/** Why a CSV file could not be made, in the words of what was wrong with it. */
+function csvFileRefusal(file: string, error: unknown): CliError {
+  const code = (error as NodeJS.ErrnoException | undefined)?.code;
+  if (code === "EEXIST") return new CliError("csv_exists", `${file} already exists. Choose another file, or remove it first.`, 2);
+  const why = code === "ENOENT" ? "its folder does not exist" : code === "EACCES" || code === "EPERM" ? "this account may not write there"
+    : code === "EISDIR" ? "that is a folder" : code === "ENOSPC" ? "the disk is full" : "the file could not be written";
+  return new CliError("csv_unwritable", `The CSV was not written to ${file}: ${why}.`, 2);
+}
+
+/**
+ * The window and period a CSV says it covers, read from its header and first row, which
+ * `analyticsCsv` writes on every row. Null when the text is not that CSV.
+ */
+function csvWindow(text: string): { window: string; period: string } | null {
+  const [header, first] = text.split(/\r?\n/, 2);
+  const cells = (line: string | undefined) => line === undefined ? [] : [...line.matchAll(/"((?:[^"]|"")*)"/g)].map(match => match[1]!.replaceAll('""', '"'));
+  const names = cells(header);
+  const row = cells(first);
+  const window = names.indexOf("window"), period = names.indexOf("period");
+  if (names[0] !== "section" || window < 0 || period < 0 || row.length !== names.length) return null;
+  return { window: row[window]!, period: row[period]! };
+}
+
+/**
+ * The week's figures as the CSV the Stats tab's link downloads, from `GET .../stats/export`,
+ * which writes it from the same report the JSON read returns (`analyticsCsv`). The query is
+ * checked exactly as for the JSON read, and creator tokens are redacted from the text as
+ * they are from a report.
+ */
+export async function readAnalyticsCsv(options: AnalyticsOptions & { game?: string }, settings: { root?: string; tokenStdin?: boolean } = {}): Promise<string> {
+  const { game, ...query } = options;
+  const search = analyticsSearch(query);
+  if (game !== undefined && !gameIdentifierSchema.safeParse(game).success) throw new CliError("invalid_game", "Use a game ID from opengame games.", 2);
+  const api = new Api();
+  try {
+    const id = game ?? (await readProject(settings.root ?? process.cwd(), api.origin)).gameId;
+    if (!id) throw new CliError("not_linked", "Supply --game <id>, or run opengame link --game <id> in this folder.", 2, { next: "opengame games" });
+    const active = await activeToken(api.origin, Boolean(settings.tokenStdin));
+    if (!active) throw new CliError("not_signed_in", "Run opengame login, or supply OPENGAME_TOKEN.", 3, { next: "opengame login" });
+    api.tokenSource = active.source;
+    const answer = await api.json(`/api/v1/games/${encodeURIComponent(id.toLowerCase())}/stats/export${search}`,
+      { token: active.token, text: "text/csv", signal: AbortSignal.timeout(LIMITS.analytics.queryTimeoutMs) });
+    /* The same question the JSON read asks of its report: is this the week that was asked
+       for. A server that answered the newest week to a request for another would otherwise
+       be written into a file named for the one asked (review of #1289). */
+    const said = typeof answer.text === "string" ? csvWindow(answer.text) : null;
+    if (!said || said.window !== (query.window ?? "week") || (query.period !== undefined && said.period !== query.period)) {
+      throw new CliError("invalid_response", "The CSV could not be read, or it is not the week asked for. Update the CLI or retry later.", 5);
+    }
+    return redactAnalyticsText(answer.text as string);
+  } catch (error) {
+    // Redacted as the JSON read's errors are.
+    if (error instanceof CliError) throw new CliError(redactAnalyticsText(error.code) === error.code ? error.code : "api_error", redactAnalyticsText(error.message), error.exitCode,
+      { retry: error.retry, retryAfterSeconds: error.retryAfterSeconds, next: error.next ? redactAnalyticsText(error.next) : undefined });
+    throw error;
+  } finally { await api.close(); }
+}
+
 const number = (value: number | null) => value === null ? "Unavailable" : new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
 /** "Week 43 · Oct 19 to 25, 2026 · UTC", the label the stats page and the report mail
  * use. A report without a named window is one saved before fixed windows, which still
@@ -135,6 +194,33 @@ export async function statsCommand(target: string | undefined, flags: Record<str
   const options: Record<string, unknown> = {};
   for (const key of ["window", "period"]) if (typeof flags[key] === "string") options[key] = flags[key];
   if (typeof flags.funnel === "string") options.funnel = flags.funnel.split(",").map(step => step.trim());
+  if (typeof flags.csv === "string") {
+    const file = resolve(flags.csv);
+    // The query first, which asks nothing of anybody, so a bad flag leaves no file behind.
+    analyticsSearch(options as AnalyticsOptions);
+    /* The file is claimed before the server is asked, so a name already taken costs no
+       analytics read (each counts against the account's limit), and with `wx` a file already
+       there, somebody's, is never written over. Whatever goes wrong after that removes the
+       file this run made, so a retry is not refused by a half-written CSV (review of #1289). */
+    let handle: Awaited<ReturnType<typeof open>> | undefined;
+    try { handle = await open(file, "wx"); }
+    catch (error) { throw csvFileRefusal(file, error); }
+    try {
+      const csv = await readAnalyticsCsv({ ...options, game: isGame ? target : typeof flags.game === "string" ? flags.game : undefined },
+        { root: resolve(isGame ? "." : target ?? "."), tokenStdin: Boolean(flags["token-stdin"]) });
+      await handle.writeFile(csv);
+      await handle.close();
+      handle = undefined;
+      output.emit({ type: "result", command: "stats", data: { file, bytes: Buffer.byteLength(csv), message: `Wrote the week's figures to ${file}, the same CSV the Stats tab downloads.` } });
+    } catch (error) {
+      if (handle) {
+        await handle.close().catch(() => undefined);
+        await unlink(file).catch(() => undefined);
+      }
+      throw error instanceof CliError ? error : csvFileRefusal(file, error);
+    }
+    return;
+  }
   const report = await readAnalytics({ ...options, game: isGame ? target : typeof flags.game === "string" ? flags.game : undefined },
     { root: resolve(isGame ? "." : target ?? "."), tokenStdin: Boolean(flags["token-stdin"]) });
   output.emit({ type: "result", command: "stats", data: { ...report, message: analyticsText(report, output.json ? undefined : await gameTitle(report.gameId)) } });

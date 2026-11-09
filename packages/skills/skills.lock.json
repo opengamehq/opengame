@@ -31,9 +31,9 @@
       "digestPublished": "c60c349f58483bfa633c40dd721f2d7e38a60394daf73965a161b22e6f768bcd"
     },
     "opengame-cli": {
-      "version": "1.0.4",
-      "digest": "63283c3cd526310d789730bc0eb75a8c3fe692403b9de80efedbb10bd0b5ff7a",
-      "digestPublished": "b51714f57d2e43a6d70ece4444eea19cc2525663968638a7a02060996d034d07"
+      "version": "1.7.0",
+      "digest": "07e8b0fd15cc21af10232d1585a145a7f8f54258d5b0ea83d15012f8073b4e46",
+      "digestPublished": "8b8156881cff565369a5bb21f005c7c5fb3166b726e1b0dfd6f92b050e74f750"
     },
     "opengame-deploy": {
       "version": "1.0.9",

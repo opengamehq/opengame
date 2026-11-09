@@ -6,7 +6,9 @@ command checks a game folder, uploads it and gives you a private preview to play
 ## Install
 
 <!-- install:cli -->
-The CLI is not on npm yet. Write to team@opengame.io for a copy.
+```bash
+npm i -g @opengamehq/cli
+```
 <!-- /install -->
 
 It needs Node.js 18.17 or later. `opengame --version` prints the version you have.
@@ -85,17 +87,26 @@ OpenCode, so a coding agent can do all of the above for you.
 | `opengame check [dir] [options]` | Find local build and asset problems before uploading. |
 | `opengame dev [dir] [options]` | Serve a local export with game-runtime headers. Under a contract that adds the SDK, pages also get the host runtime and SDK, as they do when hosted. If the contract supports opting out, sdk.inject: false leaves out the SDK. |
 | `opengame login [options]` | Sign in through your browser. |
-| `opengame deploy [dir] [options]` | Build, check and upload a release, then return with the address of its deployment page, where the checks run and the private preview plays once they pass. Add --wait to stay until they finish. Once the preview is ready, the achievements opengame.json declares are saved by deploy --wait or by the next opengame status in this folder. Removing an achievement from opengame.json does not switch it off. To retire one, send PUT /api/v1/games/{id}/achievements with achievementId, title, description and active: false. Unlocks are never deleted. |
-| `opengame status [dir] [options]` | Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, send PUT /api/v1/games/{id}/achievements with achievementId, title, description and active: false. Unlocks are never deleted. |
+| `opengame deploy [dir] [options]` | Build, check and upload a release, then return with the address of its deployment page, where the checks run and the private preview plays once they pass. Add --wait to stay until they finish. Once the preview is ready, the achievements opengame.json declares are saved by deploy --wait or by the next opengame status in this folder. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted. |
+| `opengame status [dir] [options]` | Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted. |
 | `opengame deployments [dir] [options]` | List the linked game's deploys, newest first: status, when, size, who started each one, why any stopped, and each one's page or preview. |
 | `opengame open [dir] [options]` | Open the linked game's private page in your browser. |
 | `opengame submit [dir] [options]` | Send one release to review, and enter it in a jam. |
 | `opengame jams [slug] [options]` | List open jams, or show one jam's tracks and flags. |
+| `opengame jam <withdraw\|reenter> [options]` | Withdraw the linked game's jam entry, freeing its place, or put a withdrawn one back while the jam is open, as your jam entries page does. Needs a token with submit; opengame login has it. |
+| `opengame releases [dir] [options]` | List the linked game's releases, newest first, as the Releases tab on its page does: which one is live, which were live before, which are drafts and which were cleaned up, and which can be made live again. |
+| `opengame rollback <release> [options]` | Make a release that was live before live again, as Make live again does on the game's page. The game must be live, and the release must still have its files. Players get it from their next load. Run again on the live release to rewrite its address after a failed one. Needs a token with read or deploy, and submit; opengame login has all three. |
+| `opengame unpublish [dir] [options]` | Take the linked game off the gallery and stop serving it, as Unpublish does on Your games. Your build, uploads and review record are kept, and opengame restore puts it back. Needs a token with read or deploy, and submit; opengame login has all three. |
+| `opengame restore [dir] [options]` | Put a game you unpublished back on the gallery, serving the version it was on, as Put it back does on Your games. Refused for a game we took down, one with an open report or a hold, and one under a copyright notice. Needs a token with read or deploy, and submit; opengame login has all three. |
+| `opengame delete [dir] [options]` | Delete the linked game for good, as Delete for good does on its page: it comes off the gallery, stops being served and cannot be put back. You type its title to confirm. Refused while it is under a legal hold, with a reviewer, or in a jam being scored. Only the opengame login token can do this, not a token made in settings. |
+| `opengame details [dir] [options]` | Print the linked game's title, tagline and description as the website shows them, or change any of them, as the Details tab on its page does. A field you leave out stays as it is. On a published game players see the change at once. Printing needs a token with read or deploy, and saving needs submit too; opengame login has all three. |
+| `opengame achievements [retire <id>] [options]` | List the linked game's achievements, active and retired, or retire one, as the achievements step on the website does. Players keep what they unlocked, and the game can no longer award a retired one. Retiring needs a token with deploy and submit; opengame login has them. |
 | `opengame games [options]` | List your games and their latest deploy. |
 | `opengame link [dir] [options]` | Connect this folder to an existing game. |
 | `opengame pull [dir] [options]` | Bring website metadata into this folder. |
 | `opengame stats [game\|dir] [options]` | Read analytics for a game you own, or this folder's linked game, for one complete ISO week, Monday to Sunday in UTC. Average playtime is total playtime divided by distinct players in the week. |
 | `opengame whoami [options]` | Show the account and permissions for this token. |
+| `opengame handle <name> [options]` | Rename your handle, as Settings does. Your old handle keeps pointing at you and is never given to anybody else, and renames are limited per day. Only the opengame login token can do this, not a token made in settings. |
 | `opengame token create\|list\|revoke [options]` | Create, list or revoke tokens in your browser. |
 | `opengame logout [options]` | Revoke this device's token and remove it locally. |
 | `opengame limits [options]` | Show bundle limits and your remaining account allowance. |

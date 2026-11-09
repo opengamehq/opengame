@@ -191,7 +191,9 @@ export class Api {
    * exactly that, and refusing it there left "run opengame upgrade" as the
    * answer to running opengame upgrade.
    */
-  async json(path: string, options: { token?: string; body?: unknown; method?: string; idempotencyKey?: string; anyVersion?: boolean; signal?: AbortSignal; gzip?: GzipBody } = {}): Promise<Record<string, unknown>> {
+  async json(path: string, options: { token?: string; body?: unknown; method?: string; idempotencyKey?: string; anyVersion?: boolean; signal?: AbortSignal; gzip?: GzipBody;
+    /** Read a non-JSON success body of this content type, answered as `{ text }`. Refusals are still JSON. */
+    text?: string } = {}): Promise<Record<string, unknown>> {
     let answered = false;
     try {
       const response = await this.send(path, options);
@@ -213,12 +215,19 @@ export class Api {
       // Only a body that arrived whole is an answer; a reset or a timeout mid-body is
       // still "could not reach".
       answered = true;
+      const body = Buffer.concat(chunks).toString("utf8");
       let data: unknown;
-      try { data = JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { data = undefined; }
+      try { data = JSON.parse(body); } catch { data = undefined; }
       // An error page from a proxy is still an answer with a status.
       if (!response.ok) {
         const value = data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : {};
         throw new ApiError(response.status, typeof value.error === "string" ? value.error : "unknown", value, this.origin, this.tokenSource, retryAfterHeader(response.headers.get("retry-after")));
+      }
+      /* A file the server writes, such as the stats CSV: the same checks as JSON on the way
+         in, the version, the size and a refusal read as JSON, and the text handed back. */
+      if (options.text) {
+        if (!response.headers.get("content-type")?.toLowerCase().startsWith(options.text)) throw new Error();
+        return { text: body };
       }
       if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error();
       const value = data as Record<string, unknown>;

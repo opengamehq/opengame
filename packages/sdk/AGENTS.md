@@ -11,7 +11,9 @@ Deploy the creator's game to a private preview, give them its link, and submit i
 
 ## Install
 
-The CLI is not on npm yet. If `opengame` is not installed, stop and tell the creator to write to team@opengame.io for a copy.
+```bash
+npm i -g @opengamehq/cli
+```
 
 Once `opengame` is installed, confirm it and read the command reference:
 

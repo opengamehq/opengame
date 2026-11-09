@@ -191,6 +191,20 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   // opengame submit and opengame jams (pf/submit-review), and the server's refusals of a
   // submission. These were a table of their own in apps/web's submit.ts.
   conflicting_flags: input, invalid_release: input, release_required: input, no_ready_release: input,
+  // opengame releases and opengame rollback. A rollback changes what every player gets, so
+  // without a person to ask, --yes is the answer; a prefix two releases share is not guessed.
+  // A server from before the releases routes is ours to update, and the page has both.
+  confirmation_required: input, release_ambiguous: input, releases_unavailable: { exit: 5, retry: "after-fix" },
+  // opengame unpublish and opengame restore, against a server from before their routes.
+  take_down_unavailable: { exit: 5, retry: "after-fix" },
+  // opengame details and opengame handle: an older server, and a rename with no name.
+  edit_unavailable: { exit: 5, retry: "after-fix" }, handle_required_argument: input,
+  // opengame jam withdraw and reenter: a subcommand that is not one.
+  jam_action_required: input,
+  // opengame achievements retire: no id, or one the game does not have.
+  achievement_required: input, achievement_not_found: input,
+  // opengame stats --csv: the file is somebody's, or cannot be written.
+  csv_exists: input, csv_unwritable: input,
   invalid_jam: input, jam_answers_required: input, jam_choice_required: input,
   submission_destination_mismatch: say(input, "The server selects the submission destination. Run opengame jams to read the current destination, then submit with its answers.", 409),
   submission_destination_unavailable: say({ exit: 5, retry: "later" }, "OpenGame cannot take submissions right now. Your private preview is unchanged; try submitting again later.", 503),
@@ -300,6 +314,53 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   // Ours. The sentence names the cause, so it is the caller's to write and these rows carry none.
   host_failed: { exit: 5, retry: "now", status: 502 },
   rollback_failed: { exit: 5, retry: "later", status: 409 },
+  /* The rest of what @opengame/hosting's rollback refuses with, each in a sentence it writes
+     for its audience (copyright, the build's own holds, the creator's account). They had no
+     row, so the owner's rollback met `refused()`'s missing-row fault: a 500 from the API and
+     the page's "could not be made" in place of the reason. None is fixed by waiting or by
+     sending it again; another release, or a person, is what changes them. */
+  copyright_hold: { exit: 2, retry: "never", status: 409 }, copyright_evidence_version: { exit: 2, retry: "never", status: 409 },
+  build_threat: { exit: 2, retry: "never", status: 409 }, build_legal_hold: { exit: 2, retry: "never", status: 409 },
+  account_suspended: { exit: 2, retry: "never", status: 409 }, account_deleted: { exit: 2, retry: "never", status: 409 },
+  /* Unpublish and put it back, on Your games (the page reads these for its own words) and
+     from the creator API, through the same
+     functions. A refusal is about this game and none changes by sending it again.
+     `unpublish_refused` has one reason, a game that is not live; `restore_refused` carries
+     `verdicts`' own sentence (our takedown, a hold, a report, the scanner), and this one
+     when the game is not one its owner took down. The rest are ours, and say which half
+     of the act happened. `unpublish_incomplete` is a game already down, because the edge
+     leads. `restore_incomplete` is a restore that stopped and was put back on hold. */
+  unpublish_refused: say({ exit: 2, retry: "never" }, "This game is not on the gallery, so there is nothing to take off it.", 409),
+  restore_refused: say({ exit: 2, retry: "never" }, "Only a game you unpublished yourself can go back up.", 409),
+  no_reviewed_build: { ...say({ exit: 2, retry: "never" }, "There is no reviewed build to serve, so putting this back would give players a page that does not load. Write to team@opengame.io and we will sort it out.", 409),
+    page: "There is no reviewed build to serve, so putting this back would give players a page that does not load. Write to us and we will sort it out." },
+  take_down_unreachable: say({ exit: 5, retry: "later" }, "Nothing changed and your game is exactly where it was. We could not reach the part of our system that starts and stops serving a game, which is ours to fix rather than yours. Try again in a minute.", 503),
+  restore_unverified: say({ exit: 5, retry: "later" }, "The address could not be checked. Your game and uploads are saved. Check its review status, then try again.", 503),
+  unpublish_incomplete: { ...say({ exit: 5, retry: "now" }, "Your game is no longer being served and browsers have been told to drop what they cached. The gallery has not caught up yet, so it may still be listed for a moment. Run it again, and write to team@opengame.io if that keeps happening.", 502),
+    page: "Your game is no longer being served and browsers have been told to drop what they cached. The gallery has not caught up yet, so it may still be carded for a moment. Press it again, and write to us if that keeps happening." },
+  restore_incomplete: say({ exit: 5, retry: "now" }, "Your game’s gallery status could not be confirmed. Your build and uploads are saved. Try again in a minute.", 502),
+  /* Delete for good from the creator API, through the website's `deleteGameAs`. The typed
+     title is compared on the server; `delete_refused` carries `verdicts`' sentence (a legal
+     hold, a reviewer holding it, a jam being scored, already deleted). */
+  delete_title_mismatch: say(input, "Nothing was deleted. The title you typed does not match the game's title. Type it exactly as opengame games prints it.", 400),
+  delete_refused: { exit: 2, retry: "never", status: 409 },
+  delete_incomplete: say({ exit: 5, retry: "now" }, "Your game is no longer being served, and the gallery has not caught up with the delete yet. Run the same delete again, and write to team@opengame.io if that keeps happening.", 502),
+  /* Editing a game's words and renaming a handle from the creator API, through the
+     website's own functions, whose sentences these carry. */
+  invalid_details: { exit: 2, retry: "after-fix", status: 400 },
+  // The two refusals the website gives every writer of a game's words, which it reads from here.
+  legacy_game_words: say({ exit: 2, retry: "never" }, "This game’s words are changed on its entry page, so nothing was saved here.", 409),
+  words_refused: say({ exit: 3, retry: "never" }, "This account can’t edit its games, so nothing was saved.", 403),
+  invalid_handle: { exit: 2, retry: "after-fix", status: 400 }, handle_unavailable: { exit: 2, retry: "after-fix", status: 409 },
+  handle_unchanged: say({ exit: 2, retry: "never" }, "That is already your handle.", 409),
+  /* Withdrawing a jam entry and putting it back from the creator API (lib/platform/
+     jam-entry.ts), through /jam/entries' own functions. `kind_not_in_jam` and
+     `at_entry_limit` are the submit path's rows and say the same thing here. */
+  jam_entry_not_found: { exit: 2, retry: "never", status: 404 },
+  withdraw_closed: say({ exit: 2, retry: "never" }, "Nothing changed. That jam has stopped taking entries, so its entries stay as they are. Write to team@opengame.io if you need this one out.", 409),
+  reenter_closed: say({ exit: 2, retry: "later" }, "Nothing changed. That jam is not taking entries right now, so the entry stays withdrawn. Run this again once it opens; after it closes, write to team@opengame.io.", 409),
+  jam_entry_taken: say({ exit: 2, retry: "never" }, "A later entry of this game is already standing in the jam, so this one stays withdrawn.", 409),
+  jam_entry_held: say({ exit: 3, retry: "never" }, "Nothing changed. This account cannot enter the jam right now, so the entry stays withdrawn. Write to team@opengame.io if you think that is wrong.", 403),
   // A cron route refusing the private setup's clock because this process is not the
   // internal one (lib/platform/internal-clock.ts). Only the bridge ever reads it; a row
   // keeps the one-table rule true for every code the platform's web code sends.

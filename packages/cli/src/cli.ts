@@ -13,6 +13,11 @@ import { largeAssetStatement } from "@opengame/shared/large-asset-statement";
 import { upgradeCommand } from "./upgrade";
 import { submitCommand } from "./submit";
 import { jamsCommand } from "./jams";
+import { releasesCommand } from "./releases";
+import { deleteCommand, takeDownCommand } from "./take-down";
+import { detailsCommand, handleCommand } from "./edits";
+import { jamEntryCommand } from "./jam-entry";
+import { achievementsCommand } from "./achievements";
 import { AGENT_MARKERS, Output, CliError, agentMode, hang, preferHuman } from "./output";
 import { applyNetworkDefaults } from "./network";
 import { initProject, ensureDeployManifest } from "./init";
@@ -71,7 +76,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "vendor", type: "boolean", description: "Download dependencies from approved sources at the exact versions your code names into the packaging copy, with hashes and licenses." },
     { name: "build", type: "boolean", description: "Run the build command from opengame.json first, so the check reads fresh output." }, json],
     examples: ["opengame check .", "opengame check . --build --json"] },
-  deploy: { args: "[dir]", description: "Build, check and upload a release, then return with the address of its deployment page, where the checks run and the private preview plays once they pass. Add --wait to stay until they finish. Once the preview is ready, the achievements opengame.json declares are saved by deploy --wait or by the next opengame status in this folder. Removing an achievement from opengame.json does not switch it off. To retire one, send PUT /api/v1/games/{id}/achievements with achievementId, title, description and active: false. Unlocks are never deleted.", flags: [externalAssets, unityAssets, acceptStatement,
+  deploy: { args: "[dir]", description: "Build, check and upload a release, then return with the address of its deployment page, where the checks run and the private preview plays once they pass. Add --wait to stay until they finish. Once the preview is ready, the achievements opengame.json declares are saved by deploy --wait or by the next opengame status in this folder. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted.", flags: [externalAssets, unityAssets, acceptStatement,
     { name: "title", type: "string", description: "Title when deploy creates a missing manifest." },
     { name: "description", type: "string", description: "Description when deploy creates a missing manifest." },
     { name: "genre", type: "string", description: "Genre when deploy creates a missing manifest." },
@@ -87,7 +92,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "timeout", type: "string", description: `With --wait, stop watching after this many seconds (at most ${LIMITS.platform.operations.watchTimeoutMs / 1000}), exiting 5 with the checks still running. Setting it implies --wait.` },
     stdin, json],
     examples: ["opengame deploy .", "opengame deploy . --dry-run", "opengame deploy . --no-build", "opengame deploy . --wait --json"] },
-  status: { args: "[dir]", description: "Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, send PUT /api/v1/games/{id}/achievements with achievementId, title, description and active: false. Unlocks are never deleted.", flags: [
+  status: { args: "[dir]", description: "Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted.", flags: [
     { name: "watch", type: "boolean", description: "Follow the deploy until it is ready, refused, or the watch window closes." },
     { name: "timeout", type: "string", description: `Stop watching after this many seconds (at most ${LIMITS.platform.operations.watchTimeoutMs / 1000}), exiting 5 with the checks still running.` }, stdin, json],
     examples: ["opengame status . --watch"] },
@@ -106,12 +111,50 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
   deployments: { args: "[dir]", description: "List the linked game's deploys, newest first: status, when, size, who started each one, why any stopped, and each one's page or preview.", flags: [
     { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of the linked folder's." }, stdin, json],
     examples: ["opengame deployments", "opengame deployments --game <id> --json"] },
+  releases: { args: "[dir]", description: "List the linked game's releases, newest first, as the Releases tab on its page does: which one is live, which were live before, which are drafts and which were cleaned up, and which can be made live again.", flags: [
+    { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of the linked folder's." }, stdin, json],
+    examples: ["opengame releases", "opengame releases --game <id> --json"] },
+  rollback: { args: "<release>", description: "Make a release that was live before live again, as Make live again does on the game's page. The game must be live, and the release must still have its files. Players get it from their next load. Run again on the live release to rewrite its address after a failed one. Needs a token with read or deploy, and submit; opengame login has all three.", flags: [
+    { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of this folder's linked game." },
+    { name: "yes", type: "boolean", description: "Make it live without the question a person is asked. Required for agents and scripts, since this changes what every player gets." }, stdin, json],
+    examples: ["opengame rollback 5f2c9a1e", "opengame rollback 5f2c9a1e --game <id> --yes --json"] },
+  unpublish: { args: "[dir]", description: "Take the linked game off the gallery and stop serving it, as Unpublish does on Your games. Your build, uploads and review record are kept, and opengame restore puts it back. Needs a token with read or deploy, and submit; opengame login has all three.", flags: [
+    { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of the linked folder's." },
+    { name: "yes", type: "boolean", description: "Unpublish without the question a person is asked. Required for agents and scripts, since players lose the game." }, stdin, json],
+    examples: ["opengame unpublish", "opengame unpublish --game <id> --yes --json"] },
+  restore: { args: "[dir]", description: "Put a game you unpublished back on the gallery, serving the version it was on, as Put it back does on Your games. Refused for a game we took down, one with an open report or a hold, and one under a copyright notice. Needs a token with read or deploy, and submit; opengame login has all three.", flags: [
+    { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of the linked folder's." },
+    { name: "yes", type: "boolean", description: "Put it back without the question a person is asked. Required for agents and scripts, since players get the game again." }, stdin, json],
+    examples: ["opengame restore", "opengame restore --game <id> --yes --json"] },
+  delete: { args: "[dir]", description: "Delete the linked game for good, as Delete for good does on its page: it comes off the gallery, stops being served and cannot be put back. You type its title to confirm. Refused while it is under a legal hold, with a reviewer, or in a jam being scored. Only the opengame login token can do this, not a token made in settings.", flags: [
+    { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of the linked folder's." },
+    { name: "title", type: "string", description: "The game's title, typed out, which the server checks against the game. Required with --yes." },
+    { name: "yes", type: "boolean", description: "Delete without the prompt a person types the title into. Agents and scripts pass it with --title." }, stdin, json],
+    examples: ["opengame delete", "opengame delete --game <id> --title \"Tide runner\" --yes --json"] },
+  details: { args: "[dir]", description: "Print the linked game's title, tagline and description as the website shows them, or change any of them, as the Details tab on its page does. A field you leave out stays as it is. On a published game players see the change at once. Printing needs a token with read or deploy, and saving needs submit too; opengame login has all three.", flags: [
+    { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of the linked folder's." },
+    { name: "title", type: "string", description: "The new title." }, { name: "tagline", type: "string", description: "The new tagline, the line under the title on a card." },
+    { name: "description", type: "string", description: "The new description, the copy on the game's page." },
+    { name: "clear-tagline", type: "boolean", description: "Remove the tagline, as emptying its box on the Details tab does." }, stdin, json],
+    examples: ["opengame details", "opengame details --title \"Tide runner\" --tagline \"Race the rain to the river.\" --json"] },
+  handle: { args: "<name>", description: "Rename your handle, as Settings does. Your old handle keeps pointing at you and is never given to anybody else, and renames are limited per day. Only the opengame login token can do this, not a token made in settings.", flags: [
+    { name: "yes", type: "boolean", description: "Rename without the question a person is asked. Required for agents and scripts." }, stdin, json],
+    examples: ["opengame handle stormcaller", "opengame handle stormcaller --yes --json"] },
+  jam: { args: "<withdraw|reenter>", description: "Withdraw the linked game's jam entry, freeing its place, or put a withdrawn one back while the jam is open, as your jam entries page does. Needs a token with submit; opengame login has it.", flags: [
+    { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of this folder's linked game." },
+    { name: "yes", type: "boolean", description: "Withdraw without the question a person is asked. Required for agents and scripts." }, stdin, json],
+    examples: ["opengame jam withdraw", "opengame jam reenter --game <id> --json", "opengame jam withdraw --yes --json"] },
+  achievements: { args: "[retire <id>]", description: "List the linked game's achievements, active and retired, or retire one, as the achievements step on the website does. Players keep what they unlocked, and the game can no longer award a retired one. Retiring needs a token with deploy and submit; opengame login has them.", flags: [
+    { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of this folder's linked game." },
+    { name: "yes", type: "boolean", description: "Retire without the question a person is asked. Required for agents and scripts." }, stdin, json],
+    examples: ["opengame achievements", "opengame achievements retire first-lap --yes --json"] },
   stats: { args: "[game|dir]", description: "Read analytics for a game you own, or this folder's linked game, for one complete ISO week, Monday to Sunday in UTC. Average playtime is total playtime divided by distinct players in the week.", flags: [
     { name: "game", type: "string", description: "Game ID or public ID from opengame games. Defaults to the linked game." },
     { name: "window", type: "string", values: [...ANALYTICS_WINDOW_KINDS], default: "week", description: `Always week. A week is readable ${LIMITS.analytics.windowSettleHours} hours after it ends on Sunday at midnight UTC. Any other window is refused.` },
     { name: "period", type: "string", description: "Which ISO week, such as 2026-W43. Defaults to the newest complete week." },
     { name: "funnel", type: "string", description: `Ordered custom event names separated by commas, from 2 to ${LIMITS.analytics.funnelStepsMax} steps.` },
-    stdin, json], examples: ["opengame stats", "opengame stats <game-id> --json", "opengame stats --game <id> --window week --period 2026-W42 --json", "opengame stats --period 2026-W40 --json"] },
+    { name: "csv", type: "string", description: "Write the week's figures to this file as the CSV the Stats tab downloads, instead of printing them. An existing file is never written over." },
+    stdin, json], examples: ["opengame stats", "opengame stats --csv week.csv", "opengame stats <game-id> --json", "opengame stats --game <id> --window week --period 2026-W42 --json", "opengame stats --period 2026-W40 --json"] },
   link: { args: "[dir]", description: "Connect this folder to an existing game.", flags: [
     { name: "game", type: "string", description: "Game id or public id from opengame games." },
     { name: "replace", type: "boolean", description: "Replace an existing link." }, stdin, json] },
@@ -391,7 +434,7 @@ async function main() {
   const takesFolder = Boolean(commands[command]!.args?.includes("dir"));
   // token takes create|list|revoke and jams a slug: one argument each, like a folder.
   // skills takes its action first, then the folder.
-  if (positional.length > (command === "skills" ? 2 : commands[command]!.args ? 1 : 0)) {
+  if (positional.length > (command === "skills" || command === "achievements" ? 2 : commands[command]!.args ? 1 : 0)) {
     throw new CliError("arguments", takesFolder ? "Supply one project folder." : `The ${command} command does not accept ${positional.length > 1 ? "these arguments" : "a project folder"}.`);
   }
   // Pointed at the build folder, these use the project that names it (projectFor). The
@@ -399,8 +442,9 @@ async function main() {
   // link is not: it would rewrite the parent's link while naming dist.
   const buildNote = command === "deploy" ? (flags["no-build"] ? undefined : "deploy runs its build command there first; pass --no-build to upload the folder as it is.")
     : ["check", "dev", "vendor"].includes(command) && flags.build ? "--build runs its build command there first." : undefined;
-  const root = ["check", "dev", "deploy", "vendor", "status", "open", "pull", "submit", "deployments"].includes(command)
-    ? await projectFor(resolve(positional[0] ?? "."), output, buildNote) : resolve(positional[0] ?? ".");
+  // rollback's argument is the release, so its folder is the one it runs in.
+  const root = ["check", "dev", "deploy", "vendor", "status", "open", "pull", "submit", "deployments", "releases", "rollback", "unpublish", "restore", "details", "jam", "delete", "achievements"].includes(command)
+    ? await projectFor(resolve(command === "rollback" || command === "jam" || command === "achievements" ? "." : positional[0] ?? "."), output, buildNote) : resolve(positional[0] ?? ".");
   if (command === "token") { tokensCommand(positional[0], flags, output); return; }
   if (command === "skills") { await skillsCommand(positional[0], positional[1], flags, output); return; }
   if (command === "upgrade") { await upgradeCommand(flags, output); return; }
@@ -411,6 +455,13 @@ async function main() {
   if (command === "pull") { await pullCommand(root, flags, output); return; }
   if (command === "submit") { await submitCommand(root, flags, output); return; }
   if (command === "jams") { await jamsCommand(positional[0], flags, output); return; }
+  if (command === "achievements") { await achievementsCommand(positional[0], positional[1], root, flags, output); return; }
+  if (command === "delete") { await deleteCommand(root, flags, output); return; }
+  if (command === "jam") { await jamEntryCommand(positional[0], root, flags, output); return; }
+  if (command === "details") { await detailsCommand(root, flags, output); return; }
+  if (command === "handle") { await handleCommand(positional[0], flags, output); return; }
+  if (command === "unpublish" || command === "restore") { await takeDownCommand(command, root, flags, output); return; }
+  if (command === "releases" || command === "rollback") { await releasesCommand(command, root, command === "rollback" ? positional[0] : undefined, flags, output); return; }
   if (command === "dev") { await devCommand(root, flags, output); return; }
   if (command === "vendor") { await vendorCommand(root, flags, output); return; }
   if (command === "init") { output.emit({ type: "result", command, data: await initProject(root, flags, { interactive: !output.json && !agentMode() && Boolean(process.stdin.isTTY) }) }); return; }

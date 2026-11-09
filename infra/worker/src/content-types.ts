@@ -148,6 +148,51 @@ export function resolveContentType(path: string): ResolvedType {
 }
 
 /**
+ * Files og-games compresses itself on the way out, by extension, when the bytes at rest are
+ * the plain file and the browser takes br or gzip. index.ts says when, and what it leaves
+ * alone.
+ *
+ * WHY HERE AND NOT IN THE EDGE'S LIST. Cloudflare compresses a response on its own only when
+ * its type is on a list, and `application/octet-stream` is not on it. So Dragon Aces'
+ * 16.8 MB `terrain-global.bin` went out whole (measured 9 Nov 2026), about 2 s of a 50 Mbps
+ * line, while it is 3.3 MB as Brotli. The zone's compression rule
+ * (scripts/cloudflare-games-compression.mjs) added glb, gltf, hza and ktx by extension, and
+ * nothing else. Each new extension there was a dashboard change somebody had to make with a
+ * token this repository does not hold, so `.bin`, `.data` and `.wav` waited. The rule has been
+ * disabled since 9 Nov 2026, because it replaced this table's br with larger zstd for those
+ * four, and this table now covers them. Deciding it
+ * here puts the list in reviewed source with tests, the same as the type table above.
+ *
+ * WHAT IS ON IT: formats that are stored plain and shrink. Engine data blobs, WebAssembly,
+ * glTF and uncompressed KTX, uncompressed PCM audio, and the text a game loads as data. Not
+ * on it: anything already compressed inside its own format, where a second pass costs CPU
+ * and saves nothing. That means images, lossy audio and video, woff and woff2, KTX2 and
+ * Basis supercompression, Draco, the zip-shaped runtime packages, and Unity's .unityweb,
+ * which is usually Brotli already. An extension this table has not been told about stays as
+ * it is, so a new format is never compressed by guess. OG Clash's .qoa measured 91 to 100%
+ * of its size under Brotli and is left off for that reason.
+ *
+ * Only the two codings the Workers runtime will actually produce are ever named
+ * (binary-delivery.ts, transitEncoding): told `zstd`, workerd sends the plain bytes under a
+ * zstd label, which no browser can decode.
+ */
+const COMPRESSED_IN_TRANSIT = new Set([
+  // engine output and raw data
+  "bin", "data", "mem", "symbols", "pck", "buffer", "dmanifest", "wasm",
+  // 3D. hza is Kaigen's asset container (OG Clash), plain at rest, 10 to 53% smaller
+  "glb", "gltf", "ktx", "hza", "fbx", "obj", "mtl",
+  // uncompressed audio
+  "wav",
+  // text a game reads as code or data, never a document
+  "js", "mjs", "cjs", "css", "json", "map", "txt", "xml", "webmanifest", "csv",
+  "wgsl", "glsl", "vert", "frag", "atlas", "py", "lua", "ttf", "otf",
+]);
+
+export function compressedInTransit(path: string): boolean {
+  return COMPRESSED_IN_TRANSIT.has(extensionOf(path));
+}
+
+/**
  * Generated art on the media host: the one place a stored type is read, and only to choose
  * among three inert raster types this file already names.
  *

@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.7.0
+
+- `opengame unpublish` takes a game off the gallery and stops serving it, and `opengame
+  restore` puts a game you unpublished back, through the same checks and audit as
+  Unpublish and Put it back on Your games. A person is asked first; an agent or a script
+  passes `--yes`. Both need a token with the `submit` permission, which `opengame login`
+  gives.
+- `opengame details` prints a game's title, tagline and description as the website shows
+  them, and `--title`, `--tagline` and `--description` change them, through the same
+  checks as the Details tab on the game's page. It needs the `submit` permission.
+- `opengame handle <name>` renames your handle, through the same limits and checks as
+  Settings. A person is asked first; an agent passes `--yes`. Only the `opengame login`
+  token can do it.
+- `opengame jam withdraw` takes the linked game's jam entry out of the jam and frees its
+  place, and `opengame jam reenter` puts a withdrawn one back while the jam is open, as
+  the jam entries page does. Withdrawing asks first; an agent passes `--yes`.
+- `opengame delete` deletes a game for good, through the same checks as Delete for good
+  on its page. You type its title to confirm; an agent passes `--title` and `--yes`. Only
+  the `opengame login` token can delete.
+- `opengame achievements` lists a game's achievements, and `opengame achievements retire
+  <id>` retires one, as the website's achievements step does. Retiring now needs the
+  `submit` permission as well as `deploy`, from the CLI and the API alike; a deploy's own
+  save of its declared achievements still needs only `deploy`.
+- `opengame stats --csv <file>` writes the week's figures as the CSV the Stats tab
+  downloads, from the same export. It never writes over an existing file.
+- Ships the skills from `@opengamehq/skills` 1.3.0.
+
+## 0.6.0
+
+- `opengame releases` lists a game's releases, newest first, as the Releases tab on its
+  page does: which one is live, which were live before, which are drafts or in review,
+  which were cleaned up, and which can be made live again.
+- `opengame rollback <release>` makes a release that was live before live again, through
+  the same check and audit as Make live again on the website. A person is asked first; an
+  agent or a script passes `--yes`. It needs a token with the `submit` permission, which
+  `opengame login` gives.
+- Ships the skills from `@opengamehq/skills` 1.2.0.
+
 ## 0.5.0
 
 - Before OpenGame opens for creators, a refused command names the day it opens ("OpenGame

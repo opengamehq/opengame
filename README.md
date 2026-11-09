@@ -11,7 +11,9 @@ Documentation: [docs.opengame.io](https://docs.opengame.io)
 The CLI checks a game and uploads it, and `opengame help` lists its commands.
 
 <!-- install:cli -->
-The CLI is not on npm yet. Write to team@opengame.io for a copy.
+```bash
+npm i -g @opengamehq/cli
+```
 <!-- /install -->
 
 A game calls the SDK at runtime to read who is playing and their OG, and to keep
@@ -19,13 +21,17 @@ leaderboards, achievements and events. Every call is optional, and a game that u
 still runs outside OpenGame.
 
 <!-- install:sdk -->
-The SDK is not on npm yet. Write to team@opengame.io for a copy.
+```bash
+npm i @opengamehq/sdk
+```
 <!-- /install -->
 
 The skills teach a coding agent to build a game and ship it here.
 
 <!-- install:skills -->
-The skills come with the CLI: run `opengame skills add` in your game's folder.
+```bash
+npx skills add opengamehq/opengame
+```
 <!-- /install -->
 
 ## What is in this repository

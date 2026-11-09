@@ -1,7 +1,10 @@
-import type { GameManifest } from "@opengame/protocol";
+import { EXIT, type GameManifest } from "@opengame/protocol";
+import { activeToken } from "./credentials";
+import { linkedGameId, readGame } from "./games";
 import { Api, ApiError } from "./http";
-import { CliError, Output } from "./output";
+import { CliError, Output, agentMode, terminalText } from "./output";
 import { readProject, updateProject } from "./project";
+import { confirm } from "./prompt";
 
 type Declared = NonNullable<GameManifest["achievements"]>;
 type Operation = { id: string; state: string; gameId: string | null; releaseId: string | null };
@@ -44,4 +47,68 @@ export async function syncAchievements(api: Api, token: string, root: string, op
   }
   if (!recorded) lines.push("This folder was busy, so the record of what was saved was not written. Run opengame status to finish.");
   output.emit({ type: "notice", code: failure || !recorded ? "achievements_not_saved" : "achievements_saved", message: lines.join(" ") });
+}
+
+type Flags = Record<string, string | boolean>;
+type Definition = { achievement_id: string; title: string; description: string | null; active: boolean };
+
+/**
+ * `opengame achievements` lists a game's achievements as the server holds them, active and
+ * retired. `opengame achievements retire <id>` retires one, as the achievements step on the
+ * website does, through the same route: unlocks already earned are kept, and the game can no
+ * longer award it. Declaring it again in opengame.json and deploying turns it back on.
+ *
+ * Retiring changes what players of a live game see, so a person is asked first and an agent
+ * says --yes, and the server asks for the `submit` permission as well as `deploy`.
+ */
+export async function achievementsCommand(action: string | undefined, achievementId: string | undefined, root: string, flags: Flags, output: Output) {
+  if (action !== undefined && action !== "retire") {
+    throw new CliError("arguments", "Use opengame achievements to list them, or opengame achievements retire <id> to retire one.", EXIT.input);
+  }
+  if (action === "retire" && !achievementId) {
+    throw new CliError("achievement_required", "Name the achievement to retire: opengame achievements retire <id>. opengame achievements lists them.", EXIT.input, { next: "opengame achievements" });
+  }
+  const api = new Api();
+  try {
+    const active = await activeToken(api.origin, Boolean(flags["token-stdin"]));
+    if (!active) throw new CliError("not_signed_in", "Run opengame login, or supply OPENGAME_TOKEN.", 3, { next: "opengame login" });
+    const token = active.token;
+    api.tokenSource = active.source;
+    const requested = typeof flags.game === "string" ? flags.game : undefined;
+    const id = requested ?? await linkedGameId(api, token, root);
+    if (!id) throw new CliError("not_linked", "Run this in a linked folder, or name the game with opengame achievements --game <id>.");
+    const game = await readGame(api, token, id);
+    const path = `/api/v1/games/${encodeURIComponent(game.id)}/achievements`;
+    const listed = (await api.json(path, { token })).achievements;
+    if (!Array.isArray(listed)) throw new CliError("invalid_response", "The achievements could not be read. Try again.", 5);
+    const all = listed as Definition[];
+
+    if (action !== "retire") {
+      const lines = all.map(row => `${terminalText(row.achievement_id)}  ${row.active ? "active" : "retired"}  ${terminalText(row.title)}`);
+      output.emit({ type: "result", command: "achievements", data: { gameId: game.id, achievements: all,
+        message: all.length ? `${terminalText(game.title)}\n\n${lines.join("\n")}\n\nRetire one with opengame achievements retire <id>.`
+          : `${terminalText(game.title)} has no achievements. Declare them in opengame.json and run opengame deploy.` } });
+      return;
+    }
+    const target = all.find(row => row.achievement_id === achievementId);
+    if (!target) throw new CliError("achievement_not_found", `${terminalText(game.title)} has no achievement ${terminalText(achievementId!)}. Run opengame achievements to see them.`, EXIT.input, { next: "opengame achievements" });
+    if (!target.active) {
+      output.emit({ type: "result", command: "achievements", data: { gameId: game.id, achievement: target, message: `${terminalText(target.title)} is already retired. Nothing changed.` } });
+      return;
+    }
+    if (!flags.yes) {
+      const person = !output.json && !agentMode() && Boolean(process.stdin.isTTY);
+      if (!person) {
+        throw new CliError("confirmation_required", `Retiring stops ${terminalText(game.title)} awarding ${terminalText(target.title)}. Add --yes to retire it.`,
+          EXIT.input, { next: terminalText(`opengame achievements retire ${achievementId}${requested ? ` --game ${requested}` : ""} --yes`) });
+      }
+      if (!await confirm(`Retire ${terminalText(target.title)}? Players keep what they unlocked, and the game can no longer award it.`)) {
+        throw new CliError("cancelled", "Cancelled. Nothing changed.", EXIT.input);
+      }
+    }
+    const saved = await api.json(path, { token, method: "PUT",
+      body: { achievementId: target.achievement_id, title: target.title, description: target.description ?? "", active: false } });
+    output.emit({ type: "result", command: "achievements", data: { gameId: game.id, achievement: saved.achievement ?? null,
+      message: `${terminalText(target.title)} is retired. Players keep what they unlocked. Declare it in opengame.json and deploy to turn it back on.` } });
+  } finally { await api.close(); }
 }

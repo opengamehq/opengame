@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0
+
+- `opengame-cli` 1.2.0 teaches `opengame unpublish` and `opengame restore`, run only when
+  the person asks, 1.3.0 `opengame details` and `opengame handle`, 1.4.0 `opengame jam
+  withdraw` and `opengame jam reenter`, 1.5.0 `opengame delete`, 1.6.0 `opengame achievements`, and 1.7.0 `opengame stats --csv`.
+
+## 1.2.0
+
+- `opengame-cli` 1.1.0 teaches `opengame releases` and `opengame rollback`, and says to
+  roll a live game back only with the person's go-ahead.
+
 ## 1.1.0
 
 - `opengame-sdk` 1.0.9 teaches OG Radio (`og.radio` and its picker, in

@@ -8,7 +8,9 @@ holds no API key; the OpenGame page it plays in gives it a session.
 ## Install
 
 <!-- install:sdk -->
-The SDK is not on npm yet. Write to team@opengame.io for a copy.
+```bash
+npm i @opengamehq/sdk
+```
 <!-- /install -->
 
 With no bundler, copy the files you use out of `dist/` next to your game (see "No build

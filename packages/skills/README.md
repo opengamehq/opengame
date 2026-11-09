@@ -7,7 +7,9 @@ Cursor or OpenCode how to build a game that plays well, check it and deploy it.
 ## Install
 
 <!-- install:skills -->
-The skills come with the CLI: run `opengame skills add` in your game's folder.
+```bash
+npx skills add opengamehq/opengame
+```
 <!-- /install -->
 
 Through the CLI, `opengame skills add .` installs the starting set for the agent you use,
@@ -16,7 +18,9 @@ and `opengame skills add . --all` installs every skill.
 ### Get the CLI
 
 <!-- install:cli -->
-The CLI is not on npm yet. Write to team@opengame.io for a copy.
+```bash
+npm i -g @opengamehq/cli
+```
 <!-- /install -->
 
 To pin a version or vendor the files yourself, copy a skill's folder out of this package's

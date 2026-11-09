@@ -1,6 +1,6 @@
 {
   "name": "@opengamehq/cli",
-  "version": "0.5.0",
+  "version": "0.7.0",
   "private": true,
   "description": "Deploy browser games to OpenGame from the command line.",
   "keywords": [
@@ -41,7 +41,7 @@
   "scripts": {
     "build": "node ../shared/scripts/limits-values.mjs --check && node build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "OPENGAME_TEST_SKIP_LAUNCH_CHECK=1 node --import tsx --test tests/*.test.ts",
+    "test": "OPENGAME_TEST_SKIP_LAUNCH_CHECK=1 node --import tsx --test ${OPENGAME_TEST_SHARD:+--test-shard=$OPENGAME_TEST_SHARD} tests/*.test.ts",
     "prepack": "npm run build",
     "pretest": "npm run build",
     "test:matrix": "node scripts/node-matrix.mjs",

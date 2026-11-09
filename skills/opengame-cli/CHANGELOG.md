@@ -1,5 +1,33 @@
 # opengame-cli changelog
 
+## 1.7.0
+
+Teaches `opengame stats --csv`.
+
+## 1.6.0
+
+Teaches `opengame achievements` and `opengame achievements retire`.
+
+## 1.5.0
+
+Teaches `opengame delete`: only when the person asks for that game to be deleted, with the title they confirmed, and unpublish offered first.
+
+## 1.4.0
+
+Teaches `opengame jam withdraw` and `opengame jam reenter`.
+
+## 1.3.0
+
+Teaches `opengame details` and `opengame handle`: changing a game's words on the website, and renaming the person's handle with their go-ahead.
+
+## 1.2.0
+
+Teaches `opengame unpublish` and `opengame restore`: taking a game off the gallery and putting it back, only when the person asks.
+
+## 1.1.0
+
+Teaches `opengame releases` and `opengame rollback`: listing a game's releases and making one that was live before live again, only with the person's go-ahead.
+
 ## 1.0.4
 
 The site opens on one day and the CLI, uploads and the creator API on the next, the jam's kickoff. Until then an account outside the team is told that day, read from the launch clock.

@@ -55,7 +55,9 @@ OpenGame team which line here is wrong.
 Ship the SDK with the game rather than loading it from a CDN, so an outage cannot take it
 away.
 
-The SDK is not on npm yet. If the game has no copy of it, stop and tell the creator to write to team@opengame.io for one.
+```bash
+npm i @opengamehq/sdk
+```
 
 Some runtime contracts add the full global at `/_og/sdk.js` to the
 game's pages themselves. How each path works, and what happens when a game ships its

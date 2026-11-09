@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opengame.io/schema/opengame.json",
+  "title": "Doom but blue",
+  "description": "A blue palette and three new levels for an old shooter, made in a weekend.",
+  "genre": "shooter-survival",
+  "kind": "mod",
+  "basedOn": "Doom",
+  "controls": [
+    "keyboard",
+    "mouse"
+  ]
+}

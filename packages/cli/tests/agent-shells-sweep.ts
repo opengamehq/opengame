@@ -34,6 +34,20 @@ export const RUNS: Record<string, string[][]> = {
   limits: [["limits"]],
   games: [["games"]],
   deployments: [["deployments", "{root}"], ["deployments", "{root}", "--game", "abc123"]],
+  releases: [["releases", "{root}"], ["releases", "{root}", "--game", "abc123"]],
+  // Without --yes an agent is refused before anything is sent; with it, the stand-in's 404 ends it.
+  rollback: [["rollback", releaseId], ["rollback", releaseId, "--game", "abc123", "--yes"]],
+  // The same two shapes: refused without --yes before anything is sent, then the stand-in's 404.
+  unpublish: [["unpublish", "{root}"], ["unpublish", "{root}", "--game", "abc123", "--yes"]],
+  restore: [["restore", "{root}"], ["restore", "{root}", "--game", "abc123", "--yes"]],
+  details: [["details", "{root}"], ["details", "{root}", "--game", "abc123", "--title", "Night shift"]],
+  // A rename asks first, so an agent without --yes is refused before anything is sent.
+  handle: [["handle", "stormcaller"], ["handle", "stormcaller", "--yes"]],
+  jam: [["jam", "withdraw"], ["jam", "reenter", "--game", "abc123"]],
+  // Listed, then refused without --yes before anything is sent.
+  achievements: [["achievements"], ["achievements", "retire", "first-lap", "--game", "abc123"]],
+  // Refused before anything is sent without both --title and --yes.
+  delete: [["delete", "{root}"], ["delete", "{root}", "--game", "abc123", "--title", "Night shift", "--yes"]],
   link: [["link", "{root}"], ["link", "{root}", "--game", "abc123"]],
   open: [["open", "{root}", "--game", "abc123"]],
   pull: [["pull", "{root}"]],

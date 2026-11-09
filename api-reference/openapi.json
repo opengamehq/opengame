@@ -170,6 +170,44 @@
               "access_denied",
               "expired_token",
               "release_unavailable",
+              "rollback_failed",
+              "game_not_live",
+              "release_never_live",
+              "release_not_promoted",
+              "release_bytes_deleted",
+              "release_copy_changed",
+              "release_held_by_us",
+              "report_open",
+              "publishing_in_progress",
+              "own_game_held",
+              "copyright_hold",
+              "copyright_evidence_version",
+              "build_threat",
+              "build_legal_hold",
+              "account_suspended",
+              "account_deleted",
+              "controlled_incident_review",
+              "unpublish_refused",
+              "restore_refused",
+              "no_reviewed_build",
+              "unpublish_incomplete",
+              "restore_incomplete",
+              "take_down_unreachable",
+              "restore_unverified",
+              "invalid_details",
+              "legacy_game_words",
+              "words_refused",
+              "invalid_handle",
+              "delete_title_mismatch",
+              "delete_incomplete",
+              "delete_refused",
+              "jam_entry_not_found",
+              "withdraw_closed",
+              "reenter_closed",
+              "jam_entry_taken",
+              "jam_entry_held",
+              "handle_unavailable",
+              "handle_unchanged",
               "invalid_webhook",
               "invalid_origin",
               "report_expired",
@@ -5848,6 +5886,251 @@
         ],
         "additionalProperties": false
       },
+      "GameRelease": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "examples": [
+              "c6f19a03-5b8e-4d27-9e4a-2b70d1f8c345"
+            ]
+          },
+          "short": {
+            "type": "string",
+            "minLength": 1
+          },
+          "versionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "examples": [
+                  "0d7e3b58-6a21-4f9c-b4e2-93c1a8f05d17"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "live": {
+            "type": "boolean"
+          },
+          "newest": {
+            "type": "boolean"
+          },
+          "cleaned": {
+            "type": "boolean"
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "rollback": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "short",
+          "versionId",
+          "createdAt",
+          "title",
+          "status",
+          "label",
+          "live",
+          "newest",
+          "cleaned",
+          "ready",
+          "rollback"
+        ],
+        "additionalProperties": false
+      },
+      "TakeDownResult": {
+        "type": "object",
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "format": "uuid",
+            "examples": [
+              "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+            ]
+          },
+          "publicId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "unpublished",
+              "published",
+              "removed"
+            ]
+          },
+          "repaired": {
+            "type": "boolean"
+          },
+          "artPending": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "gameId",
+          "publicId",
+          "visibility",
+          "repaired",
+          "artPending",
+          "url",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "GameDetails": {
+        "type": "object",
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "format": "uuid",
+            "examples": [
+              "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+            ]
+          },
+          "publicId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "live": {
+            "type": "boolean"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "tagline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "gameId",
+          "publicId",
+          "live",
+          "revision",
+          "title",
+          "tagline",
+          "description",
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "AccountHandle": {
+        "type": "object",
+        "properties": {
+          "handle": {
+            "type": "string",
+            "minLength": 1
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "handle",
+          "previous",
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "JamEntryResult": {
+        "type": "object",
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "format": "uuid",
+            "examples": [
+              "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+            ]
+          },
+          "publicId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entryId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entered": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "gameId",
+          "publicId",
+          "entryId",
+          "entered",
+          "url",
+          "message"
+        ],
+        "additionalProperties": false
+      },
       "PreviewGrant": {
         "type": "object",
         "required": [
@@ -10907,6 +11190,224 @@
             "lang": "bash",
             "label": "cURL",
             "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/auth/logout' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
+          }
+        ]
+      }
+    },
+    "/api/v1/account/handle": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "renameHandle",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Rename your handle",
+        "description": "Rename the signed-in account's handle, as Settings does, through the same function: the same rate limits, the same moderation and the same uniqueness check. The old handle keeps pointing at the account and is never given to anybody else. Only a browser session or the token `opengame login` makes can do this; a token made in settings cannot, whatever its permissions, and neither can one pinned to a game. What `opengame handle` sends.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "handle"
+                ],
+                "properties": {
+                  "handle": {
+                    "type": "string",
+                    "description": "The new handle, without the @.",
+                    "examples": [
+                      "stormcaller"
+                    ]
+                  }
+                }
+              },
+              "example": {
+                "handle": "stormcaller"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Renamed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountHandle"
+                },
+                "example": {
+                  "apiVersion": "1",
+                  "handle": "stormcaller",
+                  "previous": "rainmaker",
+                  "url": "https://opengame.io/@stormcaller"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_request`: the body is not `{ \"handle\": \"...\" }`. `invalid_handle`: the name breaks the handle rules, which the message names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "invalid_request",
+                  "message": "Send the new handle."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential is not a browser session or the `opengame login` token, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "Only opengame login can rename your handle, not a token made in settings. Run opengame login, or rename it on the website."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "not_found",
+                  "message": "Not found."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`handle_unchanged`: that is already your handle. `handle_unavailable`: the handle is taken or not available. Nothing changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "handle_unchanged",
+                  "message": "That is already your handle.",
+                  "retry": "never"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`body_too_large`: the body is over 1,024 bytes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "body_too_large",
+                  "message": "The request body is too large."
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`content_type`: send `Content-Type: application/json`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "content_type",
+                  "message": "Send a JSON request body."
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: too many handle checks in a minute, or too many renames in a day, or this token made too many requests. Wait `retryAfterSeconds`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`temporarily_unavailable`: OpenGame could not check the handle, count the attempt or finish the rename, so nothing changed. Wait, then try again. `platform_unconfigured`: a fault on OpenGame's side.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "temporarily_unavailable",
+                  "message": "OpenGame could not finish this request. Try again shortly.",
+                  "retry": "later",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246",
+                  "retryAfterSeconds": 30
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/account/handle' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\" \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"handle\": \"stormcaller\"\n}'"
           }
         ]
       }
@@ -16636,6 +17137,1663 @@
         ]
       }
     },
+    "/api/v1/games/{id}/releases": {
+      "get": {
+        "tags": [
+          "Games"
+        ],
+        "operationId": "listGameReleases",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "List a game's releases",
+        "description": "Every release of one game you own, newest first, as the Releases tab on its page lists them: which one is live, which were live before, which are drafts, in review or cleaned up, and `rollback` on each one the page offers to make live again. What `opengame releases` prints. `rollbackBlocked` says why none can be made live right now, when a publication is on its way. Requires the `read` or `deploy` scope. A game-pinned token can read only its own game.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Game UUID or public ID.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The releases.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "apiVersion",
+                    "gameId",
+                    "publicId",
+                    "live",
+                    "rollbackBlocked",
+                    "releases"
+                  ],
+                  "properties": {
+                    "apiVersion": {
+                      "type": "string",
+                      "examples": [
+                        "1"
+                      ]
+                    },
+                    "gameId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "examples": [
+                        "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+                      ]
+                    },
+                    "publicId": {
+                      "type": "string"
+                    },
+                    "live": {
+                      "type": "boolean",
+                      "description": "Whether the game is live now. Nothing can be made live again while it is not."
+                    },
+                    "rollbackBlocked": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Why no release can be made live again right now, or null."
+                    },
+                    "releases": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GameRelease"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "apiVersion": "1",
+                  "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                  "publicId": "tq7m4x2k9p",
+                  "live": true,
+                  "rollbackBlocked": null,
+                  "releases": [
+                    {
+                      "id": "c6f19a03-5b8e-4d27-9e4a-2b70d1f8c345",
+                      "short": "c6f19a03",
+                      "versionId": null,
+                      "createdAt": "2026-10-21T16:42:09.000Z",
+                      "title": "Tide Runner",
+                      "status": "review",
+                      "label": "With a person",
+                      "live": false,
+                      "newest": true,
+                      "cleaned": false,
+                      "ready": true,
+                      "rollback": false
+                    },
+                    {
+                      "id": "0d7e3b58-6a21-4f9c-b4e2-93c1a8f05d17",
+                      "short": "0d7e3b58",
+                      "versionId": "0d7e3b58-6a21-4f9c-b4e2-93c1a8f05d17",
+                      "createdAt": "2026-10-07T11:20:33.000Z",
+                      "title": "Tide Runner",
+                      "status": "published",
+                      "label": "Published",
+                      "live": true,
+                      "newest": false,
+                      "cleaned": false,
+                      "ready": true,
+                      "rollback": false
+                    },
+                    {
+                      "id": "19ea6dc1-36d4-483a-9503-552308c56871",
+                      "short": "19ea6dc1",
+                      "versionId": "19ea6dc1-36d4-483a-9503-552308c56871",
+                      "createdAt": "2026-09-30T09:05:12.000Z",
+                      "title": "Tide Runner",
+                      "status": "previously_live",
+                      "label": "Previously live",
+                      "live": false,
+                      "newest": false,
+                      "cleaned": false,
+                      "ready": true,
+                      "rollback": true
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This credential cannot read this game’s releases."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`game_not_found`: no game with this UUID or public ID is in your account, or a game-pinned token named another game. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "game_not_found",
+                  "message": "This game was not found in your account."
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`temporarily_unavailable`: OpenGame could not finish the request, and the cause is on our side. Wait `retryAfterSeconds` when the body gives it, then send the same request again, with the same `Idempotency-Key` if it had one. A token or access check that could not finish carries no wait.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "temporarily_unavailable",
+                  "message": "OpenGame could not finish this request. Try again shortly.",
+                  "retry": "later",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246",
+                  "retryAfterSeconds": 30
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request GET \\\n  --url 'https://opengame.io/api/v1/games/b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71/releases' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
+          }
+        ]
+      }
+    },
+    "/api/v1/games/{id}/releases/{releaseId}/rollback": {
+      "post": {
+        "tags": [
+          "Games"
+        ],
+        "operationId": "rollbackGameRelease",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Make an earlier release live again",
+        "description": "Make a release that was live before the live one again, as Make live again does on the game's page, through the same check and the same audit. Players get it from their next load, and the release it replaces stays in the list to go back to. The game must be live, and the release must have been live and still have its files. Requires the `submit` scope on this game; the `deploy` scope makes private previews only, so it cannot change what players get. A banned account can still go back to a version the game served. What `opengame rollback` sends. No body. When the swap was made and writing the game's address failed, the answer is 502 `host_failed` with the reason; send the same request again, and it writes only the address.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Game UUID or public ID.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+              ]
+            }
+          },
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "description": "The release to make live again, from `GET /api/v1/games/{id}/releases`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "19ea6dc1-36d4-483a-9503-552308c56871"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "That release is live. `swapped` is false when it already was; its address is written again either way.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "apiVersion",
+                    "gameId",
+                    "publicId",
+                    "releaseId",
+                    "versionId",
+                    "swapped",
+                    "url"
+                  ],
+                  "properties": {
+                    "apiVersion": {
+                      "type": "string",
+                      "examples": [
+                        "1"
+                      ]
+                    },
+                    "gameId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "examples": [
+                        "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+                      ]
+                    },
+                    "publicId": {
+                      "type": "string"
+                    },
+                    "releaseId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "examples": [
+                        "c6f19a03-5b8e-4d27-9e4a-2b70d1f8c345"
+                      ]
+                    },
+                    "versionId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "examples": [
+                        "0d7e3b58-6a21-4f9c-b4e2-93c1a8f05d17"
+                      ]
+                    },
+                    "swapped": {
+                      "type": "boolean"
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "The game's public address."
+                    }
+                  }
+                },
+                "example": {
+                  "apiVersion": "1",
+                  "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                  "publicId": "tq7m4x2k9p",
+                  "releaseId": "19ea6dc1-36d4-483a-9503-552308c56871",
+                  "versionId": "19ea6dc1-36d4-483a-9503-552308c56871",
+                  "swapped": true,
+                  "url": "https://opengame.io/g/tq7m4x2k9p"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `account_banned`: the account is banned and the release is not one the game already served. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This credential cannot change which release is live. Use a token with the submit permission, or opengame login."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`game_not_found`: no game with this UUID or public ID is in your account, or a game-pinned token named another game. `release_not_found`: the release is not one of this game's, or the ID is not a UUID. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "game_not_found",
+                  "message": "This game was not found in your account."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A refusal the message explains, and nothing changed: `rollback_failed` (for example, that release was published as a decomp or a mod and the game is now labelled otherwise), `game_not_live` (the game is off the gallery or was taken down), `release_never_live` (submit it for review instead), `release_not_promoted`, `release_bytes_deleted` (its files were cleaned up), `release_copy_changed`, `release_held_by_us` (we took the game off that release), `report_open`, `publishing_in_progress` (wait until the publication is live), `own_game_held`, `copyright_hold`, `copyright_evidence_version`, `build_threat`, `build_legal_hold`, `account_suspended`, `account_deleted`, or `handle_required`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rollback_failed",
+                  "message": "This version was published as a decomp or a mod, and the game is now labelled otherwise. Publish a new release instead.",
+                  "retry": "never"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`temporarily_unavailable`: OpenGame could not finish the request, and the cause is on our side. Wait `retryAfterSeconds` when the body gives it, then send the same request again. `controlled_incident_review`: a safety review holds that release; the message says who to ask. `platform_unconfigured`: a fault on OpenGame's side left the game without an address to give. Try again later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "temporarily_unavailable",
+                  "message": "OpenGame could not finish this request. Try again shortly.",
+                  "retry": "later",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246",
+                  "retryAfterSeconds": 30
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/games/b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71/releases/19ea6dc1-36d4-483a-9503-552308c56871/rollback' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
+          }
+        ]
+      }
+    },
+    "/api/v1/games/{id}/unpublish": {
+      "post": {
+        "tags": [
+          "Games"
+        ],
+        "operationId": "unpublishGame",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Take a game off the gallery",
+        "description": "Take a live game off the gallery and stop serving it, as Unpublish does on Your games, through the same function: the game's address answers 410 and tells browsers to drop what they cached, its cover and screenshots come off public storage, and every row and upload is kept. Reversible with `POST /api/v1/games/{id}/restore`. Nothing holds it: a report, a hold or a reviewer does not stop a creator taking their own game down. Requires the `submit` scope on this game; the `deploy` scope makes private previews only, so it cannot take a game down. A banned tester or staff member can still unpublish, as on the website; a banned creator is no longer a member. What `opengame unpublish` sends. No body.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Game UUID or public ID.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The game is off the gallery. `artPending` is true when some of its art may still be on public storage, which staff finish.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeDownResult"
+                },
+                "example": {
+                  "apiVersion": "1",
+                  "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                  "publicId": "tq7m4x2k9p",
+                  "visibility": "unpublished",
+                  "repaired": false,
+                  "artPending": false,
+                  "url": "https://opengame.io/settings/games/tq7m4x2k9p",
+                  "message": "That game is off the gallery and is no longer being served, and its cover and screenshots have come off our public storage with it. Your build and your uploads are safe, and putting it back puts all of it back."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: a banned creator is no longer a member; a banned tester or staff member can still unpublish, as on the website. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This credential cannot take a game down. Use a token with the submit permission, or opengame login."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`game_not_found`: no game with this UUID or public ID is in your account, or a game-pinned token named another game. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "game_not_found",
+                  "message": "This game was not found in your account."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`unpublish_refused`: the game is not on the gallery, so nothing changed. `restore_refused` and `no_reviewed_build` are put back's refusals and are not sent here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "unpublish_refused",
+                  "message": "This game is not on the gallery, so there is nothing to take off it.",
+                  "retry": "never"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`unpublish_incomplete`: the game is no longer served, and the gallery has not caught up. Send the same request again. `restore_incomplete` is put back's, and is not sent here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "unpublish_incomplete",
+                  "message": "Your game is no longer being served and browsers have been told to drop what they cached. The gallery has not caught up yet, so it may still be listed for a moment. Run it again, and write to team@opengame.io if that keeps happening.",
+                  "retry": "now"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`take_down_unreachable`: OpenGame could not reach the part of its system that starts and stops serving a game, so nothing changed. Try again in a minute. `restore_unverified` is put back's, and is not sent here. `temporarily_unavailable`: OpenGame could not finish the request. `platform_unconfigured`: a fault on OpenGame's side. Try again later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "take_down_unreachable",
+                  "message": "Nothing changed and your game is exactly where it was. We could not reach the part of our system that starts and stops serving a game, which is ours to fix rather than yours. Try again in a minute.",
+                  "retry": "later"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/games/b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71/unpublish' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
+          }
+        ]
+      }
+    },
+    "/api/v1/games/{id}/restore": {
+      "post": {
+        "tags": [
+          "Games"
+        ],
+        "operationId": "restoreGame",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Put an unpublished game back on the gallery",
+        "description": "Put a game you unpublished back on the gallery, serving the version it was on, as Put it back does on Your games, through the same function and the same checks. Refused for a game OpenGame took down, one under a legal hold or a copyright notice, one with a report nobody has answered, and one whose build has not come back clean from the scanner. On a game that is already listed and whose address a failed attempt left held, it writes only the address (`repaired`). Requires the `submit` scope on this game. What `opengame restore` sends. No body.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Game UUID or public ID.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The game is back on the gallery, or its address was written again (`repaired`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeDownResult"
+                },
+                "example": {
+                  "apiVersion": "1",
+                  "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                  "publicId": "tq7m4x2k9p",
+                  "visibility": "published",
+                  "repaired": false,
+                  "artPending": false,
+                  "url": "https://opengame.io/settings/games/tq7m4x2k9p",
+                  "message": "That game is back on the gallery, serving the version it was on when you took it down."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This credential cannot put a game back up. Use a token with the submit permission, or opengame login."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`game_not_found`: no game with this UUID or public ID is in your account, or a game-pinned token named another game. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "game_not_found",
+                  "message": "This game was not found in your account."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A refusal the message explains, and nothing changed: `no_reviewed_build` (there is no reviewed build to serve), or `restore_refused` (the game is not one you unpublished, OpenGame took it down, it is under a hold or a copyright notice, a report is open, or its build has not come back clean). `unpublish_refused` is unpublish's, and is not sent here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "no_reviewed_build",
+                  "message": "There is no reviewed build to serve, so putting this back would give players a page that does not load. Write to team@opengame.io and we will sort it out.",
+                  "retry": "never"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`restore_incomplete`: the game's gallery status could not be confirmed. Its build and uploads are saved. Send the same request again in a minute. `unpublish_incomplete` is unpublish's, and is not sent here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "restore_incomplete",
+                  "message": "Your game’s gallery status could not be confirmed. Your build and uploads are saved. Try again in a minute.",
+                  "retry": "now"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`restore_unverified`: the game's address could not be checked, so it was not put back. `temporarily_unavailable`: OpenGame could not finish checking the game, or the request. Try again in a few minutes. `take_down_unreachable`: OpenGame could not reach the part of its system that starts and stops serving a game, so nothing changed. `platform_unconfigured`: a fault on OpenGame's side. Try again later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "restore_unverified",
+                  "message": "The address could not be checked. Your game and uploads are saved. Check its review status, then try again.",
+                  "retry": "later"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/games/b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71/restore' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
+          }
+        ]
+      }
+    },
+    "/api/v1/games/{id}/details": {
+      "patch": {
+        "tags": [
+          "Games"
+        ],
+        "operationId": "saveGameDetails",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Change a game's title, tagline or description",
+        "description": "Save a game's title, tagline or description on the website, as the Details tab on its page does, through the same function: the same limits, the same account check, and on a published game an audit record with both sides. Send any of the three; a field left out keeps what the game has. On a published game players see the change at once. The game's metadata revision moves, so the next `opengame deploy` from a folder with older words keeps the website's and `opengame pull` brings them into opengame.json. Requires the `submit` scope on this game; the `deploy` scope cannot change what players read. What `opengame details` sends.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Game UUID or public ID.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "minProperties": 1,
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "The new title.",
+                    "examples": [
+                      "Tide runner"
+                    ]
+                  },
+                  "tagline": {
+                    "type": "string",
+                    "description": "The new tagline, the line under the title on a card.",
+                    "examples": [
+                      "Race the rain to the river."
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "The new description, the copy on the game's page.",
+                    "examples": [
+                      "Guide a paper boat downstream before the storm breaks."
+                    ]
+                  }
+                }
+              },
+              "example": {
+                "title": "Tide runner",
+                "tagline": "Race the rain to the river."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved. The words the website now shows.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameDetails"
+                },
+                "example": {
+                  "apiVersion": "1",
+                  "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                  "publicId": "tq7m4x2k9p",
+                  "live": true,
+                  "revision": 4,
+                  "title": "Tide runner",
+                  "tagline": "Race the rain to the river.",
+                  "description": "Steer a paper boat down a storm drain and pick up every lost marble before the water rises.",
+                  "url": "https://opengame.io/settings/games/tq7m4x2k9p"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_request`: the body is not one or more of `title`, `tagline` and `description` as text. `invalid_details`: one of them breaks the website's own limit, which the message names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "invalid_request",
+                  "message": "Send a title, a tagline or a description, as text."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `words_refused`: this account cannot edit its games. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This credential cannot change a game’s words. Use a token with the submit permission, or opengame login."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`game_not_found`: no game with this UUID or public ID is in your account, or a game-pinned token named another game. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "game_not_found",
+                  "message": "This game was not found in your account."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`legacy_game_words`: an older jam game's words are changed on its entry page. `game_removed`: the game is deleted. Nothing was saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "legacy_game_words",
+                  "message": "This game’s words are changed on its entry page, so nothing was saved here.",
+                  "retry": "never"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`body_too_large`: the body is over `platform.manifest.bytesMax` bytes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "body_too_large",
+                  "message": "The request body is too large."
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`content_type`: send `Content-Type: application/json`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "content_type",
+                  "message": "Send a JSON request body."
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`temporarily_unavailable`: OpenGame could not confirm the account or save the words, so nothing was saved. Wait, then try again. `platform_unconfigured`: a fault on OpenGame's side.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "temporarily_unavailable",
+                  "message": "OpenGame could not finish this request. Try again shortly.",
+                  "retry": "later",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246",
+                  "retryAfterSeconds": 30
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request PATCH \\\n  --url 'https://opengame.io/api/v1/games/b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71/details' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\" \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"title\": \"Tide runner\",\n  \"tagline\": \"Race the rain to the river.\"\n}'"
+          }
+        ]
+      }
+    },
+    "/api/v1/games/{id}/delete": {
+      "post": {
+        "tags": [
+          "Games"
+        ],
+        "operationId": "deleteGame",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Delete a game for good",
+        "description": "Delete a game you own for good, as Delete for good does on its page, through the same function and the same typed-title confirmation, which the server compares against the game's own title (case and spacing forgiven). The game comes off the gallery, its address answers 410 and its cover and screenshots come off public storage. It cannot be put back. Its build, archive and records are kept, so nothing a live or frozen version points at is removed. Its standing jam entries are withdrawn. Refused while it is under a legal hold, with a reviewer, or in a jam that has closed and is being scored. Only a browser session or the token `opengame login` makes can delete, with the `submit` permission; a token made in settings cannot, whatever its permissions, and neither can one pinned to a game. A banned tester or staff member can still delete, as on the website; a banned creator is no longer a member. What `opengame delete` sends.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Game UUID or public ID.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "title"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "The game's title, typed out.",
+                    "examples": [
+                      "Tide Runner"
+                    ]
+                  }
+                }
+              },
+              "example": {
+                "title": "Tide Runner"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The game is deleted. `artPending` is true when some of its art may still be on public storage, which staff finish.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeDownResult"
+                },
+                "example": {
+                  "apiVersion": "1",
+                  "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                  "publicId": "tq7m4x2k9p",
+                  "visibility": "removed",
+                  "repaired": false,
+                  "artPending": false,
+                  "url": "https://opengame.io/settings/games",
+                  "message": "That game is deleted. It is off the gallery, it is not served anywhere, and its cover and screenshots have been taken off our public storage."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`delete_title_mismatch`: the title does not match the game's, so nothing was deleted. `invalid_request`: the body is not `{ \"title\": \"...\" }`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "delete_title_mismatch",
+                  "message": "Nothing was deleted. The title you typed does not match the game's title. Type it exactly as opengame games prints it.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential is not a browser session or the `opengame login` token with the `submit` permission, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: a banned creator is no longer a member; a banned tester or staff member can still delete, as on the website. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "Only opengame login can delete a game, not a token made in settings. Run opengame login, or delete it on the website."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`game_not_found`: no game with this UUID or public ID is in your account, or a game-pinned token named another game. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "game_not_found",
+                  "message": "This game was not found in your account."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`delete_refused`: the message says why: a legal hold, a reviewer holding it, a jam being scored, or it is already deleted. Nothing was deleted. `unpublish_refused`, `restore_refused` and `no_reviewed_build` are unpublish's and put back's, and are not sent here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "delete_refused",
+                  "message": "This game cannot be deleted right now. Nothing was deleted.",
+                  "retry": "never"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`body_too_large`: the body is over 4,096 bytes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "body_too_large",
+                  "message": "The request body is too large."
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`content_type`: send `Content-Type: application/json`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "content_type",
+                  "message": "Send a JSON request body."
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`delete_incomplete`: the game is no longer served, and the gallery has not caught up with the delete. Send the same request again, never an unpublish. `unpublish_incomplete` and `restore_incomplete` are unpublish's and put back's, and are not sent here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "delete_incomplete",
+                  "message": "Your game is no longer being served, and the gallery has not caught up with the delete yet. Run the same delete again, and write to team@opengame.io if that keeps happening.",
+                  "retry": "now"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`take_down_unreachable`: OpenGame could not reach the part of its system that starts and stops serving a game, so nothing changed. `temporarily_unavailable`: OpenGame could not finish checking the game, or the delete. Try again in a few minutes. `restore_unverified` is put back's, and is not sent here. `platform_unconfigured`: a fault on OpenGame's side.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "take_down_unreachable",
+                  "message": "Nothing changed and your game is exactly where it was. We could not reach the part of our system that starts and stops serving a game, which is ours to fix rather than yours. Try again in a minute.",
+                  "retry": "later"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/games/b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71/delete' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\" \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"title\": \"Tide Runner\"\n}'"
+          }
+        ]
+      }
+    },
+    "/api/v1/games/{id}/jam-entry/withdraw": {
+      "post": {
+        "tags": [
+          "Jams"
+        ],
+        "operationId": "withdrawJamEntry",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Withdraw a game's jam entry",
+        "description": "Take this game's standing jam entry out of the jam, as Withdraw does on the jam entries page, through the same function. The entry, its certifications and its build are kept, its review closes, and its place is free. `POST /api/v1/games/{id}/jam-entry/reenter` puts it back while the jam is open. Requires the `submit` scope on this game. A banned tester or staff member can still withdraw, as on the page; a banned creator is no longer a member. What `opengame jam withdraw` sends. No body.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Game UUID or public ID.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The entry is out of the jam.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JamEntryResult"
+                },
+                "example": {
+                  "apiVersion": "1",
+                  "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                  "publicId": "tq7m4x2k9p",
+                  "entryId": "7a2f5c8e-1d4b-4f93-b6e0-2c8a5d1f9e37",
+                  "entered": false,
+                  "url": "https://opengame.io/jam/entries",
+                  "message": "That entry is out of the jam and its place is free."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `jam_entry_held` is re-entry's, and is not sent here. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: a banned creator is no longer a member; a banned tester or staff member can still withdraw, as on the page. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This credential cannot change a jam entry. Use a token with the submit permission, or opengame login."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`jam_entry_not_found`: the game has no entry standing in a jam. `game_not_found`: no game with this UUID or public ID is in your account, or a game-pinned token named another game. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "jam_entry_not_found",
+                  "message": "This game has no entry standing in a jam, so there is nothing to withdraw."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`withdraw_closed`: the jam has stopped taking entries, so its entries stay as they are. Nothing changed. `reenter_closed`, `at_entry_limit`, `jam_entry_taken` and `kind_not_in_jam` are re-entry's, and are not sent here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "withdraw_closed",
+                  "message": "Nothing changed. That jam has stopped taking entries, so its entries stay as they are. Write to team@opengame.io if you need this one out.",
+                  "retry": "never"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`temporarily_unavailable`: OpenGame could not read the entries or withdraw the entry, so it is still in the jam. Try again in a moment. `platform_unconfigured`: a fault on OpenGame's side.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "temporarily_unavailable",
+                  "message": "We could not withdraw that entry, and it is still in the jam. Try again in a moment.",
+                  "retry": "later"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/games/b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71/jam-entry/withdraw' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
+          }
+        ]
+      }
+    },
+    "/api/v1/games/{id}/jam-entry/reenter": {
+      "post": {
+        "tags": [
+          "Jams"
+        ],
+        "operationId": "reenterJamEntry",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Put a withdrawn jam entry back",
+        "description": "Put this game's newest withdrawn jam entry back in the jam, as Re-enter does on the jam entries page, through the same function: the same entry, reference and build, and its review picks up where it stood. The jam must be taking entries and the account must have a place left. Requires the `submit` scope on this game. What `opengame jam reenter` sends. No body.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Game UUID or public ID.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The entry is back in the jam.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JamEntryResult"
+                },
+                "example": {
+                  "apiVersion": "1",
+                  "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                  "publicId": "tq7m4x2k9p",
+                  "entryId": "7a2f5c8e-1d4b-4f93-b6e0-2c8a5d1f9e37",
+                  "entered": true,
+                  "url": "https://opengame.io/jam/entries",
+                  "message": "That entry is back in the jam, with the same reference and the same build."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `jam_entry_held`: this account cannot enter the jam right now. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This credential cannot change a jam entry. Use a token with the submit permission, or opengame login."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`jam_entry_not_found`: the game has no withdrawn entry to put back. `game_not_found`: no game with this UUID or public ID is in your account, or a game-pinned token named another game. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "jam_entry_not_found",
+                  "message": "This game has no withdrawn jam entry to put back."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`reenter_closed`: the jam is not taking entries right now. `at_entry_limit`: all of this account's entries are standing. `jam_entry_taken`: a later entry of this game is standing. `kind_not_in_jam`: the game is now a decomp or a mod. Nothing changed. `withdraw_closed` is withdrawal's, and is not sent here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "reenter_closed",
+                  "message": "Nothing changed. That jam is not taking entries right now, so the entry stays withdrawn. Run this again once it opens; after it closes, write to team@opengame.io.",
+                  "retry": "later"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`temporarily_unavailable`: OpenGame could not read the entries or put the entry back, so it is still withdrawn. Try again in a moment. `platform_unconfigured`: a fault on OpenGame's side.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "temporarily_unavailable",
+                  "message": "We could not put that entry back, and it is still withdrawn. Try again in a moment.",
+                  "retry": "later"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/games/b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71/jam-entry/reenter' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
+          }
+        ]
+      }
+    },
     "/api/v1/games/{id}/metadata": {
       "get": {
         "tags": [
@@ -16970,7 +19128,7 @@
             }
           },
           "409": {
-            "description": "`preview_not_ready`: no ready release matches, either the newest one or the `releaseId` you sent, which may also belong to another game. Wait `retryAfterSeconds` and try again. `preview_held`: OpenGame took the game down, a copyright notice is holding it or the version this release ships, or this release was not accepted. `preview_revoked`: previews of this game stopped while this one was opening, so reload the page.",
+            "description": "`preview_not_ready`: no ready release matches, either the newest one or the `releaseId` you sent, which may also belong to another game. Wait `retryAfterSeconds` and try again. `preview_held`: OpenGame stopped serving this release (a staff rollback, an upheld report, or a copyright, legal or incident hold on the version it ships), took the game down, or did not accept this release. `preview_revoked`: previews of this game stopped while this one was opening, so reload the page.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19535,7 +21693,7 @@
           }
         ],
         "summary": "Declare or change one achievement",
-        "description": "Requires the `deploy` scope for this game. Creates the achievement or replaces its title, description and active flag; an existing one keeps its `created_at`. A game can declare 100; one more is refused as `invalid_request`. A deploy sync sends `operationId`. An older ready deploy is refused as `achievement_deploy_superseded`, so it cannot replace a newer title, description or retired achievement. An explicit edit, such as retiring one, omits `operationId`. `opengame deploy` calls this for each achievement `opengame.json` declares, once the deploy is ready. Unlocks are the game's claim.",
+        "description": "Requires the `deploy` scope for this game, and the `submit` scope as well for anything but a deploy's own save. A deploy's own save is active and names a ready deploy whose `opengame.json` declared exactly this ID, title and description. Retiring one (`active: false`), renaming one, or any edit without `operationId` changes what players of the game see, which a deploy-only token cannot. Creates the achievement or replaces its title, description and active flag; an existing one keeps its `created_at`. A game can declare 100; one more is refused as `invalid_request`. A deploy sync sends `operationId`. An older ready deploy is refused as `achievement_deploy_superseded`, so it cannot replace a newer title, description or retired achievement. An explicit edit, such as retiring one, omits `operationId`; `opengame achievements retire` sends that. `opengame deploy` calls this for each achievement `opengame.json` declares, once the deploy is ready. Unlocks are the game's claim.",
         "parameters": [
           {
             "name": "id",
@@ -19699,7 +21857,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the credential has no `deploy` scope for this game. `forbidden`: a browser change came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the credential has no `deploy` scope for this game, or is retiring one, or saving words its named deploy did not declare, without the `submit` scope. `forbidden`: a browser change came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {

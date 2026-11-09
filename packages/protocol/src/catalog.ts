@@ -143,6 +143,145 @@ export const gameDeploymentsSchema = z.object({
   deployments: z.array(deploymentSchema).max(100),
 });
 
+/** Every release of one game, newest first: what `opengame releases` lists. */
+export function gameReleasesApiPath(gameId: string): string {
+  return `/api/v1/games/${encodeURIComponent(gameId)}/releases`;
+}
+/** Make one release of the game live again: what `opengame rollback` sends. */
+export function gameRollbackApiPath(gameId: string, releaseId: string): string {
+  return `${gameReleasesApiPath(gameId)}/${encodeURIComponent(releaseId)}/rollback`;
+}
+
+/**
+ * One row of `GET /api/v1/games/<id>/releases`: a release as the Releases tab on the game
+ * workspace lists it, from the same read (`readReleases`), named in the one status
+ * vocabulary. `status` is a key of RELEASE_STATUS and `label` its words; the CLI prints the
+ * label, so a status added later still reads. `rollback` is true where the tab offers
+ * "Make live again": the game is live, and this release was live before and still has its
+ * files. It is an offer, not a permission; the rollback itself is checked again.
+ * Additive only, like every platform shape.
+ */
+export const gameReleaseSchema = z.object({
+  id: z.uuid(),
+  /** The first eight characters, the way the website, the strip and the emails print it. */
+  short: z.string().min(1),
+  /** The published version this release made, or null for one that never became a version. */
+  versionId: z.uuid().nullable(),
+  createdAt: z.string(),
+  /** The title its manifest carried, as the release list shows it. */
+  title: z.string(),
+  status: z.string().min(1),
+  label: z.string().min(1),
+  live: z.boolean(),
+  newest: z.boolean(),
+  /** Its files were cleaned up by retention: history only, never playable or live again. */
+  cleaned: z.boolean(),
+  /** Passed every preview check, so it plays on the private page. */
+  ready: z.boolean(),
+  rollback: z.boolean(),
+});
+export type GameRelease = z.infer<typeof gameReleaseSchema>;
+export const gameReleasesSchema = z.object({
+  gameId: z.uuid(),
+  publicId: z.string().min(1),
+  /** Whether the game is live on OpenGame now. Nothing can be rolled back while it is not. */
+  live: z.boolean(),
+  /** Why no release can be made live right now (a publication is on its way), or null. */
+  rollbackBlocked: z.string().nullable(),
+  // A bound on what a client will parse, not the page size, which is the server's to pick.
+  releases: z.array(gameReleaseSchema).max(100),
+});
+
+/** `POST /api/v1/games/<id>/releases/<releaseId>/rollback`: what was made live. */
+export const gameRollbackSchema = z.object({
+  gameId: z.uuid(),
+  publicId: z.string().min(1),
+  releaseId: z.uuid(),
+  versionId: z.uuid(),
+  /** False when that release was already the live one; its address is written again either way. */
+  swapped: z.boolean(),
+  /** The game's public address, which serves this release from players' next load. */
+  url: z.string(),
+});
+
+/** Take a game off the gallery, or put it back: what `opengame unpublish` and `opengame
+ * restore` send. The website's Unpublish and Put it back, through the same functions. */
+export function gameTakeDownApiPath(gameId: string, act: "unpublish" | "restore"): string {
+  return `/api/v1/games/${encodeURIComponent(gameId)}/${act}`;
+}
+/** Delete a game for good: what `opengame delete` sends, with the title typed out. */
+export function gameDeleteApiPath(gameId: string): string {
+  return `/api/v1/games/${encodeURIComponent(gameId)}/delete`;
+}
+export const gameDeleteRequestSchema = z.strictObject({ title: z.string().min(1).max(1024) });
+/** What `POST /api/v1/games/<id>/unpublish`, `.../restore` and `.../delete` answer once the act is done. */
+export const gameTakeDownSchema = z.object({
+  gameId: z.uuid(),
+  publicId: z.string().min(1),
+  /** Where the game now stands on the gallery: `removed` after a delete. */
+  visibility: z.enum(["unpublished", "published", "removed"]),
+  /** A put back that found the game already listed and wrote only its address. */
+  repaired: z.boolean(),
+  /** The game came down, and some of its art may still be public: staff finish it. */
+  artPending: z.boolean(),
+  /** The game's page in the creator's settings. */
+  url: z.string(),
+  /** What happened, in the website's own words for the same press. */
+  message: z.string(),
+});
+
+/** A game's title, tagline and description on the website: what `opengame details` sends.
+ * The Details tab on the game's page, through the same function. */
+export function gameDetailsApiPath(gameId: string): string {
+  return `/api/v1/games/${encodeURIComponent(gameId)}/details`;
+}
+/** The body of `PATCH /api/v1/games/<id>/details`: any of the three, and the rest stay as
+ * they are. The server holds each to the website's own limits. */
+export const gameDetailsRequestSchema = z.strictObject({
+  title: z.string().max(4096).optional(),
+  tagline: z.string().max(4096).optional(),
+  description: z.string().max(65536).optional(),
+}).refine(body => body.title !== undefined || body.tagline !== undefined || body.description !== undefined, "Send a title, a tagline or a description.");
+/** What the website now shows for the game, once saved. */
+export const gameDetailsSchema = z.object({
+  gameId: z.uuid(),
+  publicId: z.string().min(1),
+  /** The game is published, so the change is public now (and recorded with both sides). */
+  live: z.boolean(),
+  /** The metadata revision the save moved to, which the next deploy from an older folder reads. */
+  revision: z.number().int().nullable(),
+  title: z.string(),
+  tagline: z.string().nullable(),
+  description: z.string(),
+  url: z.string(),
+});
+
+/** Rename the account's handle: what `opengame handle <name>` sends. */
+export const ACCOUNT_HANDLE_API_PATH = "/api/v1/account/handle";
+export const accountHandleRequestSchema = z.strictObject({ handle: z.string().max(256) });
+export const accountHandleSchema = z.object({
+  handle: z.string().min(1),
+  /** The handle it replaced, which keeps pointing at this account and is never reissued. */
+  previous: z.string().nullable(),
+  url: z.string(),
+});
+
+/** Withdraw a game's jam entry, or put a withdrawn one back: what `opengame jam withdraw`
+ * and `opengame jam reenter` send. /jam/entries' own Withdraw and Re-enter. */
+export function gameJamEntryApiPath(gameId: string, act: "withdraw" | "reenter"): string {
+  return `/api/v1/games/${encodeURIComponent(gameId)}/jam-entry/${act}`;
+}
+export const gameJamEntrySchema = z.object({
+  gameId: z.uuid(),
+  publicId: z.string().min(1),
+  /** The entry that moved: the one standing in the jam, or the newest withdrawn one. */
+  entryId: z.string().min(1),
+  /** Whether it is in the jam now. */
+  entered: z.boolean(),
+  url: z.string(),
+  message: z.string(),
+});
+
 
 export const gameMetadataSnapshotSchema = z.object({
   gameId: z.uuid(), revision: z.number().int().positive(),

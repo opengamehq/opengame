@@ -173,7 +173,7 @@ function deploymentLines(row: Deployment): string {
 }
 
 
-async function linkedGameId(api: Api, token: string, root: string): Promise<string | undefined> {
+export async function linkedGameId(api: Api, token: string, root: string): Promise<string | undefined> {
   const state = await readProject(root, api.origin);
   if (!state.gameId && state.deploy) {
     const op = await readSavedOperation(api, token, root, state);

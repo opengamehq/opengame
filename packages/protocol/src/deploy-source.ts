@@ -6,10 +6,12 @@ import { z } from "./zod";
  * /deploy page's GitHub tab.
  *
  * It is a claim the creator makes, kept with the operation so the deploy page can offer
- * Redeploy from the same repository, branch and folder. The server checks one thing about
- * it before anything is stored: that opengame.json at that commit names the deploying
- * account as its owner (lib/platform/github/ownership.ts). The bytes themselves go through
- * the same checks a Drop's do, whatever the claim says.
+ * Redeploy from the same repository, branch and folder. Before anything is stored the server
+ * checks that the commit is the named branch's or release's own in that repository, and that
+ * an opengame.json at that commit, if it names an owner, names the deploying account
+ * (lib/platform/github/ownership.ts). Since 10 Nov 2026 a repository needs no opengame.json,
+ * so the claim does not prove the repository is the creator's. The bytes go through the same
+ * checks a Drop's do, whatever the claim says.
  */
 export const deploySourceSchema = z.strictObject({
   kind: z.literal("github"),

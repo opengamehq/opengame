@@ -1096,6 +1096,10 @@
       "min": 1,
       "max": 1000
     },
+    "jamWaitlistEmail": {
+      "min": 3,
+      "max": 320
+    },
     "gameTitle": {
       "min": 1,
       "productMin": 3,

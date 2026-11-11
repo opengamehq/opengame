@@ -83,7 +83,7 @@ OpenCode, so a coding agent can do all of the above for you.
 <!-- generated:commands -->
 | Command | What it does |
 | --- | --- |
-| `opengame init [dir] [options]` | Create opengame.json for an existing game. |
+| `opengame init [dir] [options]` | Create opengame.json for an existing game. When one is already there, fill in the fields it leaves blank and keep the rest. |
 | `opengame check [dir] [options]` | Find local build and asset problems before uploading. |
 | `opengame dev [dir] [options]` | Serve a local export with game-runtime headers. Under a contract that adds the SDK, pages also get the host runtime and SDK, as they do when hosted. If the contract supports opting out, sdk.inject: false leaves out the SDK. |
 | `opengame login [options]` | Sign in through your browser. |

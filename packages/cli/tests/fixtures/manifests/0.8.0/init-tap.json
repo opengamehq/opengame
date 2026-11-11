@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opengame.io/schema/opengame.json",
+  "title": "Tap counter",
+  "description": "Tap the screen as many times as you can before the counter runs out.",
+  "genre": "puzzle-casual",
+  "kind": "game",
+  "controls": [
+    "mouse"
+  ]
+}

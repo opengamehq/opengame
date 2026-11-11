@@ -5963,6 +5963,12 @@
       "TakeDownResult": {
         "type": "object",
         "properties": {
+          "apiVersion": {
+            "type": "string",
+            "examples": [
+              "1"
+            ]
+          },
           "gameId": {
             "type": "string",
             "format": "uuid",
@@ -5996,6 +6002,7 @@
           }
         },
         "required": [
+          "apiVersion",
           "gameId",
           "publicId",
           "visibility",
@@ -6009,6 +6016,12 @@
       "GameDetails": {
         "type": "object",
         "properties": {
+          "apiVersion": {
+            "type": "string",
+            "examples": [
+              "1"
+            ]
+          },
           "gameId": {
             "type": "string",
             "format": "uuid",
@@ -6054,6 +6067,7 @@
           }
         },
         "required": [
+          "apiVersion",
           "gameId",
           "publicId",
           "live",
@@ -6068,6 +6082,12 @@
       "AccountHandle": {
         "type": "object",
         "properties": {
+          "apiVersion": {
+            "type": "string",
+            "examples": [
+              "1"
+            ]
+          },
           "handle": {
             "type": "string",
             "minLength": 1
@@ -6087,6 +6107,7 @@
           }
         },
         "required": [
+          "apiVersion",
           "handle",
           "previous",
           "url"
@@ -6096,6 +6117,12 @@
       "JamEntryResult": {
         "type": "object",
         "properties": {
+          "apiVersion": {
+            "type": "string",
+            "examples": [
+              "1"
+            ]
+          },
           "gameId": {
             "type": "string",
             "format": "uuid",
@@ -6122,6 +6149,7 @@
           }
         },
         "required": [
+          "apiVersion",
           "gameId",
           "publicId",
           "entryId",
@@ -12876,7 +12904,7 @@
             }
           },
           "409": {
-            "description": "`idempotency_conflict`: this key was already used for a different request, so send a new one. `game_removed`: the game was removed and takes no new releases. `kind_not_in_jam`: the manifest makes a game entered in the jam a decomp or a mod, so withdraw the entry first. `handle_required`: claim a handle at `url`, then send it again. `owner_mismatch`: opengame.json's `owner` names a different account, so change it to your own `@handle` or deploy from your own copy. `github_owner_unproved`: a GitHub deploy's repository has no opengame.json naming this account at that commit, so commit `\"owner\": \"@yourhandle\"` and send it again.",
+            "description": "`idempotency_conflict`: this key was already used for a different request, so send a new one. `game_removed`: the game was removed and takes no new releases. `kind_not_in_jam`: the manifest makes a game entered in the jam a decomp or a mod, so withdraw the entry first. `handle_required`: claim a handle at `url`, then send it again. `owner_mismatch`: opengame.json's `owner` names a different account, so change it to your own `@handle` or deploy from your own copy. `github_owner_unproved`: a GitHub deploy's branch or release no longer names that commit, or the repository's own opengame.json names a different account as its owner. No opengame.json is needed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12951,7 +12979,7 @@
             }
           },
           "502": {
-            "description": "`github_unreachable`: OpenGame could not read opengame.json from GitHub to check the repository is yours. Send the same request again in a minute.",
+            "description": "`github_unreachable`: OpenGame could not read the repository from GitHub to check it. Send the same request again in a minute.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12959,7 +12987,7 @@
                 },
                 "example": {
                   "error": "github_unreachable",
-                  "message": "OpenGame could not read opengame.json from GitHub to check the repository is yours. Try again in a minute.",
+                  "message": "OpenGame could not read the repository from GitHub to check it. Try again in a minute.",
                   "retry": "later"
                 }
               }
@@ -13155,7 +13183,7 @@
             }
           },
           "409": {
-            "description": "`idempotency_conflict`: the key was used for a different request, or for a ZIP deploy. Use a new key. `game_removed`: the game takes no new releases. `kind_not_in_jam`: the manifest makes a game entered in the jam a decomp or a mod, so withdraw the entry first. `handle_required`: claim a handle at `url`. `upload_attempts_exhausted`, `upload_size_mismatch` or `build_conflict` from the first page: start a new deploy. `owner_mismatch`: opengame.json's `owner` names a different account, so change it to your own `@handle` or deploy from your own copy. `github_owner_unproved`: a GitHub deploy's repository has no opengame.json naming this account at that commit, so commit `\"owner\": \"@yourhandle\"` and send it again.",
+            "description": "`idempotency_conflict`: the key was used for a different request, or for a ZIP deploy. Use a new key. `game_removed`: the game takes no new releases. `kind_not_in_jam`: the manifest makes a game entered in the jam a decomp or a mod, so withdraw the entry first. `handle_required`: claim a handle at `url`. `upload_attempts_exhausted`, `upload_size_mismatch` or `build_conflict` from the first page: start a new deploy. `owner_mismatch`: opengame.json's `owner` names a different account, so change it to your own `@handle` or deploy from your own copy. `github_owner_unproved`: a GitHub deploy's branch or release no longer names that commit, or the repository's own opengame.json names a different account as its owner. No opengame.json is needed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13229,7 +13257,7 @@
             }
           },
           "502": {
-            "description": "`github_unreachable`: OpenGame could not read opengame.json from GitHub to check the repository is yours. Send the same request again in a minute.",
+            "description": "`github_unreachable`: OpenGame could not read the repository from GitHub to check it. Send the same request again in a minute.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13237,7 +13265,7 @@
                 },
                 "example": {
                   "error": "github_unreachable",
-                  "message": "OpenGame could not read opengame.json from GitHub to check the repository is yours. Try again in a minute.",
+                  "message": "OpenGame could not read the repository from GitHub to check it. Try again in a minute.",
                   "retry": "later"
                 }
               }
@@ -14202,7 +14230,7 @@
             }
           },
           "409": {
-            "description": "`idempotency_conflict`: use a new key. `game_removed`: the game takes no new releases. `kind_not_in_jam`: the manifest makes a game entered in the jam a decomp or a mod, so withdraw the entry first. `handle_required`: claim a handle at `url`. From the first page, `build_conflict`, `upload_attempts_exhausted` or `upload_size_mismatch`: start a new deploy. `owner_mismatch`: opengame.json's `owner` names a different account, so change it to your own `@handle` or deploy from your own copy. `github_owner_unproved`: a GitHub deploy's repository has no opengame.json naming this account at that commit, so commit `\"owner\": \"@yourhandle\"` and send it again.",
+            "description": "`idempotency_conflict`: use a new key. `game_removed`: the game takes no new releases. `kind_not_in_jam`: the manifest makes a game entered in the jam a decomp or a mod, so withdraw the entry first. `handle_required`: claim a handle at `url`. From the first page, `build_conflict`, `upload_attempts_exhausted` or `upload_size_mismatch`: start a new deploy. `owner_mismatch`: opengame.json's `owner` names a different account, so change it to your own `@handle` or deploy from your own copy. `github_owner_unproved`: a GitHub deploy's branch or release no longer names that commit, or the repository's own opengame.json names a different account as its owner. No opengame.json is needed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14276,7 +14304,7 @@
             }
           },
           "502": {
-            "description": "`github_unreachable`: OpenGame could not read opengame.json from GitHub to check the repository is yours. Send the same request again in a minute.",
+            "description": "`github_unreachable`: OpenGame could not read the repository from GitHub to check it. Send the same request again in a minute.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14284,7 +14312,7 @@
                 },
                 "example": {
                   "error": "github_unreachable",
-                  "message": "OpenGame could not read opengame.json from GitHub to check the repository is yours. Try again in a minute.",
+                  "message": "OpenGame could not read the repository from GitHub to check it. Try again in a minute.",
                   "retry": "later"
                 }
               }
@@ -14522,7 +14550,7 @@
             }
           },
           "409": {
-            "description": "`idempotency_conflict`: use a new key. `game_removed`: the game takes no new releases. `kind_not_in_jam`: the manifest makes a game entered in the jam a decomp or a mod, so withdraw the entry first. `handle_required`: claim a handle at `url`. From the first page, `build_conflict`, `upload_attempts_exhausted` or `upload_size_mismatch`: start a new deploy. `owner_mismatch`: opengame.json's `owner` names a different account, so change it to your own `@handle` or deploy from your own copy. `github_owner_unproved`: a GitHub deploy's repository has no opengame.json naming this account at that commit, so commit `\"owner\": \"@yourhandle\"` and send it again.",
+            "description": "`idempotency_conflict`: use a new key. `game_removed`: the game takes no new releases. `kind_not_in_jam`: the manifest makes a game entered in the jam a decomp or a mod, so withdraw the entry first. `handle_required`: claim a handle at `url`. From the first page, `build_conflict`, `upload_attempts_exhausted` or `upload_size_mismatch`: start a new deploy. `owner_mismatch`: opengame.json's `owner` names a different account, so change it to your own `@handle` or deploy from your own copy. `github_owner_unproved`: a GitHub deploy's branch or release no longer names that commit, or the repository's own opengame.json names a different account as its owner. No opengame.json is needed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14596,7 +14624,7 @@
             }
           },
           "502": {
-            "description": "`github_unreachable`: OpenGame could not read opengame.json from GitHub to check the repository is yours. Send the same request again in a minute.",
+            "description": "`github_unreachable`: OpenGame could not read the repository from GitHub to check it. Send the same request again in a minute.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14604,7 +14632,7 @@
                 },
                 "example": {
                   "error": "github_unreachable",
-                  "message": "OpenGame could not read opengame.json from GitHub to check the repository is yours. Try again in a minute.",
+                  "message": "OpenGame could not read the repository from GitHub to check it. Try again in a minute.",
                   "retry": "later"
                 }
               }
@@ -19740,60 +19768,2365 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/AnalyticsReport"
+                  "type": "object",
+                  "properties": {
+                    "apiVersion": {
+                      "type": "string"
                     },
-                    {
+                    "gameId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "examples": [
+                        "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71"
+                      ]
+                    },
+                    "from": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "examples": [
+                        "2026-10-12"
+                      ]
+                    },
+                    "to": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "examples": [
+                        "2026-10-18"
+                      ]
+                    },
+                    "timezone": {
+                      "type": "string",
+                      "const": "UTC"
+                    },
+                    "minPlayers": {
+                      "type": "number",
+                      "const": 5
+                    },
+                    "filters": {
                       "type": "object",
-                      "required": [
-                        "plays"
-                      ],
+                      "properties": {},
+                      "additionalProperties": false
+                    },
+                    "summary": {
+                      "type": "object",
                       "properties": {
                         "plays": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "players": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "playtimeSeconds": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "averagePlaytimeSeconds": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "returningPlayers": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "likes": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "livePlayers": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "peakPlayers": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "plays",
+                        "players",
+                        "playtimeSeconds",
+                        "averagePlaytimeSeconds",
+                        "returningPlayers",
+                        "likes",
+                        "livePlayers",
+                        "peakPlayers"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "funnel": {
+                      "minItems": 2,
+                      "maxItems": 10,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      }
+                    },
+                    "window": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "week"
+                          ]
+                        },
+                        "period": {
+                          "type": "string",
+                          "examples": [
+                            "2026-W42"
+                          ]
+                        },
+                        "start": {
+                          "type": "string",
+                          "format": "date-time",
+                          "examples": [
+                            "2026-10-12T00:00:00Z"
+                          ]
+                        },
+                        "end": {
+                          "type": "string",
+                          "format": "date-time",
+                          "examples": [
+                            "2026-10-19T00:00:00Z"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "period",
+                        "start",
+                        "end"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "comparison": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "to": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "summary": {
+                          "type": "object",
+                          "properties": {
+                            "plays": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "players": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "playtimeSeconds": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "averagePlaytimeSeconds": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "returningPlayers": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "likes": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "livePlayers": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "peakPlayers": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "plays",
+                            "players",
+                            "playtimeSeconds",
+                            "averagePlaytimeSeconds",
+                            "returningPlayers",
+                            "likes",
+                            "livePlayers",
+                            "peakPlayers"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "eligible": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "summary",
+                        "eligible"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "daily": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "plays": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "players": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "playtimeSeconds": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "partial": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "day",
+                          "plays",
+                          "players",
+                          "playtimeSeconds",
+                          "partial"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "breakdowns": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
                           "type": "array",
-                          "description": "The reportable `daily` rows. `returning1d` and `returning7d` are always null.",
                           "items": {
                             "type": "object",
                             "properties": {
-                              "day": {
-                                "type": "string",
-                                "format": "date",
-                                "examples": [
-                                  "2026-10-17"
-                                ]
+                              "value": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
                               },
                               "plays": {
-                                "type": [
-                                  "integer",
-                                  "null"
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
                                 ]
                               },
                               "players": {
-                                "type": "null",
-                                "description": "Always null. A day's players are not released; the week's are in `summary`."
-                              },
-                              "playtimeSeconds": {
-                                "type": [
-                                  "integer",
-                                  "null"
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
                                 ]
                               },
-                              "partial": {
+                              "playtimeSeconds": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "withheld": {
                                 "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "label",
+                              "plays",
+                              "players",
+                              "playtimeSeconds",
+                              "withheld"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "surface": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string"
                               },
-                              "returning1d": {
-                                "type": "null"
+                              "label": {
+                                "type": "string"
                               },
-                              "returning7d": {
+                              "plays": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "players": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "playtimeSeconds": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "withheld": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "label",
+                              "plays",
+                              "players",
+                              "playtimeSeconds",
+                              "withheld"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "country": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "plays": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "players": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "playtimeSeconds": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "withheld": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "label",
+                              "plays",
+                              "players",
+                              "playtimeSeconds",
+                              "withheld"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "device": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "plays": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "players": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "playtimeSeconds": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "withheld": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "label",
+                              "plays",
+                              "players",
+                              "playtimeSeconds",
+                              "withheld"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "build": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "plays": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "players": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "playtimeSeconds": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "withheld": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "label",
+                              "plays",
+                              "players",
+                              "playtimeSeconds",
+                              "withheld"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "surface",
+                        "country",
+                        "device",
+                        "build"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "events": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
                                 "type": "null"
                               }
+                            ]
+                          },
+                          "players": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "shareOfPlayers": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "source": {
+                            "type": "string",
+                            "const": "game_reported"
+                          },
+                          "properties": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "type": "string"
+                                },
+                                "events": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "players": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "value",
+                                "events",
+                                "players"
+                              ],
+                              "additionalProperties": false
                             }
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "events",
+                          "players",
+                          "shareOfPlayers",
+                          "source"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "retention": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "players": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "day1": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "day",
+                          "players",
+                          "day1"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "survival": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "seconds": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "players": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "share": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "seconds",
+                          "players",
+                          "share"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "performance": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "buildId": {
+                            "type": "string"
+                          },
+                          "plays": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "readyP50Ms": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "readyP90Ms": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "errorsPer100Plays": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fpsP50": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "buildId",
+                          "plays",
+                          "readyP50Ms",
+                          "readyP90Ms",
+                          "errorsPer100Plays",
+                          "fpsP50"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "signals": {
+                      "type": "object",
+                      "properties": {
+                        "heapMb": {
+                          "type": "object",
+                          "properties": {
+                            "p50": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "p90": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "statistic": {
+                              "type": "string",
+                              "const": "per_player_mean"
+                            },
+                            "coverage": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "observed",
+                                    "partial",
+                                    "unavailable",
+                                    "withheld"
+                                  ]
+                                },
+                                "eligiblePlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "measuredPlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "provenance": {
+                                  "type": "string",
+                                  "enum": [
+                                    "sdk",
+                                    "host",
+                                    "game_reported"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "eligiblePlayers",
+                                "measuredPlayers",
+                                "reason",
+                                "provenance"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "p50",
+                            "p90",
+                            "statistic",
+                            "coverage"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "firstInput": {
+                          "type": "object",
+                          "properties": {
+                            "players": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "events": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "share": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "coverage": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "observed",
+                                    "partial",
+                                    "unavailable",
+                                    "withheld"
+                                  ]
+                                },
+                                "eligiblePlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "measuredPlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "provenance": {
+                                  "type": "string",
+                                  "enum": [
+                                    "sdk",
+                                    "host",
+                                    "game_reported"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "eligiblePlayers",
+                                "measuredPlayers",
+                                "reason",
+                                "provenance"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "players",
+                            "events",
+                            "share",
+                            "coverage"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "idle": {
+                          "type": "object",
+                          "properties": {
+                            "players": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "events": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "share": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "coverage": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "observed",
+                                    "partial",
+                                    "unavailable",
+                                    "withheld"
+                                  ]
+                                },
+                                "eligiblePlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "measuredPlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "provenance": {
+                                  "type": "string",
+                                  "enum": [
+                                    "sdk",
+                                    "host",
+                                    "game_reported"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "eligiblePlayers",
+                                "measuredPlayers",
+                                "reason",
+                                "provenance"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "players",
+                            "events",
+                            "share",
+                            "coverage"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "pause": {
+                          "type": "object",
+                          "properties": {
+                            "players": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "events": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "share": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "coverage": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "observed",
+                                    "partial",
+                                    "unavailable",
+                                    "withheld"
+                                  ]
+                                },
+                                "eligiblePlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "measuredPlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "provenance": {
+                                  "type": "string",
+                                  "enum": [
+                                    "sdk",
+                                    "host",
+                                    "game_reported"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "eligiblePlayers",
+                                "measuredPlayers",
+                                "reason",
+                                "provenance"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "players",
+                            "events",
+                            "share",
+                            "coverage"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "mute": {
+                          "type": "object",
+                          "properties": {
+                            "players": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "events": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "share": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "coverage": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "observed",
+                                    "partial",
+                                    "unavailable",
+                                    "withheld"
+                                  ]
+                                },
+                                "eligiblePlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "measuredPlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "provenance": {
+                                  "type": "string",
+                                  "enum": [
+                                    "sdk",
+                                    "host",
+                                    "game_reported"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "eligiblePlayers",
+                                "measuredPlayers",
+                                "reason",
+                                "provenance"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "players",
+                            "events",
+                            "share",
+                            "coverage"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "fullscreen": {
+                          "type": "object",
+                          "properties": {
+                            "players": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "events": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "share": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "coverage": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "observed",
+                                    "partial",
+                                    "unavailable",
+                                    "withheld"
+                                  ]
+                                },
+                                "eligiblePlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "measuredPlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "provenance": {
+                                  "type": "string",
+                                  "enum": [
+                                    "sdk",
+                                    "host",
+                                    "game_reported"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "eligiblePlayers",
+                                "measuredPlayers",
+                                "reason",
+                                "provenance"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "players",
+                            "events",
+                            "share",
+                            "coverage"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "leaderboard": {
+                          "type": "object",
+                          "properties": {
+                            "players": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "events": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "share": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "coverage": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "observed",
+                                    "partial",
+                                    "unavailable",
+                                    "withheld"
+                                  ]
+                                },
+                                "eligiblePlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "measuredPlayers": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "provenance": {
+                                  "type": "string",
+                                  "enum": [
+                                    "sdk",
+                                    "host",
+                                    "game_reported"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "eligiblePlayers",
+                                "measuredPlayers",
+                                "reason",
+                                "provenance"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "players",
+                            "events",
+                            "share",
+                            "coverage"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "heapMb",
+                        "firstInput",
+                        "idle",
+                        "pause",
+                        "mute",
+                        "fullscreen",
+                        "leaderboard"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "insights": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "to": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "timezone": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "examples": [
+                            "2026-10-21T14:35:41Z"
+                          ]
+                        },
+                        "minPlayers": {
+                          "type": "number",
+                          "const": 5
+                        },
+                        "discovery": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "surface": {
+                                "type": "string"
+                              },
+                              "impressions": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "pageViews": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "plays": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "clickThrough": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "playThrough": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "surface",
+                              "impressions",
+                              "pageViews",
+                              "plays",
+                              "clickThrough",
+                              "playThrough"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "sources": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "source": {
+                                "type": "string"
+                              },
+                              "players": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "averagePlaytimeSeconds": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "source",
+                              "players",
+                              "averagePlaytimeSeconds"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "benchmarks": {
+                          "type": "object",
+                          "properties": {
+                            "own": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available",
+                                    "insufficient",
+                                    "unavailable"
+                                  ]
+                                },
+                                "games": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "medianSeconds": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "lowerSeconds": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "upperSeconds": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "games",
+                                "medianSeconds",
+                                "lowerSeconds",
+                                "upperSeconds"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "peers": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available",
+                                    "insufficient",
+                                    "unavailable"
+                                  ]
+                                },
+                                "games": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "medianSeconds": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "lowerSeconds": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "upperSeconds": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "games",
+                                "medianSeconds",
+                                "lowerSeconds",
+                                "upperSeconds"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "own",
+                            "peers"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "drilldown": {
+                          "type": "object",
+                          "properties": {
+                            "builds": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "players": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "plays": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "averagePlaytimeSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "label",
+                                  "players",
+                                  "plays",
+                                  "averagePlaytimeSeconds"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "sessions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "players": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "sessions": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "label",
+                                  "players",
+                                  "sessions"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "errors": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "category": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string"
+                                  },
+                                  "players": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "errors": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "category",
+                                  "kind",
+                                  "players",
+                                  "errors"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "selectedBuild": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "selectedSession": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "builds",
+                            "sessions",
+                            "errors",
+                            "selectedBuild",
+                            "selectedSession"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "unavailable": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "timezone",
+                        "updatedAt",
+                        "minPlayers",
+                        "discovery",
+                        "sources",
+                        "benchmarks",
+                        "drilldown",
+                        "unavailable"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "preview": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "eventId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "examples": [
+                              "2026-10-21T14:32:08Z"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "play",
+                              "session_start",
+                              "session_checkpoint",
+                              "session_end",
+                              "heartbeat",
+                              "impression",
+                              "page_view",
+                              "custom",
+                              "ready",
+                              "error",
+                              "performance",
+                              "attention",
+                              "score",
+                              "achievement",
+                              "share",
+                              "remix"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "props": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "eventId",
+                          "occurredAt",
+                          "kind",
+                          "name",
+                          "props"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "funnels": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "steps": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "players": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "conversion": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "players",
+                                "conversion"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "steps"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "freshness": {
+                      "type": "object",
+                      "properties": {
+                        "receiptWatermark": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "examples": [
+                                "2026-10-21T14:32:08Z"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "dataSince": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "examples": [
+                                "2026-10-20T09:12:30Z"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "examples": [
+                                "2026-10-21T14:35:41Z"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "completeThrough": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "examples": [
+                                "2026-10-21T14:35:41Z"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "partial": {
+                          "type": "boolean"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "clickhouse",
+                            "postgres"
+                          ]
+                        },
+                        "quality": {
+                          "type": "string",
+                          "enum": [
+                            "exact",
+                            "estimated",
+                            "legacy"
+                          ]
+                        },
+                        "unavailable": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "dataSince",
+                        "updatedAt",
+                        "completeThrough",
+                        "partial",
+                        "source",
+                        "quality",
+                        "unavailable"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "plays": {
+                      "type": "array",
+                      "description": "The reportable `daily` rows. `returning1d` and `returning7d` are always null.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "format": "date",
+                            "examples": [
+                              "2026-10-17"
+                            ]
+                          },
+                          "plays": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "players": {
+                            "type": "null",
+                            "description": "Always null. A day's players are not released; the week's are in `summary`."
+                          },
+                          "playtimeSeconds": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "partial": {
+                            "type": "boolean"
+                          },
+                          "returning1d": {
+                            "type": "null"
+                          },
+                          "returning7d": {
+                            "type": "null"
                           }
                         }
                       }
                     }
-                  ]
+                  },
+                  "required": [
+                    "apiVersion",
+                    "gameId",
+                    "from",
+                    "to",
+                    "timezone",
+                    "minPlayers",
+                    "filters",
+                    "summary",
+                    "window",
+                    "comparison",
+                    "daily",
+                    "breakdowns",
+                    "events",
+                    "retention",
+                    "survival",
+                    "performance",
+                    "freshness",
+                    "plays"
+                  ],
+                  "additionalProperties": false
                 },
                 "example": {
                   "apiVersion": "1",
@@ -23433,7 +25766,7 @@
             }
           },
           "409": {
-            "description": "`release_unavailable`: the source's manifest does not pass today's checks, or its archive is missing from storage. `idempotency_conflict`: this key was used for a different source or title. Or a refusal from the deploy the remix starts, such as `game_removed`, `kind_not_in_jam` or `upload_missing` when the copied archive did not arrive. `owner_mismatch`: opengame.json's `owner` names a different account, so change it to your own `@handle` or deploy from your own copy. `github_owner_unproved`: a GitHub deploy's repository has no opengame.json naming this account at that commit, so commit `\"owner\": \"@yourhandle\"` and send it again.",
+            "description": "`release_unavailable`: the source's manifest does not pass today's checks, or its archive is missing from storage. `idempotency_conflict`: this key was used for a different source or title. Or a refusal from the deploy the remix starts, such as `game_removed`, `kind_not_in_jam` or `upload_missing` when the copied archive did not arrive. `owner_mismatch`: opengame.json's `owner` names a different account, so change it to your own `@handle` or deploy from your own copy. `github_owner_unproved`: a GitHub deploy's branch or release no longer names that commit, or the repository's own opengame.json names a different account as its owner. No opengame.json is needed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -23507,7 +25840,7 @@
             }
           },
           "502": {
-            "description": "`github_unreachable`: OpenGame could not read opengame.json from GitHub to check the repository is yours. Send the same request again in a minute.",
+            "description": "`github_unreachable`: OpenGame could not read the repository from GitHub to check it. Send the same request again in a minute.",
             "content": {
               "application/json": {
                 "schema": {
@@ -23515,7 +25848,7 @@
                 },
                 "example": {
                   "error": "github_unreachable",
-                  "message": "OpenGame could not read opengame.json from GitHub to check the repository is yours. Try again in a minute.",
+                  "message": "OpenGame could not read the repository from GitHub to check it. Try again in a minute.",
                   "retry": "later"
                 }
               }

@@ -20,7 +20,7 @@ import { jamEntryCommand } from "./jam-entry";
 import { achievementsCommand } from "./achievements";
 import { AGENT_MARKERS, Output, CliError, agentMode, hang, preferHuman } from "./output";
 import { applyNetworkDefaults } from "./network";
-import { initProject, ensureDeployManifest } from "./init";
+import { initProject, ensureDeployManifest, FALLBACK_GENRE } from "./init";
 import { inspectArchive } from "./archive";
 import { folderArgument, loadManifest, outputFolder, projectFor } from "./files";
 import { CLI_VERSION } from "./version";
@@ -56,11 +56,11 @@ const basedOnFlag = (when: string): Flag => ({ name: "based-on", type: "string",
 /** One table drives parsing, `help` and `help --json`, so the schema an agent
  * reads is the parser it is talking to. */
 const commands: Record<string, { args?: string; description: string; flags: Flag[]; examples?: string[] }> = {
-  init: { args: "[dir]", description: "Create opengame.json for an existing game.", flags: [
-    { name: "title", type: "string", description: "Game title. Without it, read from index.html's title, then package.json, then the folder name." }, { name: "description", type: "string", description: "One or two sentences about the game." },
+  init: { args: "[dir]", description: "Create opengame.json for an existing game. When one is already there, fill in the fields it leaves blank and keep the rest.", flags: [
+    { name: "title", type: "string", description: "Game title. Without it, read from index.html's title, then package.json, then the folder name." }, { name: "description", type: "string", description: `One or two sentences about the game, ${LIMITS.text.gameDescription.productMin} to ${LIMITS.text.gameDescription.max} characters.` },
     { name: "output", type: "string", description: "Static build folder. Required when several outputs contain index.html." },
     { name: "engine", type: "string", values: [...ENGINE_IDS], description: "Engine export recipe. Otherwise detect source markers and built-export signatures; unknown projects use custom." },
-    { name: "genre", type: "string", description: "A genre slug. Without it, guessed from the title and description; a wrong one lists the slugs." },
+    { name: "genre", type: "string", description: `A genre slug. Without it, guessed from the title, the description and package.json's keywords. When they name none, init asks a person in a terminal and sets ${FALLBACK_GENRE} for everyone else, and says so. A wrong one lists the slugs.` },
     kindFlag("What you are making. Without it, init asks a person in a terminal, with game selected, and makes a game for everyone else."), basedOnFlag(""), json],
     examples: ['opengame init . --title "My game"', 'opengame init . --kind mod --based-on "Doom"'] },
   dev: { args: "[dir]", description: "Serve a local export with game-runtime headers. Under a contract that adds the SDK, pages also get the host runtime and SDK, as they do when hosted. If the contract supports opting out, sdk.inject: false leaves out the SDK.", flags: [

@@ -7,14 +7,16 @@ import { lock } from "proper-lockfile";
 import { LIMITS } from "@opengame/shared";
 import { LARGE_ASSET_DELIVERIES, LARGE_ASSET_DELIVERY, largeAssetInputText, largeAssetLimits, validateLargeAssetFiles } from "@opengame/shared/large-assets";
 import type { UnityAssetsState } from "./unity-assets";
-import { manifestSchema, type GameManifest } from "@opengame/protocol";
+import { deployProvisionalSchema, manifestSchema, type DeployProvisional, type GameManifest } from "@opengame/protocol";
 import { CliError } from "./output";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const validKey = (key: string) => key.length <= LIMITS.platform.operations.idempotencyKeyCharsMax && /^[A-Za-z0-9._:-]+$/.test(key);
 export type DeployRequest = { gameId?: string; byteSize: number; fileCount: number; sha256: string; manifest: GameManifest; metadataRevision: number | null; metadata: "preserve" | "local";
   /** Sent only to a server that advertises archive parts; part of the request, so a resumed deploy keeps its transport. */
-  multipart?: true };
+  multipart?: true;
+  /** The manifest fields init chose without being told (`provisionalFields` in init.ts), which review and the details form treat as placeholders. */
+  provisional?: DeployProvisional[] };
 export type SubmitRequest = { releaseId: string; jam: { slug: string; track: string; models: string[]; sponsors: string[]; evidence: Record<string, string> } | null; destination?: "qa" };
 export type Project = { version: 1; origin: string; gameId?: string; metadataRevision?: number; deploy?: { key: string; transport?: "files" | string; unityAssets?: UnityAssetsState; request: DeployRequest; operationId?: string; terminal?: boolean; uploaded?: boolean };
   /** The last submit's retry key, saved before the request leaves, so a lost answer is recovered rather than repeated. */
@@ -57,6 +59,7 @@ function parse(value: unknown, origin: string): Project {
       typeof request.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(request.sha256) ||
       (request.gameId !== undefined && !uuid.test(request.gameId)) ||
       (request.metadata !== "preserve" && request.metadata !== "local") || (request.multipart !== undefined && request.multipart !== true) ||
+      (request.provisional !== undefined && !deployProvisionalSchema.safeParse(request.provisional).success) ||
       (request.metadataRevision !== null && (!Number.isSafeInteger(request.metadataRevision) || request.metadataRevision < 1)) ||
       !manifestSchema.safeParse(request.manifest).success) throw invalid();
     if (transport !== undefined && transport !== "files") {

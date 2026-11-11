@@ -151,9 +151,12 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   entries_closed: say({ exit: 3, retry: "never" }, ENTRIES_CLOSED_MESSAGE, 403),
   /* opengame.json's `owner` names a different account than the one deploying. */
   owner_mismatch: say(game, "This project’s opengame.json names a different OpenGame account as its owner. Change owner to your own @handle, or deploy from your own copy.", 409),
-  /* The GitHub tab's proof: opengame.json at the commit must name this account. */
-  github_owner_unproved: say(game, "To deploy from GitHub, commit an opengame.json at the top of the repository with \"owner\": \"@yourhandle\", then try again. It is how OpenGame knows the repository is yours.", 409),
-  github_unreachable: say(ours, "OpenGame could not read opengame.json from GitHub to check the repository is yours. Try again in a minute.", 502),
+  /* A GitHub deploy's check (lib/platform/github/ownership.ts): the commit is the named
+     branch's or release's own, and an opengame.json at the top, when there is one naming an
+     owner, names this account. A repository without one deploys; since 10 Nov 2026 nothing
+     requires the file. */
+  github_owner_unproved: say(game, "This repository could not be deployed as yours: its opengame.json names a different OpenGame account as its owner, or the branch or release has moved. Read the repository again, and if it is yours, change owner to your own @handle.", 409),
+  github_unreachable: say(ours, "OpenGame could not read the repository from GitHub to check it. Try again in a minute.", 502),
   idempotency_conflict: say(input, "This retry key was already used for a different request. Use a new --idempotency-key, or run the command without one.", 409),
   /* A later ready deploy owns the achievement definitions. Retrying the older one
      would put its titles back and turn a retired achievement on again. */

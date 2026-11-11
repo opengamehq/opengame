@@ -201,12 +201,11 @@ const boardSchema = z.strictObject({
 
 export const manifestSchema = z.strictObject({
   $schema: z.literal("https://opengame.io/schema/opengame.json").optional(),
-  /* The OpenGame account this project deploys as, written `@handle`. A deploy from the
-     /deploy page's GitHub tab needs it, read at the exact commit by our server, because a
-     line only somebody with write access could have committed is what proves the repository
-     is theirs (the server's ownership proof). On any other path it is
-     optional, and when it is present and names somebody else the deploy is refused, so a
-     project copied from another creator says so before it uploads. */
+  /* The OpenGame account this project deploys as, written `@handle`. Optional on every path,
+     the GitHub tab's included since 10 Nov 2026 (it was required there, as the proof the
+     repository was the creator's). When it is present and names somebody else the deploy is
+     refused, and for a GitHub deploy our server reads it at the exact commit, so a project
+     copied from another creator says so before it uploads. */
   owner: z.string().regex(new RegExp(`^@${LIMITS.handle.pattern.slice(1)}`), "Write your OpenGame handle with its @, like @yourname.").optional(),
   title: text(LIMITS.text.gameTitle.productMin, LIMITS.text.gameTitle.max),
   description: text(LIMITS.text.gameDescription.productMin, LIMITS.text.gameDescription.max),

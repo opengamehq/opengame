@@ -9,7 +9,8 @@
 - `opengame init` in a folder whose opengame.json leaves title, description, genre or
   controls blank fills those in and keeps everything the file sets. It used to stop because
   the file existed. A file with nothing blank is still refused, and a flag for a field the
-  file already sets is named as unused.
+  file already sets is named as unused. If the file is saved while init is asking a
+  question, init keeps that edit and writes nothing.
 - `opengame init` sets controls from the keyboard, mouse, touch and gamepad listeners in
   your game's own source. Touch counts as mouse, so a game that only listens for taps or
   clicks gets `mouse`. It used to write keyboard and mouse whatever the game used, and

@@ -116,6 +116,25 @@ test("a --genre given for a blank genre is the one written", async () => fixture
   assert.doesNotMatch(result.message, /could not tell the genre/);
 }));
 
+/* Greptile on opengamehq/opengame#6: the fill is written from the file as init read it, so an
+   edit saved while a person sat at the genre question was overwritten without a word. */
+test("an edit saved to opengame.json while init asks a question is kept, and nothing is written", async () => fixture(async root => {
+  const path = join(root, "opengame.json");
+  await writeFile(path, JSON.stringify({ title: "Night shift", description: DESCRIPTION, genre: "", controls: ["keyboard"] }));
+  const edited = JSON.stringify({ title: "Night shift", description: DESCRIPTION, genre: "", controls: ["gamepad"] });
+  const prompts = {
+    ask: async () => "",
+    choose: async () => { await writeFile(path, edited); return "rpg"; },
+  } as never;
+  await assert.rejects(initProject(root, {}, { interactive: true, prompts }), (error: { code: string; message: string }) =>
+    error.code === "manifest_changed" && /kept your edits and wrote nothing/.test(error.message));
+  assert.equal(await readFile(path, "utf8"), edited, "init wrote over an edit saved during its prompt");
+  // With nothing changing underneath, the same answers are written.
+  const result = await initProject(root, {}, { interactive: true, prompts: { ask: async () => "", choose: async () => "rpg" } as never });
+  assert.equal(result.manifest.genre, "rpg");
+  assert.deepEqual((await written(root)).controls, ["gamepad"]);
+}));
+
 test("an opengame.json init cannot read is still refused, not rewritten", async () => fixture(async root => {
   await writeFile(join(root, "opengame.json"), "{ not json");
   await assert.rejects(initProject(root, { genre: "rpg" }), { code: "manifest_exists" });

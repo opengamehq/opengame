@@ -252,7 +252,7 @@ export async function initProject(root: string, flags: Record<string, string | b
   if (genre && !GENRE_SLUGS.includes(genre as typeof GENRE_SLUGS[number])) throw new CliError("genre_invalid", `Choose --genre from ${GENRE_SLUGS.join(", ")}.`);
   // Read before anything is asked, so a person with a finished opengame.json is asked nothing.
   const existing = await existingManifest(root);
-  if (existing) return fillManifest(root, existing, { title, description, genre, flags, html, pkg, interactive: options.interactive, prompts });
+  if (existing) return fillManifest(root, existing.manifest, existing.text, { title, description, genre, flags, html, pkg, interactive: options.interactive, prompts });
   let guessedGenre = false;
   if (options.interactive) {
     kind ??= await askKind(prompts);
@@ -409,25 +409,32 @@ async function manifestExists(root: string) {
     : "opengame.json already exists, so init left it alone. Edit it to change the game's details.", undefined, { next: `opengame check ${folderArgument(root)}` });
 }
 
-/** The existing opengame.json as a plain object, or null when there is none. One that is a
- * symlink, too large, not JSON or not an object is not init's to repair: it is refused as
- * existing, as every opengame.json was before init could fill one in. */
-async function existingManifest(root: string): Promise<Record<string, unknown> | null> {
-  const path = join(root, "opengame.json");
-  let stat;
-  try { stat = await lstat(path); }
-  catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
+/** opengame.json's text, read through a handle that cannot follow a link swapped in after
+ * the lstat, or null when it is not a regular file within the manifest's size limit. */
+async function manifestText(path: string): Promise<string | null> {
   let handle;
   try {
-    if (!stat.isFile()) throw new Error();
-    // Read through a handle that cannot follow a link swapped in after the lstat.
+    if (!(await lstat(path)).isFile()) return null;
     handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
     const info = await handle.stat();
-    if (!info.isFile() || info.size > LIMITS.platform.manifest.bytesMax) throw new Error();
-    const value: unknown = JSON.parse(withoutBom(await handle.readFile("utf8")));
-    if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
-  } catch { /* refused below */ }
+    if (!info.isFile() || info.size > LIMITS.platform.manifest.bytesMax) return null;
+    return await handle.readFile("utf8");
+  } catch { return null; }
   finally { await handle?.close(); }
+}
+
+/** The existing opengame.json as a plain object with the text it was read from, or null when
+ * there is none. One that is a symlink, too large, not JSON or not an object is not init's to
+ * repair: it is refused as existing, as every opengame.json was before init could fill one in. */
+async function existingManifest(root: string): Promise<{ manifest: Record<string, unknown>; text: string } | null> {
+  const path = join(root, "opengame.json");
+  try { await lstat(path); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
+  const text = await manifestText(path);
+  try {
+    const value: unknown = text === null ? null : JSON.parse(withoutBom(text));
+    if (value && typeof value === "object" && !Array.isArray(value)) return { manifest: value as Record<string, unknown>, text: text! };
+  } catch { /* refused below */ }
   throw await manifestExists(root);
 }
 
@@ -447,7 +454,7 @@ const blank = (value: unknown) => value === undefined || value === null || (type
  * writing "game" into a world's old manifest would change what it is. A file with nothing to
  * fill is refused as it always was.
  */
-async function fillManifest(root: string, existing: Record<string, unknown>, context: {
+async function fillManifest(root: string, existing: Record<string, unknown>, original: string, context: {
   title: string; description: string; genre: string | null; flags: Record<string, string | boolean>; html: string;
   pkg: { description?: unknown; keywords?: unknown }; interactive?: boolean; prompts: InitPrompts;
 }) {
@@ -494,6 +501,13 @@ async function fillManifest(root: string, existing: Record<string, unknown>, con
   try {
     const handle = await open(temporary, "wx", 0o644);
     try { await handle.writeFile(JSON.stringify(manifest, null, 2) + "\n"); await handle.sync(); } finally { await handle.close(); }
+    /* The fill was worked out from the file as init read it, and a person at the prompts has
+       time to save an edit to it, which the rename would drop without a word (Greptile on
+       opengamehq/opengame#6). So the file must still be those exact bytes, or nothing is
+       written; pull's manifest_changed makes the same check. */
+    if (await manifestText(path) !== original) {
+      throw new CliError("manifest_changed", "opengame.json changed while init was filling it in, so init kept your edits and wrote nothing. Run opengame init again to fill what is still blank.", undefined, { next: `opengame init ${folderArgument(root)}` });
+    }
     await replaceFile(temporary, path);
   } finally { await unlink(temporary).catch(() => {}); }
   await ensureProjectIgnored(root);

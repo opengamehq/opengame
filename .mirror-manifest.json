@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "0f233c72a083f8bcc195de014d30d837eb10c429"
+    "commit": "0ad8d638652258ca937919d061b5c20bc4ee5fe9"
   },
-  "digest": "34c1f2779d27ec518e4dcd0406f881164b18d631e384c0379a93bc07346de895",
+  "digest": "1b4b9dce23655e6e8daabe7e56b6a9d8a8a105f7af0bd6458999e29ed66a679a",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -225,8 +225,8 @@
     },
     {
       "path": "packages/cli/CHANGELOG.md",
-      "bytes": 5066,
-      "sha256": "af279c9babefd231b1fee06e2c5ad3021b9e6d0dfe868e4f0c3343c92fd8c3e7",
+      "bytes": 5163,
+      "sha256": "cce94f51f33c46c4601fc34d893ce6966c79d59b55f50a9b7b5e4292729f2474",
       "executable": false
     },
     {
@@ -405,8 +405,8 @@
     },
     {
       "path": "packages/cli/src/init.ts",
-      "bytes": 35592,
-      "sha256": "47d7561769d6f41ce4a8c4015cc2672714b91f8a51807d176ff004637577aecf",
+      "bytes": 36642,
+      "sha256": "67185b341c53905c1bf19247200611456a3f7a26b17fd63310f2fa7171999551",
       "executable": false
     },
     {
@@ -957,8 +957,8 @@
     },
     {
       "path": "packages/cli/tests/init-guesses.test.ts",
-      "bytes": 13844,
-      "sha256": "f697495387fb74fd8aa566e6e25b6f7843f4429bfbe26b19af27914554e7b637",
+      "bytes": 15240,
+      "sha256": "5043c51db1a65fa2d5126a55770676064ae3ced35f674d4b481a8005e37feaa1",
       "executable": false
     },
     {

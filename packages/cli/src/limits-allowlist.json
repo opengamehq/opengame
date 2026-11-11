@@ -172,6 +172,8 @@
     "text.gameTitle.min",
     "text.gameTitle.productMin",
     "text.jamTrackEvidence.max",
+    "text.jamWaitlistEmail.max",
+    "text.jamWaitlistEmail.min",
     "text.mediaTitle.max",
     "text.mediaTitle.min",
     "text.platformAppeal.max",

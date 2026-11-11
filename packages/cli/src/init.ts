@@ -1,16 +1,18 @@
 import { constants } from "node:fs";
-import { writeFile, readFile, open, lstat, access, realpath } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { writeFile, readFile, open, lstat, access, realpath, readdir, mkdir, unlink } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { sourceGameFor } from "@opengame/shared/source-games";
 import { DEFAULT_GAME_KIND, GAME_KINDS, GAME_KIND_SLUGS, GENRES, GENRE_SLUGS, LIMITS, gameKind, gameKindOrDefault, inferGenre, isGameKind, kindNeedsBasedOn,
   kindPhrase as sharedKindPhrase,
   parseGameKind, slurTextProblem, type GameKind } from "@opengame/shared";
-import { manifestSchema, manifestCredentialIssue } from "@opengame/protocol";
+import { isBundlePath, manifestSchema, manifestCredentialIssue, type DeployProvisional } from "@opengame/protocol";
 import { CliError } from "./output";
 import { detectBuildOutput, readBuildPackage } from "./build-output";
 import { engineSetup, ENGINE_PRESETS, GENERIC_EXPORT, namedEngine, projectText } from "./engines";
 import { ask, choose } from "./prompt";
-import { folderArgument } from "./files";
+import { folderArgument, replaceFile, withoutBom } from "./files";
+import { safeReadFiles } from "./safe-fs";
 
 export async function ensureProjectIgnored(root: string) {
   const path = join(root, ".gitignore");
@@ -137,26 +139,126 @@ function kindFlags(flags: Record<string, string | boolean>): { kind: GameKind | 
   throw new CliError("based_on_invalid", `Use up to ${LIMITS.text.gameBasedOn.max} characters for --based-on.`);
 }
 
+/**
+ * The genre init writes when the game's own words do not point at one and nobody is at a
+ * terminal to ask: an agent, a pipe, or deploy making a missing manifest.
+ *
+ * Until 10 Nov 2026 init wrote `"genre": ""` here, though its help said it guessed, and the
+ * next command, `opengame check`, refused the file. Rerunning init could not help either,
+ * because init never touched an existing opengame.json. A coding agent following the team's
+ * CLI test steps met both, with a tap counter called "CLI test (delete me)". So a project
+ * with no genre in its words gets this one and init says so, by name, with the line to
+ * change. Puzzle & casual, because it is the bucket for arcade, idle and hypercasual games,
+ * which is what a small project with nothing to say about itself most often is. A deploy
+ * names it provisional (`provisionalFields` below), as the Drop and GitHub uploads name
+ * theirs, so the details form after review offers what review detected rather than this.
+ */
+export const FALLBACK_GENRE = "puzzle-casual";
+
+/** What the project already says about itself, for `inferGenre`: the title and description
+ * init is writing, and the description and keywords in package.json and index.html. */
+function genreEvidence(title: string, description: string, pkg: { description?: unknown; keywords?: unknown }, html: string) {
+  const meta = (name: string) => html.match(new RegExp(`<meta[^>]+name=["']${name}["'][^>]*content=["']([^"']*)["']`, "i"))?.[1]
+    ?? html.match(new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*name=["']${name}["']`, "i"))?.[1] ?? "";
+  const keywords = Array.isArray(pkg.keywords) ? pkg.keywords.filter((word): word is string => typeof word === "string") : [];
+  return [title, description, typeof pkg.description === "string" ? pkg.description : "", ...keywords, meta("description"), meta("keywords")].join(" ");
+}
+
+type Control = "keyboard" | "mouse" | "gamepad";
+/* What each control looks like in a web game's own source: DOM listeners, inline handlers,
+   and the input calls of the libraries init recognises (Phaser's input.keyboard and
+   activePointer, Kaplay's onKeyPress and onClick, LittleJS's keyIsDown and mouseIsDown).
+   Taps are "mouse": the manifest's controls are keyboard, mouse and gamepad, and a pointer
+   or touch handler is what a mouse click reaches, so a game that only listens for taps is
+   played with a mouse on a desktop. */
+const CONTROL_PATTERNS: [Control, RegExp][] = [
+  ["keyboard", /["'`]key(?:down|up|press)["'`]|\bonkey(?:down|up|press)\b|KeyboardEvent|\.keyboard\b|createCursorKeys|\b(?:onKey(?:Press|Down|Release)|isKey(?:Down|Pressed|Released)|key(?:IsDown|WasPressed|WasReleased))\s*\(/i],
+  ["mouse", /\b(?:on)?(?:mouse|pointer)(?:down|up|move|enter|leave|over|out)\b|\b(?:on)?touch(?:start|end|move|cancel)\b|["'`](?:click|dblclick|wheel|contextmenu)["'`]|\bonclick\b|\b(?:Pointer|Mouse|Touch)Event\b|activePointer|\b(?:onClick|onMouse\w*|isMouse\w*|mouse(?:IsDown|WasPressed|WasReleased|Pos))\s*\(/i],
+  ["gamepad", /getGamepads|["'`]gamepad(?:dis)?connected["'`]|\.gamepad\b|\bgamepad(?:IsDown|WasPressed|WasReleased|Stick)\s*\(/],
+];
+/** Engines whose source is the JavaScript or TypeScript the game was written in. Anything
+ * else (Unity, Godot, an Emscripten build) ships a runtime that listens for every input
+ * whether the game uses it or not, so its words are not evidence. */
+const WEB_SOURCE_ENGINES = new Set(["custom", "javascript", "typescript", "threejs", "phaser", "pixijs", "babylonjs", "playcanvas", "excalibur", "kaplay", "melonjs", "littlejs", "react"]);
+const SOURCE_FILE = /\.(?:html?|[cm]?[jt]sx?)$/i;
+const SOURCE_DIRS = new Set(["src", "js", "scripts", "game"]);
+/* Somebody else's code inside the project: a minified library or a vendored folder listens
+   for whatever its library supports, and a gamepad shim would put "controller" on a game
+   nobody can play with one. */
+const VENDORED_DIR = /^(?:vendor|vendors|third[_-]?party|libs?|external|deps)$/i;
+const VENDORED_FILE = /[.-]min\.[cm]?js$/i;
+/* An engine's runtime sits beside its .wasm or data pack, and it listens for everything. */
+const ENGINE_ARTIFACT = /\.(?:wasm|pck|data|unityweb)$/i;
+
+/** Up to a few hundred of the project's own source files, read in one helper job: the root,
+ * and src/, js/ and the like below it. Never node_modules, a dot folder, a symlink, or a
+ * folder holding an engine's runtime. Nothing here is required, so any failure reads as
+ * no evidence. */
+async function sourceTexts(root: string, html: string): Promise<string[]> {
+  const files: { path: string; byteSize: number }[] = [];
+  let total = 0;
+  const FILE_MAX = 512 * 1024, TOTAL_MAX = 4 * 1024 * 1024, COUNT_MAX = 300;
+  async function walk(folder: string, depth: number) {
+    let entries;
+    try { entries = await readdir(join(root, folder), { withFileTypes: true }); } catch { return; }
+    if (entries.some(entry => entry.isFile() && ENGINE_ARTIFACT.test(entry.name))) return;
+    for (const entry of entries) {
+      if (files.length >= COUNT_MAX || entry.name.startsWith(".") || entry.name === "node_modules") continue;
+      const path = folder ? `${folder}/${entry.name}` : entry.name;
+      if (entry.isDirectory() && depth < 4 && !VENDORED_DIR.test(entry.name) && (depth > 0 || SOURCE_DIRS.has(entry.name))) await walk(path, depth + 1);
+      // The helper refuses a whole batch for one path it cannot carry, so such a file is left out here.
+      else if (entry.isFile() && SOURCE_FILE.test(entry.name) && !VENDORED_FILE.test(entry.name) && path !== "index.html" && isBundlePath(path)) {
+        const size = (await lstat(join(root, path)).catch(() => null))?.size ?? FILE_MAX + 1;
+        if (size <= FILE_MAX && total + size <= TOTAL_MAX) { files.push({ path, byteSize: size }); total += size; }
+      }
+    }
+  }
+  await walk("", 0);
+  if (!files.length) return [html];
+  try { return [html, ...[...(await safeReadFiles(root, files)).values()].map(bytes => withoutBom(bytes.toString("utf8")))]; }
+  catch { return [html]; }
+}
+
+/**
+ * The controls a web game's source listens for, or null when it shows none, in which case
+ * init writes keyboard and mouse as it always did. Before 10 Nov 2026 init wrote keyboard and
+ * mouse for every game, so a canvas that only counts taps told players it needed a keyboard.
+ */
+export async function detectControls(root: string, html: string, engineId: string): Promise<Control[] | null> {
+  if (!WEB_SOURCE_ENGINES.has(engineId)) return null;
+  const text = (await sourceTexts(root, html)).join("\n");
+  const found = CONTROL_PATTERNS.filter(([, pattern]) => pattern.test(text)).map(([control]) => control);
+  return found.length ? found : null;
+}
+
+const CONTROL_WORDS: Record<Control, string> = { keyboard: "keyboard", mouse: "mouse or touch", gamepad: "controller" };
+function controlsNote(detected: Control[] | null): string {
+  return detected
+    ? `Controls: set to ${detected.join(", ")}, from the ${new Intl.ListFormat("en").format(detected.map(control => CONTROL_WORDS[control]))} input in your source. If the game takes other input, change controls in opengame.json.`
+    : "Controls: set to keyboard, mouse, because init found no input handlers to read. Change controls in opengame.json if the game uses something else.";
+}
+function genreNote(genre: string): string {
+  return `Genre: init could not tell the genre from the title and description, so it set ${genre}. If that is wrong, change genre in opengame.json to one of ${GENRE_SLUGS.join(", ")}.`;
+}
+
 export async function initProject(root: string, flags: Record<string, string | boolean>, options: { interactive?: boolean; prompts?: InitPrompts } = {}) {
   const pkg = await readBuildPackage(root);
   const html = await projectText(await realpath(root), "index.html") ?? "";
   const title = typeof flags.title === "string" ? flags.title : html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() ?? pkg.name ?? basename(root);
   let description = typeof flags.description === "string" ? flags.description : pkg.description ?? "";
-  let genre = typeof flags.genre === "string" ? flags.genre : inferGenre(`${title} ${description}`);
+  let genre = typeof flags.genre === "string" ? flags.genre : inferGenre(genreEvidence(title, description, pkg, html));
   let { kind, basedOn } = kindFlags(flags);
   const prompts = options.prompts ?? TERMINAL;
-  // Asked before anything is written, so an existing opengame.json is refused first.
-  if (options.interactive) {
-    let fresh = true;
-    try { await lstat(join(root, "opengame.json")); fresh = false; }
-    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
-    if (fresh) {
-      kind ??= await askKind(prompts);
-      if (kindNeedsBasedOn(kind) && basedOn === null) basedOn = await askBasedOn(kind, prompts);
-      if (typeof flags.description !== "string" || genre === null) ({ description, genre } = await askMetadata(description, genre, kind, prompts));
-    }
-  }
   if (genre && !GENRE_SLUGS.includes(genre as typeof GENRE_SLUGS[number])) throw new CliError("genre_invalid", `Choose --genre from ${GENRE_SLUGS.join(", ")}.`);
+  // Read before anything is asked, so a person with a finished opengame.json is asked nothing.
+  const existing = await existingManifest(root);
+  if (existing) return fillManifest(root, existing.manifest, existing.text, { title, description, genre, flags, html, pkg, interactive: options.interactive, prompts });
+  let guessedGenre = false;
+  if (options.interactive) {
+    kind ??= await askKind(prompts);
+    if (kindNeedsBasedOn(kind) && basedOn === null) basedOn = await askBasedOn(kind, prompts);
+    if (typeof flags.description !== "string" || genre === null) ({ description, genre } = await askMetadata(description, genre, kind, prompts));
+  } else if (genre === null) { genre = FALLBACK_GENRE; guessedGenre = true; }
   // Absent is a game, and init writes it anyway, so every new opengame.json says what it is.
   kind ??= DEFAULT_GAME_KIND;
   // Nobody here to ask (an agent, a pipe, deploy making a missing manifest): the flag is the only way to say it.
@@ -193,10 +295,11 @@ export async function initProject(root: string, flags: Record<string, string | b
   if (engine.instructions === GENERIC_EXPORT) engine.instructions = command
     ? `init set the build to ${command} and the export folder to ${output}/. If your build writes somewhere else, change build.output in opengame.json.${untested}`
     : `init set the export folder to ${output === "." ? "this folder" : `${output}/`}, which needs index.html at its root. If the export is somewhere else, change build.output in opengame.json.${untested}`;
+  const detected = await detectControls(sourceRoot, html, engine.id);
   const manifest = {
     $schema: "https://opengame.io/schema/opengame.json", title, description, genre: genre ?? "", kind, ...(basedOn ? { basedOn } : {}),
     ...(command || output !== "." || typeof flags.output === "string" ? { build: { ...(command ? { command } : {}), output } } : {}),
-    controls: ["keyboard", "mouse"],
+    controls: detected ?? ["keyboard", "mouse"],
     ...(engine.requires ? { requires: engine.requires } : {}),
   };
   const credentialIssue = manifestCredentialIssue(manifest);
@@ -210,20 +313,14 @@ export async function initProject(root: string, flags: Record<string, string | b
   const rejected = issues.filter(issue => !issue.path.length || typeof flags[String(issue.path[0])] === "string" || ["kind", "basedOn"].includes(String(issue.path[0])));
   if (rejected.length) throw new CliError("manifest_invalid", rejected.map(issue => `${issue.path.join(".") || "opengame.json"}: ${issue.message}`).join("\n"), 2);
   const needs = [...new Set(issues.map(issue => issue.path.join(".")))];
-  const ignorePath = join(root, ".gitignore");
-  try {
-    if ((await lstat(ignorePath)).isSymbolicLink()) throw new CliError("ignore_symlink", ".gitignore is a symlink. Use a regular file before running opengame init.");
-  } catch (error) {
-    if (error instanceof CliError || (error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-  }
+  await refuseIgnoreSymlink(root);
   try { await writeFile(join(root, "opengame.json"), JSON.stringify(manifest, null, 2) + "\n", { flag: "wx" }); }
   catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") throw new CliError("manifest_exists", await linkedGame(root)
-      ? "opengame.json already exists, so init left it alone. Edit it, or run opengame pull to copy the title and details you changed on the website."
-      : "opengame.json already exists, so init left it alone. Edit it to change the game's details.", undefined, { next: `opengame check ${folderArgument(root)}` });
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") throw await manifestExists(root);
     throw error;
   }
   await ensureProjectIgnored(root);
+  await recordGuesses(root, { ...(guessedGenre ? { genre: genre! } : {}), ...(detected ? {} : { controls: manifest.controls }) }, ["genre", "controls"]);
   const next = `opengame check ${folderArgument(root)}${command ? " --build" : ""}`;
   /* The command goes last, on a line of its own after "Next:", as an error's does. Ending a
      sentence with it printed "run opengame check .." with the folder's dot and the full stop
@@ -231,10 +328,205 @@ export async function initProject(root: string, flags: Record<string, string | b
   return { manifest, needs, engine, next, message: [needs.length
     ? `Created a draft opengame.json${made(kind, basedOn)}. Add ${new Intl.ListFormat("en").format(needs)} to it.\n${issues.map(issue => `${issue.path.join(".")}: ${issue.message}`).join("\n")}`
     : `Created opengame.json${made(kind, basedOn)}.`,
+  ...(guessedGenre ? [genreNote(genre!)] : []),
+  controlsNote(detected),
   `${engine.name}: ${engine.instructions}`,
   `Guide: ${engine.docs}`,
   `Next: ${next}`].join("\n") };
 
+}
+
+async function refuseIgnoreSymlink(root: string) {
+  try {
+    if ((await lstat(join(root, ".gitignore"))).isSymbolicLink()) throw new CliError("ignore_symlink", ".gitignore is a symlink. Use a regular file before running opengame init.");
+  } catch (error) {
+    if (error instanceof CliError || (error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}
+
+/**
+ * Which values in opengame.json init chose without being told, kept in .opengame/ beside the
+ * project's other machine-local state.
+ *
+ * The Drop and GitHub uploads name a placeholder genre or controls in the deploy request's
+ * `provisional`, so review never takes it for the creator's word and the details form after
+ * review offers what review detected instead (one-flow.ts on the site). init's fallback genre
+ * is the same kind of placeholder, and so are the keyboard and mouse it writes when it finds
+ * no input handlers. Without this record a deploy sent them as stated, and the confirm form
+ * showed the fallback as the creator's own choice ahead of review's guess. A deploy names a
+ * field provisional only while opengame.json still holds exactly the value init chose, so
+ * the moment somebody edits it, it is theirs.
+ */
+const GUESSES = "init-guesses.json";
+type Guesses = { genre?: string; controls?: string[] };
+async function readGuesses(root: string): Promise<Guesses> {
+  let handle;
+  try {
+    handle = await open(join(root, ".opengame", GUESSES), constants.O_RDONLY | constants.O_NOFOLLOW);
+    const info = await handle.stat();
+    if (!info.isFile() || info.size > 4096) return {};
+    const value = JSON.parse(await handle.readFile("utf8")) as Guesses;
+    return {
+      ...(typeof value.genre === "string" ? { genre: value.genre } : {}),
+      ...(Array.isArray(value.controls) && value.controls.every(item => typeof item === "string") ? { controls: value.controls } : {}),
+    };
+  } catch { return {}; }
+  finally { await handle?.close(); }
+}
+/** `settled` are the fields this run wrote; a guess about one of them is replaced or dropped. */
+async function recordGuesses(root: string, guessed: Guesses, settled: string[]) {
+  const before = await readGuesses(root);
+  if (!settled.some(field => field in before) && !Object.keys(guessed).length) return;
+  const record: Guesses = { ...before };
+  for (const field of settled) delete record[field as keyof Guesses];
+  Object.assign(record, guessed);
+  const folder = join(root, ".opengame");
+  try {
+    await mkdir(folder, { recursive: true, mode: 0o700 });
+    const stat = await lstat(folder);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) return;
+    const path = join(folder, GUESSES), temporary = `${path}.${randomUUID()}`;
+    try {
+      const handle = await open(temporary, "wx", 0o600);
+      try { await handle.writeFile(JSON.stringify(record) + "\n"); } finally { await handle.close(); }
+      await replaceFile(temporary, path);
+    } finally { await unlink(temporary).catch(() => {}); }
+  } catch { /* A missing record only means the next deploy states what the file says. */ }
+}
+
+/** The fields a deploy should name in `provisional`: those opengame.json still holds as init guessed them. */
+export async function provisionalFields(root: string, manifest: { genre?: unknown; controls?: unknown }): Promise<DeployProvisional[]> {
+  const guesses = await readGuesses(root);
+  const fields: DeployProvisional[] = [];
+  if (guesses.genre !== undefined && manifest.genre === guesses.genre) fields.push("genre");
+  if (guesses.controls && JSON.stringify(manifest.controls) === JSON.stringify(guesses.controls)) fields.push("controls");
+  return fields;
+}
+
+async function manifestExists(root: string) {
+  return new CliError("manifest_exists", await linkedGame(root)
+    ? "opengame.json already exists, so init left it alone. Edit it, or run opengame pull to copy the title and details you changed on the website."
+    : "opengame.json already exists, so init left it alone. Edit it to change the game's details.", undefined, { next: `opengame check ${folderArgument(root)}` });
+}
+
+/** opengame.json's text, read through a handle that cannot follow a link swapped in after
+ * the lstat, or null when it is not a regular file within the manifest's size limit. */
+async function manifestText(path: string): Promise<string | null> {
+  let handle;
+  try {
+    if (!(await lstat(path)).isFile()) return null;
+    handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const info = await handle.stat();
+    if (!info.isFile() || info.size > LIMITS.platform.manifest.bytesMax) return null;
+    return await handle.readFile("utf8");
+  } catch { return null; }
+  finally { await handle?.close(); }
+}
+
+/** The existing opengame.json as a plain object with the text it was read from, or null when
+ * there is none. One that is a symlink, too large, not JSON or not an object is not init's to
+ * repair: it is refused as existing, as every opengame.json was before init could fill one in. */
+async function existingManifest(root: string): Promise<{ manifest: Record<string, unknown>; text: string } | null> {
+  const path = join(root, "opengame.json");
+  try { await lstat(path); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
+  const text = await manifestText(path);
+  try {
+    const value: unknown = text === null ? null : JSON.parse(withoutBom(text));
+    if (value && typeof value === "object" && !Array.isArray(value)) return { manifest: value as Record<string, unknown>, text: text! };
+  } catch { /* refused below */ }
+  throw await manifestExists(root);
+}
+
+const blank = (value: unknown) => value === undefined || value === null || (typeof value === "string" && !value.trim()) || (Array.isArray(value) && value.length === 0);
+
+/**
+ * Fill the fields an existing opengame.json leaves blank, and touch nothing it sets.
+ *
+ * Before 10 Nov 2026 init refused any folder that had an opengame.json, so the draft it had
+ * written itself, with `"genre": ""`, could only be finished by hand: running init again,
+ * which is what an agent told "init guesses the genre" tries next, said the file existed and
+ * stopped. Now it fills title, description, genre and controls where they are missing or
+ * empty, from the same flags and guesses a new file gets, and says which. A value already
+ * there is the creator's, even when a flag names another, because init cannot tell a
+ * deliberate edit from a stale one; a flag it did not use is named so nobody thinks it took.
+ * kind is never filled: absent means "whatever this already is" to deploy (manifest.ts), and
+ * writing "game" into a world's old manifest would change what it is. A file with nothing to
+ * fill is refused as it always was.
+ */
+async function fillManifest(root: string, existing: Record<string, unknown>, original: string, context: {
+  title: string; description: string; genre: string | null; flags: Record<string, string | boolean>; html: string;
+  pkg: { description?: unknown; keywords?: unknown }; interactive?: boolean; prompts: InitPrompts;
+}) {
+  const { flags } = context;
+  const filled: Record<string, unknown> = {};
+  let { description, genre } = context;
+  if (blank(existing.title)) filled.title = context.title;
+  if (blank(existing.description)) description = context.description;
+  else description = String(existing.description);
+  // The guess reads the file's own words, which is what the game says about itself now.
+  if (blank(existing.genre) && typeof flags.genre !== "string") {
+    genre = inferGenre(genreEvidence(String(filled.title ?? existing.title), description, context.pkg, context.html));
+  }
+  if (context.interactive && (blank(existing.description) || (blank(existing.genre) && genre === null))) {
+    ({ description, genre } = await askMetadata(description, blank(existing.genre) ? genre : String(existing.genre), gameKindOrDefault(existing.kind as string | undefined), context.prompts));
+  }
+  // A description that changed here was typed at the prompt, which is the person's word too.
+  if ((blank(existing.description) || description !== existing.description) && description.trim()) filled.description = description;
+  let guessedGenre = false;
+  if (blank(existing.genre)) {
+    if (genre === null && !context.interactive) { genre = FALLBACK_GENRE; guessedGenre = true; }
+    if (genre) filled.genre = genre;
+  }
+  let detected: Control[] | null = null;
+  if (blank(existing.controls)) {
+    const sourceRoot = await realpath(root);
+    const engineId = await engineSetup(sourceRoot, await readBuildPackage(root), typeof flags.engine === "string" ? flags.engine : undefined).then(engine => engine.id, () => "unknown");
+    detected = await detectControls(sourceRoot, context.html, engineId);
+    filled.controls = detected ?? ["keyboard", "mouse"];
+  }
+  if (!Object.keys(filled).length) throw await manifestExists(root);
+  const manifest = { ...existing, ...filled };
+  const credentialIssue = manifestCredentialIssue(manifest);
+  if (credentialIssue) throw new CliError("manifest_invalid", credentialIssue, 2);
+  const parsed = manifestSchema.safeParse(manifest);
+  const issues = parsed.success ? [] : parsed.error.issues;
+  // A flag's value that the schema refuses is the command's to correct, before anything is written.
+  const rejected = issues.filter(issue => String(issue.path[0]) in filled && typeof flags[String(issue.path[0])] === "string");
+  if (rejected.length) throw new CliError("manifest_invalid", rejected.map(issue => `${issue.path.join(".")}: ${issue.message}`).join("\n"), 2);
+  await refuseIgnoreSymlink(root);
+  /* A new file beside the old one, renamed over it, so a write that fails part way leaves
+     the creator's file as it was, and a rename replaces a link rather than writing through it. */
+  const path = join(root, "opengame.json"), temporary = `${path}.${randomUUID()}`;
+  try {
+    const handle = await open(temporary, "wx", 0o644);
+    try { await handle.writeFile(JSON.stringify(manifest, null, 2) + "\n"); await handle.sync(); } finally { await handle.close(); }
+    /* The fill was worked out from the file as init read it, and a person at the prompts has
+       time to save an edit to it, which the rename would drop without a word (Greptile on
+       opengamehq/opengame#6). So the file must still be those exact bytes, or nothing is
+       written; pull's manifest_changed makes the same check. */
+    if (await manifestText(path) !== original) {
+      throw new CliError("manifest_changed", "opengame.json changed while init was filling it in, so init kept your edits and wrote nothing. Run opengame init again to fill what is still blank.", undefined, { next: `opengame init ${folderArgument(root)}` });
+    }
+    await replaceFile(temporary, path);
+  } finally { await unlink(temporary).catch(() => {}); }
+  await ensureProjectIgnored(root);
+  await recordGuesses(root, { ...(guessedGenre ? { genre: genre! } : {}), ...("controls" in filled && !detected ? { controls: filled.controls as string[] } : {}) },
+    Object.keys(filled).filter(field => field === "genre" || field === "controls"));
+  const names = Object.keys(filled);
+  /* Every flag init could have used and did not: a value the file already sets, and the
+     flags that only shape a new file (what it is, and where its build goes). */
+  const kept = ["title", "description", "genre", "kind", "based-on", "output", ...("controls" in filled ? [] : ["engine"])]
+    .filter(field => typeof flags[field] === "string" && !(field in filled)).map(field => `--${field}`);
+  const needs = [...new Set(issues.map(issue => issue.path.join(".")))];
+  const next = `opengame check ${folderArgument(root)}`;
+  return { manifest, needs, filled: names, next, message: [
+    `Filled ${new Intl.ListFormat("en").format(names)} in the existing opengame.json and left everything else as it was.`,
+    ...(kept.length ? [`init did not use ${new Intl.ListFormat("en").format(kept)}, because it only fills what the file leaves blank. Edit opengame.json to change anything it already sets.`] : []),
+    ...(needs.length ? [`Still to correct in opengame.json:\n${issues.map(issue => `${issue.path.join(".") || "opengame.json"}: ${issue.message}`).join("\n")}`] : []),
+    ...(guessedGenre ? [genreNote(genre!)] : []),
+    ...("controls" in filled ? [controlsNote(detected)] : []),
+    `Next: ${next}`].join("\n") };
 }
 
 /** "a mod of Doom", "a world", or null for a game: the shared phrase for anything that is

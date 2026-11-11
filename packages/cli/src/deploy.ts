@@ -17,7 +17,7 @@ import { activeToken } from "./credentials";
 import { loadManifest, outputFolder, replaceFile } from "./files";
 import { createArchive } from "./archive";
 import { assertSdkInstalled } from "./build-output";
-import { ensureProjectIgnored, ensureDeployManifest, kindPhrase } from "./init";
+import { ensureProjectIgnored, ensureDeployManifest, kindPhrase, provisionalFields } from "./init";
 import { readProject, savedSubmit, updateProject, validKey, withProject, type Project } from "./project";
 import { CliError, Output, terminalText } from "./output";
 import { CLI_VERSION, olderThan } from "./version";
@@ -593,12 +593,14 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
         await timed("cache", () => cacheArchive(root, archive.sha256, archive.bytes, archive.packaging));
         freshArchive = archive.bytes;
         const previousHash = state.deploy?.request.sha256;
+        const provisional = await provisionalFields(root, manifest);
         state.deploy = { key: restarted || !key ? randomUUID() : key, ...(archive.unityAssets ? { transport: planDelivery(archive.unityAssets), unityAssets: archive.unityAssets } : archive.incremental ? { transport: "files" as const } : {}), request: { ...(state.gameId ? { gameId: state.gameId } : {}), byteSize: archive.bytes.byteLength,
           fileCount: archive.fileCount, sha256: archive.sha256,
           // Build commands are local instructions, not game metadata. The cover is not
           // anything any more: OpenGame makes it after approval (archive.ts says so once).
           manifest: withoutCover({ ...manifest, ...(manifest.build ? { build: { output: manifest.build.output } } : {}) }),
           metadataRevision: state.metadataRevision ?? null, metadata,
+          ...(provisional.length ? { provisional } : {}),
           /* One archive to storage: ask for parts where the server takes them. The server
              still sends anything at or under multipart.aboveBytes as one PUT. */
           ...(limits.archiveParts && !archive.unityAssets && !archive.incremental ? { multipart: true as const } : {}) } };

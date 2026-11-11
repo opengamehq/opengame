@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.8.0
+
+- `opengame init` guesses a genre from the title, the description, the page's meta
+  description and package.json's keywords, as its help says. When none of those names a
+  genre, it asks a person, and an agent or a script gets `puzzle-casual`, with the line to
+  change it. It used to leave genre blank, and `opengame check` then refused the file.
+- `opengame init` in a folder whose opengame.json leaves title, description, genre or
+  controls blank fills those in and keeps everything the file sets. It used to stop because
+  the file existed. A file with nothing blank is still refused, and a flag for a field the
+  file already sets is named as unused. If the file is saved while init is asking a
+  question, init keeps that edit and writes nothing.
+- `opengame init` sets controls from the keyboard, mouse, touch and gamepad listeners in
+  your game's own source. Touch counts as mouse, so a game that only listens for taps or
+  clicks gets `mouse`. It used to write keyboard and mouse whatever the game used, and
+  still does when it finds no input at all.
+- A genre or controls that init chose without being told are marked provisional when you
+  deploy, as Drop and the GitHub tab already do, so the details form after review offers
+  what review detected rather than treating the guess as your choice. Change either in
+  opengame.json and it is yours.
+- `opengame check` says how to set a blank or unknown genre, naming the genres and the
+  init line that fills it, rather than "Correct genre in opengame.json".
+- Ships the skills from `@opengamehq/skills` 1.3.0, as 0.7.0 did.
+
 ## 0.7.0
 
 - `opengame unpublish` takes a game off the gallery and stops serving it, and `opengame

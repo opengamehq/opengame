@@ -39,8 +39,9 @@ opengame check .
 opengame deploy .
 ```
 
-`init` writes `opengame.json`, the manifest with your game's title, description and
-build. `check` runs the same checks the upload will, on your machine. `deploy` builds,
+`init` writes `opengame.json`, the manifest with your game's title and build. It asks
+you one thing, the game's name, and you write the description, choose the genre and
+enter the jam on the deployment page afterwards, or have your agent do it. `check` runs the same checks the upload will, on your machine. `deploy` builds,
 checks and uploads a release, then prints its deployment page:
 
 ```
@@ -50,9 +51,8 @@ Watch them, and play the preview once it is ready, at https://opengame.io/settin
 Or follow them here with opengame status --watch.
 ```
 
-The private preview plays on that page once the checks pass. Add `--wait` to stay in the
-terminal until they finish. When the preview is ready, `opengame submit` sends the
-release to review.
+The private preview plays on that page once the checks pass, and the release goes to
+review by itself. Add `--wait` to stay in the terminal until the checks finish.
 
 ## Scripts and agents
 
@@ -83,7 +83,7 @@ OpenCode, so a coding agent can do all of the above for you.
 <!-- generated:commands -->
 | Command | What it does |
 | --- | --- |
-| `opengame init [dir] [options]` | Create opengame.json for an existing game. When one is already there, fill in the fields it leaves blank and keep the rest. |
+| `opengame init [dir] [options]` | Create opengame.json for an existing game. A person at a terminal is asked the game's name and nothing else; the description, genre, jam entry and the rest are filled in on the deploy's page, by you or your agent. When opengame.json is already there, fill in the fields it leaves blank and keep the rest. |
 | `opengame check [dir] [options]` | Find local build and asset problems before uploading. |
 | `opengame dev [dir] [options]` | Serve a local export with game-runtime headers. Under a contract that adds the SDK, pages also get the host runtime and SDK, as they do when hosted. If the contract supports opting out, sdk.inject: false leaves out the SDK. |
 | `opengame login [options]` | Sign in through your browser. |
@@ -91,7 +91,7 @@ OpenCode, so a coding agent can do all of the above for you.
 | `opengame status [dir] [options]` | Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted. |
 | `opengame deployments [dir] [options]` | List the linked game's deploys, newest first: status, when, size, who started each one, why any stopped, and each one's page or preview. |
 | `opengame open [dir] [options]` | Open the linked game's private page in your browser. |
-| `opengame submit [dir] [options]` | Send one release to review, and enter it in a jam. |
+| `opengame submit [dir] [options]` | Send one release to review, and enter it in a jam. A deploy goes to review by itself, so this is mostly for agents entering a jam with flags. A person who names no jam answer is given the deploy's page, where the track, models and sponsor tracks are chosen, and nothing is sent. |
 | `opengame jams [slug] [options]` | List open jams, or show one jam's tracks and flags. |
 | `opengame jam <withdraw\|reenter> [options]` | Withdraw the linked game's jam entry, freeing its place, or put a withdrawn one back while the jam is open, as your jam entries page does. Needs a token with submit; opengame login has it. |
 | `opengame releases [dir] [options]` | List the linked game's releases, newest first, as the Releases tab on its page does: which one is live, which were live before, which are drafts and which were cleaned up, and which can be made live again. |

@@ -38,7 +38,8 @@ export type RadioStation = Readonly<{ id: string; name: string; label: string; c
 /**
  * A song. `id` is `<station>/<song>` and is what `play({ track })` takes. `duration` is
  * null until the song plays, and `art` is null because OG Radio songs have no cover art:
- * colour a song with its station's `palette`. Show `attribution` wherever you credit music.
+ * colour a song with its station's `palette`. `attribution` is a ready-made now-playing
+ * line; a game does not have to credit the music.
  */
 export type RadioTrack = Readonly<{
   id: string; title: string; station: string; stationName: string; genre: string | null; genreLabel: string | null;

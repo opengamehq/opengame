@@ -2,7 +2,7 @@ import { z } from "./zod";
 import { engineMetadataSchema, buildMetadataSchema } from "./engine";
 import { METADATA_FIELDS } from "./manifest";
 import { LIMITS } from "@opengame/shared/browser";
-import { operationStageSchema, repairFindingSchema } from "./findings";
+import { CHECK_PROGRESS_STATES, operationStageSchema, repairFindingSchema } from "./findings";
 import { submissionSchema } from "./submission";
 
 export const gameCursorSchema = z.uuid();
@@ -42,6 +42,8 @@ export const operationSummarySchema = z.object({
   // `stage` above is the raw check the deploy waits on. `progress` is the same
   // thing said for a person: whose move it is and whether the fault is ours.
   progress: operationStageSchema.optional(),
+  /** Selected check receipts, shared with the deployment page. Older servers omit them. */
+  checks: z.array(z.object({ check: z.string(), label: z.string(), state: z.enum(CHECK_PROGRESS_STATES) })).optional(),
   findings: z.array(repairFindingSchema).max(40).optional(),
   /** The exact command that moves this operation forward, when there is one. */
   next: z.string().nullable().optional(),

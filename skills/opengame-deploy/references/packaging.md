@@ -9,9 +9,9 @@ also published at opengame.io/agent.md.
 | Rule | Limit | What happens |
 | --- | --- | --- |
 | Entry point | `index.html` at the root of the build output | Refused |
-| Compressed size | 1024 MiB | Refused |
-| Uncompressed size | 1536 MiB | Refused |
-| File count | 10,000 | Refused |
+| Compressed size | 4096 MiB | Refused |
+| Uncompressed size | 5120 MiB | Refused |
+| File count | 25,000 | Refused |
 | Compression ratio | 200 : 1 | Refused, as a zip bomb guard |
 | Paths | Case matches the file on disk; no `../`, no symlinks, no absolute paths | Refused |
 | Excluded | `node_modules/`, `.git/`, `.env*`, source maps, OS junk | Stripped, with a `files_excluded` notice |
@@ -114,4 +114,4 @@ game at 1920 x 1080 (primary), 1366 x 768, 2560 x 1440, 3440 x 1440, 1024 x 640 
 ## Manifest limits
 
 `opengame.json` itself is at most 64 KiB, with at most
-10 leaderboards. See [manifest.md](manifest.md).
+25 leaderboards. See [manifest.md](manifest.md).

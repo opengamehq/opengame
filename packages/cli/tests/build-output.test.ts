@@ -96,17 +96,17 @@ test("a build over the size limit names its heaviest folders by their whole size
   const root = await mkdtemp(join(tmpdir(), "og-size-"));
   try {
     // Sparse files: their size is real to lstat and costs no disk. Each is under
-    // bundle.fileBytesMax (256 MiB), so only the total is over. Sorted a to h, the walk
-    // crosses 1.5 GiB inside g/, so a walk that stopped there would never have seen h/,
+    // bundle.fileBytesMax (1 GiB), so only the total is over. Sorted a to h, the walk
+    // crosses 5 GiB inside g/, so a walk that stopped there would never have seen h/,
     // the heaviest.
-    for (const [dir, mib] of [["a", 200], ["b", 200], ["c", 200], ["d", 200], ["e", 251], ["f", 252], ["g", 253], ["h", 255]] as const) {
+    for (const [dir, mib] of [["a", 700], ["b", 700], ["c", 700], ["d", 700], ["e", 700], ["f", 800], ["g", 900], ["h", 1000]] as const) {
       await mkdir(join(root, dir));
       const handle = await open(join(root, dir, "blob.bin"), "w");
       await handle.truncate(mib * 1048576); await handle.close();
     }
     await assert.rejects(collectFiles(root), (error: Error & { code?: string }) =>
-      error.code === "bundle_limit" && error.message.includes("The largest: h/ (255 MiB), g/ (253 MiB), f/ (252 MiB).")
-      && error.message.includes("1.8 GiB uncompressed, over the 1.5 GiB limit"));
+      error.code === "bundle_limit" && error.message.includes("The largest: h/ (1000 MiB), g/ (900 MiB), f/ (800 MiB).")
+      && error.message.includes("6.1 GiB uncompressed, over the 5 GiB limit"));
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
@@ -159,29 +159,92 @@ test("a recognised nested demo cannot hide a valid root game", async () => {
 });
 
 // A starter copied out of the repository keeps `file:../../packages/sdk`, and npm leaves a
-// symlink to nothing. The build used to die inside Rollup with the cause off screen.
-test("a build refuses an SDK that package.json names and nothing installed, and says how to get it", async () => {
-  const { assertSdkInstalled } = await import("../src/build-output");
+// symlink to nothing. The build used to die inside Rollup with the cause off screen. An SDK
+// that is merely not installed is now one missing dependency among others, which deploy
+// installs from the lockfile (tests/build-install.test.ts).
+test("a build refuses an SDK that package.json names from a path no install can reach, and says how to get it", async () => {
+  const { missingDependencies } = await import("../src/build-output");
   const root = await mkdtemp(join(tmpdir(), "og-sdk-"));
   try {
     await writeFile(join(root, "package.json"), JSON.stringify({ dependencies: { "@opengamehq/sdk": "file:../../packages/sdk" } }));
-    await assert.rejects(assertSdkInstalled(root), (error: { code: string; exitCode: number; message: string }) =>
+    await writeFile(join(root, "package-lock.json"), "{}");
+    await assert.rejects(missingDependencies(root), (error: { code: string; exitCode: number; message: string }) =>
       error.code === "build_failed" && error.exitCode === 1 && /exists only inside the OpenGame repository/.test(error.message)
       // How to get the SDK follows packages/shared/npm-release.json, and names no archive in either state.
       && (installsOpen(release) ? error.message.includes(`npm i ${release.packages.sdk}@latest`) : error.message.includes(INSTALL_CLOSED.sdk) && !/npm i|npm install/.test(error.message))
       && !/tarball|\.tgz|archive/.test(error.message));
     await mkdir(join(root, "vendor-sdk"));
     await writeFile(join(root, "package.json"), JSON.stringify({ dependencies: { "@opengamehq/sdk": "file:./vendor-sdk" } }));
-    await assert.rejects(assertSdkInstalled(root), (error: { code: string; next?: string }) => error.code === "build_failed" && error.next === "npm install");
+    const missing = await missingDependencies(root);
+    assert.deepEqual([missing?.missing, missing?.install?.command, missing?.fresh], [["@opengamehq/sdk"], "npm ci", true]);
     await mkdir(join(root, "node_modules", "@opengamehq", "sdk"), { recursive: true });
     await writeFile(join(root, "node_modules", "@opengamehq", "sdk", "package.json"), '{"name":"@opengamehq/sdk","version":"0.1.0"}');
-    await assertSdkInstalled(root);
-    await writeFile(join(root, "package.json"), JSON.stringify({ dependencies: { phaser: "3.90.0" } }));
-    await rm(join(root, "node_modules"), { recursive: true });
-    await assertSdkInstalled(root);
+    assert.equal(await missingDependencies(root), null);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
+/* The layout of a real Three.js game, 11 Nov 2026: `vite build` with no config, the game's
+   page at the root loading /src/main.js, and a weapons lab tool page at
+   src/weapons/lab/index.html. init wrote build.output src/weapons/lab, because the root was
+   dropped as Vite's input and the lab was the only index.html left. */
+test("a page under src/ in a Vite game is source, not the export, and init writes dist", async () => {
+  const { initProject } = await import("../src/init");
+  const root = await mkdtemp(join(tmpdir(), "og-vite-nested-"));
+  try {
+    const pkg = { name: "karen", type: "module", scripts: { build: "vite build" }, dependencies: { three: "^0.186.1" }, devDependencies: { vite: "^8.3.4" } };
+    await writeFile(join(root, "package.json"), JSON.stringify(pkg));
+    await writeFile(join(root, "package-lock.json"), "{}");
+    await writeFile(join(root, "index.html"), '<!doctype html><title>Karen</title><canvas></canvas><script type="module" src="/src/main.js"></script>');
+    await mkdir(join(root, "src/weapons/lab"), { recursive: true });
+    await writeFile(join(root, "src/main.js"), "import * as THREE from 'three'; addEventListener('keydown', () => {});");
+    await writeFile(join(root, "src/weapons/lab/index.html"), '<!doctype html><title>weapons lab</title><script type="module" src="./lab.js"></script>');
+    await writeFile(join(root, "src/weapons/lab/lab.js"), "import * as THREE from 'three';");
+    await mkdir(join(root, "public"));
+    assert.equal((await detectBuildOutput(root, pkg)).output, "dist");
+    // Built once, dist is still the answer, and the lab still is not.
+    await mkdir(join(root, "dist/assets"), { recursive: true });
+    await writeFile(join(root, "dist/index.html"), '<script type="module" crossorigin src="/assets/index-abc.js"></script>');
+    assert.equal((await detectBuildOutput(root, pkg)).output, "dist");
+    await rm(join(root, "dist"), { recursive: true });
+    // A vite.config's build.outDir is read, and the nested page still does not win.
+    await writeFile(join(root, "vite.config.js"), 'export default { build: { outDir: "web-build" } };');
+    assert.equal((await detectBuildOutput(root, pkg)).output, "web-build");
+    await rm(join(root, "vite.config.js"));
+    const result = await initProject(root, { title: "Karen", description: "A long enough description of a first-person game about weapons." });
+    assert.equal(result.manifest.build?.output, "dist");
+    assert.match(result.message, /export folder to dist\//);
+    assert.doesNotMatch(result.message, /src\/weapons\/lab/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+/* Two layouts init read correctly at 88a2c24db and then got wrong (review, 11 Nov 2026): a
+   build script that moves Vite's output to docs/, whose built page loads a hashed module from
+   assets/, and esbuild bundling into src/ beside the page there. */
+test("Vite output moved by the build script, and esbuild writing into src/, are still the exports", async () => {
+  const root = await mkdtemp(join(tmpdir(), "og-moved-output-"));
+  try {
+    const vite = { scripts: { build: "vite build && rm -rf docs && mv dist docs" }, devDependencies: { vite: "5" } };
+    await writeFile(join(root, "index.html"), '<script type="module" src="/src/main.js"></script>');
+    await mkdir(join(root, "src")); await writeFile(join(root, "src/main.js"), "export {};");
+    await mkdir(join(root, "docs/assets"), { recursive: true });
+    await writeFile(join(root, "docs/index.html"), '<script type="module" crossorigin src="/assets/index-BqT3x9aZ.js"></script>');
+    await writeFile(join(root, "docs/assets/index-BqT3x9aZ.js"), "console.log(1);");
+    assert.equal((await detectBuildOutput(root, vite)).output, "docs");
+  } finally { await rm(root, { recursive: true, force: true }); }
+  const esbuild = await mkdtemp(join(tmpdir(), "og-esbuild-src-"));
+  try {
+    await mkdir(join(esbuild, "src"));
+    await writeFile(join(esbuild, "src/index.html"), '<script src="bundle.js"></script>');
+    await writeFile(join(esbuild, "src/game.js"), "export {};");
+    const pkg = { scripts: { build: "esbuild src/game.js --bundle --outfile=src/bundle.js" }, devDependencies: { esbuild: "0.24" } };
+    assert.equal((await detectBuildOutput(esbuild, pkg)).output, "src");
+    // webpack and rollup are not read either, so their src/ page stands too.
+    assert.equal((await detectBuildOutput(esbuild, { scripts: { build: "webpack" }, devDependencies: { webpack: "5" } })).output, "src");
+    // parcel names its output on the command line, so there src/ is its input.
+    assert.equal((await detectBuildOutput(esbuild, { scripts: { build: "parcel build src/index.html --dist-dir out" }, devDependencies: { parcel: "2" } })).output, "out");
+    assert.equal((await detectBuildOutput(esbuild, {})).output, "src");
+  } finally { await rm(esbuild, { recursive: true, force: true }); }
+});
 
 test("one file past the per-file limit is refused by name before anything is packed", async () => {
   const { mkdtemp, open, rm, writeFile: write } = await import("node:fs/promises");
@@ -198,6 +261,6 @@ test("one file past the per-file limit is refused by name before anything is pac
     const over = await open(join(root, "over.bin"), "w");
     await over.truncate(LIMITS.bundle.fileBytesMax + 1); await over.close();
     await assert.rejects(collectFiles(root), (error: Error & { code?: string }) =>
-      error.code === "bundle_limit" && error.message.startsWith("over.bin is 257 MiB, and one file can be at most 256 MiB."));
+      error.code === "bundle_limit" && /^over\.bin is [\d.]+ GiB, and one file can be at most 1 GiB\./.test(error.message));
   } finally { await rm(root, { recursive: true, force: true }); }
 });

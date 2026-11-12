@@ -5,7 +5,10 @@ import { sha256Hex } from "./sha256";
  * The launch clock: the one place that says when OpenGame opens and when entries close.
  *
  * The owner's call of 4 Nov 2026 ("Clock, with a hold"): everything goes live by itself at
- * 17 Nov 2026 12:00 am PT and nothing new deploys after 19 Dec 2026 12:00 am PT. Web, the
+ * launchAt and nothing new deploys after 19 Dec 2026 12:00 am PT. Since 11 Nov 2026 launchAt
+ * is 18 Nov 2026 12:00 am PT, the jam's kickoff (the owner: "lets just have everything go live and
+ * be unveiled on November 18th 12am PT automatically"). The 17th is gone: the site, sign-in,
+ * the CLI, uploads, the blog and the jam open at one instant. Web, the
  * API, the CLI, the pipeline and the Workers all read these two instants, from launch.json
  * when they are not TypeScript, so no surface can open a minute before another. The
  * database cannot read a file, so it carries the same two instants in
@@ -39,16 +42,15 @@ export const COMMITTED_LAUNCH_AT = new Date(launch.launchAt);
 export const COMMITTED_ENTRIES_CLOSE_AT = new Date(launch.entriesCloseAt);
 /**
  * When the launch jam takes its first entry, and when the creator platform opens to
- * everybody: 18 Nov 2026 12:00 am PT, a day after the site opens at launchAt.
+ * everybody: 18 Nov 2026 12:00 am PT, the same instant as launchAt.
  *
- * The launch team's decision of 5 Nov 2026 put the jam's first entry here and left the CLI
- * and uploads at launchAt. The owner, 8 Nov 2026, moved those too: "the jam entries open on
- * nov 18th 12am PST 2026 and thats when cli and uploading etc will be unlocked". So from
- * launchAt anybody can sign in, claim a handle, make a profile and play, and from this
- * instant they can connect the CLI, mint a token, upload and enter. The jam's row carries the same instant in
- * `config.kickoff_at` and the database's clock carries it as `jamKickoffAt`
- * (20261108120000); the launch-clock test fails if any of them part. The close is shared:
- * entries and deploys both stop at entriesCloseAt.
+ * It was a day after launchAt from 5 to 11 Nov 2026 (the site on the 17th, the CLI, uploads
+ * and entries on the 18th). The owner, on 11 Nov 2026, made them one instant, so the two keys in
+ * launch.json now hold the same value and `tests/launch-clock.test.ts` fails if they part.
+ * The name stays because the jam's row (`config.kickoff_at`), the database's clock
+ * (`jamKickoffAt`, 20261108120000 and 20261112060700) and every caller read it; the
+ * exported names are an interface, and two names for one instant cost nothing. The close is
+ * shared: entries and deploys both stop at entriesCloseAt.
  */
 export const COMMITTED_JAM_KICKOFF_AT = new Date(launch.jamKickoffAt);
 
@@ -175,14 +177,13 @@ export function launchClock(env: LaunchEnv = processEnv()): LaunchClock {
 export const LAUNCH_AT = launchClock().launchAt;
 export const ENTRIES_CLOSE_AT = launchClock().entriesCloseAt;
 
-/* What the site says. Never derived from the instants: the kickoff copy deliberately names
-   the day after the real opening (the plan's margin), and the close names the last minute
-   in Pacific time rather than the first minute of the next day. */
+/* What the site says. Never derived from the instants: the close names the last minute in
+   Pacific time rather than the first minute of the next day. */
 export const KICKOFF_COPY = launch.kickoffCopy;
-/** The day the site opens, "17 November", for sentences about launch rather than the jam.
- * Before 5 Nov 2026 those borrowed KICKOFF_COPY, which named the wrong day once the jam's
- * kickoff moved a day after the opening. A sentence that must stay true under an owner hold
- * says the held day instead (`opensAtCopy` below). */
+/** The day the site opens, "18 November", for sentences about launch rather than the jam.
+ * The same day as KICKOFF_COPY since 11 Nov 2026, when the two instants became one. A
+ * sentence that must stay true under an owner hold says the held day instead (`opensAtCopy`
+ * below). */
 export const LAUNCH_COPY = launch.launchCopy;
 export const CLOSE_COPY = launch.closeCopy;
 /** The close as a day alone, for a badge with no room for a time. */
@@ -222,9 +223,9 @@ const PACIFIC_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "l
 
 /**
  * The day the site opens, as a sentence says it: LAUNCH_COPY, or the held day in Pacific time
- * while an owner hold pushes the opening later. For copy shown before launch ("until 17
- * November, only the team can sign in"), which would otherwise name a day that has passed
- * during a long hold.
+ * while an owner hold pushes the opening later. For copy shown before launch ("OpenGame
+ * opens on 18 November"), which would otherwise name a day that has passed during a long
+ * hold.
  */
 export function opensAtCopy(heldUntil: Date | null = null, clock: LaunchClock = launchClock()): string {
   const opens = opensAt(heldUntil, clock);

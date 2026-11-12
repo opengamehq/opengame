@@ -231,7 +231,7 @@ test('import has no listeners or timers; standalone init resolves without a four
   assert.equal(h.og.player.handle, null, 'a local guest has no handle, as a hosted guest has none');
   assert.equal(h.timers.size, 0); assert.equal(h.messages.length, 0);
   // No credential: a game has no server of its own to show one to, and the token is a bearer.
-  assert.deepEqual(Object.keys(h.og.player), ['id', 'handle', 'ogNumber', 'signedIn', 'avatar', 'onChange', 'requestSignIn']);
+  assert.deepEqual(Object.keys(h.og.player), ['id', 'handle', 'ogNumber', 'signedIn', 'avatar', 'onChange', 'stats', 'requestSignIn']);
   h.og.ready(); h.og.ready();
   assert.equal(h.messages.length, 1); assert.equal(h.messages[0].target, h.win.location.origin);
   assert.equal(h.messages[0].data.phase, 'playable');

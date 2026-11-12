@@ -1,6 +1,6 @@
 {
   "name": "@opengamehq/sdk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "The OpenGame SDK for browser games: players, leaderboards, achievements and events.",
   "keywords": [

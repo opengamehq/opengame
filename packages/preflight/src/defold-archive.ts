@@ -286,6 +286,10 @@ export async function defoldCustomKeyFindings(files: PreflightFile[]): Promise<F
       const stored = flags & 2 ? compressed : expanded;
       if (flags & ~7 || (flags & 2 && compressed === 0xffffffff)) return findings;
       if (expanded > Math.max(stored, 1) * LIMITS.bundle.compressionRatioMax) return findings;
+      // One row is one file. The stage refuses a row past bundle.fileBytesMax, which since
+      // 11 Nov 2026 is far below the 5 GiB bundle cap, so a row claiming 4 GiB would
+      // otherwise reach LZ4 and ask for a 4 GiB buffer here.
+      if (expanded > LIMITS.bundle.fileBytesMax) return findings;
       expanding += expanded;
       if (expanding > LIMITS.bundle.uncompressedBytesMax) return findings;
       if (offset + stored > data.length) return findings;

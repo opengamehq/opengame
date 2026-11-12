@@ -68,4 +68,4 @@ radio.onChange(state => render(state.playing, state.track))
   searches up to {{raw platform.sdk.radio.queryCharsMax}} characters, `timeout` after
   {{s platform.sdk.radio.requestTimeoutMs}}.
 - `not_found` for an unknown station, genre or song id; `invalid_request` for a bad argument.
-- Show a song's `attribution` wherever the game credits music.
+- A game does not have to credit the music. `attribution` is there for a now-playing line.

@@ -83,8 +83,9 @@ script loads. See "The player during your loading screen".
 
 ## Players
 
-`og.player` is `{ id, handle, ogNumber, signedIn, avatar }`, plus `onChange(fn)` and
-`requestSignIn()`.
+`og.player` is `{ id, handle, ogNumber, signedIn, avatar }`, plus `onChange(fn)`,
+`requestSignIn()` and `stats()`, which reads the player's own entry on every leaderboard
+(see [Leaderboards](#leaderboards)).
 
 - `id` is stable for this player in this game, on every device once signed in, and
   different in every other game. It cannot be joined across games.
@@ -293,7 +294,7 @@ mock included, every call returns `unavailable`. See
 
 ## Leaderboards
 
-Declare each board in `opengame.json` (up to ten), then use the same calls locally and on
+Declare each board in `opengame.json` (up to 25), then use the same calls locally and on
 OpenGame:
 
 ```js
@@ -317,6 +318,24 @@ An entry's `name` is the player's handle while they share their profile in games
 otherwise `Guest` and the first four characters of their `og.player.id`; a few old entries
 are null. `isMe` marks yours; label guests however suits the game. Private previews have
 their own boards.
+
+### The player's own stats
+
+`og.player.stats()` reads the player's entry on every board the game declares in one
+request: `{ boards: [{ board, label, keep, entry }], preview, source }`, where `entry` is
+`{ score, stats, tags, meta, createdAt, imported }` or null. On a career board it is the
+player's row for all runs, so XP, levels and lifetime kills can be read back into the game:
+
+```js
+const result = await og.player.stats()
+const xp = result.ok ? result.value.boards.find(line => line.board === 'career')?.entry?.score ?? 0 : 0
+const level = Math.floor(xp / 1000) + 1
+```
+
+The request names no player and no game; OpenGame reads both from the session, so a game
+reads only its own boards and only the player who is playing. It shares `me()`'s
+allowance. The local mock answers from this browser's scores and leaves career boards
+empty.
 
 ### Columns, variants and runs
 

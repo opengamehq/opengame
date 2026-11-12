@@ -215,17 +215,39 @@ async function finishLogin(api: Api, credentials: Credentials, pending: PendingL
   // one 503 cannot stretch every later poll to minutes.
   let base = request.interval;
   let interval = base;
+  /* The earliest the server will take a poll without answering slow_down, which also adds
+     five seconds to its pace. A poll before it is never sent, and the time is saved with
+     the pending login after every answer, because each --continue is a new process. One
+     that started from the original interval polled early every time, and on 11 Nov 2026 an
+     agent running --continue as told stretched an allowed login's pace past its expiry, so
+     it was never collected. A login saved before then has no time and waits one interval. */
+  const savedNext = request.nextPollAt === undefined ? NaN : Date.parse(request.nextPollAt);
+  let nextPoll = Number.isFinite(savedNext) ? Math.min(savedNext, deadline) : Date.now() + interval * 1000;
+  const remember = async () => {
+    // Only onto this same code: another --continue may have collected it and cleared the file.
+    // Losing this only makes the next command's first poll early, which the server paces.
+    try { await pending.pace(request.deviceCode, base, new Date(nextPoll).toISOString()); } catch { /* Kept in memory. */ }
+  };
   let received: string | null = null;
   let busyNoticed = false;
+  let polls = 0;
+  let lastPoll = -Infinity;
   /* Poll until the code expires. The person may already have pressed Allow, so a server
      error or a dropped connection is not the end of the login: both are retried until the
      last poll, with the interval growing, and the agent is told the login is still alive. */
   let unanswered = false;
   while (true) {
     const now = Date.now();
-    if (finalPoll - now < 0) break;
-    if (stopAt - now < 0) { unanswered = true; break; }
-    await sleep(Math.min(interval * 1000, Math.min(finalPoll, stopAt) - now));
+    if (finalPoll - now < 0 || lastPoll >= finalPoll) break;
+    /* The last poll goes out at finalPoll even when that is early: an Allow pressed in the
+       final interval is otherwise lost, and the server collects an approved login on any
+       poll. Every other poll waits for its time, and when this command's budget ends first
+       it stops without polling, so an agent's repeated --continue cannot earn slow_down. */
+    const at = Math.max(now, Math.min(nextPoll, finalPoll));
+    if (at > stopAt) { unanswered = true; break; }
+    await sleep(at - now);
+    lastPoll = Date.now();
+    polls++;
     try {
       const result = await api.json("/api/v1/auth/token", { body: { device_code: request.deviceCode, grant_type: "urn:ietf:params:oauth:grant-type:device_code" } });
       if (typeof result.access_token !== "string" || !platformToken(result.access_token)) invalidResponse();
@@ -235,14 +257,18 @@ async function finishLogin(api: Api, credentials: Credentials, pending: PendingL
       const transient = (error instanceof ApiError && error.status >= 500) || (error instanceof CliError && error.code === "network");
       if (transient) {
         interval = Math.min(interval * 2, base * 4);
+        nextPoll = Date.now() + interval * 1000;
         if (!busyNoticed) output.emit({ type: "progress", stage: "approval", message: "Still waiting (the server is busy). Your browser approval is kept." });
         busyNoticed = true;
         continue;
       }
       if (!(error instanceof ApiError)) throw error;
       interval = base;
-      if (error.reason === "authorization_pending") continue;
-      if (error.reason === "slow_down" || error.status === 429) { base = Math.max(base + LIMITS.platform.device.pollIntervalSeconds, Number(error.data.interval) || 0); interval = base; continue; }
+      if (error.reason === "authorization_pending") { nextPoll = Date.now() + base * 1000; await remember(); continue; }
+      if (error.reason === "slow_down" || error.status === 429) {
+        base = Math.max(base + LIMITS.platform.device.pollIntervalSeconds, Number(error.data.interval) || 0); interval = base;
+        nextPoll = Date.now() + base * 1000; await remember(); continue;
+      }
       if (error.reason === "access_denied") {
         await pending.save(null);
         // An approval collected after its account stopped being a member says why; only a
@@ -265,7 +291,12 @@ async function finishLogin(api: Api, credentials: Credentials, pending: PendingL
   if (!received && unanswered) {
     // The code is still alive and kept, so the next --continue polls the same one.
     const minutes = Math.max(1, Math.ceil((deadline - Date.now()) / 60_000));
-    throw new CliError("login_pending", `Access has not been allowed yet. The code ${request.userCode} at ${request.url} is good for ${minutes} more minute${minutes === 1 ? "" : "s"}. Run opengame login --continue again once the person has typed the code and pressed Allow access.`, 3, { next: "opengame login --continue" });
+    const alive = `The code ${request.userCode} at ${request.url} is good for ${minutes} more minute${minutes === 1 ? "" : "s"}.`;
+    const wait = Math.max(1, Math.ceil((nextPoll - Date.now()) / 1000));
+    throw new CliError("login_pending", polls > 0
+      ? `Access has not been allowed yet. ${alive} Run opengame login --continue again once the person has typed the code and pressed Allow access.`
+      : `Not checked yet: OpenGame asks for ${base} seconds between checks, and the next one is due in ${wait} second${wait === 1 ? "" : "s"}. ${alive} Run opengame login --continue again in ${wait} second${wait === 1 ? "" : "s"}.`,
+      3, { next: "opengame login --continue" });
   }
   await pending.save(null);
   if (!received) throw new CliError("login_expired", "The login code expired. Run opengame login for a new code.", 3, { next: "opengame login" });

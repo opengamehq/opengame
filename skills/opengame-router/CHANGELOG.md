@@ -1,5 +1,9 @@
 # opengame-router changelog
 
+## 1.0.6
+
+OpenGame opens on 18 November 2026, the jam's kickoff, not 17 November: the site no longer opens a day before the rest.
+
 ## 1.0.5
 
 The site opens on one day and the CLI, uploads and the creator API on the next, the jam's kickoff. Until then an account outside the team is told that day, read from the launch clock.

@@ -34,3 +34,5 @@ export * from "./deploy-source";
 export * from "./bootstrap";
 
 export { studioExperimentSchema, studioExperimentRefusals, type StudioExperimentRefusal } from "./experiments";
+
+export * from "./deployment-progress";

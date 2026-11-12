@@ -113,6 +113,61 @@ def execute(job, stream=None):
                 result.append([file["path"], base64.b64encode(data).decode("ascii")])
             unchanged()
             return {"files": result}
+        if job["operation"] == "copy":
+            # The snapshot a deploy checks and packages, written to a private folder the
+            # CLI made, instead of returned as base64 for Node to hold. A 5 GB build held
+            # that way needed the whole build in memory twice over (snapshot and archive);
+            # copied, it costs disk the size of the build and a megabyte of memory. Each
+            # file is read from the held root exactly as "read" reads it, hashed as it is
+            # copied, and refused if it changed while being read.
+            destination = os.open("/", flags)
+            held.append(destination)
+            for component in parts(job["destination"].lstrip("/")):
+                destination = directory(destination, component)
+            result = []
+            total = 0
+            for file in job["files"]:
+                first_fd = len(held)
+                first_binding = len(bindings)
+                path = parts(file["relative"])
+                parent = root
+                for component in path[:-1]:
+                    parent = directory(parent, component)
+                fd = os.open(path[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
+                target = str(file["target"])
+                if not target.isdigit():
+                    raise ValueError("invalid target")
+                with os.fdopen(fd, "rb") as source:
+                    before = os.fstat(source.fileno())
+                    if not stat.S_ISREG(before.st_mode) or (file.get("size") is not None and before.st_size != file["size"]):
+                        raise ValueError("file changed")
+                    total += before.st_size
+                    if total > job["maximum"]:
+                        raise OverLimit("file limit")
+                    out = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=destination)
+                    digest = hashlib.sha256()
+                    wanted, read = before.st_size + 1, 0
+                    with os.fdopen(out, "wb") as output:
+                        while read < wanted:
+                            chunk = source.read(min(CHUNK, wanted - read))
+                            if not chunk:
+                                break
+                            read += len(chunk)
+                            if read > before.st_size:
+                                break
+                            digest.update(chunk)
+                            output.write(chunk)
+                    after = os.fstat(source.fileno())
+                    if read != before.st_size or (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+                        raise ValueError("file changed")
+                result.append([file["path"], before.st_size, digest.hexdigest()])
+                unchanged()
+                for fd in reversed(held[first_fd:]):
+                    os.close(fd)
+                del held[first_fd:]
+                del bindings[first_binding:]
+            unchanged()
+            return {"digests": result}
         if job["operation"] in ("sizes", "hash"):
             # An external-asset plan is thousands of files. One process per file spent
             # its time starting interpreters (OG Clash's 12,979 ran past ten minutes at

@@ -2,12 +2,12 @@
 name: opengame-jam
 description: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, and submits one exact release as an entry with the person's own answers, leaving the certification to the person. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
 metadata:
-  version: "1.0.6"
+  version: "1.0.7"
 ---
 
 # Enter an OpenGame jam
 
-OpenGame opens on 17 November 2026. Jam entries open on 18 November and close on
+OpenGame opens on 18 November 2026. Jam entries open on 18 November and close on
 18 December, 11:59 pm PT; after the close every deploy path answers `entries_closed`.
 
 Until 18 November, entries stay closed: the CLI and the API answer
@@ -48,8 +48,8 @@ the authority):
 - **Free to play, with no crypto, ads or tracking.** No payments, tips or donations, no
   wallets or tokens, no ads or ad pixels, no session recording. `opengame-deploy` has
   the full rules.
-- **Inside the bundle limits:** 1024 MiB zipped,
-  1536 MiB unzipped, 10,000 files.
+- **Inside the bundle limits:** 4096 MiB zipped,
+  5120 MiB unzipped, 25,000 files.
 - **The person owns the art, audio, models, fonts and code**, or holds a licence to
   ship them.
 - **A game or a world, not a decomp or a mod.** Read `kind` in `opengame.json`. A decomp

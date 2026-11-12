@@ -1,5 +1,13 @@
 # opengame-cli changelog
 
+## 1.8.1
+
+OpenGame opens on 18 November 2026, the jam's kickoff, not 17 November: the site no longer opens a day before the rest.
+
+## 1.8.0
+
+`opengame init` asks a person only the game's name, and `opengame submit` sends a person with no jam answers to the deploy's page, where the description, genre and jam entry are filled in.
+
 ## 1.7.0
 
 Teaches `opengame stats --csv`.

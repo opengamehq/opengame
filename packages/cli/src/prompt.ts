@@ -1,6 +1,6 @@
 import { emitKeypressEvents } from "node:readline";
 import { createInterface } from "node:readline/promises";
-import { CliError, releaseTerminal, terminalText } from "./output";
+import { CliError, questionAnswered, questionGap, releaseTerminal, terminalText } from "./output";
 
 /**
  * Terminal questions for a person, never for an agent: callers ask only after
@@ -10,6 +10,13 @@ import { CliError, releaseTerminal, terminalText } from "./output";
  * cold `npx` start pays for every import. The highlight moves between options in place,
  * so the menu reads as one control rather than a scrolling list. Colour carries meaning
  * only (the highlight), and `NO_COLOR` turns it into a plain marker.
+ *
+ * Questions start in column one, where everything else the CLI says starts, and the options
+ * sit two in under them. Answered questions stack as a form does, with no blank lines
+ * between them, and one blank line separates the form from what came before and after
+ * (`questionGap` in output.ts). Until 11 Nov 2026 each question was indented two and
+ * opened with a blank line, and the summary init printed under them ran flush left with
+ * none, so the two halves of one command looked like two programs.
  */
 
 const plain = () => process.env.NO_COLOR !== undefined || process.env.TERM === "dumb";
@@ -34,6 +41,11 @@ export function menuWindow(count: number, cursor: number, top: number, rows: num
   if (cursor < start) start = cursor;
   if (cursor >= start + size) start = cursor - size + 1;
   return { top: start, size };
+}
+
+/** A question settled to one line: the question, two spaces, and the answer in bold. */
+export function answered(question: string, answer: string): string {
+  return `${terminalText(question)}  ${plain() ? terminalText(answer) : `\x1b[1m${terminalText(answer)}\x1b[0m`}`;
 }
 
 /** One display row, cut to the terminal width so a long hint cannot wrap and throw the
@@ -61,6 +73,8 @@ export function labelWidth(options: PromptOption[]): number {
 /** Arrow keys and Enter; space toggles in a multi-select. Returns the chosen values. */
 async function menu(question: string, options: PromptOption[], { many = false, initial = 0, selected = [] as string[] } = {}): Promise<string[]> {
   if (!options.length) return [];
+  // Before the gap is read: a spinner stopped here prints its tick, which changes it.
+  releaseTerminal();
   const input = process.stdin;
   emitKeypressEvents(input);
   const wasRaw = input.isRaw;
@@ -85,7 +99,7 @@ async function menu(question: string, options: PromptOption[], { many = false, i
     return [...(above ? [quiet(`↑ ${above} more`)] : []), ...shown, ...(below ? [quiet(`↓ ${below} more`)] : []), quiet(help)];
   };
   let drawn = lines();
-  write(`\n  ${terminalText(question)}\n${drawn.join("\n")}\n`);
+  write(`${questionGap()}${terminalText(question)}\n${drawn.join("\n")}\n`);
   const redraw = () => { const next = lines(); write(`\x1b[${drawn.length}A\x1b[0J${next.join("\n")}\n`); drawn = next; };
   try {
     const chosen = await new Promise<string[]>((resolve, reject) => {
@@ -107,7 +121,8 @@ async function menu(question: string, options: PromptOption[], { many = false, i
     // The answered question settles to one line, the way a form keeps what was filled in,
     // so the next question is not read under a wall of options nobody can change now.
     const answer = options.filter(o => chosen.includes(o.value)).map(o => o.label).join(", ") || "None";
-    write(`\x1b[${drawn.length + 1}A\x1b[0J  ${terminalText(question)}  ${plain() ? answer : `\x1b[1m${terminalText(answer)}\x1b[0m`}\n`);
+    write(`\x1b[${drawn.length + 1}A\x1b[0J${answered(question, answer)}\n`);
+    questionAnswered();
     return chosen;
   } finally {
     input.setRawMode?.(wasRaw ?? false);
@@ -128,7 +143,8 @@ export function chooseMany(question: string, options: PromptOption[], selected: 
 export async function ask(question: string): Promise<string> {
   releaseTerminal();
   const reader = createInterface({ input: process.stdin, output: process.stdout });
-  try { return (await reader.question(`\n  ${terminalText(question)} `)).trim(); }
+  // The typed answer stays on the question's line, which is its answered form.
+  try { const answer = (await reader.question(`${questionGap()}${terminalText(question)} `)).trim(); questionAnswered(); return answer; }
   finally { reader.close(); }
 }
 

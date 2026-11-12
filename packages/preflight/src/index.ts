@@ -996,6 +996,7 @@ export async function preflight(
      silence (wasm-module.ts). A module that was not read says nothing either way. */
   const threaded = glueThreaded || sharedModules.length > 0;
   const bundlePaths = kept.map((f) => f.path);
+  const fileNames = new Set([...exact].map((path) => path.slice(path.lastIndexOf("/") + 1)));
   const knownOrigin = (url: string, site: Site) => engineDefault(ENGINE_DEFAULT_ORIGINS, engineIds, url, bundlePaths, site);
   const engineRefs = new Map<EngineId, Map<string, { at: string; value: string; why: string }>>();
   const godotLoad = engineIds.has("godot") ? godotLoadPath(engineSources) : null;
@@ -1095,6 +1096,19 @@ export async function preflight(
         .filter((r): r is string => r !== null && r !== "");
       if (candidates.length === 0) continue;
       if (candidates.some((c) => exact.has(c))) continue;
+      /* A bare file name in a script, with a file of exactly that name elsewhere in the
+         folder, is a name a loader joins to a folder it is told about while the game runs:
+         three.js's KTX2Loader after setTranscoderPath, DRACOLoader after setDecoderPath, and
+         Emscripten's glue through locateFile, which every one of those transcoders carries.
+         Trailer Park Warfare (12 Nov 2026) keeps basis_transcoder.wasm in basis/ and points
+         KTX2Loader there, and was told the file was missing because the glue beside the
+         bundler's copy names it bare. Neither base this check knows is the one the loader
+         uses, so the file being in the folder at all is the evidence there is. */
+      /* Not a name built against the page's own address, `new URL("level.json", location.href)`:
+         that has one answer, the bundle root, and a file of the name elsewhere does not
+         serve it (Greptile on opengamehq/opengame#7). */
+      if (ref.kind === "runtime" && ref.base !== "document" && /\.[cm]?js$/i.test(sourcePath)
+          && !ref.value.includes("/") && fileNames.has(ref.value)) continue;
 
       /* The candidate to talk about. For a case mismatch it has to be the one
          that actually matched, or the sentence names two paths that have
@@ -1621,6 +1635,7 @@ function findOutboundOrigins(
       return;
     }
 
+    if (plain && script && !isImport && isWordListItem(text, at)) return;
     if (plain) {
       /* The anchor-href precedent for a value: the same code, a warning, and the reason
          that is true. A request is a blocker, because it cannot succeed. */
@@ -1876,6 +1891,16 @@ function externalHostsNote(hosts: Map<string, string>): Finding {
  * above. The creator is told what it would mean if their game really uses it, and left to
  * decide.
  */
+/* The public relays WebRTC libraries ship as their defaults, which are a note rather than
+   the warning a relay of the game's own choosing gets. Trailer Park Warfare (12 Nov 2026)
+   vendors PeerJS unchanged and was told to explain three relays in its description before
+   anyone would let it through, for servers every PeerJS game on the web dials. A note still
+   names them, and the warning stays for any other host, which is the one a creator chose
+   and a player could not guess. */
+const PUBLIC_LIBRARY_RELAYS: readonly RegExp[] = [
+  /^stun[0-4]?\.l\.google\.com$/, /^(?:[a-z]{2}-\d+\.)?turn\.peerjs\.com$/, /^stun\.cloudflare\.com$/,
+];
+
 function findIceServers(path: string, text: string, inert: Span[]): Finding[] {
   const lineAt = lineLocator(text);
   const out: Finding[] = [];
@@ -1894,6 +1919,7 @@ function findIceServers(path: string, text: string, inert: Span[]): Finding[] {
   for (const url of LIMITS.platform.sdk.roomStunUrls) ours.add(url.replace(/^\w+:/, "").replace(/:\d+$/, "").toLowerCase());
 
   const seen = new Set<string>();
+  const library: { host: string; line: number }[] = [];
   for (const m of text.matchAll(re)) {
     const at = m.index ?? 0;
     if (isInert(inert, at)) continue;
@@ -1902,6 +1928,10 @@ function findIceServers(path: string, text: string, inert: Span[]): Finding[] {
     /* Once per host per file. A library that lists four regional relays is one fact. */
     if (seen.has(host)) continue;
     seen.add(host);
+    if (PUBLIC_LIBRARY_RELAYS.some((relay) => relay.test(host))) {
+      library.push({ host, line: lineAt(at) });
+      continue;
+    }
     if (out.length >= 4) continue;
 
     const finding: Finding = {
@@ -1919,6 +1949,21 @@ function findIceServers(path: string, text: string, inert: Span[]): Finding[] {
       line: lineAt(at),
     };
     out.push(finding);
+  }
+  if (library.length) {
+    const hosts = library.map((row) => row.host);
+    out.push({
+      code: "ice-server",
+      severity: "note",
+      title: `${path} line ${library[0]!.line} names the public relays WebRTC libraries use by default: ${
+        hosts.length === 1 ? hosts[0] : `${hosts.slice(0, -1).join(", ")} and ${hosts.at(-1)}`}.`,
+      detail:
+        "Nothing has to change. PeerJS and most WebRTC libraries connect players through these unless the game " +
+        "names its own. A STUN server sees each player's address while a connection is set up, and a TURN relay " +
+        "carries a connection only when a direct one cannot be made, as on any site that uses the library.",
+      path,
+      line: library[0]!.line,
+    });
   }
 
   return out;
@@ -2043,6 +2088,26 @@ const STRING_LIST_BEFORE = /(?:"[^"\\\n:]{1,80}"|'[^'\\\n:]{1,80}')\s*,\s*$/;
    both checkers. content.py's `_CALL_ARGS_BEFORE` is the same pattern. */
 const CALL_ARGS_BEFORE = /\(\s*(?:(?:"[^"\\\n]{0,80}"|'[^'\\\n]{0,80}')\s*,\s*)+$/;
 const STRING_LIST_AFTER = /^\s*,\s*(?:"[^"\\\n:]{1,80}"|'[^'\\\n:]{1,80}')/;
+
+/* The same list written as one string. PostHog's newer builds carry the bot list as
+   `amazonbot,...,facebookcatalog,http://yandex.com/bots,hubspot,...` and split it on
+   commas, so the URL is one item of a longer string, with a plain word on each side, and
+   the string as a whole is not an address anything could request. The older list shape
+   above did not match it, and on 12 Nov 2026 Trailer Park Warfare was refused for
+   "reaches yandex.com over plain http" and had to take analytics out to get through.
+   Plain http only, where the cost of a miss is a request the browser refuses anyway; a
+   blocked host or package in the same place is still judged above. Both neighbours, by
+   the rule STRING_LIST_BEFORE gives: words without a colon, bracket, brace, semicolon or
+   equals sign, which no argument list, object or template expression is. */
+function isWordListItem(text: string, at: number): boolean {
+  if (text[at - 1] !== ",") return false;
+  const comma = text.indexOf(",", at);
+  if (comma < 0 || comma - at > 300 || /[\s"'`]/.test(text.slice(at, comma))) return false;
+  return WORD_ITEM_BEFORE.test(text.slice(Math.max(0, at - 1 - 120), at - 1))
+    && WORD_ITEM_AFTER.test(text.slice(comma + 1, comma + 1 + 120));
+}
+const WORD_ITEM_BEFORE = /(?:^|[,`"'])[^,`"'\\\n:(){};=$]{1,80}$/;
+const WORD_ITEM_AFTER = /^[^,`"'\\\n:(){};=$]{1,80}[,`"']/;
 
 /**
  * Is this URL in the middle of a sentence, in a script? `"... is not supported in most

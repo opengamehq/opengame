@@ -2,7 +2,7 @@
 name: opengame-cli
 description: Drive the OpenGame command line tool from an agent. Covers installing it, signing in with the person, every command, JSON and JSONL output, exit codes, findings and how to retry. Use when the person mentions the opengame command, the OpenGame CLI, installing @opengamehq/cli, opengame login, check, dev, deploy, status, submit, releases, rollback, unpublish, restore, delete, details, achievements, handle, jam or token, or a command exited with an error you need to read.
 metadata:
-  version: "1.7.0"
+  version: "1.8.1"
 ---
 
 # Use the OpenGame CLI
@@ -59,7 +59,7 @@ token in a command argument, a file in the project, a log or a reply.
 
 | Command | What it does |
 | --- | --- |
-| `opengame init [dir]` | Create opengame.json for an existing game. |
+| `opengame init [dir]` | Create opengame.json for an existing game. Asks a person only the game's name; the rest is filled in on the deploy's page. |
 | `opengame check [dir]` | Find local build and asset problems before uploading. |
 | `opengame dev [dir]` | Serve a local export with the game runtime's headers. |
 | `opengame login` | Sign in through the browser. |
@@ -67,7 +67,7 @@ token in a command argument, a file in the project, a log or a reply.
 | `opengame status [dir]` | Show the latest deploy for this folder, with its findings. |
 | `opengame deployments [dir]` | List the linked game's deploys, newest first. |
 | `opengame open [dir]` | Open the linked game's private page. |
-| `opengame submit [dir]` | Send one release to review, and enter it in a jam. |
+| `opengame submit [dir]` | Send one release to review, and enter it in a jam with flags. A deploy goes to review by itself; a person enters the jam on the deploy's page. |
 | `opengame jams [slug]` | List open jams, or show one jam's tracks and flags. |
 | `opengame jam <withdraw\|reenter>` | Withdraw the linked game's jam entry, or put a withdrawn one back. |
 | `opengame releases [dir]` | List the linked game's releases: which is live, which were live before, and which can be made live again. |

@@ -41,6 +41,14 @@ export type LeaderboardShape = Readonly<{ label: string | null; scoreLabel: stri
  * narrowed to (empty is every run). `shape` is null from an older API. */
 export type LeaderboardPage = Readonly<{ entries: readonly ScoreEntry[]; order: 'asc' | 'desc'; preview: boolean; source: 'game_reported';
   total: number | null; offset: number; sort: string; filter: Readonly<Record<string, string>>; shape: LeaderboardShape | null }>;
+/** The player's entry on one board, as `og.player.stats()` reads it: their best accepted
+ * run by the board's order, or on a career board the row that adds up their runs. */
+export type PlayerStatEntry = Readonly<{ score: number; stats: Readonly<Record<string, number>>; tags: Readonly<Record<string, string>>;
+  meta: ScoreMeta; createdAt: string; imported: boolean }>;
+/** One of the game's boards and the player's entry there, or null when they have none yet. */
+export type PlayerStat = Readonly<{ board: string; label: string | null; keep: 'best' | 'runs' | 'career'; entry: PlayerStatEntry | null }>;
+/** The boards the game declares, in key order. Like any score, each number is the game's claim. */
+export type PlayerStats = Readonly<{ boards: readonly PlayerStat[]; preview: boolean; source: 'game_reported' }>;
 /** A finished run: the score, and optionally a number for each of the board's columns and
  * a value for each of its variants. */
 export type LeaderboardRun = { value: number; stats?: Record<string, number>; tags?: Record<string, string>; meta?: ScoreMeta };
@@ -128,6 +136,47 @@ export class Leaderboards {
       me: async (options?: LeaderboardQuery) => { const page = await this.read(key, 'me', options); return page.ok ? { ok: true as const, value: page.value.entries[0] ?? null } : page; },
       around: (options?: LeaderboardQuery) => this.read(key, 'around', options),
     });
+  }
+  /** og.player.stats(): the player's own row on every board, in one request. og-api takes the
+   * player and the game from the session token, so the request carries nothing but it. The
+   * local mock answers from this browser's scores; it keeps no career rows, so a career board
+   * reads null there until the game is hosted. */
+  async stats(): Promise<Result<PlayerStats>> {
+    await this.initialize();
+    const state = this.context(), generation = this.generation;
+    if (state.disposed || !state.win || !state.enabled) return fail('unavailable', state.disposed ? 'disposed' : 'leaderboards_unavailable');
+    if (!state.local && !state.token) return fail('unavailable', 'session_unavailable');
+    const line = (board: string, label: unknown, keep: unknown, entry: PlayerStatEntry | null): PlayerStat =>
+      Object.freeze({ board, label: typeof label === 'string' ? label : null, keep: keep === 'runs' || keep === 'career' ? keep : 'best', entry });
+    const own = (entry: ScoreEntry | null): PlayerStatEntry | null => entry && Object.freeze({ score: entry.score, stats: entry.stats, tags: entry.tags,
+      meta: entry.meta, createdAt: entry.createdAt, imported: entry.imported });
+    if (state.local) {
+      const boards = await this.definitions(); if (!boards.ok) return boards;
+      try {
+        const lines = [...boards.value].sort((a, b) => a.key < b.key ? -1 : 1).map(board => {
+          const stored = board.keep === 'career' ? null : this.stored(board);
+          return line(board.key, board.label, board.keep, own(stored?.state === 'ok' ? stored.entry : null));
+        });
+        return { ok: true, value: Object.freeze({ boards: Object.freeze(lines), preview: false, source: 'game_reported' as const }) };
+      } catch { return fail('unavailable', 'local_storage_unavailable'); }
+    }
+    if (!this.host(state)) return fail('unavailable', 'unsupported_game_origin');
+    const result = await this.json(new URL('/v1/player/stats', __SDK_CONFIG__.leaderboards.apiOrigin),
+      { headers: { Authorization: `Bearer ${state.token}` }, cache: 'no-store' }, __SDK_CONFIG__.leaderboards.responseBytesMax, generation);
+    if (!result.ok) return result;
+    if (this.context().disposed || generation !== this.generation || !this.context().enabled) return fail('unavailable', 'session_changed');
+    const data = result.value;
+    if (!object(data) || data.source !== 'game_reported' || Boolean(data.preview) !== state.preview || !Array.isArray(data.boards)) return fail('unavailable', 'invalid_response');
+    const lines: PlayerStat[] = [];
+    for (const row of data.boards) {
+      if (!object(row) || typeof row.board !== 'string') return fail('unavailable', 'invalid_response');
+      // The entry is read by the board reader's own check, with the rank and name a stats row
+      // does not carry filled in, so the two can never disagree about what a row may hold.
+      const entry = row.entry === null ? null : this.entry(object(row.entry) ? { ...row.entry, rank: 1, player_name: null } : null);
+      if (row.entry !== null && !entry) return fail('unavailable', 'invalid_response');
+      lines.push(line(row.board, row.label, row.keep, own(entry)));
+    }
+    return { ok: true, value: Object.freeze({ boards: Object.freeze(lines), preview: state.preview, source: 'game_reported' as const }) };
   }
   private validKey(key: string) { return typeof key === 'string' && key.length <= __SDK_CONFIG__.leaderboards.keyCharsMax && /^[a-z0-9][a-z0-9_-]*$/.test(key); }
   private async state(key: string): Promise<Result<LeaderboardContext & { generation: number }>> {

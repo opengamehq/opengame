@@ -2,7 +2,7 @@
 name: opengame-sdk
 description: Integrate a browser game with OpenGame through @opengamehq/sdk, the injected global or a native engine bridge. Covers start-up, the player and their OG at load, names, leaderboards, achievements, events, pause, mute, fullscreen, keys inside the frame and threaded builds. Use when the person says integrate with OpenGame, add the SDK, show the player's name or OG, add a leaderboard or achievement, track events, fix fullscreen or keys in the game frame, or asks how a game talks to OpenGame.
 metadata:
-  version: "1.0.9"
+  version: "1.0.10"
 ---
 
 # Integrate a game with OpenGame

@@ -13,14 +13,14 @@ const TOKEN_RULES: Record<string, string> = {
 /** Token administration needs a browser session, including after CLI login. */
 export function tokensCommand(action: string | undefined, flags: Record<string, string | boolean>, output: Output) {
   if (!["create", "list", "revoke"].includes(action ?? "")) {
-    throw new CliError("token_action", "Use opengame token create, list or revoke.");
+    throw new CliError("token_action", "Use opengame token create, list or revoke.", undefined, { next: "opengame help token" });
   }
   // --human is global and opengame help token lists it, so it belongs here with the other
   // output flags: leaving it out refused the person it exists for, in a shell that carries
   // an agent's variable.
   const allowed = new Set(["json", "jsonl", "human", "no-browser", ...(action === "create" ? ["name", "scopes", "game"] : action === "revoke" ? ["id"] : [])]);
   for (const key of Object.keys(flags)) {
-    if (!allowed.has(key)) throw new CliError("unsupported_flag", `The token ${action} command does not use --${key}. Run opengame help token.`);
+    if (!allowed.has(key)) throw new CliError("unsupported_flag", `The token ${action} command does not use --${key}. Run opengame help token.`, undefined, { next: "opengame help token" });
   }
   const input = tokenHandoffSchema.safeParse({ action,
     ...(flags.name !== undefined ? { name: flags.name } : {}),

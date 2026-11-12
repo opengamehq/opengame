@@ -32,7 +32,7 @@ they belong to one entry, not to the game.
 | `cover` | Not used. OpenGame makes the cover after approval. A file that still names one passes `check`, and the CLI does not upload it; leave the field out |
 | `controls` | One or more of `keyboard`, `mouse`, `gamepad`, each once |
 | `requires` | Optional. `threads: true` for a build that cannot start without them, `renderer` (`webgl`, `webgl2` or `webgpu`), `desktopOnly`, `gamepad`. The game page lists them, and a browser that cannot run threads is told so instead of getting a black frame |
-| `leaderboards` | Up to 10 boards: `key` (lowercase, starts with a letter, up to 48 characters), `order` (`asc` or `desc`), `label` (up to 60 characters), optional `min` and `max` |
+| `leaderboards` | Up to 25 boards: `key` (lowercase, starts with a letter, up to 48 characters), `order` (`asc` or `desc`), `label` (up to 60 characters), optional `min` and `max` |
 | `achievements` | Up to 100: `id` (lowercase letters, digits, `-` and `_`, up to 48 characters), `title`, optional `description`. A deploy saves them when its preview is ready |
 | `sdk` | Optional. A version string, or `{ "inject": false, "version": "..." }`. `inject: false` is honoured only on the older contract whose serving tree the pipeline rewrites; the contracts that add `/_og/sdk.js` at the edge always add it |
 | `runtimes` | Optional. Settings for a runtime the platform serves pinned (js-dos, Ruffle, Pyodide, wasmoon, Flutter's CanvasKit); the engine's guide says which |
@@ -69,8 +69,14 @@ it plays.
 | `decomp` | An existing game rebuilt from its decompiled code | Required | No |
 | `mod` | Changes to an existing game, like new levels, rules or art | Required | No |
 
-`opengame init --kind mod --based-on "Doom"` writes both. Without `--kind`, init asks a
-person in a terminal and makes a game for an agent.
+`opengame init --kind mod --based-on "Doom"` writes both. Without `--kind`, init makes a
+game; it asks a person nothing but the game's name.
+
+A folder with no description of its own gets a placeholder sentence, which the deploy marks
+provisional, and so does a genre init could not read from the game's words. Do not ask the
+creator for either before deploying: the deploy's page asks them, and `opengame details
+--description` sets the description from here once the game exists. A game cannot publish
+with the placeholder.
 
 ## Who owns which value
 

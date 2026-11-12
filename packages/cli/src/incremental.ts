@@ -8,9 +8,20 @@ import { Api, UploadInterrupted } from "./http";
 import { setTimeout as sleep } from "node:timers/promises";
 import { CliError, type Output } from "./output";
 
-export function canonicalArchive(entries: [string, Uint8Array][]) {
-  const files = entries.map(([path, bytes]) => ({ path, sha256: createHash("sha256").update(bytes).digest("hex"), byteSize: bytes.byteLength })).sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+/** The file transport's file list, in its canonical order, or null when the files cannot
+ * go that way (a path the schema refuses, or past the transport's archive size). Decided
+ * from sizes and hashes alone, before a byte of the archive is written. */
+export function canonicalFiles(rows: IncrementalFile[]): IncrementalFile[] | null {
+  const files = [...rows].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
   if (!incrementalFilesSchema.safeParse(files).success || incrementalArchiveBytes(files) > Math.min(LIMITS.bundle.archiveBytesMax, LIMITS.platform.incrementalUpload.archiveBytesMax)) return null;
+  return files;
+}
+
+/** The canonical archive in memory. archive.ts writes the same bytes to disk a file at a
+ * time; this one is for Drop's equivalence test and the tests here. */
+export function canonicalArchive(entries: [string, Uint8Array][]) {
+  const files = canonicalFiles(entries.map(([path, bytes]) => ({ path, sha256: createHash("sha256").update(bytes).digest("hex"), byteSize: bytes.byteLength })));
+  if (!files) return null;
   const byPath = new Map(entries);
   const local: Uint8Array[] = [], central: Uint8Array[] = [];
   let offset = 0;
@@ -44,7 +55,10 @@ function unpackBounded(bytes: Uint8Array) {
       const parents = parts.slice(0, -1).map((_, index) => parts.slice(0, index + 1).join("/"));
       if (paths.has(path) || directories.has(path) || parents.some(parent => paths.has(parent))) throw invalid();
       total += entry.size; count++;
-      if (count > LIMITS.bundle.fileCountMax || total > LIMITS.bundle.uncompressedBytesMax) throw invalid();
+      // One file's own allowance as well as the tree's: since 11 Nov 2026 the tree's (5 GiB)
+      // is past what a 32-bit ZIP size can say, so it alone no longer bounds one member.
+      if (count > LIMITS.bundle.fileCountMax || total > LIMITS.bundle.uncompressedBytesMax
+        || entry.size > LIMITS.bundle.fileBytesMax) throw invalid();
       paths.add(path);
       for (const parent of parents) directories.add(parent);
       members.set(entry.name, entry.size);

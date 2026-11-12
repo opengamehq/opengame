@@ -1,5 +1,9 @@
 # opengame-sdk changelog
 
+## 1.0.10
+
+og.player.stats() reads the player's own entry on every board in one request, a career board's row for all runs included, so XP and levels can be read back into a game. Higher event and score budgets, up to 25 boards a game, and no need to credit OG Radio's music.
+
 ## 1.0.9
 
 OG Radio: `og.radio` and its drop-in picker, so players can pick stations and songs in a game's menu and listen while they play. Sound needs the player's press and stays off while the game is muted. A new reference, `references/radio.md`, has the calls, scopes, theming and codes.

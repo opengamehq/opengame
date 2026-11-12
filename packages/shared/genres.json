@@ -8,7 +8,7 @@
         "TPS",
         "battle royale",
         "extraction shooter",
-        "survival horror",
+        "horror",
         "tactical shooter",
         "looter shooter"
       ],
@@ -47,6 +47,40 @@
         "horror",
         "zombie",
         "zombies"
+      ],
+      "subgenres": [
+        {
+          "slug": "shooter",
+          "label": "Shooter"
+        },
+        {
+          "slug": "survival",
+          "label": "Survival"
+        },
+        {
+          "slug": "horror",
+          "label": "Horror"
+        },
+        {
+          "slug": "battle-royale",
+          "label": "Battle royale"
+        },
+        {
+          "slug": "tactical-shooter",
+          "label": "Tactical shooter"
+        },
+        {
+          "slug": "extraction-shooter",
+          "label": "Extraction shooter"
+        },
+        {
+          "slug": "looter-shooter",
+          "label": "Looter shooter"
+        },
+        {
+          "slug": "bullet-hell",
+          "label": "Bullet hell"
+        }
       ]
     },
     {
@@ -77,6 +111,32 @@
         "swords",
         "exploration",
         "explore"
+      ],
+      "subgenres": [
+        {
+          "slug": "adventure",
+          "label": "Adventure"
+        },
+        {
+          "slug": "hack-and-slash",
+          "label": "Hack and slash"
+        },
+        {
+          "slug": "stealth",
+          "label": "Stealth"
+        },
+        {
+          "slug": "beat-em-up",
+          "label": "Beat ’em up"
+        },
+        {
+          "slug": "soulslike",
+          "label": "Soulslike"
+        },
+        {
+          "slug": "character-action",
+          "label": "Character action"
+        }
       ]
     },
     {
@@ -115,6 +175,40 @@
         "leveling",
         "quest",
         "quests"
+      ],
+      "subgenres": [
+        {
+          "slug": "action-rpg",
+          "label": "Action RPG"
+        },
+        {
+          "slug": "jrpg",
+          "label": "JRPG"
+        },
+        {
+          "slug": "crpg",
+          "label": "CRPG"
+        },
+        {
+          "slug": "mmorpg",
+          "label": "MMORPG"
+        },
+        {
+          "slug": "dungeon-crawler",
+          "label": "Dungeon crawler"
+        },
+        {
+          "slug": "roguelike",
+          "label": "Roguelike"
+        },
+        {
+          "slug": "roguelite",
+          "label": "Roguelite"
+        },
+        {
+          "slug": "monster-collecting",
+          "label": "Monster collecting"
+        }
       ]
     },
     {
@@ -142,6 +236,28 @@
         "jumping",
         "double jump",
         "wall jump"
+      ],
+      "subgenres": [
+        {
+          "slug": "2d-platformer",
+          "label": "2D platformer"
+        },
+        {
+          "slug": "3d-platformer",
+          "label": "3D platformer"
+        },
+        {
+          "slug": "precision-platformer",
+          "label": "Precision platformer"
+        },
+        {
+          "slug": "metroidvania",
+          "label": "Metroidvania"
+        },
+        {
+          "slug": "endless-runner",
+          "label": "Endless runner"
+        }
       ]
     },
     {
@@ -173,6 +289,40 @@
         "deckbuilder",
         "deck building",
         "card battler"
+      ],
+      "subgenres": [
+        {
+          "slug": "real-time-strategy",
+          "label": "Real-time strategy"
+        },
+        {
+          "slug": "turn-based-strategy",
+          "label": "Turn-based strategy"
+        },
+        {
+          "slug": "4x",
+          "label": "4X"
+        },
+        {
+          "slug": "tactics",
+          "label": "Tactics"
+        },
+        {
+          "slug": "tower-defence",
+          "label": "Tower defense"
+        },
+        {
+          "slug": "moba",
+          "label": "MOBA"
+        },
+        {
+          "slug": "auto-battler",
+          "label": "Auto-battler"
+        },
+        {
+          "slug": "deck-builder",
+          "label": "Deck-builder"
+        }
       ]
     },
     {
@@ -203,6 +353,36 @@
         "cozy sim",
         "cosy sim",
         "colony"
+      ],
+      "subgenres": [
+        {
+          "slug": "life-sim",
+          "label": "Life sim"
+        },
+        {
+          "slug": "farming-sim",
+          "label": "Farming sim"
+        },
+        {
+          "slug": "city-builder",
+          "label": "City builder"
+        },
+        {
+          "slug": "tycoon",
+          "label": "Tycoon"
+        },
+        {
+          "slug": "management",
+          "label": "Management"
+        },
+        {
+          "slug": "vehicle-sim",
+          "label": "Vehicle and flight sim"
+        },
+        {
+          "slug": "cozy-sim",
+          "label": "Cozy sim"
+        }
       ]
     },
     {
@@ -243,6 +423,36 @@
         "surfing",
         "extreme sports",
         "sports management"
+      ],
+      "subgenres": [
+        {
+          "slug": "racing",
+          "label": "Racing"
+        },
+        {
+          "slug": "kart-racing",
+          "label": "Kart racing"
+        },
+        {
+          "slug": "sim-racing",
+          "label": "Sim racing"
+        },
+        {
+          "slug": "driving",
+          "label": "Driving"
+        },
+        {
+          "slug": "sports",
+          "label": "Sports"
+        },
+        {
+          "slug": "extreme-sports",
+          "label": "Extreme sports"
+        },
+        {
+          "slug": "sports-management",
+          "label": "Sports management"
+        }
       ]
     },
     {
@@ -270,6 +480,28 @@
         "combo",
         "combos",
         "versus"
+      ],
+      "subgenres": [
+        {
+          "slug": "2d-fighter",
+          "label": "2D fighter"
+        },
+        {
+          "slug": "3d-fighter",
+          "label": "3D fighter"
+        },
+        {
+          "slug": "arena-fighter",
+          "label": "Arena fighter"
+        },
+        {
+          "slug": "platform-fighter",
+          "label": "Platform fighter"
+        },
+        {
+          "slug": "wrestling",
+          "label": "Wrestling and combat"
+        }
       ]
     },
     {
@@ -303,6 +535,44 @@
         "sokoban",
         "riddle",
         "riddles"
+      ],
+      "subgenres": [
+        {
+          "slug": "puzzle",
+          "label": "Puzzle"
+        },
+        {
+          "slug": "physics-puzzle",
+          "label": "Physics puzzle"
+        },
+        {
+          "slug": "match-three",
+          "label": "Match-3"
+        },
+        {
+          "slug": "word-trivia",
+          "label": "Word and trivia"
+        },
+        {
+          "slug": "rhythm",
+          "label": "Rhythm"
+        },
+        {
+          "slug": "idle",
+          "label": "Idle and incremental"
+        },
+        {
+          "slug": "tabletop",
+          "label": "Tabletop and dice"
+        },
+        {
+          "slug": "arcade",
+          "label": "Arcade"
+        },
+        {
+          "slug": "hypercasual",
+          "label": "Hypercasual"
+        }
       ]
     },
     {
@@ -334,6 +604,36 @@
         "ugc",
         "minigames",
         "mini games"
+      ],
+      "subgenres": [
+        {
+          "slug": "party",
+          "label": "Party"
+        },
+        {
+          "slug": "social-deduction",
+          "label": "Social deduction"
+        },
+        {
+          "slug": "co-op-chaos",
+          "label": "Co-op chaos"
+        },
+        {
+          "slug": "sandbox",
+          "label": "Sandbox"
+        },
+        {
+          "slug": "building-creative",
+          "label": "Building and creative"
+        },
+        {
+          "slug": "social-world",
+          "label": "Social world"
+        },
+        {
+          "slug": "ugc",
+          "label": "UGC"
+        }
       ]
     }
   ],

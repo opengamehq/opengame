@@ -2,7 +2,7 @@
 name: opengame-api
 description: Call the OpenGame creator API directly over HTTPS. Covers the base URL, creator tokens and scopes, the OpenAPI document, the error shape and retry fields, deploying without the CLI, and checking whether OpenGame is open. Use when the person wants to deploy from their own tool or CI without the CLI, asks about the OpenGame REST API, api/v1, openapi.json or a creator token, or an API call returned an error code you need to read.
 metadata:
-  version: "1.0.4"
+  version: "1.0.5"
 ---
 
 # Call the OpenGame creator API

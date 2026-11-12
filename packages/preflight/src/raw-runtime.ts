@@ -385,7 +385,10 @@ export async function inspectRawRuntime(file: { path: string; sourcePath?: strin
     if(i<3) try { name=decodeURIComponent(name.replace(/%(?![0-9a-f]{2})/gi,"%25")); } catch { refuse("engine_archive_member_path"); }
   }
   if (!file.bytes) refuse("engine_archive_not_inspected");
-  const maximum = Math.min(options.maximum ?? BUNDLE.uncompressedBytesMax, BUNDLE.uncompressedBytesMax, file.size * BUNDLE.compressionRatioMax);
+  // One decoded movie or disk image is one file, and since 11 Nov 2026 a file's allowance
+  // (1 GiB) is far below the bundle's (5 GiB), so it bounds the buffer inflate asks for.
+  const maximum = Math.min(options.maximum ?? BUNDLE.uncompressedBytesMax, BUNDLE.uncompressedBytesMax, BUNDLE.fileBytesMax,
+    file.size * BUNDLE.compressionRatioMax);
   if (!Number.isSafeInteger(file.size) || file.size < 0 || file.size > BUNDLE.uncompressedBytesMax || maximum < 0) refuse("engine_archive_byte_limit");
   const source = await file.bytes!();
   if (source.length !== file.size) refuse("engine_archive_size_mismatch");

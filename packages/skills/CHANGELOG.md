@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.4.0
+
+- `opengame-sdk` 1.0.10 teaches `og.player.stats()`, which reads the player's own entry on
+  every board in one request, a career board's row included, so a game can read XP and
+  levels back. It also has the higher event and score budgets and the 25-board limit, and
+  drops the request to credit OG Radio's music.
+- `opengame-cli` 1.8.0 and `opengame-deploy` 1.1.0: `opengame init` asks a person only the
+  game's name, and the description, genre and jam entry are filled in on the deploy's page
+  afterwards. Do not ask the creator for a description or genre before deploying.
+- `opengame-deploy` 1.1.1 and `opengame-jam` 1.0.7: a build can be 4 GiB zipped, 5 GiB
+  unpacked and 25,000 files, from 1 GiB, 1.5 GiB and 10,000.
+- `opengame-api` 1.0.5, `opengame-cli` 1.8.1, `opengame-deploy` 1.1.1, `opengame-jam` 1.0.7
+  and `opengame-router` 1.0.6: OpenGame opens on 18 November 2026, the jam's kickoff, all
+  at once.
+
 ## 1.3.0
 
 - `opengame-cli` 1.2.0 teaches `opengame unpublish` and `opengame restore`, run only when

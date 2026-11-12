@@ -25,7 +25,12 @@ export const bootstrapSchema = z.object({
   /* archiveParts: the server takes an archive in parts (POST /api/v1/deploys with
      multipart: true). Absent from every server before 4 Nov 2026, so a CLI sends one PUT to
      those, as it always did. */
-  capabilities: z.object({ incrementalUpload: z.boolean(), archiveParts: z.boolean().optional() }).optional(),
+  capabilities: z.object({ incrementalUpload: z.boolean(), archiveParts: z.boolean().optional(),
+    /* The asset plan kinds this account may send file by file now (11 Nov 2026): the lane
+       is open to it and the server is taking per-file uploads. A CLI sends a build too big
+       for the file route through large-game-v1 when it is listed, and as one archive when
+       it is not. Absent from older servers, which is the archive. */
+    externalAssets: z.array(z.string().max(64)).max(16).optional() }).optional(),
 });
 export type Bootstrap = z.infer<typeof bootstrapSchema>;
 

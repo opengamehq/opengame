@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm, stat, chmod, writeFile, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Credentials } from "../src/credentials";
+import { Credentials, PendingLogins } from "../src/credentials";
 import { Api, ApiError, apiOrigin } from "../src/http";
 import { createServer } from "node:http";
 import { once } from "node:events";
@@ -28,6 +28,57 @@ test("credentials are private, origin-bound and removed without affecting anothe
     assert.equal(await b.read(), other);
     await chmod(b.file, 0o644);
     await assert.rejects(b.read(), /private credential storage/);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test("a pending login keeps the server's pace, and one saved before the pace was kept still resumes", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "og-pending-"));
+  try {
+    const origin = "https://a.example";
+    const pending = new PendingLogins(origin, dir);
+    const base = { origin, deviceCode: "d".repeat(43), userCode: "BCDF-GHJK", url: `${origin}/cli?code=BCDF-GHJK`,
+      expiresAt: new Date(Date.now() + 300_000).toISOString(), interval: 5, deviceName: "Laptop" };
+    // Written by a CLI from before 11 Nov 2026: no nextPollAt at all.
+    await pending.save(base);
+    assert.deepEqual(await pending.read(), base);
+    const paced = { ...base, interval: 20, nextPollAt: new Date(Date.now() + 20_000).toISOString() };
+    await pending.save(paced);
+    assert.deepEqual(await pending.read(), paced);
+    // A time that cannot be read is dropped, not the whole login.
+    await writeFile(pending.file, JSON.stringify({ [origin]: { ...base, nextPollAt: "soon" } }), { mode: 0o600 });
+    assert.deepEqual(await pending.read(), base);
+    await writeFile(pending.file, JSON.stringify({ [origin]: { ...base, nextPollAt: 7 } }), { mode: 0o600 });
+    assert.deepEqual(await pending.read(), base);
+    // A pace lands only on the login it was measured for.
+    const later = new Date(Date.now() + 30_000).toISOString();
+    assert.equal(await pending.pace(base.deviceCode, 25, later), true);
+    assert.deepEqual(await pending.read(), { ...base, interval: 25, nextPollAt: later });
+    await pending.save(null);
+    assert.equal(await pending.pace(base.deviceCode, 30, later), false);
+    assert.equal(await pending.read(), null);
+    const newer = { ...base, deviceCode: "e".repeat(43) };
+    await pending.save(newer);
+    assert.equal(await pending.pace(base.deviceCode, 30, later), false);
+    assert.deepEqual(await pending.read(), newer);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test("a pace racing the save that clears a collected login never writes it back", async () => {
+  /* Greptile on opengamehq/opengame#7: a pace that read the entry before another run cleared
+     it replaced the file afterwards, and the spent login came back. */
+  const dir = await mkdtemp(join(tmpdir(), "og-pending-race-"));
+  try {
+    const origin = "https://a.example";
+    const pending = new PendingLogins(origin, dir);
+    const base = { origin, deviceCode: "d".repeat(43), userCode: "BCDF-GHJK", url: `${origin}/cli?code=BCDF-GHJK`,
+      expiresAt: new Date(Date.now() + 300_000).toISOString(), interval: 5, deviceName: "Laptop" };
+    const later = new Date(Date.now() + 30_000).toISOString();
+    for (let round = 0; round < 20; round++) {
+      await pending.save(base);
+      await Promise.all([pending.pace(base.deviceCode, 10, later), pending.pace(base.deviceCode, 15, later),
+        pending.save(null), pending.pace(base.deviceCode, 20, later)]);
+      assert.equal(await pending.read(), null, `round ${round}`);
+    }
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 

@@ -97,6 +97,9 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   ...AUTH,
   // The game or its files.
   check_failed: game, build_failed: game, build_timeout: game, deploy_failed: game, bundle_limit: game,
+  /* The CLI installing a project's packages before its build (packages/cli deploy.ts):
+     none installed and no lockfile to install from, or the lockfile's install failed. */
+  dependencies_missing: game, install_failed: game,
   archive_limit: game, symlink: game, special_file: game, unportable_name: game, unicode_collision: game, build_changed: game,
   manifest_invalid: game, manifest_unreadable: game, folder_missing: game,
   reserved_runtime_path: game, entry_missing: game, vendor_hash: game,
@@ -230,7 +233,7 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   jam_closed: say(input, "That jam is not taking entries now. Your private preview remains available. Marketplace submissions open separately.", 409),
   // After the close a game's entry that judges play fixes its live version, in the jam and on
   // the marketplace alike (platform_jam_entry_judged), so no retry and no flag changes it.
-  jam_entry_judged: say({ ...input, retry: "never" }, "The jam has closed and judges play the version of this game that was live then, so this release cannot replace it, in the jam or on the marketplace. It stays a private preview.", 409),
+  jam_entry_judged: say({ ...input, retry: "never" }, "The jam has closed and the version of this game that was live then is the one that is judged, so this release cannot replace it, in the jam or on the marketplace. It stays a private preview.", 409),
   // Its rules require that you own every asset and built it after kickoff, which a decomp or
   // a mod of somebody else's game cannot (game-kinds.json). Refused by the CLI from the local
   // manifest, by the submit route from the release, and by a trigger on jam_entries.

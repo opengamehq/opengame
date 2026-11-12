@@ -47,7 +47,7 @@ export function analyticsSearch(options: AnalyticsOptions): string {
 export async function readAnalytics(options: AnalyticsOptions & { game?: string }, settings: { root?: string; tokenStdin?: boolean; signal?: AbortSignal } = {}): Promise<AnalyticsReport> {
   const { game, ...query } = options;
   const search = analyticsSearch(query);
-  if (game !== undefined && !gameIdentifierSchema.safeParse(game).success) throw new CliError("invalid_game", "Use a game ID from opengame games.", 2);
+  if (game !== undefined && !gameIdentifierSchema.safeParse(game).success) throw new CliError("invalid_game", "Use a game ID from opengame games.", 2, { next: "opengame games" });
   const api = new Api();
   try {
     const id = game ?? (await readProject(settings.root ?? process.cwd(), api.origin)).gameId;
@@ -76,9 +76,12 @@ export async function readAnalytics(options: AnalyticsOptions & { game?: string 
 function csvFileRefusal(file: string, error: unknown): CliError {
   const code = (error as NodeJS.ErrnoException | undefined)?.code;
   if (code === "EEXIST") return new CliError("csv_exists", `${file} already exists. Choose another file, or remove it first.`, 2);
-  const why = code === "ENOENT" ? "its folder does not exist" : code === "EACCES" || code === "EPERM" ? "this account may not write there"
-    : code === "EISDIR" ? "that is a folder" : code === "ENOSPC" ? "the disk is full" : "the file could not be written";
-  return new CliError("csv_unwritable", `The CSV was not written to ${file}: ${why}.`, 2);
+  const [why, fix] = code === "ENOENT" ? ["its folder does not exist", "Create the folder, or give --csv a path in one that exists."]
+    : code === "EACCES" || code === "EPERM" ? ["this account may not write there", "Give --csv a path in a folder you can write to."]
+    : code === "EISDIR" ? ["that is a folder", "Give --csv a file name, such as stats.csv."]
+    : code === "ENOSPC" ? ["the disk is full", "Free some space, or give --csv a path on another disk."]
+    : ["the file could not be written", "Check the path, then run the command again."];
+  return new CliError("csv_unwritable", `The CSV was not written to ${file}: ${why}. ${fix}`, 2);
 }
 
 /**
@@ -104,7 +107,7 @@ function csvWindow(text: string): { window: string; period: string } | null {
 export async function readAnalyticsCsv(options: AnalyticsOptions & { game?: string }, settings: { root?: string; tokenStdin?: boolean } = {}): Promise<string> {
   const { game, ...query } = options;
   const search = analyticsSearch(query);
-  if (game !== undefined && !gameIdentifierSchema.safeParse(game).success) throw new CliError("invalid_game", "Use a game ID from opengame games.", 2);
+  if (game !== undefined && !gameIdentifierSchema.safeParse(game).success) throw new CliError("invalid_game", "Use a game ID from opengame games.", 2, { next: "opengame games" });
   const api = new Api();
   try {
     const id = game ?? (await readProject(settings.root ?? process.cwd(), api.origin)).gameId;

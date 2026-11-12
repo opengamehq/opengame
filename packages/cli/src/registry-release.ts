@@ -9,7 +9,7 @@ export const CLI_PACKAGE = "@opengamehq/cli";
 export const REGISTRY_RELEASE = /^@opengamehq\/cli@(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$(?![\s\S])/;
 
 const CAPS = LIMITS.platform.cliUpgrade;
-const invalid = () => new CliError("upgrade_untrusted", "The CLI release could not be verified against the official npm registry. Nothing was installed.", 5);
+const invalid = () => new CliError("upgrade_untrusted", "The CLI release could not be verified against the official npm registry, so nothing was installed. Check your connection and HTTPS_PROXY, then run opengame upgrade again. If it fails again, write to team@opengame.io.", 5, { next: "opengame upgrade" });
 
 export function registryMetadata(value: unknown, spec: string): { tarball: string; integrity: string; version: string } {
   if (!REGISTRY_RELEASE.test(spec) || !value || typeof value !== "object") throw invalid();

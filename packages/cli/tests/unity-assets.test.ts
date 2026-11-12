@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 // EN6 regressions, added without running tests or building the CLI in this task.
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -54,12 +55,12 @@ test("the boot archive excludes exact asset paths and keeps sibling code, wasm a
   for (const [path, bytes] of files) await writeFile(join(root, path), bytes);
   await writeFile(join(root, "plan.json"), JSON.stringify({ assets: ["Build/game.data"] }));
   const archive = await createUnityArchive(root, manifest, silent, root, "plan.json");
-  const tree = unzipSync(archive.bytes);
+  const tree = unzipSync(readFileSync(archive.file));
   assert.equal(tree["Build/game.data"], undefined);
   for (const path of ["Build/game.js", "Build/game.wasm", "Build/other.data"]) assert.deepEqual(Buffer.from(tree[path]!), files.get(path));
   assert.equal(archive.fileCount, archive.incremental!.length);
   assert.deepEqual(archive.unityAssets.assets, [asset("Build/game.data", files.get("Build/game.data")!)]);
-  assert.equal(archive.unityAssets.inputDigest, unityInputDigest({ sha256: archive.sha256, byteSize: archive.bytes.length }, archive.unityAssets.assets));
+  assert.equal(archive.unityAssets.inputDigest, unityInputDigest({ sha256: archive.sha256, byteSize: archive.byteSize }, archive.unityAssets.assets));
 }));
 
 test("ordinary collection stays capped and unlisted large siblings cannot escape the boot budget", async () => temporary(async root => {
@@ -447,7 +448,7 @@ test('the archive caller forwards exact external references without putting byte
   await writeFile(join(root, 'StreamingAssets/sky.png'), 'external bytes');
   await writeFile(join(root, 'assets.json'), JSON.stringify({ assets: ['Build/game.data', 'StreamingAssets/sky.png'] }));
   const archive = await createUnityArchive(root, manifest, silent, root, 'assets.json');
-  const entries = unzipSync(archive.bytes);
+  const entries = unzipSync(readFileSync(archive.file));
   assert.equal(entries['Build/game.data'], undefined);
   assert.equal(entries['StreamingAssets/sky.png'], undefined);
   assert.ok(entries['index.html']); assert.ok(entries['game.js']);

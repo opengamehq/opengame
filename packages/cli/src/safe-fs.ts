@@ -15,7 +15,7 @@ type Reply = { error?: string; files?: [string, string][]; ok?: boolean; sizes?:
 export type DirectoryIdentity = { dev: string; ino: string };
 
 export async function safeDirectoryIdentity(root: string, expected?: DirectoryIdentity): Promise<DirectoryIdentity> {
-  if (!isAbsolute(root)) throw new CliError("build_changed", "The selected export root is no longer canonical.", 1);
+  if (!isAbsolute(root)) throw new CliError("build_changed", "The selected export root is no longer canonical. Finish building, then run the command again.", 1);
   const stat = await lstat(root, { bigint: true });
   const identity = { dev: String(stat.dev), ino: String(stat.ino) };
   // Validate the supplied binding, never adopt realpath's replacement target.
@@ -148,7 +148,7 @@ export async function safeSnapshot(folder: string, options: { externalAssets?: R
   if (options.rootIdentity) await safeDirectoryIdentity(folder, options.rootIdentity);
   const collected = await collectFiles(folder, { externalAssets: options.externalAssets, externalDelivery: options.externalDelivery });
   const identity = options.rootIdentity ? await safeDirectoryIdentity(collected.root, options.rootIdentity) : await safeDirectoryIdentity(collected.root);
-  if (options.rootIdentity && collected.root !== folder) throw new CliError("build_changed", "The selected export root changed during collection.", 1);
+  if (options.rootIdentity && collected.root !== folder) throw new CliError("build_changed", "The selected export root changed while it was being read. Finish building, then run the command again.", 1);
   const rows = collected.files.map(file => ({ path: file.path, relative: relative(collected.root, file.source).split(sep).join("/"), size: file.size }));
   const snapshot = new Map<string, Buffer>();
   // Each read is held to what is left of the whole allowance, as one read was held to all
@@ -165,6 +165,34 @@ export async function safeSnapshot(folder: string, options: { externalAssets?: R
   }
   return { ...collected, snapshot };
 }
+
+/** safeSnapshot's reads, copied into `destination` (a private folder the caller made)
+ * instead of returned. Each file lands as its index in `files`, and comes back with the
+ * size and SHA-256 of the bytes copied. The reply is a few hundred bytes a file however
+ * large the files are, so one job takes a few thousand files. */
+export async function safeCopySnapshot(folder: string, destination: string, options: { externalAssets?: ReadonlySet<string>; externalDelivery?: string; rootIdentity?: DirectoryIdentity; words?: ReadWords } = {}) {
+  if (options.rootIdentity) await safeDirectoryIdentity(folder, options.rootIdentity);
+  const collected = await collectFiles(folder, { externalAssets: options.externalAssets, externalDelivery: options.externalDelivery });
+  const identity = options.rootIdentity ? await safeDirectoryIdentity(collected.root, options.rootIdentity) : await safeDirectoryIdentity(collected.root);
+  if (options.rootIdentity && collected.root !== folder) throw new CliError("build_changed", "The selected export root changed during collection.", 1);
+  const rows = collected.files.map((file, index) => ({ path: file.path, relative: relative(collected.root, file.source).split(sep).join("/"), size: file.size, target: String(index) }));
+  const copied: { path: string; size: number; sha256: string; file: string }[] = [];
+  let left = LIMITS.bundle.uncompressedBytesMax;
+  for (let start = 0; start < rows.length; start += COPY_BATCH_FILES) {
+    const batch = rows.slice(start, start + COPY_BATCH_FILES);
+    const reply = await filesystem({ operation: "copy", root: collected.root, identity, destination, maximum: left, files: batch }, options.words);
+    const digests = reply.digests;
+    if (!Array.isArray(digests) || digests.length !== batch.length) throw helperBroke();
+    digests.forEach((row: unknown, index) => {
+      const expected = batch[index]!;
+      if (!Array.isArray(row) || row[0] !== expected.path || row[1] !== expected.size || typeof row[2] !== "string" || !/^[0-9a-f]{64}$/.test(row[2])) throw helperBroke();
+      copied.push({ path: expected.path, size: expected.size, sha256: row[2], file: expected.target });
+      left -= expected.size;
+    });
+  }
+  return { ...collected, copied };
+}
+const COPY_BATCH_FILES = 2048;
 
 /** Files in runs of at most `cap` bytes, in order, and a file bigger than `cap` in a run
  * of its own.
@@ -205,7 +233,7 @@ export async function writeStage(root: string, target: string, files: Map<string
 
 
 export async function safeReadFile(root: string, name: string, maximum: number, words: ReadWords = {}): Promise<Buffer> {
-  if (!isBundlePath(name)) throw new CliError("build_changed", "The export contains an invalid file path.", 1);
+  if (!isBundlePath(name)) throw new CliError("build_changed", `The export contains a file path that cannot be read safely: ${name}. Rename it, or finish building, then run the command again.`, 1);
   const base = await realpath(root);
   const identity = await lstat(base, { bigint: true });
   const reply = await filesystem({ operation: "read", root: base, identity: { dev: String(identity.dev), ino: String(identity.ino) }, maximum, allowMissing: true, files: [{ path: name, relative: name }] }, words);
@@ -218,7 +246,7 @@ export async function safeReadFile(root: string, name: string, maximum: number, 
  * The same helper validates held directory bindings before releasing any bytes. */
 export async function safeReadLargeFile(root: string, name: string, maximum: number, expectedRoot?: DirectoryIdentity): Promise<Buffer> {
   if (!isAbsolute(root) || !isBundlePath(name) || !Number.isSafeInteger(maximum) || maximum < 0 || maximum > LARGEST_ASSET_BYTES) {
-    throw new CliError("build_changed", "The external asset has an invalid path or size.", 1);
+    throw new CliError("build_changed", "The external asset has an invalid path or size. Finish building, then run the command again.", 1);
   }
   const base = root, identity = await safeDirectoryIdentity(base, expectedRoot);
   const child = await helper();
@@ -267,7 +295,7 @@ export async function safeHashFiles(root: string, names: readonly string[], limi
   const { fileBytes, totalBytes } = limits;
   if (!isAbsolute(root) || names.some(name => !isBundlePath(name)) || !Number.isSafeInteger(fileBytes) || fileBytes < 0 || fileBytes > LARGEST_ASSET_BYTES ||
       !Number.isSafeInteger(totalBytes) || totalBytes < 0) {
-    throw new CliError("build_changed", "The external asset has an invalid path or size.", 1);
+    throw new CliError("build_changed", "The external asset has an invalid path or size. Finish building, then run the command again.", 1);
   }
   const words: ReadWords = { changed: ASSET_CHANGED, ...options.words };
   const identity = await safeDirectoryIdentity(root, options.expectedRoot);
@@ -307,7 +335,7 @@ export async function safeHashFiles(root: string, names: readonly string[], limi
  * each call to a few megabytes. */
 export async function safeReadFiles(root: string, files: readonly { path: string; byteSize: number }[], words: ReadWords = {}): Promise<Map<string, Buffer>> {
   if (!isAbsolute(root) || files.some(file => !isBundlePath(file.path) || !Number.isSafeInteger(file.byteSize) || file.byteSize < 0 || file.byteSize > LARGEST_ASSET_BYTES)) {
-    throw new CliError("build_changed", "The external asset has an invalid path or size.", 1);
+    throw new CliError("build_changed", "The external asset has an invalid path or size. Finish building, then run the command again.", 1);
   }
   const identity = await safeDirectoryIdentity(root);
   const reply = await filesystem({ operation: "read", root, identity, maximum: files.reduce((sum, file) => sum + file.byteSize, 0),

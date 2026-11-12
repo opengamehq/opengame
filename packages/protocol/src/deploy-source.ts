@@ -45,7 +45,23 @@ export function deploySourceUrl(source: DeploySource): string {
  * review lane reads it so a placeholder genre is never taken for the creator's word, and the
  * details form reads it to prefill from what review detected rather than from the
  * placeholder.
+ *
+ * `description` joined them on 11 Nov 2026, when the CLI stopped asking for one in the
+ * terminal (the owner: "we shouldnt make people manually fill out stuff like genre and
+ * description in the terminal"). A folder with no words of its own deploys with
+ * PLACEHOLDER_DESCRIPTION, and the deploy's page asks for the real one before the game can
+ * publish.
  */
-export const deployProvisionalSchema = z.array(z.enum(["genre", "controls"])).max(2)
+export const deployProvisionalSchema = z.array(z.enum(["genre", "controls", "description"])).max(3)
   .refine(items => new Set(items).size === items.length, "Name each provisional field once.");
+
+/**
+ * The description a deploy carries when nobody has written one yet. One fixed sentence, so
+ * the server can tell it from a creator's words wherever it meets it (the game row, an older
+ * release) without trusting a flag the client sent, and so it is long enough for the
+ * manifest's minimum and says nothing review could find untrue. It is never meant to reach a
+ * player: the site's details step asks for the real one before a game holding it can
+ * publish.
+ */
+export const PLACEHOLDER_DESCRIPTION = "The creator has not written a description for this game yet.";
 export type DeployProvisional = z.infer<typeof deployProvisionalSchema>[number];

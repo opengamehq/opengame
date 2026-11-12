@@ -93,14 +93,14 @@ opengame login --continue --json
 
 Run these from the game folder.
 
-If the folder has no `opengame.json`, create one. Ask the creator whether it is a game, a world, a decomp or a mod; a decomp or a mod names the game it is based on:
+If the folder has no `opengame.json`, create one. The title is all it needs. A decomp or a mod says so with `--kind` and names the game it is based on:
 
 ```bash
 opengame init . --title "My game" --json
 opengame init . --title "Doom but blue" --kind mod --based-on "Doom" --json
 ```
 
-Then fill in `description` (40 characters or more) and `genre` in `opengame.json`. If the file already exists, leave `init` alone and edit the file.
+Do not ask the creator for a description or a genre before deploying. When you know them, pass `--description` (40 characters or more) and `--genre`; when you do not, init writes a placeholder description and a provisional genre, and the deploy prints its page, where the creator writes the description, chooses the genre and enters the jam. After the deploy you can set the description yourself with `opengame details --description "..." --json`. If the file already exists, leave `init` alone and edit the file.
 
 For a game that already exists on OpenGame, in a new checkout, link the folder first so the deploy does not create a second game:
 
@@ -116,7 +116,7 @@ opengame check . --build --json
 opengame deploy . --json
 ```
 
-`deploy` runs the manifest's build command, checks the output and uploads it, up to 1 GiB zipped. It returns once the upload is in, with exit 0 and `data.done: false`, while the checks run on the server. Keep `.opengame/`: later commands resume and follow the same deploy from it. Use `--no-build` only when the creator says the export is already built and its build cannot run here, never to get past a failing build.
+`deploy` runs the manifest's build command, checks the output and uploads it, up to 4 GiB zipped. It returns once the upload is in, with exit 0 and `data.done: false`, while the checks run on the server. Keep `.opengame/`: later commands resume and follow the same deploy from it. Use `--no-build` only when the creator says the export is already built and its build cannot run here, never to get past a failing build.
 
 | Field | What it holds |
 | --- | --- |
@@ -170,7 +170,7 @@ opengame jams --json
 opengame submit --release <releaseId> --no-wait --json
 ```
 
-OpenGame decides where submissions go. When that is a jam, the submission is the creator's entry: read the form with `opengame jams <slug> --json`, ask the creator for their track, the models they used and any sponsor evidence, and pass them as `--track`, `--models`, `--sponsor` and `--evidence-<sponsor>`. A missing answer exits 2 and names the flag. A decomp or a mod cannot enter a jam.
+OpenGame decides where submissions go, and a ready deploy goes to review by itself. When that is a jam, the creator usually enters it on the deploy's page (`data.deploymentUrl`). To enter it from here instead, read the form with `opengame jams <slug> --json` and pass the track, the models they used and any sponsor evidence as `--track`, `--models`, `--sponsor` and `--evidence-<sponsor>`. A missing answer exits 2 and names the flag. A decomp or a mod cannot enter a jam.
 
 When `data.state` is `needs_certification`, give the creator `data.certifyUrl`, which the CLI also prints as a `certify_required` notice. They certify in their own browser that they have the rights to the game. You cannot do it for them. Follow the review with:
 

@@ -25,6 +25,23 @@ export interface Genre {
   includes: string[];
   /** Words that suggest it. See `inferGenre`. */
   cues: string[];
+  /** Its curated second level, in the order a picker offers them. See `Subgenre`. */
+  subgenres: Subgenre[];
+}
+
+/**
+ * One genre's second level: Horror under Shooter & survival, Monster collecting under RPG.
+ * The owner's call, 11 Nov 2026: every game also says what it is within its genre, detected by review
+ * and confirmed or changed by its creator. Optional on a game, where the genre never is.
+ *
+ * The database holds these as active children of their genre in `taxonomy_terms`
+ * (20261112060000_subgenres.sql), and `tests/genres.test.ts` holds the two to one list. A
+ * slug is unique across all ten genres, so a subgenre names its genre without being told.
+ */
+export interface Subgenre {
+  slug: string;
+  /** Sentence case, as a card's badge prints it. */
+  label: string;
 }
 
 export const GENRE_SLUGS = [
@@ -53,6 +70,39 @@ if (GENRES.map((g) => g.slug).join() !== GENRE_SLUGS.join()) {
 
 const BY_SLUG = new Map<string, Genre>(GENRES.map((g) => [g.slug, g]));
 const LEGACY = raw.legacy as Record<string, GenreSlug>;
+
+/* Each subgenre slug, with the genre it sits under. A slug claimed twice, or one that is also
+   a genre's, would make a subgenre name two places, so that is refused at load like the list
+   above rather than discovered as a badge under the wrong genre. */
+const SUBGENRE_OF = new Map<string, { genre: GenreSlug; label: string }>();
+for (const genre of GENRES) {
+  for (const sub of genre.subgenres ?? []) {
+    if (SUBGENRE_OF.has(sub.slug) || BY_SLUG.has(sub.slug)) {
+      throw new Error(`packages/shared/genres.json names the subgenre ${sub.slug} twice.`);
+    }
+    SUBGENRE_OF.set(sub.slug, { genre: genre.slug, label: sub.label });
+  }
+}
+
+/** A genre's subgenres, in order, or none for a slug that is not one of the ten. */
+export function subgenresOf(genre: string): Subgenre[] {
+  return BY_SLUG.get(genre)?.subgenres ?? [];
+}
+
+/** What a card prints for a subgenre slug, or null for one that is not on the list. */
+export function subgenreLabel(slug: string): string | null {
+  return SUBGENRE_OF.get(slug)?.label ?? null;
+}
+
+/** The genre a subgenre sits under, or null for a slug that is not a subgenre. */
+export function genreOfSubgenre(slug: string): GenreSlug | null {
+  return SUBGENRE_OF.get(slug)?.genre ?? null;
+}
+
+/** Whether `subgenre` is one of `genre`'s own: the one pairing a game may carry. */
+export function isSubgenreOf(genre: string, subgenre: string): boolean {
+  return SUBGENRE_OF.get(subgenre)?.genre === genre;
+}
 
 export function isGenreSlug(value: unknown): value is GenreSlug {
   return typeof value === "string" && BY_SLUG.has(value);

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { gzipSync, brotliCompressSync } from "node:zlib";
@@ -33,7 +34,7 @@ test("recognized gzip and Brotli engine resources retain original bytes in the c
     "game.data.br": brotliCompressSync(Buffer.from("ordinary game data")),
   };
   const { archive } = await bundle(files);
-  const staged = unzipSync(archive.bytes);
+  const staged = unzipSync(readFileSync(archive.file));
   for (const [path, bytes] of Object.entries(files)) assert.deepEqual(staged[path], new Uint8Array(bytes), path);
 });
 

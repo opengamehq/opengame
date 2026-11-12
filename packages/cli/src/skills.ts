@@ -288,7 +288,7 @@ export async function installSkills(options: InstallOptions) {
   if (options.all && options.skill !== undefined) throw new CliError("arguments", "Use --all or --skill, not both.");
   const names = options.skill?.split(",").map(name => name.trim()).filter(Boolean);
   const unknown = names?.filter(name => !bundle.skills.some(skill => skill.name === name));
-  if (names && (!names.length || unknown?.length)) throw new CliError("invalid_skill", "Use --skill with names from opengame skills list, separated by commas.");
+  if (names && (!names.length || unknown?.length)) throw new CliError("invalid_skill", "Use --skill with names from opengame skills list, separated by commas.", undefined, { next: "opengame skills list" });
   const selected = bundle.skills.filter(skill => options.all || (names ? names.includes(skill.name) : skill.default));
   if (!selected.length) throw broken("no starting skills");
   const { agents, reason } = await chooseAgents(options.agent, project, options.env);
@@ -330,10 +330,10 @@ function summary(result: Awaited<ReturnType<typeof installSkills>>, total: numbe
 }
 
 export async function skillsCommand(action: string | undefined, folder: string | undefined, flags: Record<string, string | boolean>, output: Output) {
-  if (action !== "add" && action !== "list") throw new CliError("skills_action", "Use opengame skills add or opengame skills list.");
+  if (action !== "add" && action !== "list") throw new CliError("skills_action", "Use opengame skills add or opengame skills list.", undefined, { next: "opengame help skills" });
   if (action === "list") {
-    if (folder !== undefined) throw new CliError("arguments", "The skills list command does not take a project folder. It lists what this CLI carries.");
-    for (const key of ["agent", "dir", "replace", "keep-edited", "skill", "all"]) if (key in flags) throw new CliError("unsupported_flag", `The skills list command does not use --${key}. Run opengame help skills.`);
+    if (folder !== undefined) throw new CliError("arguments", "The skills list command does not take a project folder. It lists what this CLI carries, so run opengame skills list on its own.", undefined, { next: "opengame skills list" });
+    for (const key of ["agent", "dir", "replace", "keep-edited", "skill", "all"]) if (key in flags) throw new CliError("unsupported_flag", `The skills list command does not use --${key}. Run opengame help skills.`, undefined, { next: "opengame help skills" });
     const bundle = await readBundle();
     const skills = bundle.skills.map(({ name, family, default: byDefault, description }) => ({ name, family, default: byDefault, description }));
     output.emit({ type: "result", command: "skills list", data: { skills,

@@ -264,6 +264,25 @@ test('a relay the game names is a warning about players\' addresses, not about t
   assert.equal(result.ok, true);
 });
 
+/* Trailer Park Warfare, 12 Nov 2026: PeerJS unchanged, with its default relays, and three
+   warnings asking for a description of servers every PeerJS game dials. */
+test("a WebRTC library's public default relays are one note, and another relay is still a warning", async () => {
+  const peer = 'const d={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:["turn:eu-0.turn.peerjs.com:3478","turn:us-0.turn.peerjs.com:3478"],username:"peerjs",credential:"peerjsp"}]};';
+  const result = await game(peer);
+  const rows = result.findings.filter((f) => f.code === 'ice-server');
+  assert.deepEqual(rows.map((f) => f.severity), ['note']);
+  assert.match(rows[0]!.title, /stun\.l\.google\.com, eu-0\.turn\.peerjs\.com and us-0\.turn\.peerjs\.com/);
+  assert.match(rows[0]!.detail!, /Nothing has to change/);
+  assert.equal(result.ok, true);
+  const mixed = (await game(peer + ' const mine={iceServers:[{urls:"turn:relay.mygame.example:3478"}]};'))
+    .findings.filter((f) => f.code === 'ice-server');
+  assert.deepEqual(mixed.map((f) => f.severity).sort(), ['note', 'warning']);
+  // A look-alike under somebody else's name is not the library's.
+  const lookalike = (await game('const c={iceServers:[{urls:"turn:turn.peerjs.com.evil.example:3478"}]};'))
+    .findings.filter((f) => f.code === 'ice-server');
+  assert.deepEqual(lookalike.map((f) => f.severity), ['warning']);
+});
+
 test('no finding still says a game may only reach OpenGame', async () => {
   const result = await game('fetch("https://api.mygame.example/x"); const v = {cfg:"http://plain.example/x"}; new WebSocket("wss://ok.example/");');
   for (const f of result.findings) assert.doesNotMatch(`${f.title} ${f.detail ?? ''}`, /may only reach|refused by the CSP/, f.code);

@@ -31,11 +31,11 @@ export async function jamsCommand(slug: string | undefined, flags: Flags, output
       output.emit({ type: "result", command: "jams", data: { jams, message: lines.map(terminalText).join("\n") } });
       return;
     }
-    if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/i.test(slug)) throw new CliError("invalid_jam", "Use a jam's short name from opengame jams.");
+    if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/i.test(slug)) throw new CliError("invalid_jam", "Use a jam's short name from opengame jams.", undefined, { next: "opengame jams" });
     let raw;
     try { raw = await api.json(`/api/v1/jams/${slug.toLowerCase()}/form`, { token }); }
     catch (error) {
-      if (error instanceof ApiError && error.status === 404) throw new CliError("jam_not_found", "There is no jam with that name. Run opengame jams to see the open ones.");
+      if (error instanceof ApiError && error.status === 404) throw new CliError("jam_not_found", "There is no jam with that name. Run opengame jams to see the open ones.", undefined, { next: "opengame jams" });
       throw error;
     }
     const form = jamFormSchema.parse(raw.form);

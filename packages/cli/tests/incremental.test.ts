@@ -106,7 +106,7 @@ test("saved file uploads reject duplicate, colliding and malformed paths", () =>
 
 test("prototype-related saved members retain the same pre-allocation size checks", () => {
   const archive = canonicalArchive([["__proto__", Buffer.from("bounded")]])!;
-  for (const size of [0, LIMITS.bundle.uncompressedBytesMax + 1]) {
+  for (const size of [0, LIMITS.bundle.fileBytesMax + 1]) {
     const altered = Buffer.from(archive.bytes);
     const directoryOffset = altered.readUInt32LE(altered.length - 6);
     altered.writeUInt32LE(size, directoryOffset + 24);

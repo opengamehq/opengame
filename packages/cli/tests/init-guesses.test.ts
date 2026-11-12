@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LIMITS } from "@opengame/shared";
 import { FALLBACK_GENRE, initProject, provisionalFields } from "../src/init";
+import { PLACEHOLDER_DESCRIPTION } from "@opengame/protocol";
 import { readProject } from "../src/project";
 import { loadManifest } from "../src/files";
 import type { Output } from "../src/output";
@@ -39,7 +40,8 @@ test("a project whose words name no genre gets one, said by name, and check acce
   const file = await written(root);
   assert.equal(file.genre, FALLBACK_GENRE, "init left genre for the next command to refuse");
   assert.deepEqual(result.needs, []);
-  assert.match(result.message, new RegExp(`Genre: init could not tell the genre from the title and description, so it set ${FALLBACK_GENRE}\\.`));
+  assert.match(result.message, new RegExp(`Genre: init could not tell the genre from the title and description, so it set ${FALLBACK_GENRE} for now\\.`));
+  assert.match(result.message, /Choose the real one on your deploy's page after opengame deploy/);
   assert.match(result.message, /change genre in opengame\.json/);
   // What `opengame check` reads first: the file init wrote has to pass it.
   await loadManifest(root);
@@ -117,23 +119,105 @@ test("a --genre given for a blank genre is the one written", async () => fixture
 }));
 
 /* Greptile on opengamehq/opengame#6: the fill is written from the file as init read it, so an
-   edit saved while a person sat at the genre question was overwritten without a word. */
+   edit saved while a person sat at the genre question was overwritten without a word. The
+   name is the one question left (11 Nov 2026), and the same holds for it. */
 test("an edit saved to opengame.json while init asks a question is kept, and nothing is written", async () => fixture(async root => {
   const path = join(root, "opengame.json");
-  await writeFile(path, JSON.stringify({ title: "Night shift", description: DESCRIPTION, genre: "", controls: ["keyboard"] }));
-  const edited = JSON.stringify({ title: "Night shift", description: DESCRIPTION, genre: "", controls: ["gamepad"] });
+  await writeFile(path, JSON.stringify({ title: "", description: DESCRIPTION, genre: "rpg", controls: ["keyboard"] }));
+  const edited = JSON.stringify({ title: "", description: DESCRIPTION, genre: "rpg", controls: ["gamepad"] });
   const prompts = {
-    ask: async () => "",
-    choose: async () => { await writeFile(path, edited); return "rpg"; },
+    ask: async () => { await writeFile(path, edited); return "Night shift"; },
+    choose: async () => { throw new Error("init asked a menu"); },
   } as never;
   await assert.rejects(initProject(root, {}, { interactive: true, prompts }), (error: { code: string; message: string }) =>
     error.code === "manifest_changed" && /kept your edits and wrote nothing/.test(error.message));
   assert.equal(await readFile(path, "utf8"), edited, "init wrote over an edit saved during its prompt");
-  // With nothing changing underneath, the same answers are written.
-  const result = await initProject(root, {}, { interactive: true, prompts: { ask: async () => "", choose: async () => "rpg" } as never });
-  assert.equal(result.manifest.genre, "rpg");
+  // With nothing changing underneath, the same answer is written.
+  const result = await initProject(root, {}, { interactive: true, prompts: { ask: async () => "Night shift", choose: async () => "rpg" } as never });
+  assert.equal(result.manifest.title, "Night shift");
   assert.deepEqual((await written(root)).controls, ["gamepad"]);
 }));
+
+/* The owner's call, 11 Nov 2026: the CLI collects the name and nothing else, and the rest is written on
+   the deploy's page. A project with no words of its own gets the placeholder, which a deploy
+   names provisional so the page asks for the real one before the game can publish. */
+test("a folder with no description of its own gets the placeholder, named provisional", async () => fixture(async root => {
+  await writeFile(join(root, "index.html"), TAP_COUNTER);
+  const result = await initProject(root, { title: "CLI test (delete me)" });
+  assert.equal(result.manifest.description, PLACEHOLDER_DESCRIPTION);
+  assert.deepEqual(result.needs, [], "the placeholder has to pass the manifest check, or deploy refuses it");
+  await loadManifest(root);
+  assert.match(result.message, /Description: none yet\. Write it on your deploy's page after opengame deploy/);
+  assert.deepEqual(await provisionalFields(root, result.manifest), ["description", "genre"]);
+  // Once somebody writes their own, it is theirs.
+  assert.deepEqual(await provisionalFields(root, { ...result.manifest, description: DESCRIPTION }), ["genre"]);
+}));
+
+test("the project's own words are used for the description when they fit, and never a too-short one", async () => {
+  await fixture(async root => {
+    await writeFile(join(root, "index.html"), `<!doctype html><title>Pond</title><meta name="description" content="${DESCRIPTION}">`);
+    assert.equal((await initProject(root, {})).manifest.description, DESCRIPTION);
+  });
+  await fixture(async root => {
+    await writeFile(join(root, "package.json"), JSON.stringify({ name: "pond", description: "A pond." }));
+    await writeFile(join(root, "index.html"), "<!doctype html><title>Pond</title>");
+    assert.equal((await initProject(root, {})).manifest.description, PLACEHOLDER_DESCRIPTION);
+  });
+});
+
+test("the deploy's address says what is left to do there, only when something is", async () => {
+  const { detailsLine } = await import("../src/deploy");
+  assert.equal(detailsLine(undefined), "");
+  assert.equal(detailsLine(["controls"]), "", "controls are confirmed on the page anyway, and ask nothing of a person");
+  assert.match(detailsLine(["description", "genre"]), /^\nOn that page, write its description and choose its genre, and enter the jam once review passes\./);
+  assert.match(detailsLine(["genre"]), /^\nOn that page, choose its genre,/);
+});
+
+test("a person at a terminal is asked the name and nothing else, and Enter keeps what init read", async () => {
+  await fixture(async root => {
+    await writeFile(join(root, "index.html"), "<!doctype html><title>Pond</title><canvas></canvas>");
+    const asked: string[] = [];
+    const prompts = { ask: async (q: string) => { asked.push(q); return ""; }, choose: async (q: string) => { asked.push(q); return ""; } } as never;
+    const result = await initProject(root, {}, { interactive: true, prompts });
+    assert.deepEqual(asked, ['Game name (Enter keeps "Pond"):']);
+    assert.equal(result.manifest.title, "Pond");
+    assert.equal(result.manifest.kind, "game");
+  });
+  await fixture(async root => {
+    await writeFile(join(root, "index.html"), "<!doctype html><title>Pond</title>");
+    const answers = ["x".repeat(LIMITS.text.gameTitle.max + 1), "  Lily pond  "];
+    const asked: string[] = [];
+    const prompts = { ask: async (q: string) => { asked.push(q); return answers.shift()!; }, choose: async () => "" } as never;
+    const result = await initProject(root, {}, { interactive: true, prompts });
+    assert.equal(asked.length, 2);
+    assert.match(asked[1]!, new RegExp(`^Use ${LIMITS.text.gameTitle.productMin} to ${LIMITS.text.gameTitle.max} characters\\.`));
+    assert.equal(result.manifest.title, "Lily pond");
+  });
+  // --title says it, so nothing is asked at all.
+  await fixture(async root => {
+    const prompts = { ask: async () => { throw new Error("asked"); }, choose: async () => { throw new Error("asked"); } } as never;
+    assert.equal((await initProject(root, { title: "Given" }, { interactive: true, prompts })).manifest.title, "Given");
+  });
+});
+
+/* Review of mirror #7, 12 Nov 2026: the genre was guessed from the name init offered, before
+   the person answered, so a folder made as a kart racer and named a dungeon crawler kept
+   the racing genre. It is guessed from the name the person settles on. */
+test("the genre is guessed from the name the person types, not the one init offered", async () => {
+  await fixture(async root => {
+    await writeFile(join(root, "index.html"), "<!doctype html><title>Kart Racer</title><canvas></canvas>");
+    const prompts = { ask: async () => "Dungeon Crawler", choose: async () => "" } as never;
+    const result = await initProject(root, {}, { interactive: true, prompts });
+    assert.equal(result.manifest.title, "Dungeon Crawler");
+    assert.equal(result.manifest.genre, "rpg");
+  });
+  // --genre is the person's own word, and a new name does not change it.
+  await fixture(async root => {
+    await writeFile(join(root, "index.html"), "<!doctype html><title>Kart Racer</title><canvas></canvas>");
+    const prompts = { ask: async () => "Dungeon Crawler", choose: async () => "" } as never;
+    assert.equal((await initProject(root, { genre: "racing-sports" }, { interactive: true, prompts })).manifest.genre, "racing-sports");
+  });
+});
 
 test("an opengame.json init cannot read is still refused, not rewritten", async () => fixture(async root => {
   await writeFile(join(root, "opengame.json"), "{ not json");

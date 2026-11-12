@@ -109,12 +109,12 @@ function olderServer(error: unknown, page: string): unknown {
  */
 export function pick(releases: readonly GameRelease[], typed: string): GameRelease {
   const wanted = typed.trim().toLowerCase();
-  if (!/^[0-9a-f-]{8,36}$/.test(wanted)) throw new CliError("invalid_release", "Name a release by its id, or the first eight characters opengame releases prints.", EXIT.input);
+  if (!/^[0-9a-f-]{8,36}$/.test(wanted)) throw new CliError("invalid_release", "Name a release by its id, or the first eight characters opengame releases prints.", EXIT.input, { next: "opengame releases" });
   const exact = releases.find(row => row.id === wanted || row.versionId === wanted);
   if (exact) return exact;
   const matches = releases.filter(row => row.id.startsWith(wanted) || (row.versionId?.startsWith(wanted) ?? false));
   if (matches.length === 1) return matches[0]!;
-  if (matches.length > 1) throw new CliError("release_ambiguous", `More than one release starts with ${wanted}: ${matches.map(row => row.id).join(", ")}. Use more of the id.`, EXIT.input);
+  if (matches.length > 1) throw new CliError("release_ambiguous", `More than one release starts with ${wanted}: ${matches.map(row => row.id).join(", ")}. Use more of the id.`, EXIT.input, { next: "opengame releases" });
   throw new CliError("release_not_found", `No release of this game starts with ${wanted}. Run opengame releases to see them.`, EXIT.input, { next: "opengame releases" });
 }
 

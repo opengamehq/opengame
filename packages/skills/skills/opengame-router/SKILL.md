@@ -2,7 +2,7 @@
 name: opengame-router
 description: Build, test and submit a browser game on OpenGame. Routes game work to the deploy guide, whole-game review and relevant craft skills. Use when someone asks to make a game, improve a game, check it, deploy it or enter an OpenGame jam.
 metadata:
-  version: "1.0.5"
+  version: "1.0.6"
 ---
 
 # Work on an OpenGame game

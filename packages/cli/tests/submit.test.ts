@@ -328,30 +328,32 @@ test("jams lists the open jams and prints one jam's flags", async () => {
   } finally { api.close(); await rm(cwd, { recursive: true, force: true }); }
 });
 
-test("a person in a terminal is asked again for a wrong answer, and keeps the rest", async () => {
-  const { answerJamForm } = await import("../src/submit");
-  const { jamFormSchema } = await import("@opengame/protocol");
-  const parsed = jamFormSchema.parse({ ...form, models: { ...form.models, min: 2 } });
-  const asked: string[] = [];
-  const picks = [[], ["claude"], ["claude", "flux"], ["fal"]];
-  const hints: (string | null | undefined)[] = [];
-  const prompts = {
-    choose: async (q: string) => { asked.push(q); return "rpg"; },
-    chooseMany: async (q: string, options: { hint?: string | null }[]) => {
-      asked.push(q);
-      if (q === "Sponsor tracks") hints.push(...options.map(o => o.hint));
-      return picks.shift() ?? [];
-    },
-    ask: async (q: string) => { asked.push(q); return "Every texture."; },
-  };
-  const events: unknown[] = [];
-  const checked = await answerJamForm(parsed, { models: [], sponsors: [], evidence: {} }, prompts as never, undefined, { emit: (e: unknown) => events.push(e) } as never);
-  assert.equal(checked.ok, true);
-  if (!checked.ok) return;
-  assert.deepEqual(checked.answers, { slug: "fixture-jam", track: "rpg", models: ["claude", "flux"], sponsors: ["fal"], evidence: { fal: "Every texture." } });
-  assert.equal(asked.filter(q => q === "Genre track").length, 1, "the track is asked once and kept");
-  assert.equal(asked.filter(q => q.startsWith("Models used")).length, 3, "models are asked until the minimum is met");
-  assert.deepEqual(hints, ["open because you listed a fal.ai model"]);
+/* The owner's call, 11 Nov 2026: the CLI collects the minimum, and the jam's track, models and sponsors
+   are chosen on the deploy's page. A person naming none of them is sent there; an agent still
+   answers with flags, and a missing one still names its flag. */
+test("a person who names no jam answer is sent to the deploy's page, and nothing is asked", async () => {
+  const { chooseDestination, releasePage } = await import("../src/submit");
+  const { Api } = await import("../src/http");
+  const { Output } = await import("../src/output");
+  const api = await harness({ jams: [jam] });
+  const previous = process.env.OPENGAME_API_URL; process.env.OPENGAME_API_URL = api.origin;
+  const client = new Api();
+  const root = await mkdtemp(join(tmpdir(), "og-submit-page-"));
+  try {
+    const output = new Output(true, () => {});
+    assert.equal(await chooseDestination(client, token, root, {}, false, true, output), "page");
+    // An agent with no answers still exits 2 naming the flags, as before.
+    await assert.rejects(chooseDestination(client, token, root, {}, false, false, output), { code: "jam_answers_required" });
+    // A person who names an answer is held to the form, not sent away.
+    const answered = await chooseDestination(client, token, root, { track: "rpg", models: "claude" }, false, true, output);
+    assert.equal(typeof answered === "object" && answered?.track, "rpg");
+    // Outside a linked folder the page is the account's games.
+    assert.equal(await releasePage(client, token, root, false, releaseId), `${api.origin}/settings/games`);
+    assert.equal(api.posts.length, 0, "nothing was submitted");
+  } finally {
+    await client.close(); api.close(); await rm(root, { recursive: true, force: true });
+    if (previous === undefined) delete process.env.OPENGAME_API_URL; else process.env.OPENGAME_API_URL = previous;
+  }
 });
 
 test("a person submitting while the newest deploy is not ready is told which deploy is in the way", async () => {

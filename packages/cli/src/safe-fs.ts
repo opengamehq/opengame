@@ -244,7 +244,8 @@ export async function safeReadFile(root: string, name: string, maximum: number, 
  * The root must already be canonical: following a replacement symlink here could
  * redirect a saved upload outside the export selected by the current manifest.
  * The same helper validates held directory bindings before releasing any bytes. */
-export async function safeReadLargeFile(root: string, name: string, maximum: number, expectedRoot?: DirectoryIdentity): Promise<Buffer> {
+export async function safeReadLargeFile(root: string, name: string, maximum: number, expectedRoot?: DirectoryIdentity,
+  range?: { offset: number; length: number; size: number }): Promise<Buffer> {
   if (!isAbsolute(root) || !isBundlePath(name) || !Number.isSafeInteger(maximum) || maximum < 0 || maximum > LARGEST_ASSET_BYTES) {
     throw new CliError("build_changed", "The external asset has an invalid path or size. Finish building, then run the command again.", 1);
   }
@@ -264,8 +265,12 @@ export async function safeReadLargeFile(root: string, name: string, maximum: num
       if (code !== 0 || overflow) reject(new CliError("build_changed", "An external asset is missing, changed, or exceeds its size limit. Finish building and retry.", 1));
       else resolve(Buffer.concat(chunks, received));
     });
+    /* With a range, only that slice comes back, from a file that must still be `size` long: a
+       large asset sent in parts is read a part at a time (transport.ts), so memory holds the
+       parts in flight rather than the file. The slice is never longer than `maximum`. */
     child.stdin.end(JSON.stringify({ operation: "read-binary", root: base, identity,
-      maximum, files: [{ path: name, relative: name }] }));
+      maximum, files: [{ path: name, relative: name, ...(range ? { size: range.size } : {}) }],
+      ...(range ? { range: { offset: range.offset, length: range.length } } : {}) }));
   });
 }
 

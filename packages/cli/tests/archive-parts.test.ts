@@ -42,7 +42,7 @@ async function partsServer(options: { archiveParts?: boolean; drop?: (part: numb
   completedElsewhereAfter?: number }) {
   let origin = "", state = "uploading", size = 0;
   const requests: Record<string, unknown>[] = [], puts: Put[] = [], held = new Map<number, Buffer>(), signed = new Map<number, number>();
-  const keys = new Set<string>();
+  const keys = new Set<string>(), signings: number[][] = [];
   let outages = options.signOutages ?? 0, objectThere = false, forgotten = 0;
   const count = () => Math.ceil(size / PART);
   const length = (part: number) => part < count() ? PART : size - PART * (count() - 1);
@@ -74,14 +74,18 @@ async function partsServer(options: { archiveParts?: boolean; drop?: (part: numb
     }
     if (url.pathname === "/single") { await body(req); state = "queued"; res.end(); return; }
     if (url.pathname === `/api/v1/operations/${id}/upload/parts`) {
-      const [part] = JSON.parse((await body(req)).toString()).parts as number[];
+      // Every number asked for is signed, as archive-parts.ts on the server does; the CLI asks for several at once.
+      const numbers = JSON.parse((await body(req)).toString()).parts as number[];
+      signings.push(numbers);
       if (outages > 0) {
         outages--; res.statusCode = 503;
         res.end(JSON.stringify({ error: "temporarily_unavailable", message: "Try again shortly.", retry: "later", retryAfterSeconds: 1 })); return;
       }
-      signed.set(part!, (signed.get(part!) ?? 0) + 1);
-      res.end(JSON.stringify({ parts: [{ partNumber: part, expiresInSeconds: 3600, headers: { "content-length": String(length(part!)) },
-        url: `${origin}/storage?partNumber=${part}&try=${signed.get(part!)}&length=${length(part!)}` }] }));
+      res.end(JSON.stringify({ parts: numbers.map(part => {
+        signed.set(part, (signed.get(part) ?? 0) + 1);
+        return { partNumber: part, expiresInSeconds: 3600, headers: { "content-length": String(length(part)) },
+          url: `${origin}/storage?partNumber=${part}&try=${signed.get(part)}&length=${length(part)}` };
+      }) }));
       return;
     }
     if (url.pathname === `/api/v1/operations/${id}/upload` && req.method === "POST") {
@@ -105,7 +109,7 @@ async function partsServer(options: { archiveParts?: boolean; drop?: (part: numb
     .then(r => ({ code: 0, stdout: r.stdout }), (e: { code: number; stdout: string }) => e)
     .then(result => ({ ...result, events: result.stdout.trim().split("\n").map(line => JSON.parse(line)) }));
   const close = async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(root, { recursive: true, force: true }); };
-  return { deploy, close, requests, puts, held, signed, keys, state: () => state, forgotten: () => forgotten };
+  return { deploy, close, requests, puts, held, signed, signings, keys, state: () => state, forgotten: () => forgotten };
 }
 
 test("an archive goes up in parts: its own slices, signed lengths, no credential, a dropped part resent alone", async () => {
@@ -121,6 +125,8 @@ test("an archive goes up in parts: its own slices, signed lengths, no credential
     assert.equal(joined.byteLength, request.byteSize);
     assert.equal(createHash("sha256").update(joined).digest("hex"), request.sha256);
     assert.deepEqual([...fake.signed.entries()].sort(), [[1, 1], [2, 2], [3, 1]]);
+    // One request signs every part the pool is about to send; a request a part was 256 round trips for 4 GiB.
+    assert.deepEqual(fake.signings, [[1, 2, 3], [2]], "the first request signs all three parts, and the drop re-signs only its own");
     assert.equal(result.events.filter(event => event.code === "upload_retrying").length, 1);
     for (const put of fake.puts) {
       assert.equal(put.headers.authorization, undefined, "storage never sees the account token");

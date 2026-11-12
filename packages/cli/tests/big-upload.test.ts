@@ -120,9 +120,9 @@ test("a part is read from the archive file when its turn comes, and a resumed up
   const api = {
     async json(path: string, init: { body?: { parts?: number[] } }) {
       if (path.endsWith("/upload/parts")) {
-        const part = init.body!.parts![0]!;
-        const size = part < 4 ? PART : archive.byteSize - 3 * PART;
-        return { parts: [{ partNumber: part, url: `https://storage.example/${part}`, headers: { "content-length": String(size) }, expiresInSeconds: 600 }] };
+        // Every number asked for is signed, as the server's archive-parts.ts does; the CLI asks for several at once.
+        return { parts: init.body!.parts!.map(part => ({ partNumber: part, url: `https://storage.example/${part}`,
+          headers: { "content-length": String(part < 4 ? PART : archive.byteSize - 3 * PART) }, expiresInSeconds: 600 })) };
       }
       return { multipart: descriptor() };
     },

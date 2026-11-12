@@ -173,18 +173,23 @@ export class Api {
   private readonly bypass: Record<string, string>;
   constructor(readonly origin = apiOrigin()) { this.bypass = protectionBypassHeader(origin); }
   async close() { await this.dispatcher.close(); }
-  private async send(path: string, options: { token?: string; body?: unknown; method?: string; idempotencyKey?: string; signal?: AbortSignal; gzip?: GzipBody } = {}) {
+  private async send(path: string, options: { token?: string; body?: unknown; method?: string; idempotencyKey?: string; signal?: AbortSignal; gzip?: GzipBody;
+    headers?: UploadHeaders; timeoutMs?: number; bytes?: Uint8Array } = {}) {
     // A funnel step can legitimately contain ../assets or a backslash. Only the
     // route can traverse; query values must remain ordinary encoded data.
     const pathname = path.split("?", 1)[0]!;
     if (!pathname.startsWith("/api/v1/") || pathname.includes("..") || pathname.includes("\\")) throw new CliError("api_path", "The CLI made an invalid API path, so nothing was sent. That is a fault in the CLI, so write to team@opengame.io with the command you ran.");
-    const encoded = options.body === undefined ? undefined : encodeJsonBody(options.body, options.gzip);
-    return await fetch(this.origin + path, { method: options.method ?? (options.body === undefined ? "GET" : "POST"),
-        dispatcher: this.dispatcher, redirect: "error", signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(LIMITS.platform.http.timeoutMs)]) : AbortSignal.timeout(LIMITS.platform.http.timeoutMs),
-        headers: { accept: "application/json", "x-opengame-cli-version": CLI_VERSION, ...this.bypass,
+    const encoded = options.bytes ? { body: options.bytes, encoding: undefined, contentType: "application/octet-stream" }
+      : options.body === undefined ? undefined : { ...encodeJsonBody(options.body, options.gzip), contentType: "application/json" };
+    // Every request answers inside http.timeoutMs, except one the caller knows takes longer: verifying a large file
+    // sent in parts hashes the joined object on the server, inside its own lease (transport.ts).
+    const timeout = AbortSignal.timeout(Math.max(LIMITS.platform.http.timeoutMs, options.timeoutMs ?? 0));
+    return await fetch(this.origin + path, { method: options.method ?? (options.body === undefined && !options.bytes ? "GET" : "POST"),
+        dispatcher: this.dispatcher, redirect: "error", signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
+        headers: { accept: "application/json", "x-opengame-cli-version": CLI_VERSION, ...this.bypass, ...options.headers,
           ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
           ...(options.idempotencyKey ? { "idempotency-key": options.idempotencyKey } : {}),
-          ...(encoded ? { "content-type": "application/json" } : {}), ...(encoded?.encoding ? { "content-encoding": encoded.encoding } : {}) },
+          ...(encoded ? { "content-type": encoded.contentType } : {}), ...(encoded?.encoding ? { "content-encoding": encoded.encoding } : {}) },
         body: encoded?.body });
   }
   /**
@@ -194,6 +199,12 @@ export class Api {
    * answer to running opengame upgrade.
    */
   async json(path: string, options: { token?: string; body?: unknown; method?: string; idempotencyKey?: string; anyVersion?: boolean; signal?: AbortSignal; gzip?: GzipBody;
+    /** What the upload routes read beside the request (transport.ts TRANSPORT_HEADERS). Never a credential. */
+    headers?: UploadHeaders; timeoutMs?: number;
+    /** A raw body, sent as application/octet-stream: a pack of small files (transport.ts). */
+    bytes?: Uint8Array;
+    /** A larger answer than http.responseBytesMax, for the one request whose answer can be: an upload's plan. */
+    responseBytesMax?: number;
     /** Read a non-JSON success body of this content type, answered as `{ text }`. Refusals are still JSON. */
     text?: string } = {}): Promise<Record<string, unknown>> {
     let answered = false;
@@ -211,7 +222,7 @@ export class Api {
       if (reader) while (true) {
         const next = await reader.read(); if (next.done) break;
         bytes += next.value.byteLength;
-        if (bytes > LIMITS.platform.http.responseBytesMax) { await reader.cancel(); throw new Error(); }
+        if (bytes > (options.responseBytesMax ?? LIMITS.platform.http.responseBytesMax)) { await reader.cancel(); throw new Error(); }
         chunks.push(next.value);
       }
       // Only a body that arrived whole is an answer; a reset or a timeout mid-body is
@@ -256,8 +267,10 @@ export class Api {
     return this.uploadObject(value, bytes, "application/zip", progress);
   }
 
-  async uploadFile(value: unknown, bytes: Uint8Array, progress?: (sent: number, total: number) => void): Promise<void> {
-    return this.uploadObject(value, bytes, "application/octet-stream", progress);
+  /** `sha256` is the file's own hash. A server that signed the PUT with that checksum (x-amz-checksum-sha256) has
+   * storage refuse any other bytes, so verifying it is a HEAD; the header must name exactly this file. */
+  async uploadFile(value: unknown, bytes: Uint8Array, progress?: (sent: number, total: number) => void, sha256?: string, streams = 1): Promise<void> {
+    return this.uploadObject(value, bytes, "application/octet-stream", progress, sha256, streams);
   }
 
   /**
@@ -265,11 +278,11 @@ export class Api {
    * the upload and the part number and signs the length, so the only header is the length;
    * there is no create-only condition on a part, and a part sent twice replaces itself.
    */
-  async uploadPart(value: unknown, bytes: Uint8Array, progress?: (sent: number, total: number) => void): Promise<void> {
+  async uploadPart(value: unknown, bytes: Uint8Array, progress?: (sent: number, total: number) => void, streams = 1): Promise<void> {
     const upload = value as { url?: unknown; headers?: Record<string, unknown> } | undefined;
     const url = this.uploadUrl(upload, upload?.headers?.["content-length"] === String(bytes.byteLength)
       && Object.keys(upload?.headers ?? {}).length === 1);
-    return this.put(url, bytes, { "content-length": String(bytes.byteLength) }, progress);
+    return this.put(url, bytes, { "content-length": String(bytes.byteLength) }, progress, streams);
   }
 
   /** A storage URL this CLI will send bytes to: HTTPS, or plain HTTP to a local server
@@ -284,17 +297,24 @@ export class Api {
     } catch { throw new CliError("invalid_upload", "The server returned an invalid upload. Run opengame deploy again.", 5); }
   }
 
-  private async uploadObject(value: unknown, bytes: Uint8Array, contentType: "application/zip" | "application/octet-stream", progress?: (sent: number, total: number) => void): Promise<void> {
+  private async uploadObject(value: unknown, bytes: Uint8Array, contentType: "application/zip" | "application/octet-stream", progress?: (sent: number, total: number) => void,
+    sha256?: string, streams = 1): Promise<void> {
     const upload = value as { url?: unknown; headers?: Record<string, unknown> } | undefined;
+    const checksum = upload?.headers?.["x-amz-checksum-sha256"];
+    const expected = sha256 && /^[0-9a-f]{64}$/.test(sha256) ? Buffer.from(sha256, "hex").toString("base64") : undefined;
     const url = this.uploadUrl(upload, upload?.headers?.["content-type"] === contentType && upload.headers["if-none-match"] === "*" &&
-      upload.headers["content-length"] === String(bytes.byteLength));
-    return this.put(url, bytes, { "content-type": contentType, "content-length": String(bytes.byteLength), "if-none-match": "*" }, progress);
+      upload.headers["content-length"] === String(bytes.byteLength) && (checksum === undefined || (expected !== undefined && checksum === expected)));
+    return this.put(url, bytes, { "content-type": contentType, "content-length": String(bytes.byteLength), "if-none-match": "*",
+      ...(checksum !== undefined ? { "x-amz-checksum-sha256": String(checksum) } : {}) }, progress, streams);
   }
 
-  private async put(url: URL, bytes: Uint8Array, headers: Record<string, string>, progress?: (sent: number, total: number) => void): Promise<void> {
+  private async put(url: URL, bytes: Uint8Array, headers: Record<string, string>, progress?: (sent: number, total: number) => void, streams = 1): Promise<void> {
     // One PUT, so the deadline scales with the archive: the fixed limit, or
     // 64 KiB a second, whichever is longer. A slow link can finish a large build.
-    const timeout = Math.max(LIMITS.platform.deploy.uploadTimeoutMs, Math.ceil(bytes.byteLength / 65_536) * 1000);
+    // A PUT that shares the link with `streams` others (transport.ts) gets its share of the slowest
+    // rate the platform supports, so sixteen parts at once do not time out where one would have landed.
+    const timeout = Math.max(LIMITS.platform.deploy.uploadTimeoutMs, Math.ceil(bytes.byteLength / 65_536) * 1000,
+      streams > 1 ? Math.ceil(bytes.byteLength * streams / LIMITS.platform.deploy.minimumUploadBytesPerSecond) * 1000 : 0);
     const chunk = LIMITS.platform.incrementalUpload.chunkBytesMax;
     let sent = 0;
     const body = new ReadableStream<Uint8Array>({
@@ -360,6 +380,9 @@ export function uploadFailureCause(error: unknown): string {
   }
   return "the connection dropped";
 }
+
+/** Headers the upload routes read: the transport's capabilities, never a credential. */
+export type UploadHeaders = Record<"x-opengame-upload-checksum" | "x-opengame-upload-page-files", string>;
 
 /** One PUT that did not land. The deploy asks for a fresh URL and tries again, and
  * only the last one reaches the person, so the cause travels with it. */

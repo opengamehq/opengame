@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "3e96bcfa59eeaf67379625769cf515acaa12b8cc"
+    "commit": "7f4f72d0b1c68d7b14fefaa6986bfe7c1562a8f7"
   },
-  "digest": "09848bb6a5911e4de14cc2638909798e0903a5b874f4bb57a9dcc9879b33dcca",
+  "digest": "d05cc7e3ce2c880729e740e28923fb97819af2a18b992099b730e763f199fd8e",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -183,8 +183,8 @@
     },
     {
       "path": "api-reference/openapi.json",
-      "bytes": 1382494,
-      "sha256": "1180cd6deb1d932beda0d4f1027649f83e9c40a14bca8b91ea5c049fb16298a9",
+      "bytes": 1411131,
+      "sha256": "c41406d39d4116e520b74984b4afc64d131a15dab1c5ee44c78c9a80561e92b5",
       "executable": false
     },
     {
@@ -208,7 +208,7 @@
     {
       "path": "package-lock.json",
       "bytes": 27908,
-      "sha256": "1983937a56703b1e58c620fcf5287cc61e70bea703b69ecd8cc78d2c219a0e48",
+      "sha256": "a9ea117268b4520f9637cabac7ad21da5102200007cdea1614aa9e5dec9d97c8",
       "executable": false
     },
     {
@@ -225,8 +225,8 @@
     },
     {
       "path": "packages/cli/CHANGELOG.md",
-      "bytes": 9192,
-      "sha256": "a77d299208c91e0979f92f1a5a2afc45fe79361f75058a2a681641c51d4d08c4",
+      "bytes": 10130,
+      "sha256": "d75e415fae84444f791226e789cb0875d02aee948a24e35ea82b4d8fd2c7302b",
       "executable": false
     },
     {
@@ -244,7 +244,7 @@
     {
       "path": "packages/cli/package.json",
       "bytes": 1776,
-      "sha256": "f0c6151c9f6e7806155c4724351764f4859656f65424a964d8c1d54ea1627b18",
+      "sha256": "241f1ece5490cc316feb563d31a1cb394c1d6cb964f25b91e266f668e328dde5",
       "executable": false
     },
     {
@@ -279,8 +279,8 @@
     },
     {
       "path": "packages/cli/src/archive-parts.ts",
-      "bytes": 9322,
-      "sha256": "cbedc43ca17776e34b91d3ed2a04346132282826c583236eb0b80068d2862c8c",
+      "bytes": 11335,
+      "sha256": "4fb1992a3950a5912249e6b332b7db27b9b3b21df20c360a3664a4299bfe5aef",
       "executable": false
     },
     {
@@ -333,8 +333,8 @@
     },
     {
       "path": "packages/cli/src/deploy.ts",
-      "bytes": 81674,
-      "sha256": "0e9b95ba45e0e8ceb9be2d04174c0d43ed7c3eb5ba14c2833cfcc37a5dedf53e",
+      "bytes": 82205,
+      "sha256": "4cc4177b0133137669f983ecfa9e2eaf0971298ecead9ca7219b87b7b94417cf",
       "executable": false
     },
     {
@@ -399,14 +399,14 @@
     },
     {
       "path": "packages/cli/src/http.ts",
-      "bytes": 25511,
-      "sha256": "f4483d19a6e48ce99124e7cea74c5ddb93612faeac0472688a15f1792911a5cf",
+      "bytes": 27204,
+      "sha256": "0c83eec1f37c0da79f93126ac9d49162f154d603cd99572f74e5e10623b5ab09",
       "executable": false
     },
     {
       "path": "packages/cli/src/incremental.ts",
-      "bytes": 20770,
-      "sha256": "fe479237278aacf2509b6bee933e5d9f5554f8209aeaa7eb39a10c23fa24676a",
+      "bytes": 23940,
+      "sha256": "cda9bf4a8388fff2e883682d1a83ba81a34f928ccb44fd7514bc223453989a36",
       "executable": false
     },
     {
@@ -435,8 +435,8 @@
     },
     {
       "path": "packages/cli/src/limits-allowlist.json",
-      "bytes": 8326,
-      "sha256": "42eb678ef0caf9f4c00ed00d8cd722d41a1d7077aef8b2406dd36996ca6b0bda",
+      "bytes": 8574,
+      "sha256": "193b71cf1c1a5f86068362150aae66df72fef4c9fd3527aa36ff7f4a97d76bba",
       "executable": false
     },
     {
@@ -519,14 +519,14 @@
     },
     {
       "path": "packages/cli/src/safe-fs.py",
-      "bytes": 14572,
-      "sha256": "4e3a78dbf30a566f3124e0c67bd716fc9bad6e9d4993b572c9e2c6580cd82e93",
+      "bytes": 15351,
+      "sha256": "04f9450902d2bc910c8ca02b779ae1b461725fd08bd817ec52b7cc67ae9735b8",
       "executable": false
     },
     {
       "path": "packages/cli/src/safe-fs.ts",
-      "bytes": 22313,
-      "sha256": "d2559e6ca5e3fccb8fd8a76c400eb18f7b5af5dcbcd84fc647329e4a61c854e5",
+      "bytes": 22775,
+      "sha256": "fc1e957cc5eff888d799337021219d47b2f5c0aa0212b2e64a3aef4a4f9fd565",
       "executable": false
     },
     {
@@ -578,9 +578,15 @@
       "executable": false
     },
     {
+      "path": "packages/cli/src/transport.ts",
+      "bytes": 18179,
+      "sha256": "4eebc2689bf861087bce511889c9293b63225806cd9359648aad73af507ca999",
+      "executable": false
+    },
+    {
       "path": "packages/cli/src/unity-assets.ts",
-      "bytes": 24299,
-      "sha256": "b6fc6c09d226050155187ed4c5da15cdc08d7945a692e19055b56e4f3ac9acf2",
+      "bytes": 24986,
+      "sha256": "d2dd98e9a12524a9543daf6a52fbb9220ca7a170b444335e649d86deb6a8bccd",
       "executable": false
     },
     {
@@ -675,8 +681,8 @@
     },
     {
       "path": "packages/cli/tests/archive-parts.test.ts",
-      "bytes": 11163,
-      "sha256": "47a9e538a0df26a1dd141cc18b7bece9d31968ca52602e3cb1019d32400ef268",
+      "bytes": 11637,
+      "sha256": "e58000e15bdcda59e2eb25c915dc13762051eae5f4802564a27e369cdd4a27d9",
       "executable": false
     },
     {
@@ -693,8 +699,8 @@
     },
     {
       "path": "packages/cli/tests/big-upload.test.ts",
-      "bytes": 16383,
-      "sha256": "e10c576aeaea663df9e572d1e142f8b6dc8c3f3e7a73f2b0314c80145af1742e",
+      "bytes": 16471,
+      "sha256": "03bb76d4ef8275d314cdee24ba3e579eeff29e01b7c8598443bbb2408b10636e",
       "executable": false
     },
     {
@@ -1016,6 +1022,24 @@
       "executable": false
     },
     {
+      "path": "packages/cli/tests/fixtures/manifests/0.9.2/init-mod.json",
+      "bytes": 301,
+      "sha256": "e128e285a29c3dfb9586e794c16ee6b311d83451730254e5bbba3dee66bb47f1",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.9.2/init-plain.json",
+      "bytes": 261,
+      "sha256": "ec38a300855f44494b5ca052f869ad3ee001d96fc4b6966f53372d0e19d3b1f6",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.9.2/init-vite.json",
+      "bytes": 342,
+      "sha256": "e08ac11f6a5c597b24f042a05217ef35701a7e3a50d530874eae8fbdaa3b12a3",
+      "executable": false
+    },
+    {
       "path": "packages/cli/tests/fixtures/pack-memory.ts",
       "bytes": 1007,
       "sha256": "c6a5dfb4feeccfcf5771c48ec9bb6dbf671b2310fe8f968a704cffb2e5823002",
@@ -1029,8 +1053,8 @@
     },
     {
       "path": "packages/cli/tests/incremental.test.ts",
-      "bytes": 17220,
-      "sha256": "ddf5e3a71d2f703764d4001bcc94f01b051c42f0fd802973f0405eb3d8065b10",
+      "bytes": 18329,
+      "sha256": "dda0032900ed27950862fcb6c1f86f3fe43ff90843d827a85a601a620bd7bddf",
       "executable": false
     },
     {
@@ -1241,6 +1265,12 @@
       "path": "packages/cli/tests/tokens.test.ts",
       "bytes": 3695,
       "sha256": "2d3e6d916e064e1ecab34afd702055a438723ce0701c7d883701200e3021f0c1",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/transport.test.ts",
+      "bytes": 18237,
+      "sha256": "188e828053cb6b9a9c6b286c6758fcf576796badd3f49a8d4c5054147229113d",
       "executable": false
     },
     {
@@ -1623,8 +1653,8 @@
     },
     {
       "path": "packages/protocol/src/bootstrap.ts",
-      "bytes": 3551,
-      "sha256": "6243b95451f0bd0410f91db29060185064d2dbb42d7ebcd84348459467e1a2e7",
+      "bytes": 4143,
+      "sha256": "82fe264ebd03ba2732f086ac29a2efc07b4ba2b4984b49a4a2aba7ab9586fc4b",
       "executable": false
     },
     {
@@ -2175,20 +2205,20 @@
     },
     {
       "path": "packages/shared/limits.browser.json",
-      "bytes": 47788,
-      "sha256": "945aaa1c69a756031156cac63a91946a4884e1503325f159a7215e160de10e62",
+      "bytes": 47851,
+      "sha256": "645af49e97050ba762c56b8e65399e0487fff59ef87e5753822b4b2fa27f2db2",
       "executable": false
     },
     {
       "path": "packages/shared/limits.json",
-      "bytes": 64391,
-      "sha256": "2855843750cac43e5b9d0cd7cad7e1354e725600a3d6c6262bdde670d2166cff",
+      "bytes": 64565,
+      "sha256": "925fc1de15e9bf2dce5380f60807b523835f636a8bf4c278a3281d02da2d8ac6",
       "executable": false
     },
     {
       "path": "packages/shared/limits.values.json",
-      "bytes": 64391,
-      "sha256": "2855843750cac43e5b9d0cd7cad7e1354e725600a3d6c6262bdde670d2166cff",
+      "bytes": 64565,
+      "sha256": "925fc1de15e9bf2dce5380f60807b523835f636a8bf4c278a3281d02da2d8ac6",
       "executable": false
     },
     {

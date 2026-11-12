@@ -4511,7 +4511,7 @@
           "partCount",
           "uploadedParts"
         ],
-        "description": "An archive sent in parts. Every part is `partBytes` long but the last. Part n starts at byte (n - 1) x partBytes. Send up to 4 at once.",
+        "description": "An archive sent in parts. Every part is `partBytes` long but the last. Part n starts at byte (n - 1) x partBytes. Send up to 16 at once.",
         "properties": {
           "byteSize": {
             "type": "integer",
@@ -12196,6 +12196,20 @@
                             true
                           ],
                           "description": "This server takes a ZIP in parts: send `multipart: true` to `POST /api/v1/deploys`. Absent on servers that do not."
+                        },
+                        "filePacks": {
+                          "type": "boolean",
+                          "examples": [
+                            true
+                          ],
+                          "description": "Small files may go together through `POST /api/v1/operations/{id}/files/pack`, and a file past `platform.incrementalUpload.packFileBytesMax` may go in parts. Absent on servers that do not."
+                        },
+                        "fileParts": {
+                          "type": "boolean",
+                          "examples": [
+                            true
+                          ],
+                          "description": "The file and large-asset uploads take pages of up to `platform.incrementalUpload.pageFilesMax` files when asked with `x-opengame-upload-page-files`, verify a page of their files on `POST /api/v1/operations/{id}/files/verify`, and take a file over `platform.deploy.multipart.aboveBytes` in parts through `POST /api/v1/operations/{id}/files/{hash}/parts`. Absent on servers that do not."
                         }
                       }
                     }
@@ -12304,7 +12318,9 @@
                   "package": null,
                   "capabilities": {
                     "incrementalUpload": false,
-                    "archiveParts": true
+                    "archiveParts": true,
+                    "fileParts": true,
+                    "filePacks": true
                   }
                 }
               }
@@ -13842,7 +13858,7 @@
             }
           },
           "409": {
-            "description": "`upload_size_mismatch`: the stored bytes do not match the hash or size, so start a new deploy with the corrected files. `upload_attempts_exhausted` or `upload_expired`: start a new deploy. `build_conflict`: another confirmation of this file is running or the operation changed. Wait 120 seconds, then read the operation.",
+            "description": "`upload_size_mismatch`: the stored bytes do not match the hash or size, so start a new deploy with the corrected files. `upload_missing`: a file sent in parts still lacks some, so send them and confirm again. `upload_attempts_exhausted` or `upload_expired`: start a new deploy. `build_conflict`: another confirmation of this file is running or the operation changed. Wait 120 seconds, then read the operation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13909,6 +13925,624 @@
             "lang": "bash",
             "label": "cURL",
             "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39/files/bb3645559c296672f00b1612316401f3d6c23e3747e393fe36a92513646d3ab3' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
+          }
+        ]
+      }
+    },
+    "/api/v1/operations/{id}/files/{hash}/parts": {
+      "post": {
+        "tags": [
+          "Deploys"
+        ],
+        "operationId": "signFileParts",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Send one large file in parts",
+        "description": "For a file or large-asset deploy, and a file over `platform.deploy.multipart.aboveBytes` (67108864 bytes) that the deploy's page lists as missing. Answers the file's part plan, every part of `platform.deploy.multipart.partBytes` (16777216 bytes) but the last, with `uploadedParts` listing what storage already holds, and a signed PUT for each part number named, up to 64 a request. Send `parts: []` to read the plan alone. Signing spends no upload attempt. Once every part has arrived, confirm the file as usual with `POST /api/v1/operations/{id}/files/{hash}` or `.../files/verify`, which joins the parts first; a confirmation that finds parts missing answers `upload_missing`, so send the rest and confirm again. `uploaded: true` means the parts are already joined. A browser session must send `Origin` set to the OpenGame origin.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Operation UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39"
+              ]
+            }
+          },
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$",
+              "examples": [
+                "c680d6d08ae42a6aeedecdec9b83edbb1666a900caf75e962e992aa48cb27328"
+              ]
+            },
+            "description": "SHA-256 from the file manifest."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "parts"
+                ],
+                "properties": {
+                  "parts": {
+                    "type": "array",
+                    "minItems": 0,
+                    "maxItems": 64,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "examples": [
+                        2
+                      ]
+                    },
+                    "examples": [
+                      [
+                        2
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The file's part plan and one signed PUT per part named. When the operation has left uploading, the operation and an empty list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "operation",
+                    "parts"
+                  ],
+                  "properties": {
+                    "operation": {
+                      "$ref": "#/components/schemas/Operation"
+                    },
+                    "file": {
+                      "type": "object",
+                      "required": [
+                        "sha256",
+                        "byteSize"
+                      ],
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
+                        },
+                        "byteSize": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "partBytes": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "partCount": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "uploaded": {
+                          "type": "boolean"
+                        },
+                        "verified": {
+                          "const": true,
+                          "type": "boolean"
+                        },
+                        "uploadedParts": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
+                      }
+                    },
+                    "parts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ArchivePartUpload"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "operation": {
+                    "id": "d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
+                    "engine": null,
+                    "build": null,
+                    "state": "uploading",
+                    "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                    "buildId": "f8e2b6d0-4c9a-4e13-a7f5-1d3c9b0e8a62",
+                    "releaseId": null,
+                    "error": null,
+                    "createdAt": "2026-10-21T14:29:47Z",
+                    "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
+                    "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
+                    "previewUrl": null,
+                    "progress": {
+                      "code": "upload",
+                      "label": "Uploading",
+                      "message": "Waiting for your archive to finish uploading. Run opengame deploy to resume it.",
+                      "waitingOn": "you",
+                      "fault": null,
+                      "since": "2026-10-21T14:29:47Z"
+                    },
+                    "findings": [],
+                    "next": "opengame deploy"
+                  },
+                  "file": {
+                    "sha256": "c680d6d08ae42a6aeedecdec9b83edbb1666a900caf75e962e992aa48cb27328",
+                    "byteSize": 50331648,
+                    "partBytes": 16777216,
+                    "partCount": 3,
+                    "uploaded": false,
+                    "uploadedParts": [
+                      1
+                    ]
+                  },
+                  "parts": [
+                    {
+                      "partNumber": 2,
+                      "url": "https://4f1c8e2a9b7d6035e1a4c8f2b9d70e36.r2.cloudflarestorage.com/og-platform-internal-quarantine/file-content/8a4d6c12-e3f5-47b9-b0c8-1f2e9d7a5c63/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39/c680d6d08ae42a6aeedecdec9b83edbb1666a900caf75e962e992aa48cb27328?partNumber=2&uploadId=2~Hb4kR9wQeT1yZs6Lp3VxC7nM&X-Amz-Expires=600&X-Amz-Date=20261021T142947Z&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=3f9c2a71d4e8b6057a1c9e2f4b8d6a03%2F20261021%2Fauto%2Fs3%2Faws4_request&X-Amz-SignedHeaders=content-length%3Bhost&X-Amz-Signature=6f31802acf26645848543e590d0ef4d8993a9d94c221b1d95be39b45304d04f4",
+                      "headers": {
+                        "content-length": "16777216"
+                      },
+                      "expiresInSeconds": 3600
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_request`: `hash` is not 64 lowercase hex characters, is not in this deploy, names a file small enough for one PUT, or the list is too long, repeats a number or names a part past the file's plan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "invalid_request",
+                  "message": "Provide the file’s SHA-256 hash."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This token was made without the Deploy permission. Make one that has it at https://opengame.io/settings/tokens."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: no operation with that UUID is in this account. `game_not_found`: the operation's game is no longer in this account. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "not_found",
+                  "message": "This operation was not found."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`upload_expired`: the deploy ran out of time to upload. `build_conflict`: the deploy names a stored file that is not this account's. Start a new deploy for either.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "upload_expired",
+                  "message": "This upload expired before the archive arrived. Run opengame deploy to start a new one.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`body_too_large`: the body is over `platform.manifest.bytesMax` (65536) bytes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "body_too_large",
+                  "message": "The request body is too large."
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`content_type`: send `Content-Type: application/json`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "content_type",
+                  "message": "Send a JSON request body."
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`temporarily_unavailable`: the cause is on our side, so wait `retryAfterSeconds` when the body gives it and send it again. `platform_unconfigured`: a fault on OpenGame's side, so try again later. `submission_destination_unavailable`: deploys have nowhere to be stored right now, so nothing was signed. Try again later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "temporarily_unavailable",
+                  "message": "OpenGame could not finish this request. Try again shortly.",
+                  "retry": "later",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246",
+                  "retryAfterSeconds": 30
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39/files/c680d6d08ae42a6aeedecdec9b83edbb1666a900caf75e962e992aa48cb27328/parts' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\" \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"parts\": [\n    2\n  ]\n}'"
+          }
+        ]
+      }
+    },
+    "/api/v1/operations/{id}/files/pack": {
+      "post": {
+        "tags": [
+          "Deploys"
+        ],
+        "operationId": "sendFilePack",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Send small files together",
+        "description": "For a file or large-asset deploy whose bootstrap says `filePacks`. Sends up to 1024 of the deploy's files of at most `platform.incrementalUpload.packFileBytesMax` (1048576) bytes each in one request of at most 4194304 bytes, with `Content-Type: application/octet-stream`. The body is a four-byte little-endian length, that many bytes of JSON `{\"files\":[{\"sha256\":\"…\",\"byteSize\":…}]}` naming the files in order, then their bytes end to end. The server checks each file's SHA-256 and size, stores it where its PUT would have, and records the pack verified; nothing else needs sending for those files. Files already verified are accepted and left out of the answer. If any file fails, nothing in the pack is stored. Safe to repeat. Larger files go up through `POST /api/v1/operations/{id}/files/{hash}/parts`. Requires the deploy scope.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Operation UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The files this pack verified. When the operation has already left uploading, the operation and an empty list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "operation",
+                    "files"
+                  ],
+                  "properties": {
+                    "operation": {
+                      "$ref": "#/components/schemas/Operation"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "sha256",
+                          "byteSize",
+                          "verified"
+                        ],
+                        "properties": {
+                          "sha256": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
+                          },
+                          "byteSize": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "verified": {
+                            "const": true,
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "operation": {
+                    "id": "d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
+                    "engine": null,
+                    "build": null,
+                    "state": "uploading",
+                    "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                    "buildId": "f8e2b6d0-4c9a-4e13-a7f5-1d3c9b0e8a62",
+                    "releaseId": null,
+                    "error": null,
+                    "createdAt": "2026-10-21T14:29:47Z",
+                    "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
+                    "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
+                    "previewUrl": null,
+                    "progress": {
+                      "code": "upload",
+                      "label": "Uploading",
+                      "message": "Waiting for your archive to finish uploading. Run opengame deploy to resume it.",
+                      "waitingOn": "you",
+                      "fault": null,
+                      "since": "2026-10-21T14:29:47Z"
+                    },
+                    "findings": [],
+                    "next": "opengame deploy"
+                  },
+                  "files": [
+                    {
+                      "sha256": "bb3645559c296672f00b1612316401f3d6c23e3747e393fe36a92513646d3ab3",
+                      "byteSize": 38211,
+                      "verified": true
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_request`: the body is not a pack (its header, its count or its sizes do not add up), a file is past the size a pack takes, or a file is not in this deploy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "invalid_request",
+                  "message": "This file is not part of the deploy."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This token was made without the Deploy permission. Make one that has it at https://opengame.io/settings/tokens."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: no operation with that UUID is in this account. `game_not_found`: the operation's game is no longer in this account. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "not_found",
+                  "message": "This operation was not found."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`upload_size_mismatch`: a file's bytes are not its hash, or its size is not the one the deploy recorded, so nothing in the pack was stored. Start a new deploy with the corrected files. `upload_expired`: the deploy ran out of time to upload. `build_conflict`: the deploy names a stored file that is not this account's, or it left uploading while the pack was stored. Start a new deploy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "upload_expired",
+                  "message": "This upload expired before the archive arrived. Run opengame deploy to start a new one.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`body_too_large`: the pack is past `platform.incrementalUpload.bodyBytesMax` (4194304). Send fewer files in it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "body_too_large",
+                  "message": "The request body is too large."
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`content_type`: send the pack as `application/octet-stream`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "content_type",
+                  "message": "Send a JSON request body."
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`temporarily_unavailable`: the cause is on our side, so wait `retryAfterSeconds` when the body gives it and send it again. `platform_unconfigured`: a fault on OpenGame's side, so try again later. `submission_destination_unavailable`: deploys have nowhere to be stored right now, so nothing was stored. Try again later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "temporarily_unavailable",
+                  "message": "OpenGame could not finish this request. Try again shortly.",
+                  "retry": "later",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246",
+                  "retryAfterSeconds": 30
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39/files/pack' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
           }
         ]
       }
@@ -14156,7 +14790,7 @@
           }
         ],
         "summary": "Verify a page of uploaded files",
-        "description": "For a file deploy. Call after the storage PUTs for a page succeed, naming up to 32 hashes from the manifest. The server checks each stored object's size and SHA-256 checksum, or reads its bytes when storage has no checksum for it, and records the whole page at once. Hashes already verified are accepted and left out of the answer. If any file fails, none in the page is recorded. Safe to repeat. Requires the deploy scope.",
+        "description": "For a file or large-asset deploy. Call after the storage PUTs for a page succeed, naming up to 256 hashes from the manifest. A file sent in parts is joined first, and answers `upload_missing` until every part has arrived. The server checks each stored object's size and SHA-256 checksum, or reads its bytes when storage has no checksum for it, and records the whole page at once. Hashes already verified are accepted and left out of the answer. If any file fails, none in the page is recorded. Safe to repeat. Requires the deploy scope.",
         "parameters": [
           {
             "name": "id",
@@ -14185,7 +14819,7 @@
                   "hashes": {
                     "type": "array",
                     "minItems": 1,
-                    "maxItems": 32,
+                    "maxItems": 256,
                     "items": {
                       "type": "string",
                       "pattern": "^[0-9a-f]{64}$"
@@ -14339,7 +14973,7 @@
             }
           },
           "409": {
-            "description": "`upload_size_mismatch`: a stored object is missing, or its size or checksum does not match its hash, so nothing in the page was recorded. A file whose PUT never arrived can be sent again while its URL is valid and the page verified again; otherwise start a new deploy. `build_conflict`: the operation left uploading while the page was checked, so read the operation. `upload_expired`: start a new deploy.",
+            "description": "`upload_size_mismatch`: a stored object is missing, or its size or checksum does not match its hash, so nothing in the page was recorded. A file whose PUT never arrived can be sent again while its URL is valid and the page verified again; otherwise start a new deploy. `upload_missing`: a file sent in parts still lacks some, so send them and verify the page again. `build_conflict`: the operation left uploading while the page was checked, so read the operation. `upload_expired`: start a new deploy.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15750,7 +16384,7 @@
             }
           },
           "409": {
-            "description": "`upload_size_mismatch`, `upload_attempts_exhausted` or `upload_expired`: start a new deploy. `build_conflict`: the plan changed (`retry` is `never`, start a new deploy), or another confirmation is running (wait 120 seconds).",
+            "description": "`upload_size_mismatch`, `upload_attempts_exhausted` or `upload_expired`: start a new deploy. `upload_missing`: a file sent in parts still lacks some, so send them and confirm again. `build_conflict`: the plan changed (`retry` is `never`, start a new deploy), or another confirmation is running (wait 120 seconds).",
             "content": {
               "application/json": {
                 "schema": {

@@ -7,6 +7,7 @@ import { incrementalFilesSchema, incrementalArchiveBytes, incrementalZipLocalHea
 import { Api, UploadInterrupted } from "./http";
 import { setTimeout as sleep } from "node:timers/promises";
 import { CliError, type Output } from "./output";
+import { sendFiles, type ReadRange } from "./transport";
 
 /** The file transport's file list, in its canonical order, or null when the files cannot
  * go that way (a path the schema refuses, or past the transport's archive size). Decided
@@ -98,11 +99,14 @@ export function filesFromArchive(bytes: Uint8Array): IncrementalFile[] {
   return parsed.data;
 }
 
-type Page = { missing: { sha256: string; byteSize: number; upload: unknown }[]; reusedFiles: number; reusedBytes: number; totalFiles: number; totalBytes: number; nextCursor: number | null };
-function page(value: unknown, files: IncrementalFile[]): Page {
+/** How often a deploy asks whether the server's assembly has landed. */
+export const ASSEMBLY_POLL_MS = 3000;
+
+export type Page = { missing: { sha256: string; byteSize: number; upload: unknown }[]; reusedFiles: number; reusedBytes: number; totalFiles: number; totalBytes: number; nextCursor: number | null };
+export function page(value: unknown, files: IncrementalFile[], filesMax: number = LIMITS.platform.incrementalUpload.batchFilesMax): Page {
   const row = value as Page;
   const known = new Map(files.map(file => [file.sha256, file.byteSize]));
-  if (!row || !Array.isArray(row.missing) || row.missing.length > LIMITS.platform.incrementalUpload.batchFilesMax
+  if (!row || !Array.isArray(row.missing) || row.missing.length > filesMax
     || row.missing.some(item => !item || known.get(item.sha256) !== item.byteSize)
     || !Number.isSafeInteger(row.totalFiles) || row.totalFiles !== files.length || !Number.isSafeInteger(row.totalBytes)
     || row.totalBytes !== files.reduce((sum, file) => sum + file.byteSize, 0) || !Number.isSafeInteger(row.reusedBytes) || row.reusedBytes < 0 || row.reusedBytes > row.totalBytes || !Number.isSafeInteger(row.reusedFiles) || row.reusedFiles < 0 || row.reusedFiles > row.totalFiles
@@ -137,10 +141,31 @@ export async function uploadMissingFiles(api: Api, token: string, operation: str
   readFile?: (file: IncrementalFile) => Promise<Uint8Array>;
   /** Reads some of a page's files ahead, together, and may leave any out for readFile. */
   readFiles?: (files: IncrementalFile[]) => Promise<Map<string, Uint8Array>>;
+  /** The server's bootstrap said `fileParts`: send through transport.ts, which pages, verifies and splits large
+   * files the way that server takes them. Every server before 12 Nov 2026 gets the loop below. */
+  fileParts?: boolean;
+  /** One part of an external asset, read from disk without the rest of it (fileParts only). */
+  readPart?: (file: IncrementalFile, offset: number, length: number) => Promise<Uint8Array>;
 } = {}) {
   const tree = unpackBounded(bytes);
   const byHash = new Map(files.map(file => [file.sha256, file]));
   const route = options.route ?? "files";
+  if (options.fileParts) {
+    const started = Date.now();
+    // The boot files are in the archive in memory; an asset is read from disk, whole when small and a part at a time when not.
+    const read: ReadRange = async (file, offset, length) => {
+      const held = tree[file.path];
+      if (held) return held.subarray(offset, offset + length);
+      if (offset === 0 && length === file.byteSize && options.readFile) return options.readFile(file);
+      if (options.readPart) return options.readPart(file, offset, length);
+      throw new CliError("archive_unavailable", "A saved upload file is unavailable. Restore the source export and retry.", 1);
+    };
+    await sendFiles(api, token, operation, files, first, output, { route: route === "assets" ? "assets" : "files", delivery: options.delivery,
+      inputDigest: options.inputDigest, read,
+      ...(options.readFiles ? { readAhead: (rows: IncrementalFile[]) => options.readFiles!(rows.filter(file => !tree[file.path])) } : {}) });
+    const totalBytes = files.reduce((sum, file) => sum + file.byteSize, 0);
+    return completeUpload(api, token, operation, route, output, files.length, totalBytes, started);
+  }
   let cursor = 0;
   const loadPage = async (next: number) => {
     const response = await api.json(`/api/v1/operations/${operation}/${route}?cursor=${next}`, { token });
@@ -281,8 +306,23 @@ export async function uploadMissingFiles(api: Api, token: string, operation: str
     completedFiles = route === "assets" ? Math.max(completedFiles, current.reusedFiles) : current.reusedFiles + uploadedFiles;
     completedBytes = route === "assets" ? Math.max(completedBytes, current.reusedBytes) : current.reusedBytes + uploadedBytes;
   }
-  const response = await api.json(`/api/v1/operations/${operation}/${route}/complete`, { token, method: "POST" });
-  output.emit({ type: "progress", stage: "upload", operation, message: `Verified ${files.length} files (${current.totalBytes} bytes)`,
-    files: files.length, totalFiles: files.length, bytes: current.totalBytes, total: current.totalBytes, elapsedMs: Date.now() - started });
+  return completeUpload(api, token, operation, route, output, files.length, current.totalBytes, started);
+}
+
+/** Asks the server to put the verified files together, and keeps asking while it says it is still doing so. */
+async function completeUpload(api: Api, token: string, operation: string, route: string, output: Output, totalFiles: number, totalBytes: number, started: number) {
+  let response = await retryShortly(output, () => api.json(`/api/v1/operations/${operation}/${route}/complete`, { token, method: "POST" }));
+  output.emit({ type: "progress", stage: "upload", operation, message: `Verified ${totalFiles} files (${totalBytes} bytes)`,
+    files: totalFiles, totalFiles, bytes: totalBytes, total: totalBytes, elapsedMs: Date.now() - started });
+  /* A server since 12 Nov 2026 answers completion within half the request timeout and goes on putting the archive
+     together after it, saying `assembling`. Asking again is how the deploy learns it has landed: the same request
+     answers the lease while it runs and the queued operation once it has, inside the assembly's own lease. */
+  const until = Date.now() + LIMITS.platform.incrementalUpload.assemblyLeaseSeconds * 1000;
+  while (response.assembling === true && (response.operation as { state?: unknown } | undefined)?.state === "uploading" && Date.now() < until) {
+    output.emit({ type: "progress", stage: "upload", operation, message: "Putting the uploaded files together on the server",
+      files: totalFiles, totalFiles, bytes: totalBytes, total: totalBytes, elapsedMs: Date.now() - started });
+    await sleep(ASSEMBLY_POLL_MS);
+    response = await retryShortly(output, () => api.json(`/api/v1/operations/${operation}/${route}/complete`, { token, method: "POST" }));
+  }
   return response;
 }

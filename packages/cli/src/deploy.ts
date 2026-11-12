@@ -7,6 +7,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { LIMITS, compiledCredentialPatterns } from "@opengame/shared";
 import { ERRORS, DEAD_UPLOAD_CODES, LISTING, OPERATION_STATUS, RELEASE_STATUS, SUBMISSION_OPEN, findingLabel, submissionStatus, operationNext, operationOutcome, creatorGamePath, deploymentPath, withoutCover,
   incrementalArchiveBytes, type CreatorGame, type GameManifest, type OperationSummary, type RepairFinding, type Submission } from "@opengame/protocol";
+import { terminalDeploymentChecklist } from "./deployment-progress";
 import { operation, terminal, remember, readSavedOperation } from "./operation";
 import { readGame, refuseRemoved } from "./games";
 import { emitReview, followReview, readSubmission, reviewLine } from "./submit";
@@ -26,7 +27,7 @@ import { showAllowance } from "./allowance";
 import { syncAchievements } from "./achievements";
 import { filesFromArchive, uploadMissingFiles } from "./incremental";
 import { uploadArchiveParts, type ArchiveSource } from "./archive-parts";
-import { safeReadFile } from "./safe-fs";
+import { pythonAvailable, safeReadFile } from "./safe-fs";
 import { acceptedStatement, assertUnitySourceRoot, createUnityArchive, LARGE_ASSET_DELIVERY, planDelivery, readSmallUnityAssets, readUnityAsset, readUnityAssetPlan, unityFileUnion, unityInputDigest } from "./unity-assets";
 
 /** The asset plan a command was given. --external-assets takes any plan kind named in
@@ -378,12 +379,15 @@ export async function prepareDeploy(root: string, output: Output, runBuild = tru
      by its hash, skips the ones it already holds and never unpacks a zip. A build that
      fits the file route keeps it; a bigger one becomes the large-game plan with its
      assets chosen automatically, exactly as --external-assets auto. Measured from sizes
-     alone, before a byte is read. Without the server's word it is the archive, as before. */
-  const unityAssets = options.unityAssets ?? (options.autoAssets && !options.vendor && await pastFileRoute(folder) ? "auto" : undefined);
+     alone, before a byte is read. Without the server's word it is the archive, as before.
+     The plan hashes its files through the Python helper (safe-fs), and the archive falls back
+     to a Node reader where there is none, so on Windows or a machine without Python 3 a big
+     build keeps going as one archive, as every build did before the plan was chosen here. */
+  const unityAssets = options.unityAssets ?? (options.autoAssets && !options.vendor && await pythonAvailable() && await pastFileRoute(folder) ? "auto" : undefined);
   if (unityAssets && !options.unityAssets) output.emit({ type: "notice", code: "external_assets_chosen",
     message: "This build is large, so its bigger files are sent one at a time. Files OpenGame already has are skipped." });
   const archive = unityAssets
-    ? await createUnityArchive(folder, manifest, output, root, unityAssets, { unityOnly: options.unityAssets ? options.unityOnly : false, delivery: options.delivery, workDirectory: options.workDirectory })
+    ? await createUnityArchive(folder, manifest, output, root, unityAssets, { unityOnly: options.unityAssets ? options.unityOnly : false, delivery: options.delivery, workDirectory: options.workDirectory, planChosen: !options.unityAssets })
       .catch(async (error: unknown) => {
         /* A plan this command chose, which the build cannot take (its code alone is past
            the file route, or the lane refuses a path), falls back to the archive, which
@@ -571,9 +575,10 @@ export function nextWatchWait(now: number, deadline: number, delay: number): { r
 async function watch(api: Api, token: string, initial: Operation, output: Output, persist?: (op: Operation) => Promise<void>, timeoutMs = LIMITS.platform.operations.watchTimeoutMs) {
   let op = initial;
   const deadline = Date.now() + timeoutMs;
-  const describe = (value: Operation) => value.progress ? `${value.progress.code}:${value.progress.message}` : value.state;
+  const describe = (value: Operation) => `${value.progress ? `${value.progress.code}:${value.progress.message}` : value.state}${output.json ? "" : JSON.stringify(value.checks ?? [])}`;
   const say = (value: Operation) => output.emit({ type: "progress", stage: value.progress?.code ?? value.state, operation: value.id,
-    message: value.progress?.message ?? OPERATION_STATUS[value.state].message });
+    message: output.json ? value.progress?.message ?? OPERATION_STATUS[value.state].message
+      : terminalDeploymentChecklist({ state: value.state, stage: value.progress?.code, checks: value.checks }) });
   if (!terminal(op) && op.state !== "uploading") say(op);
   let misses = 0;
   let readNotBefore = 0;
@@ -802,7 +807,10 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
         await mkdir(workDirectory, { recursive: true, mode: 0o700 });
         await sweepPackaging(workDirectory);
         prepared = await timed("prepare", () => prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), incremental: limits.incrementalUpload && !incompatibleFileUpload, noBuild: Boolean(flags["no-build"]), install: !flags["no-install"], workDirectory,
-          unityAssets: assetPlan?.plan ?? retainedAssets, unityOnly: assetPlan?.unityOnly,
+          /* A restart keeps the plan the saved deploy used, of whatever kind, with its
+             delivery named: left to the default, which only a Unity plan passes, a large-game
+             plan deploy chose by itself could never be restarted. */
+          unityAssets: assetPlan?.plan ?? retainedAssets, unityOnly: assetPlan?.unityOnly ?? (retainedAssets ? false : undefined),
           autoAssets: !assetPlan && !retainedAssets && limits.externalAssets.includes("large-game-v1"), delivery: retainedAssets ? planDelivery(saved!.unityAssets) : undefined }));
         // The same bytes are already being checked: follow that deploy rather than
         // spend a second scan on an identical build.
@@ -986,7 +994,11 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
        checks_pending: the terminal blocked and still had no answer. The deploy's page shows
        the checks as they run and offers Play when they pass. --wait keeps the old contract
        for a CI job that wants the outcome as an exit code. */
-    if (wait) ({ op, timedOut } = await timed("watch", () => watch(api, token, op, output, persist, timeout)));
+    if (wait) {
+      if (!output.json) output.emit({ type: "notice", code: "deployment_follow", message: `Follow along at ${deploymentUrl(api, op.id)}` });
+      ({ op, timedOut } = await timed("watch", () => watch(api, token, op, output, persist, timeout)));
+      if (!output.json) output.emit({ type: "progress", stage: "deployment", message: terminalDeploymentChecklist({ state: op.state, stage: op.progress?.code, checks: op.checks }) });
+    }
     if (op.state !== "failed" && op.state !== "expired") await reviewContinues(api, token, root, op, output);
     await syncAchievements(api, token, root, op, result.achievements, output);
     /* Achievements are saved once the preview is ready, and a plain deploy has gone by then.

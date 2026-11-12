@@ -2310,6 +2310,20 @@
         "cameraHalfLifeMs": 90
       }
     },
+    "deployProgress": {
+      "minimumSamples": 3,
+      "referenceBytes": 1073741824,
+      "referenceFiles": 5000,
+      "setupWeight": 0.35,
+      "byteWeight": 0.4,
+      "fileWeight": 0.25,
+      "scaleMin": 0.25,
+      "scaleMax": 8,
+      "rateStaleMs": 30000,
+      "rateMinimumSeconds": 3,
+      "rateWindowSeconds": 30,
+      "rateSamplesMin": 3
+    },
     "operations": {
       "idempotencyKeyCharsMax": 128,
       "pollIntervalMs": 2000,

@@ -1,6 +1,6 @@
 {
   "name": "@opengamehq/cli",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "Deploy browser games to OpenGame from the command line.",
   "keywords": [

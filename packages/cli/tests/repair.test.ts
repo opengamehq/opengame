@@ -427,6 +427,49 @@ test("an upload the server will never accept is closed and replaced, not resumed
   } finally { await h.close(); }
 });
 
+/* Review of mirror #7, 12 Nov 2026: a restart re-read the saved plan's paths as a Unity plan,
+   the default, so a large-game plan deploy had chosen by itself could never be restarted:
+   every retry said "Use an asset plan such as ..." to a creator who never named one. */
+test("an expired upload of a large-game plan deploy chose is restarted with that plan", async () => {
+  let creates = 0;
+  const h = await harness((req, res) => {
+    // A plan's deploy is created at its own route.
+    if (req.url === "/api/v1/deploys/external-assets") {
+      creates++;
+      if (creates === 1) return json(res, 409, { error: "upload_expired", message: "This upload expired. Start a new deploy." });
+      return json(res, 200, { operation: op(2, "queued"), uploaded: true });
+    }
+    if (req.url === `/api/v1/operations/${id(2)}/upload`) return json(res, 200, { operation: op(2, "queued") });
+  });
+  try {
+    const { realpath } = await import("node:fs/promises");
+    await writeFile(join(h.root, "level0.bin"), Buffer.alloc(4096, 7));
+    const sourceRoot = await realpath(h.root);
+    const { createHash } = await import("node:crypto");
+    const { largeAssetInputText } = await import("@opengame/shared/large-assets");
+    // The saved boot archive, which a resume reads and checks before it asks the server.
+    const { canonicalArchive } = await import("../src/incremental");
+    const saved = canonicalArchive([["index.html", Buffer.from("<!doctype html><title>Night shift</title>")]]).bytes;
+    const sha256 = createHash("sha256").update(saved).digest("hex");
+    await mkdir(join(h.root, ".opengame"), { recursive: true });
+    await writeFile(join(h.root, ".opengame", `${sha256}.zip`), saved);
+    const request = { byteSize: saved.byteLength, fileCount: 1, sha256, manifest, metadataRevision: null, metadata: "preserve" as const };
+    const assets = [{ path: "level0.bin", byteSize: 4096, sha256: "c".repeat(64) }];
+    const inputDigest = createHash("sha256").update(largeAssetInputText(request, assets, "large-game-v1")).digest("hex");
+    await withProject(h.root, h.origin, async (state, save) => {
+      state.deploy = { key: "stale-key", operationId: id(1), terminal: false, transport: "large-game-v1",
+        unityAssets: { assets, inputDigest, sourceRoot, delivery: "large-game-v1" }, request };
+      await save();
+    });
+    const { events } = await h.cli("deploy", h.root, "--no-wait");
+    assert.ok(events.some(event => event.code === "upload_restarted"), JSON.stringify(events));
+    assert.ok(!events.some(event => event.code === "unity_assets_plan"), JSON.stringify(events.at(-1)));
+    assert.equal(creates, 2, JSON.stringify(events.at(-1)));
+    const second = JSON.parse(h.seen.filter(request => request.url === "/api/v1/deploys/external-assets")[1]!.body);
+    assert.equal(JSON.stringify(second).includes("large-game-v1"), true, JSON.stringify(second).slice(0, 400));
+  } finally { await h.close(); }
+});
+
 test("a deploy the server refuses outright leaves nothing pending for status to misreport", async () => {
   const h = await harness((req, res) => {
     if (req.url === "/api/v1/deploys") return json(res, 403, { error: "forbidden", message: "This token was made without the Deploy permission." });

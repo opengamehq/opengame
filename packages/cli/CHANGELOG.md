@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1
+
+- `opengame deploy --wait` shows the deployment checklist shared with Drop and prints the page where upload, checks, review and publication update live. JSON output keeps its existing event format.
+
 ## 0.9.0
 
 - `opengame login --continue` no longer loses a login you already allowed. Each run
@@ -44,6 +48,12 @@
   PeerJS's default public relays are one note instead of three warnings, and a file a
   loader asks for by bare name (KTX2Loader's `basis_transcoder.wasm`, a Draco decoder) is
   no longer reported missing when it is in the bundle under another folder.
+- A build whose archive would be past 200 MiB goes file by file when your account allows
+  it: files OpenGame already has are skipped, and the archive is written to
+  disk a slice at a time instead of held in memory. A build can be 25,000 files, 5 GiB
+  unpacked and 4 GiB zipped. A build the file-by-file plan cannot take, such as a Kaigen
+  export or one whose bulk is code, or a machine without Python 3 (Windows included), still
+  sends one archive as before.
 
 ## 0.8.0
 

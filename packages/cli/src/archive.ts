@@ -6,6 +6,8 @@ import { runPreflight, matchedRawRuntime } from "./preflight";
 import { createHash, randomUUID } from "node:crypto";
 import { Zip, ZipDeflate, ZipPassThrough } from "fflate";
 import { LIMITS } from "@opengame/shared";
+import { largeAssetPlanAdmits } from "@opengame/shared/large-assets";
+import { detectedIds } from "@opengame/preflight/engines";
 import { isBundlePath, moreLead, incrementalZipLocalHeader, incrementalZipDescriptor, incrementalZipCentralHeader, incrementalZipEnd, incrementalCrc32,
   type GameManifest, type IncrementalFile, type RepairFinding } from "@opengame/protocol";
 import { PACKAGING_CHECK_VERSION, assertNoReservedRuntimePaths } from "./files";
@@ -20,7 +22,7 @@ import { prepareRuntimeAssets, validateDeclaredRuntimes, type RuntimeArtifacts }
 
 /** Check and package one snapshot. A build tool editing files after this read
  * cannot change the bytes between preflight and upload. */
-export async function inspectArchive(folder: string, manifest: GameManifest, output: Output, options: { vendor?: boolean; artifacts?: RuntimeArtifacts; externalAssets?: ReadonlySet<string>; externalDelivery?: string; rootIdentity?: DirectoryIdentity; workDirectory?: string } = {}) {
+export async function inspectArchive(folder: string, manifest: GameManifest, output: Output, options: { vendor?: boolean; artifacts?: RuntimeArtifacts; externalAssets?: ReadonlySet<string>; externalDelivery?: string; rootIdentity?: DirectoryIdentity; workDirectory?: string; planChosen?: boolean } = {}) {
   if (!options.vendor && manifest.runtimes?.length) {
     await validateDeclaredRuntimes(manifest.runtimes, options.artifacts);
     output.emit({ type: "notice", code: "runtime_acquisition_deferred", message: "Runtime declarations match this CLI's reviewed inventory. Runtime bytes have not been acquired by this check; use vendor or dev to acquire and verify them locally. Server runtime derivation still runs before preview." });
@@ -41,7 +43,7 @@ export async function inspectArchive(folder: string, manifest: GameManifest, out
   } catch (error) { await snapshot.dispose(); throw error; }
 }
 
-async function inspectSnapshot(snapshot: Snapshot, excluded: string[], manifest: GameManifest, output: Output, options: { vendor?: boolean; artifacts?: RuntimeArtifacts; externalAssets?: ReadonlySet<string>; externalDelivery?: string }) {
+async function inspectSnapshot(snapshot: Snapshot, excluded: string[], manifest: GameManifest, output: Output, options: { vendor?: boolean; artifacts?: RuntimeArtifacts; externalAssets?: ReadonlySet<string>; externalDelivery?: string; planChosen?: boolean }) {
   const inspect = async () => {
     const result = await runPreflight(snapshot.preflightFiles(), undefined, { externalPaths: options.externalAssets ? [...options.externalAssets] : undefined, externalDelivery: options.externalDelivery,
       // opengame.json never reaches the checker as a file; its requires does, from the manifest read here.
@@ -77,6 +79,17 @@ async function inspectSnapshot(snapshot: Snapshot, excluded: string[], manifest:
       output.emit({ type: "notice", code: "dependencies_vendored", message: `Included ${dependencies.length} dependency files at the exact versions your code names, each hashed in the receipt. Rechecking the staged game.`, dependencies });
       result = await inspect();
     }
+  }
+  /* A plan deploy chose by itself (prepareDeploy) for an engine that plan refuses, such as a
+     Kaigen export on the large-game plan, which has a lane of its own, is not the creator's to
+     fix: deploy sends the build as one archive instead (the fallback there), and that check
+     reports whatever else is wrong. The engine is asked here, with what preflight's own refusal
+     reads (every detected engine and every licence stamp), because that refusal needs the
+     plan's rows and this check has only its paths: it would pass here, and the server's check,
+     which has the rows, would refuse the deploy after the upload. */
+  if (options.planChosen && options.externalDelivery
+    && !largeAssetPlanAdmits(options.externalDelivery, [...detectedIds(result.engine), ...(result.engine?.licences ?? [])])) {
+    throw new CliError("unity_assets_plan", "This build cannot take the file-by-file plan deploy chose for it.", 1);
   }
   const findings: RepairFinding[] = [];
   if (excluded.length) output.emit({ type: "notice", code: "files_excluded", message: `Excluded from upload: ${excluded.join(", ")}`, paths: excluded });
@@ -155,7 +168,9 @@ export async function createArchive(folder: string, manifest: GameManifest, outp
   /** Where the snapshot and the archive are written: the project's .opengame folder for a
    * deploy, so the archive is already beside its cache and on the build's own disk. A new
    * private folder in the system's temporary folder when none is named. */
-  workDirectory?: string } = {}) {
+  workDirectory?: string;
+  /** deploy chose the asset plan itself, so a refusal of the plan is a fallback, not a finding. */
+  planChosen?: boolean } = {}) {
   const owned = options.workDirectory ? null : await mkdtemp(join(tmpdir(), "opengame-archive-"));
   if (owned) removeAtExit(owned);
   const workDirectory = options.workDirectory ?? owned!;

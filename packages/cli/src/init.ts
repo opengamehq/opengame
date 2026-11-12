@@ -248,7 +248,12 @@ export async function initProject(root: string, flags: Record<string, string | b
   const existing = await existingManifest(root);
   if (existing) return fillManifest(root, existing.manifest, existing.text, { title, description, genre, flags, html, pkg, interactive: options.interactive, prompts, output: options.output });
   // The name only, and only when no --title said it (askTitle says why).
-  if (options.interactive && typeof flags.title !== "string") title = await askTitle(title, prompts);
+  // The genre is guessed from the name the person settles on, not the one offered to them:
+  // a folder called "racer" renamed "Block Drop" is not a racing game.
+  if (options.interactive && typeof flags.title !== "string") {
+    title = await askTitle(title, prompts);
+    if (typeof flags.genre !== "string") genre = inferGenre(genreEvidence(title, description, pkg, html));
+  }
   let guessedGenre = false;
   if (genre === null) { genre = FALLBACK_GENRE; guessedGenre = true; }
   // Absent is a game, and init writes it anyway, so every new opengame.json says what it is.

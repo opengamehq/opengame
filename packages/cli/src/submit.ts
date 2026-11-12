@@ -5,6 +5,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { LIMITS, gameKindOrDefault, kindEntersJam } from "@opengame/shared";
 import { ERRORS, EXIT, RELEASE_STATUS, SUBMISSION_OPEN, deploymentPath, heldMessage, submissionStatus, jamFormSchema, submissionDestinationSchema, repairFindingSchema, returnedMessage, submissionSchema, validateJamAnswers,
   type GameManifest, type JamAnswers, type JamForm, type RepairFinding, type Submission } from "@opengame/protocol";
+import { terminalDeploymentChecklist } from "./deployment-progress";
 import { openBrowser, trustedBrowserUrl } from "./browser";
 import { activeToken } from "./credentials";
 import { loadManifest } from "./files";
@@ -404,7 +405,7 @@ export function emitReview(result: Submission, output: Output): string[] {
  */
 export async function followReview(api: Api, token: string, start: Submission, output: Output, deadline: number): Promise<Submission> {
   let current = start;
-  const say = (value: Submission) => output.emit({ type: "progress", stage: `review:${value.state}`, message: reviewLine(value) });
+  const say = (value: Submission) => output.emit({ type: "progress", stage: `review:${value.state}`, message: output.json ? reviewLine(value) : terminalDeploymentChecklist({ state: "ready", submission: value }) });
   /* Told apart by what the line says rather than by the stored state: an outage turning
      into the launch hold is "waiting" both times, and printed nothing. */
   const seen = (value: Submission) => `${submissionStatus(value)}:${value.hold?.passed ?? ""}`;

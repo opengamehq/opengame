@@ -191,3 +191,56 @@ test("a build past the file route goes file by file through large-game-v1 when t
     await rm(work, { recursive: true, force: true });
   }
 });
+
+/* Review of mirror #7, 12 Nov 2026: a plan deploy chose for itself has to fall back on every
+   refusal that is about the plan, not only the ones the first version named. The large-game
+   plan refuses a Kaigen export for its own lane, and it hashes through the Python helper,
+   which Windows and some machines do not have. Either way the build used to deploy as one
+   archive, and the chosen plan stopped it before upload. */
+test("a big build deploy chose to send file by file goes as an archive when the plan refuses its engine or Python is missing", async () => {
+  const { prepareDeploy } = await import("../src/deploy");
+  const { PYTHON_CANDIDATES } = await import("../src/safe-fs");
+  const { LIMITS } = await import("@opengame/shared");
+  const { readFile } = await import("node:fs/promises");
+  const root = await mkdtemp(join(tmpdir(), "og-auto-refused-"));
+  const work = await mkdtemp(join(tmpdir(), "og-auto-refused-work-"));
+  const limit = LIMITS.platform.incrementalUpload.archiveBytesMax;
+  const events: Record<string, unknown>[] = [];
+  const output = new Output("jsonl", line => events.push(JSON.parse(line)));
+  const kaigen = (JSON.parse(await readFile(new URL("../../preflight/tests/fixtures/engine-signatures.json", import.meta.url), "utf8")) as
+    { id: string; text: string; wasm?: { base64: string }[] }[]).find(row => row.id === "kaigen" && row.wasm)!;
+  try {
+    await writeFile(join(root, "opengame.json"), JSON.stringify({ title: "Night shift", description: "Survive until dawn with a light and a dwindling battery.", genre: "shooter-survival", controls: ["keyboard"] }));
+    await writeFile(join(root, "index.html"), '<!doctype html><canvas id="c"></canvas><script type="module">import { createGame } from "./main.js";'
+      + 'createGame({ canvas: c, wasmUrl: new URL("game.wasm", location.href).href });</script>');
+    await writeFile(join(root, "main.js"), 'export function createGame(e){return new Worker(new URL("./main_worker.js",import.meta.url),{type:"module"})}');
+    await writeFile(join(root, "main_worker.js"), kaigen.text);
+    await writeFile(join(root, "game.wasm"), Buffer.from(kaigen.wasm![0]!.base64, "base64"));
+    await mkdir(join(root, "cooked"));
+    for (let index = 0; index < 3; index++) await fill(join(root, "cooked", `chunk${index}.bin`), 2 * MiB);
+    (LIMITS.platform.incrementalUpload as { archiveBytesMax: number }).archiveBytesMax = 4 * MiB;
+    const refused = await prepareDeploy(root, output, false, { autoAssets: true, incremental: true, workDirectory: work });
+    assert.equal(refused.archive.unityAssets, undefined);
+    assert.ok(events.some(event => event.code === "external_assets_fallback"), JSON.stringify(events.filter(event => event.type !== "progress")));
+    await refused.archive.dispose();
+
+    // The same deploy on a machine with no Python never chooses the plan at all.
+    await rm(join(root, "game.wasm")); await rm(join(root, "main_worker.js"));
+    await writeFile(join(root, "index.html"), '<!doctype html><script src="game.js"></script>');
+    await writeFile(join(root, "game.js"), "document.body.textContent = 'Play';");
+    await rm(join(root, "main.js"));
+    events.length = 0;
+    const before = PYTHON_CANDIDATES.splice(0);
+    try {
+      PYTHON_CANDIDATES.push(join(root, "no-python-here/python3"));
+      const noPython = await prepareDeploy(root, output, false, { autoAssets: true, incremental: true, workDirectory: work });
+      assert.equal(noPython.archive.unityAssets, undefined);
+      assert.ok(!events.some(event => event.code === "external_assets_chosen"));
+      await noPython.archive.dispose();
+    } finally { PYTHON_CANDIDATES.splice(0, PYTHON_CANDIDATES.length, ...before); }
+  } finally {
+    (LIMITS.platform.incrementalUpload as { archiveBytesMax: number }).archiveBytesMax = limit;
+    await rm(root, { recursive: true, force: true });
+    await rm(work, { recursive: true, force: true });
+  }
+});

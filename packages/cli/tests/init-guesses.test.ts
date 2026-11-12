@@ -200,6 +200,25 @@ test("a person at a terminal is asked the name and nothing else, and Enter keeps
   });
 });
 
+/* Review of mirror #7, 12 Nov 2026: the genre was guessed from the name init offered, before
+   the person answered, so a folder made as a kart racer and named a dungeon crawler kept
+   the racing genre. It is guessed from the name the person settles on. */
+test("the genre is guessed from the name the person types, not the one init offered", async () => {
+  await fixture(async root => {
+    await writeFile(join(root, "index.html"), "<!doctype html><title>Kart Racer</title><canvas></canvas>");
+    const prompts = { ask: async () => "Dungeon Crawler", choose: async () => "" } as never;
+    const result = await initProject(root, {}, { interactive: true, prompts });
+    assert.equal(result.manifest.title, "Dungeon Crawler");
+    assert.equal(result.manifest.genre, "rpg");
+  });
+  // --genre is the person's own word, and a new name does not change it.
+  await fixture(async root => {
+    await writeFile(join(root, "index.html"), "<!doctype html><title>Kart Racer</title><canvas></canvas>");
+    const prompts = { ask: async () => "Dungeon Crawler", choose: async () => "" } as never;
+    assert.equal((await initProject(root, { genre: "racing-sports" }, { interactive: true, prompts })).manifest.genre, "racing-sports");
+  });
+});
+
 test("an opengame.json init cannot read is still refused, not rewritten", async () => fixture(async root => {
   await writeFile(join(root, "opengame.json"), "{ not json");
   await assert.rejects(initProject(root, { genre: "rpg" }), { code: "manifest_exists" });

@@ -3904,6 +3904,39 @@
             ],
             "additionalProperties": false
           },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "check": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "passed",
+                    "failed",
+                    "held",
+                    "stopped",
+                    "advisory",
+                    "skipped"
+                  ]
+                }
+              },
+              "required": [
+                "check",
+                "label",
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          },
           "findings": {
             "maxItems": 40,
             "type": "array",
@@ -4261,6 +4294,39 @@
               "fault"
             ],
             "additionalProperties": false
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "check": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "passed",
+                    "failed",
+                    "held",
+                    "stopped",
+                    "advisory",
+                    "skipped"
+                  ]
+                }
+              },
+              "required": [
+                "check",
+                "label",
+                "state"
+              ],
+              "additionalProperties": false
+            }
           },
           "findings": {
             "maxItems": 40,
@@ -5061,6 +5127,39 @@
                       "fault"
                     ],
                     "additionalProperties": false
+                  },
+                  "checks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "check": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "running",
+                            "passed",
+                            "failed",
+                            "held",
+                            "stopped",
+                            "advisory",
+                            "skipped"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "check",
+                        "label",
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    }
                   },
                   "findings": {
                     "maxItems": 40,
@@ -10157,6 +10256,39 @@
                   "fault"
                 ],
                 "additionalProperties": false
+              },
+              "checks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "check": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "running",
+                        "passed",
+                        "failed",
+                        "held",
+                        "stopped",
+                        "advisory",
+                        "skipped"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "check",
+                    "label",
+                    "state"
+                  ],
+                  "additionalProperties": false
+                }
               },
               "findings": {
                 "maxItems": 40,

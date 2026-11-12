@@ -75,8 +75,8 @@ export function largeAssetLimits(kind: unknown): LargeAssetLimits | null {
  * releases), otherwise one game's worth, `storedBytesMax` (Kaigen's 4 GiB). Per kind, not the
  * largest across kinds, because every platform member holds Kaigen without a grant
  * (20261027160000), and a shared cap would hand them the large-game lane's allowance for
- * Kaigen files. Kinds without a grant are absent and earn nothing, because nobody decided to
- * let that account store more. Every caller that begins a deploy or reads usage sends this as
+ * Kaigen files. Kinds without a grant are absent and earn nothing, except the engine-agnostic
+ * large-game lane, which is open to active accounts by policy. Every caller that begins a deploy or reads usage sends this as
  * `laneHeldBytesPerAccountMax`. A request without it gets no lane credit at all, the rule
  * before 20261027170500, so a caller that forgets it is held to the plain allowance; the
  * database refuses caps that are present and malformed, and caps that leave out a kind the
@@ -85,7 +85,7 @@ export function largeAssetLimits(kind: unknown): LargeAssetLimits | null {
 export function laneHeldBytes(planTable: Record<string, Pick<LargeAssetPlanPolicy, "limits" | "grant">>,
   platform: Record<string, unknown>): Record<string, number> {
   return Object.fromEntries(Object.entries(planTable)
-    .filter(([kind, plan]) => !kind.startsWith("_") && plan.grant)
+    .filter(([kind, plan]) => !kind.startsWith("_") && (plan.grant || kind === "large-game-v1"))
     .map(([kind, plan]) => {
       const policy = platform[plan.limits] as { storedBytesMax?: unknown; heldBytesPerAccountMax?: unknown } | undefined;
       return [kind, Number(policy?.heldBytesPerAccountMax ?? policy?.storedBytesMax)];

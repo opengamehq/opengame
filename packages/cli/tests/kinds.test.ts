@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { GAME_KINDS, LIMITS } from "@opengame/shared";
+import { LIMITS } from "@opengame/shared";
 import { ensureDeployManifest, initProject, kindPhrase, type InitPrompts } from "../src/init";
 import { loadManifest } from "../src/files";
 import { readProject } from "../src/project";
@@ -37,8 +37,6 @@ function scripted(answers: Array<string | ((options: PromptOption[], initial: nu
   };
   return { prompts, asked, left: answers };
 }
-// Pressing Enter on a menu takes whatever the cursor starts on.
-const enter = (options: PromptOption[], initial: number) => options[initial]!.value;
 
 test("every new opengame.json says its kind, and it is a game unless somebody says otherwise", async () => fixture(async root => {
   const result = await initProject(root, metadata);
@@ -102,59 +100,23 @@ test("deploy writes a missing manifest with the kind it was given", async () => 
   assert.equal(await ensureDeployManifest(root, { ...metadata, kind: "nonsense" }), null);
 }));
 
-test("a person sees all four kinds with game selected, and Enter makes a game", async () => fixture(async root => {
-  const script = scripted([enter]);
-  const result = await initProject(root, metadata, { interactive: true, prompts: script.prompts });
-  const question = script.asked.find(entry => entry.question === "What are you making?");
-  assert.ok(question, "init asks what the upload is");
-  assert.deepEqual(question.options!.map(option => option.value), ["game", "world", "decomp", "mod"]);
-  assert.deepEqual(question.options!.map(option => option.label), GAME_KINDS.map(kind => kind.label));
-  assert.deepEqual(question.options!.map(option => option.hint), GAME_KINDS.map(kind => kind.help));
-  assert.equal(question.options![question.initial!]!.value, "game");
+/* The owner's call, 11 Nov 2026: the terminal asks the name and nothing else. What it is, and the game
+   a decomp or a mod is made from, are flags, and a game is what nobody said otherwise. */
+test("a person is not asked what they are making: Enter on the name makes a game", async () => fixture(async root => {
+  const script = scripted([""]);
+  const result = await initProject(root, { description: metadata.description, genre: metadata.genre }, { interactive: true, prompts: script.prompts });
+  assert.deepEqual(script.asked.map(entry => entry.kind), ["ask"]);
+  assert.match(script.asked[0]!.question, /^Game name \(Enter keeps /);
   assert.equal(result.manifest.kind, "game");
   assert.equal(script.left.length, 0);
 }));
 
-test("a person is asked what they are making first, a mod which game until it names one, then the rest", async () => fixture(async root => {
-  // No description and no genre flag, so every question comes up, in this order: the kind
-  // and its source before the description and genre, since they change how those read.
-  const script = scripted([
-    "mod",
-    "",
-    "x".repeat(LIMITS.text.gameBasedOn.max + 1),
-    "  Doom  ",
-    "A blue palette and three new levels for an old shooter, made for a weekend.",
-    "shooter-survival",
-  ]);
-  const result = await initProject(root, { title: "Doom but blue" }, { interactive: true, prompts: script.prompts });
-  assert.deepEqual(script.asked.map(entry => entry.kind), ["choose", "ask", "ask", "ask", "ask", "choose"]);
-  assert.equal(script.asked[0]!.question, "What are you making?");
-  assert.equal(script.asked[1]!.question, "Which game does this mod change?");
-  assert.match(script.asked[2]!.question, /^A mod needs the name of the game it is made from\. Which game does this mod change\?$/);
-  assert.match(script.asked[3]!.question, new RegExp(`^That is too long\\. Use up to ${LIMITS.text.gameBasedOn.max} characters\\.`));
-  assert.match(script.asked[4]!.question, /^Describe the mod in a sentence or two /, "the description is asked of what it is");
-  assert.equal(script.asked[5]!.question, "Which genre fits best?");
-  assert.deepEqual([result.manifest.kind, result.manifest.basedOn], ["mod", "Doom"]);
-  assert.match(result.message, /^Created opengame\.json for a mod of Doom\./);
-}));
-
-test("the description question names the kind chosen, and a game is still 'the game'", async () => {
-  for (const [kind, noun] of [["world", "world"], ["game", "game"]] as const) {
-    await fixture(async root => {
-      const script = scripted([kind, "A small island to wander at dusk, with nothing to win and lots to see.", "puzzle-casual"]);
-      await initProject(root, { title: "Dusk" }, { interactive: true, prompts: script.prompts });
-      assert.equal(script.asked[0]!.question, "What are you making?");
-      assert.match(script.asked[1]!.question, new RegExp(`^Describe the ${noun} in a sentence or two \\(`), kind);
-    });
-  }
-});
-
-test("a person who gave --kind is not asked it again, only for what is missing", async () => {
+test("a person making a mod says so with flags, and without --based-on is told the flag, not asked", async () => {
   await fixture(async root => {
-    const script = scripted(["Super Mario 64"]);
-    const result = await initProject(root, { ...metadata, kind: "decomp" }, { interactive: true, prompts: script.prompts });
-    assert.deepEqual(script.asked.map(entry => entry.question), ["Which game is this a decomp of?"]);
-    assert.equal(result.manifest.basedOn, "Super Mario 64");
+    const script = scripted([]);
+    await assert.rejects(initProject(root, { ...metadata, kind: "decomp" }, { interactive: true, prompts: script.prompts }),
+      (error: { code: string; message: string }) => error.code === "based_on_required" && error.message.includes("--kind decomp --based-on"));
+    assert.equal(script.asked.length, 0);
   });
   await fixture(async root => {
     const script = scripted([]);

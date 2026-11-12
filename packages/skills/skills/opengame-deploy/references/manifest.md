@@ -57,8 +57,14 @@ it plays.
 | --- | --- | --- | --- |
 {{kindtable}}
 
-`opengame init --kind mod --based-on "Doom"` writes both. Without `--kind`, init asks a
-person in a terminal and makes a game for an agent.
+`opengame init --kind mod --based-on "Doom"` writes both. Without `--kind`, init makes a
+game; it asks a person nothing but the game's name.
+
+A folder with no description of its own gets a placeholder sentence, which the deploy marks
+provisional, and so does a genre init could not read from the game's words. Do not ask the
+creator for either before deploying: the deploy's page asks them, and `opengame details
+--description` sets the description from here once the game exists. A game cannot publish
+with the placeholder.
 
 ## Who owns which value
 

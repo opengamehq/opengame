@@ -13,7 +13,7 @@ type Flags = Record<string, string | boolean>;
 const invalid = () => new CliError("invalid_response", "The game details could not be read. Try again.", 5);
 
 export async function readGame(api: Api, token: string, id: string): Promise<CreatorGame> {
-  if (!gameIdentifierSchema.safeParse(id).success) throw new CliError("invalid_game", "Use a game ID from opengame games with --game.");
+  if (!gameIdentifierSchema.safeParse(id).success) throw new CliError("invalid_game", "Use a game ID from opengame games with --game.", undefined, { next: "opengame games" });
   id = id.toLowerCase();
   try {
     const parsed = creatorGameSchema.safeParse((await api.json(`/api/v1/games/${id}`, { token })).game);
@@ -39,8 +39,10 @@ export function isRemoved(game: CreatorGame): boolean {
 export function refuseRemoved(game: CreatorGame, linked = true): void {
   if (!isRemoved(game)) return;
   // The row's sentence is about this folder; named with --game, there is no folder to talk about.
-  throw new CliError("game_removed", linked ? ERRORS.game_removed!.message!
-    : "That game was removed, so nobody can play it, including you. It shows as Unavailable under Your games on the website.", 2);
+  throw new CliError("game_removed", linked
+    ? `${ERRORS.game_removed!.message!} To release this folder as another game, choose one with opengame games, then run opengame link --game <id> --replace.`
+    : "That game was removed, so nobody can play it, including you. It shows as Unavailable under Your games on the website. Run opengame games to see the games you can open.", 2,
+    { next: "opengame games" });
 }
 
 /* The server names each game in the words Your games uses (`status`), so the list and the
@@ -67,7 +69,7 @@ export function publicationLabel(live: NonNullable<CreatorGame["publication"]>):
 
 async function chooseGame(api: Api, token: string, output: Output): Promise<CreatorGame> {
   if (output.json || agentMode() || !process.stdin.isTTY) {
-    throw new CliError("game_required", "Choose a game with opengame games, then run opengame link --game <id>.");
+    throw new CliError("game_required", "Choose a game with opengame games, then run opengame link --game <id>.", undefined, { next: "opengame games" });
   }
   let page = await listGames(api, token);
   if (!page.games.length) throw new CliError("no_games", "You have no games to link. Run opengame init, then opengame deploy to create one.");
@@ -133,10 +135,10 @@ export async function gamesCommand(command: "games" | "link" | "open" | "deploym
       if (isRemoved(game)) throw new CliError("game_removed", "That game was removed, so it takes no new releases. Choose another with opengame games.", 2, { next: "opengame games" });
       const changed = state.gameId !== game.id;
       if (changed && state.deploy && !state.deploy.terminal) {
-        throw new CliError("deploy_in_progress", "This folder has an unfinished deploy. Run opengame status, then finish the deploy before linking another game.");
+        throw new CliError("deploy_in_progress", "This folder has an unfinished deploy. Run opengame status, then finish the deploy before linking another game.", undefined, { next: "opengame status --watch" });
       }
       if (changed && state.gameId && !flags.replace) {
-        throw new CliError("already_linked", "This folder is linked to another game. Add --replace to link the selected game.");
+        throw new CliError("already_linked", "This folder is linked to another game. Add --replace to link the selected game.", undefined, { next: `opengame link --game ${game.publicId} --replace` });
       }
       await ensureProjectIgnored(root);
       if (changed) {

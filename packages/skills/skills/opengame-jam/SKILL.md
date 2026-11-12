@@ -2,7 +2,7 @@
 name: opengame-jam
 description: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, and submits one exact release as an entry with the person's own answers, leaving the certification to the person. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
 metadata:
-  version: "1.0.6"
+  version: "1.0.7"
 ---
 
 # Enter an OpenGame jam

@@ -8,7 +8,11 @@ import { CliError } from "./output";
 
 /** Keep hostile or unusually dense source off the CLI's event loop. File reads
  * still use the caller's snapshot, so timing out cannot change what was checked. */
-export function runPreflight(files: PreflightFile[], timeoutMs = LIMITS.platform.deploy.preflightTimeoutMs, options: { externalPaths?: readonly string[]; externalDelivery?: string; manifestRequires?: unknown } = {}): Promise<Awaited<ReturnType<typeof platformPreflight>>> {
+export function runPreflight(files: PreflightFile[], timeoutMs = LIMITS.platform.deploy.preflightTimeoutMs, options: { externalPaths?: readonly string[]; externalDelivery?: string; manifestRequires?: unknown;
+  /** Every `bytes()` answer is a buffer of its own that nothing else keeps (snapshot.ts),
+   * so it can be moved to the worker instead of copied. The checker asks for every file's
+   * bytes once, one at a time, and a copy held a large file twice. */
+  transferBytes?: boolean } = {}): Promise<Awaited<ReturnType<typeof platformPreflight>>> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("../dist/preflight-worker.mjs", import.meta.url), {
       workerData: { files: files.map(({ path, size }) => ({ path, size })), externalPaths: options.externalPaths, externalDelivery: options.externalDelivery, manifestRequires: options.manifestRequires }, env: {}, execArgv: [],
@@ -42,7 +46,8 @@ export function runPreflight(files: PreflightFile[], timeoutMs = LIMITS.platform
       if (message.type === "read-bytes") {
         let bytes: Uint8Array | undefined;
         try { bytes = await files[message.index]!.bytes?.(); } catch { /* Structural failure only. */ }
-        if (!finished) worker.postMessage({ id: message.id, bytes });
+        const whole = bytes && bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength && bytes.buffer instanceof ArrayBuffer;
+        if (!finished) worker.postMessage({ id: message.id, bytes }, options.transferBytes && whole ? [bytes!.buffer as ArrayBuffer] : []);
         return;
       }
       let text: string | undefined;
@@ -67,13 +72,26 @@ export type RawRuntimeEvidence = NonNullable<Awaited<ReturnType<typeof platformP
 /** Parser evidence is necessary, but must also describe the bytes still in this
  * snapshot. This selects an uploadable raw entry; it does not derive a shell or
  * claim that the corresponding runtime has been shipped. */
-export function matchedRawRuntime(result: Awaited<ReturnType<typeof platformPreflight>>, snapshot: Map<string, Uint8Array>): RawRuntimeEvidence | undefined {
+export function matchedRawRuntime(result: Awaited<ReturnType<typeof platformPreflight>>, snapshot: Map<string, Uint8Array> | SnapshotDigests): RawRuntimeEvidence | undefined {
   if (!result.ok || result.hasEntryPoint || snapshot.has(LIMITS.bundle.entryPoint) || result.rawRuntimes?.length !== 1) return undefined;
   const raw = result.rawRuntimes[0]!;
   if (raw.complete !== true || raw.manualReviewRequired !== false || !isBundlePath(raw.path)
     || !((raw.engine === "ruffle" && raw.format === "swf") || (raw.engine === "jsdos" && raw.format === "jsdos"))) return undefined;
-  const bytes = snapshot.get(raw.path);
-  if (!bytes || bytes.byteLength !== raw.bytes || createHash("sha256").update(bytes).digest("hex") !== raw.sha256) return undefined;
+  const digest = fileDigest(snapshot, raw.path);
+  if (!digest || digest.bytes !== raw.bytes || digest.sha256 !== raw.sha256) return undefined;
   if (!raw.path.startsWith(result.strippedRoot) || !result.include.includes(raw.path.slice(result.strippedRoot.length))) return undefined;
   return raw;
+}
+
+/** What a disk-backed snapshot (snapshot.ts) knows of a file without reading it. */
+export type SnapshotDigests = { has(path: string): boolean; keys(): Iterable<string>; sizeOf(path: string): number | undefined; sha256Of(path: string): string | undefined };
+
+/** Size and SHA-256 of one file, from bytes in a Map or from a snapshot's record. */
+export function fileDigest(snapshot: Map<string, Uint8Array> | SnapshotDigests, path: string): { bytes: number; sha256: string } | undefined {
+  if (snapshot instanceof Map) {
+    const bytes = snapshot.get(path);
+    return bytes ? { bytes: bytes.byteLength, sha256: createHash("sha256").update(bytes).digest("hex") } : undefined;
+  }
+  const size = snapshot.sizeOf(path), sha256 = snapshot.sha256Of(path);
+  return size === undefined || sha256 === undefined ? undefined : { bytes: size, sha256 };
 }

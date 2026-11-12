@@ -334,3 +334,49 @@ test('a hosted career page reads its source and aggregates, ignores what it does
   assert.equal((await career.submit(5)).error,'invalid_request');
   h.og.dispose();
 });
+
+/* og.player.stats(): GET /v1/player/stats, the player's own row on every board in one request. */
+const statsAnswer = (preview = false) => ({ source:'game_reported', ...(preview ? { preview:true } : {}), boards:[
+  { board:'kills', label:'Kills', keep:'runs', entry:{ score:7, stats:{ headshots:2 }, tags:{}, meta:{}, created_at:'2026-11-11T00:00:00Z', imported:false } },
+  { board:'xp', label:'XP', keep:'career', entry:{ score:1250, stats:{ matches:9 }, tags:{}, meta:{}, created_at:'2026-11-11T00:00:00Z', imported:false } },
+  { board:'time', label:null, keep:'best', entry:null } ] });
+
+test('player stats sends one bare GET with the session token and reads every board back', async () => {
+  const h = await connected(async () => Response.json(statsAnswer()));
+  const result = await h.og.player.stats();
+  assert.equal(result.ok, true);
+  assert.deepEqual(plain(result.value), { boards:[
+    { board:'kills', label:'Kills', keep:'runs', entry:{ score:7, stats:{ headshots:2 }, tags:{}, meta:{}, createdAt:'2026-11-11T00:00:00Z', imported:false } },
+    { board:'xp', label:'XP', keep:'career', entry:{ score:1250, stats:{ matches:9 }, tags:{}, meta:{}, createdAt:'2026-11-11T00:00:00Z', imported:false } },
+    { board:'time', label:null, keep:'best', entry:null } ], preview:false, source:'game_reported' });
+  assert.equal(h.calls.length, 1);
+  const url = new URL(h.calls[0].url);
+  // Nothing in the request names a player or a game: og-api reads both from the token.
+  assert.equal(url.origin + url.pathname, `${limits.allowedGameOrigins.api}/v1/player/stats`);
+  assert.equal(url.search, '');
+  assert.equal(h.calls[0].init.headers.Authorization, 'Bearer test-only-session');
+  assert.equal(h.calls[0].init.cache, 'no-store'); assert.equal(h.calls[0].init.credentials, 'omit');
+  h.og.dispose();
+});
+
+test('player stats refuses a malformed or mismatched answer and passes failures through', async () => {
+  for (const body of [{ boards:[] }, { ...statsAnswer(), source:'verified' }, { ...statsAnswer(), boards:'x' }, statsAnswer(true),
+    { source:'game_reported', boards:[{ board:'kills', entry:{ score:'7', created_at:'2026-11-11T00:00:00Z' } }] }]) {
+    const h = await connected(async () => Response.json(body));
+    assert.deepEqual(plain(await h.og.player.stats()), { ok:false, error:'unavailable', reason:'invalid_response' }, JSON.stringify(body));
+    h.og.dispose();
+  }
+  const limited = await connected(async () => new Response('{}', { status:429 }));
+  assert.equal((await limited.og.player.stats()).error, 'rate_limited'); limited.og.dispose();
+  const preview = await connected(async () => Response.json(statsAnswer(true)), { preview:true });
+  assert.equal((await preview.og.player.stats()).value.preview, true); preview.og.dispose();
+});
+
+test('player stats in the local mock reads this browser\'s best on each board, and a career board as empty', async () => {
+  const h = harness({ embedded:false, origin:'http://localhost:4592' });
+  await h.og.init({ manifest:{ leaderboards:[{ key:'kills', order:'desc', keep:'runs', runsPerPlayer:5 }, { key:'xp', order:'desc', keep:'career', from:'kills', scoreAgg:'sum' }, { key:'best', order:'desc' }] } });
+  assert.equal((await h.og.leaderboard('kills').submit(4)).ok, true);
+  const result = await h.og.player.stats();
+  assert.deepEqual(plain(result.value.boards).map(line => [line.board, line.keep, line.entry?.score ?? null]), [['best','best',null],['kills','runs',4],['xp','career',null]]);
+  h.og.dispose();
+});

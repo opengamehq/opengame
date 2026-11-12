@@ -95,7 +95,9 @@ test("a craft rule needs all five tags, in order, with numbers only where they a
 
 test("templates render limits and refuse a path that does not exist", () => {
   const context = loadContext();
-  assert.equal(render("{{mib bundle.archiveBytesMax}}", context), `${context.limits.bundle.archiveBytesMax / 1048576} MiB`);
+  // Units are printed to two decimals at most: the archive cap is 4 GiB less one byte (the
+  // ZIP 32-bit bound), which reads as 4096 MiB rather than 4095.9999990463257.
+  assert.equal(render("{{mib bundle.archiveBytesMax}}", context), `${Number((context.limits.bundle.archiveBytesMax / 1048576).toFixed(2))} MiB`);
   assert.equal(render("{{n bundle.fileCountMax}}", context), context.limits.bundle.fileCountMax.toLocaleString("en-US"));
   assert.equal(render("{{literal 256}}", context), "256");
   assert.match(render("{{genres}}", context), /`shooter-survival`/);
@@ -106,7 +108,7 @@ test("templates render limits and refuse a path that does not exist", () => {
 
 test("a limit typed by hand in a platform skill is found, outside code examples", () => {
   const { limits } = loadContext();
-  const archive = limits.bundle.archiveBytesMax / 1048576;
+  const archive = Number((limits.bundle.archiveBytesMax / 1048576).toFixed(2));
   assert.equal(handTypedLimits(`Archives up to ${archive} MiB.`, limits).length, 1);
   assert.equal(handTypedLimits("Archives up to {{mib bundle.archiveBytesMax}}.", limits).length, 0);
   assert.equal(handTypedLimits(`\`\`\`js\nconst max = ${limits.bundle.fileCountMax}\n\`\`\``, limits).length, 0);
@@ -383,7 +385,7 @@ test("the skills that say when OpenGame opens name launch.json's days, and none 
 
   const moved = { ...context.launch, launchAt: "2027-03-02T08:00:00Z" };
   assert.equal(render("Opens {{launch opens}}.", { ...context, launch: moved }), "Opens 2 March 2027.", "midnight in Pacific time is that day");
-  for (const typed of [`OpenGame opens on ${opens}.`, opens.replace(/ \d{4}$/, ""), "2026-11-17", context.launch.kickoffCopy, context.launch.closeCopy])
+  for (const typed of [`OpenGame opens on ${opens}.`, opens.replace(/ \d{4}$/, ""), context.launch.launchAt.slice(0, 10), context.launch.kickoffCopy, context.launch.closeCopy])
     assert.equal(typedLaunchDates(typed, context.launch).length, 1, typed);
   assert.deepEqual(typedLaunchDates("Opens {{launch opens}}; entries {{launch kickoff}} to {{launch close}}.", context.launch), []);
   assert.throws(() => render("{{launch someday}}", context), /opens, kickoff or close/);

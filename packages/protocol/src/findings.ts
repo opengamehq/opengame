@@ -485,7 +485,8 @@ export function operationStage(operation: { state: string; hasCandidate: boolean
  * "held" while the deploy is still going and "stopped" once it has ended, since nobody is
  * retrying a check on a finished deploy.
  */
-export type CheckProgressState = "pending" | "running" | "passed" | "failed" | "held" | "stopped" | "advisory" | "skipped";
+export const CHECK_PROGRESS_STATES = ["pending", "running", "passed", "failed", "held", "stopped", "advisory", "skipped"] as const;
+export type CheckProgressState = typeof CHECK_PROGRESS_STATES[number];
 export interface CheckProgress { check: string; label: string; state: CheckProgressState }
 export function checkProgress(wanted: readonly { check: string }[], receipts: readonly FindingReceipt[], stage: OperationStage["code"]): CheckProgress[] {
   const ended = stage === "ready" || stage === "failed" || stage === "expired";

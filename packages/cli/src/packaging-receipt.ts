@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { RawRuntimeEvidence } from "./preflight";
+import { fileDigest, type RawRuntimeEvidence, type SnapshotDigests } from "./preflight";
 import { LIMITS } from "@opengame/shared";
 
 export type PackagedFile = { path: string; originalPath: string; sha256: string; bytes: number };
@@ -17,11 +17,11 @@ export type PackagingReceipt = {
 /** The staged artifact is a snapshot of the source bytes. Record paths and hashes
  * before ZIP compression so root removal is reversible and byte identity can be
  * checked without relying on ZIP timestamps or compressor output. */
-export function packagingReceipt(snapshot: Map<string, Uint8Array>, include: string[], strippedRoot: string, excluded: string[], originalHashes = new Map<string, string>(), dependencies: Record<string, unknown>[] = [], rawRuntimes: RawRuntimeEvidence[] = []): PackagingReceipt {
+export function packagingReceipt(snapshot: Map<string, Uint8Array> | SnapshotDigests, include: string[], strippedRoot: string, excluded: string[], originalHashes = new Map<string, string>(), dependencies: Record<string, unknown>[] = [], rawRuntimes: RawRuntimeEvidence[] = []): PackagingReceipt {
   const files = [...include].sort().map(path => {
-    const originalPath = strippedRoot + path, bytes = snapshot.get(originalPath);
-    if (!bytes) throw new Error("A staged file is missing.");
-    return { path, originalPath, sha256: createHash("sha256").update(bytes).digest("hex"), bytes: bytes.byteLength };
+    const originalPath = strippedRoot + path, digest = fileDigest(snapshot, originalPath);
+    if (!digest) throw new Error("A staged file is missing.");
+    return { path, originalPath, sha256: digest.sha256, bytes: digest.bytes };
   });
   const kept = new Set(files.map(file => file.originalPath));
   const removed = [...new Set([...excluded, ...snapshot.keys()].filter(path => !kept.has(path)))].sort();

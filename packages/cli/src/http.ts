@@ -8,16 +8,18 @@ import { readableBytes } from "./bytes";
 import { CLI_VERSION, olderThan } from "./version";
 import type { TokenSource } from "./credentials";
 
+const DEFAULT_ORIGIN = "https://opengame.io";
+
 export function apiOrigin(env = process.env): string {
   try {
     // Empty is unset, as it is for OPENGAME_TOKEN: `OPENGAME_API_URL=` is how a shell
     // clears it, and `??` let "" through to fail as a malformed origin.
-    const url = new URL(env.OPENGAME_API_URL || "https://opengame.io");
+    const url = new URL(env.OPENGAME_API_URL || DEFAULT_ORIGIN);
     const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
     if (url.username || url.password || url.search || url.hash || url.pathname !== "/" ||
       (url.protocol !== "https:" && !(local && url.protocol === "http:"))) throw new Error();
     return url.origin;
-  } catch { throw new CliError("api_origin", "OPENGAME_API_URL must be an HTTPS origin, or an HTTP localhost origin for development."); }
+  } catch { throw new CliError("api_origin", "OPENGAME_API_URL must be an HTTPS origin such as https://opengame.io, or an HTTP localhost origin for development. Correct it, or unset it to use https://opengame.io."); }
 }
 
 export const PROTECTION_BYPASS_ENV = "OPENGAME_VERCEL_PROTECTION_BYPASS";
@@ -120,8 +122,8 @@ export class ApiError extends CliError {
       // A 403 the server sent without a sentence still has one in the shared table, and that
       // names the real reason (a missing QA grant is not a token's permissions).
       : status === 403 ? (own || errorSentence(code, "cli") || "This token does not have access to this action or game. Check its permissions in OpenGame settings.")
-      : code === "api_unavailable" ? `The OpenGame API is not available at ${origin || "the configured origin"}. Check OPENGAME_API_URL.`
-      : fatal ? `The server hit an error that retrying will not fix. Report request ${data.requestId}.`
+      : code === "api_unavailable" ? `The OpenGame API is not available at ${origin || "the configured origin"}. Check OPENGAME_API_URL${origin && origin !== DEFAULT_ORIGIN ? `, or unset it to use ${DEFAULT_ORIGIN}` : ""}.`
+      : fatal ? `The server hit an error that retrying will not fix. Report request ${data.requestId} to team@opengame.io.`
       : own || (status === 429 ? "Too many requests. Wait before trying again." : "The server could not complete this request. Try again shortly.");
     const row = errorExit(code, status);
     const serverRetry = row.exit === 5 && (data.retry === "never" || data.retry === "after-fix") ? data.retry : undefined;
@@ -175,7 +177,7 @@ export class Api {
     // A funnel step can legitimately contain ../assets or a backslash. Only the
     // route can traverse; query values must remain ordinary encoded data.
     const pathname = path.split("?", 1)[0]!;
-    if (!pathname.startsWith("/api/v1/") || pathname.includes("..") || pathname.includes("\\")) throw new CliError("api_path", "The API path is invalid.");
+    if (!pathname.startsWith("/api/v1/") || pathname.includes("..") || pathname.includes("\\")) throw new CliError("api_path", "The CLI made an invalid API path, so nothing was sent. That is a fault in the CLI, so write to team@opengame.io with the command you ran.");
     const encoded = options.body === undefined ? undefined : encodeJsonBody(options.body, options.gzip);
     return await fetch(this.origin + path, { method: options.method ?? (options.body === undefined ? "GET" : "POST"),
         dispatcher: this.dispatcher, redirect: "error", signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(LIMITS.platform.http.timeoutMs)]) : AbortSignal.timeout(LIMITS.platform.http.timeoutMs),

@@ -20,7 +20,7 @@ import { THREADED_TARGET } from "./engines";
 const SDK_LOCAL_MANIFEST = "opengame.json";
 
 export function devHeaders(version = CURRENT_CONTRACT): Headers {
-  if (!CONTRACT_VERSIONS.includes(version)) throw new CliError("runtime_contract_unknown", `This CLI does not contain runtime contract ${version}. Available: ${CONTRACT_VERSIONS.join(", ")}.`, 2);
+  if (!CONTRACT_VERSIONS.includes(version)) throw new CliError("runtime_contract_unknown", `This CLI does not contain runtime contract ${version}. Use --contract with one of ${CONTRACT_VERSIONS.join(", ")}, or leave it out to use ${CURRENT_CONTRACT}.`, 2);
   const headers = securityHeaders(contractFor(version), "http://localhost:* http://127.0.0.1:*");
   headers.set("Cache-Control", "no-store");
   // The game Worker is embedded by an isolated top-level play page. In dev this
@@ -235,7 +235,7 @@ export async function startDevServer(options: { snapshot: Map<string, Uint8Array
     }
     files.set(path, Buffer.from(text));
   }
-  if (!files.has(LIMITS.bundle.entryPoint)) throw new CliError("entry_missing", "The export has no HTML entry or complete parser-validated raw payload.", 1);
+  if (!files.has(LIMITS.bundle.entryPoint)) throw new CliError("entry_missing", "The export has no index.html or complete parser-validated raw payload. Run the build, or point build.output in opengame.json at the folder that holds index.html, then run opengame dev again.", 1);
   // Production adds the SDK only under a contract that injects it (`injectsPageTags`):
   // 2027-01's derived tree, and 2027-02 at the edge. Under 2026-11 no SDK is added, so a
   // game that leans on an injected window.OpenGame fails here as it would live. (og-games
@@ -344,7 +344,7 @@ function closeServer(server: Server): Promise<void> {
 
 export async function devCommand(root: string, flags: Record<string, string | boolean>, output: Output) {
   const manifest = await loadManifest(root, output, safeReadFile);
-  if (flags.build && manifest.build?.command) await build(manifest.build.command, root, output);
+  if (flags.build && manifest.build?.command) await build(manifest.build.command, root, output, undefined, { install: !flags["no-install"], rerun: "opengame dev --build" });
   const contract = typeof flags.contract === "string" ? flags.contract : CURRENT_CONTRACT;
   devHeaders(contract);
   const port = flags.port === undefined ? 0 : Number(flags.port);

@@ -34,6 +34,16 @@ const nearby = await board.around()                     // entries around the pl
 - `source` is always `game_reported`. Show it as the game's own scoreboard, never as a
   verified result or a prize standing.
 
+## The player's own stats
+
+`og.player.stats()` reads the player's entry on every declared board in one request:
+`value.boards` is `[{ board, label, keep, entry }]`, `entry` being `{ score, stats, tags,
+meta, createdAt, imported }` or `null`. A career board answers the player's row for all
+runs, so XP and levels can live on one: submit each match's XP as a run to a `runs` board,
+feed a career board from it with `scoreAgg: "sum"`, and compute the level in the game from
+the career `entry.score`. The request names no player or game (the session decides both),
+it shares `me()`'s allowance, and the local mock reads career boards as empty.
+
 ## Columns, variants and runs
 
 A board can declare stat `columns` beside its score, `variants` a run is tagged with, and

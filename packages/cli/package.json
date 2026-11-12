@@ -1,6 +1,6 @@
 {
   "name": "@opengamehq/cli",
-  "version": "0.8.0",
+  "version": "0.9.1",
   "private": true,
   "description": "Deploy browser games to OpenGame from the command line.",
   "keywords": [
@@ -54,6 +54,7 @@
     "@opengamehq/skills": "*",
     "@opengame/ui": "*",
     "@types/proper-lockfile": "^4.1.4",
+    "cli-spinners": "^2.9.2",
     "esbuild": "^0.28.2",
     "fflate": "^0.8.3",
     "proper-lockfile": "^4.1.2",

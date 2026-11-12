@@ -9,6 +9,7 @@ import { CliError } from "./output";
 import { createVendorDispatcher } from "./vendor-network";
 import type { RawRuntimeEvidence } from "./preflight";
 
+const REINSTALL = " Reinstall the OpenGame CLI, then run the command again.";
 const sha = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 type FileRow = { path: string; bytes: number; sha256: string; sourceSha256?: string; mime?: string };
 type SourceDistribution = {
@@ -164,7 +165,7 @@ export async function validateDeclaredRuntimes(settings: RuntimeSettings, provid
   await validateRuntimeCatalog(artifacts.catalog);
   for (const setting of selected) {
     const runtime = artifacts.catalog.inventory.runtimes.find(row => row.id === setting.id && row.version === setting.version);
-    if (!runtime) throw new CliError("runtime_reference", "The manifest requests a runtime that this CLI does not retain.", 1);
+    if (!runtime) throw new CliError("runtime_reference", `opengame.json asks for ${setting.id} ${setting.version}, and this CLI's runtime inventory does not carry it.${REINSTALL}`, 1);
     await legalRuntime(runtime);
   }
 }
@@ -172,7 +173,7 @@ export async function validateDeclaredRuntimes(settings: RuntimeSettings, provid
 function runtimeReference(value: string, catalog: RuntimeCatalog): { runtime: Runtime; path: string } | undefined {
   if (value.startsWith("/_og/runtime/")) {
     const runtime = catalog.inventory.runtimes.find(row => value.startsWith(row.prefix));
-    if (!runtime || !runtime.files.some(row => "/" + row.path === value)) throw new CliError("runtime_reference", "Use a retained runtime companion file, not a directory or unknown pin.", 1);
+    if (!runtime || !runtime.files.some(row => "/" + row.path === value)) throw new CliError("runtime_reference", `${value} is not a file this CLI's runtimes carry. Load a runtime companion file by its exact path, not a directory or an unknown version.`, 1);
     return { runtime, path: value.slice(1) };
   }
   // Only explicit npm aliases for the retained package/version are accepted.
@@ -184,7 +185,7 @@ function runtimeReference(value: string, catalog: RuntimeCatalog): { runtime: Ru
   const runtime = catalog.inventory.runtimes.find(row => row.id === id && row.version === match[2]);
   let relative = match[3]!;
   if (["wasmoon", "jsdos"].includes(id)) relative = relative.replace(/^dist\//, "");
-  if (!runtime || /[%\\?#]/.test(relative) || !runtime.files.some(row => row.path === runtime.prefix.slice(1) + relative)) throw new CliError("runtime_reference", "Use an exact retained runtime version and inventoried companion file, not a directory.", 1);
+  if (!runtime || /[%\\?#]/.test(relative) || !runtime.files.some(row => row.path === runtime.prefix.slice(1) + relative)) throw new CliError("runtime_reference", `${value} is not a file of a runtime version this CLI carries. Load an exact carried version and one of its files, not a directory.`, 1);
   return { runtime, path: runtime.prefix.slice(1) + relative };
 }
 
@@ -197,7 +198,7 @@ export async function prepareRuntimeAssets(snapshot: Map<string, Uint8Array>, op
   const selected = new Map<string, Runtime>(); const replacements = new Map<string, string>();
   for (const setting of settings) {
     const runtime = artifacts.catalog.inventory.runtimes.find(row => row.id === setting.id && row.version === setting.version);
-    if (!runtime) throw new CliError("runtime_reference", "The manifest requests a runtime that this CLI does not retain.", 1);
+    if (!runtime) throw new CliError("runtime_reference", `opengame.json asks for ${setting.id} ${setting.version}, and this CLI's runtime inventory does not carry it.${REINSTALL}`, 1);
     selected.set(runtime.id, runtime);
   }
   const target = (path: string) => options.vendor ? path.replace(/^_og\/runtime\//, ".opengame-vendor/runtime/") : path;
@@ -207,11 +208,11 @@ export async function prepareRuntimeAssets(snapshot: Map<string, Uint8Array>, op
   }
   if (options.raw) {
     const runtime = artifacts.catalog.inventory.runtimes.find(row => row.id === options.raw!.engine);
-    if (!runtime) throw new CliError("runtime_reference", "No reviewed runtime exists for the parsed payload.", 2);
+    if (!runtime) throw new CliError("runtime_reference", `This CLI has no reviewed runtime for ${options.raw.path}. Export the game to HTML with an index.html, then run opengame check again.`, 2);
     const source = snapshot.get(options.raw.path);
     if (!source || source.length !== options.raw.bytes || sha(source) !== options.raw.sha256 || !options.raw.complete || options.raw.manualReviewRequired) throw new CliError("build_changed", "The game file no longer matches what opengame check read, or the check could not read all of it. Run opengame check again.", 1);
     const setting = settings.find(row => row.id === runtime.id);
-    if (setting && setting.version !== runtime.version) throw new CliError("runtime_reference", "The manifest runtime does not match the parsed payload and retained pin.", 1);
+    if (setting && setting.version !== runtime.version) throw new CliError("runtime_reference", `opengame.json asks for ${runtime.id} ${setting.version}, and this CLI carries ${runtime.version}.${REINSTALL}`, 1);
     selected.set(runtime.id, runtime);
   }
   const files = new Map<string, Uint8Array>(); const receipts: RuntimeAssetReceipt[] = [];
@@ -219,23 +220,23 @@ export async function prepareRuntimeAssets(snapshot: Map<string, Uint8Array>, op
   for (const runtime of selected.values()) await legalRuntime(runtime);
   for (const runtime of selected.values()) {
     const setting = settings.find(row => row.id === runtime.id);
-    if (setting && setting.version !== runtime.version) throw new CliError("runtime_reference", "The manifest runtime does not match the retained pin.", 1);
+    if (setting && setting.version !== runtime.version) throw new CliError("runtime_reference", `opengame.json asks for ${runtime.id} ${setting.version}, and this CLI carries ${runtime.version}.${REINSTALL}`, 1);
     const assets = await artifacts.acquire(runtime);
-    if (assets.size !== runtime.files.length) throw new CliError("runtime_artifact_missing", "The runtime companion inventory is incomplete.", 2);
+    if (assets.size !== runtime.files.length) throw new CliError("runtime_artifact_missing", `The ${runtime.id} runtime files are incomplete. Run the command again, and if it fails again, reinstall the OpenGame CLI.`, 2);
     const rows: RuntimeAssetReceipt["files"] = [];
     for (const row of runtime.files) {
       const source = assets.get(row.path);
-      if (!source || source.byteLength !== row.bytes || sha(source) !== row.sha256) throw new CliError("runtime_artifact_missing", "A runtime companion failed its recorded digest.", 2);
+      if (!source || source.byteLength !== row.bytes || sha(source) !== row.sha256) throw new CliError("runtime_artifact_missing", `A ${runtime.id} runtime file does not match its recorded digest. Run the command again, and if it fails again, reinstall the OpenGame CLI.`, 2);
       let bytes = source;
       // The one namespace translation is applied to reviewed runtime bytes only;
       // it retains separate artifact and staged hashes, including worker fallbacks.
       if (options.vendor && /\.(?:[cm]?js|css|json)$/.test(row.path)) bytes = Buffer.from(Buffer.from(source).toString("utf8").split("/_og/runtime/").join("/.opengame-vendor/runtime/"));
       const destination = target(row.path);
       const existing = snapshot.get(destination) ?? files.get(destination);
-      if (existing && (existing.length !== bytes.length || sha(existing) !== sha(bytes))) throw new CliError("vendor_collision", "A generated runtime path collides with the export.", 1);
+      if (existing && (existing.length !== bytes.length || sha(existing) !== sha(bytes))) throw new CliError("vendor_collision", `${destination} is in your export, and the CLI writes the ${runtime.id} runtime there. Remove or rename it, then run the command again.`, 1);
       if (!existing) {
         total += bytes.length;
-        if (total > LIMITS.bundle.uncompressedBytesMax || snapshot.size + files.size >= LIMITS.bundle.fileCountMax) throw new CliError("vendor_limit", "The complete runtime and game exceed bundle limits.", 1);
+        if (total > LIMITS.bundle.uncompressedBytesMax || snapshot.size + files.size >= LIMITS.bundle.fileCountMax) throw new CliError("vendor_limit", "The complete runtime and game exceed bundle limits. Remove what the game does not load, then run opengame check again.", 1);
         files.set(destination, bytes);
       }
       rows.push({ ...row, destination, stagedSha256: sha(bytes) });
@@ -248,24 +249,24 @@ export async function prepareRuntimeAssets(snapshot: Map<string, Uint8Array>, op
     const templates: ShellTemplates = { receipt: artifacts.catalog.inventory.shells, files: new Map() };
     for (const row of artifacts.catalog.inventory.shells.files) {
       const template = await artifacts.shell(row);
-      if (template.length !== row.bytes || sha(template) !== row.sha256) throw new CliError("runtime_artifact_missing", "A canonical runtime shell failed its digest.", 2);
+      if (template.length !== row.bytes || sha(template) !== row.sha256) throw new CliError("runtime_artifact_missing", `A canonical runtime shell failed its digest.${REINSTALL}`, 2);
       templates.files.set(row.path, Buffer.from(template));
     }
     let rendered: Map<string, Uint8Array>;
     try {
       rendered = await artifacts.render({ runtimeId: runtime.id, version: runtime.version, asset: options.raw.path,
         options: setting && "options" in setting ? setting.options ?? {} : {} }, templates);
-    } catch { throw new CliError("runtime_artifact_missing", "The packaged canonical runtime renderer could not verify and render its shell.", 2); }
+    } catch { throw new CliError("runtime_artifact_missing", `The packaged canonical runtime renderer could not verify and render its shell.${REINSTALL}`, 2); }
     for (const row of artifacts.catalog.inventory.shells.files) {
       const destination = options.vendor ? row.target.replace(/^_og\//, ".opengame-vendor/") : row.target;
-      if (snapshot.has(destination) || files.has(destination)) throw new CliError("vendor_collision", "The canonical runtime shell would overwrite an existing file.", 1);
+      if (snapshot.has(destination) || files.has(destination)) throw new CliError("vendor_collision", `The canonical runtime shell would overwrite ${destination} in your export. Remove or rename that file, then run the command again.`, 1);
       let bytes = rendered.get(row.target);
-      if (!bytes) throw new CliError("runtime_artifact_missing", "The canonical renderer omitted a shell file.", 2);
+      if (!bytes) throw new CliError("runtime_artifact_missing", `The canonical renderer omitted a shell file.${REINSTALL}`, 2);
       if (options.vendor && row.target === "index.html") {
         const text = Buffer.from(bytes).toString("utf8");
         const prefix = `"prefix":${JSON.stringify(runtime.prefix)}`;
         const script = 'src="/_og/runtime-shell.js"';
-        if (text.split(prefix).length !== 2 || text.split(script).length !== 2) throw new CliError("runtime_artifact_missing", "The canonical renderer's relocation fields are missing or ambiguous.", 2);
+        if (text.split(prefix).length !== 2 || text.split(script).length !== 2) throw new CliError("runtime_artifact_missing", `The canonical renderer's relocation fields are missing or ambiguous.${REINSTALL}`, 2);
         // Only generated URL fields move. A raw asset may legitimately contain
         // the same path segment in its own name, and its identity never moves.
         bytes = Buffer.from(text.replace(prefix, `"prefix":${JSON.stringify("/" + target(runtime.prefix.slice(1)))}`)
@@ -273,7 +274,7 @@ export async function prepareRuntimeAssets(snapshot: Map<string, Uint8Array>, op
       }
       files.set(destination, bytes);
       total += bytes.length;
-      if (total > LIMITS.bundle.uncompressedBytesMax || snapshot.size + files.size > LIMITS.bundle.fileCountMax) throw new CliError("vendor_limit", "The canonical shell and complete runtime exceed bundle limits.", 1);
+      if (total > LIMITS.bundle.uncompressedBytesMax || snapshot.size + files.size > LIMITS.bundle.fileCountMax) throw new CliError("vendor_limit", "The canonical shell and complete runtime exceed bundle limits. Remove what the game does not load, then run opengame check again.", 1);
       receipts.find(row => row.runtime === runtime.id)!.files.push({ ...row, destination, stagedSha256: sha(bytes) });
     }
   }

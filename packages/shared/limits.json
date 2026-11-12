@@ -1,10 +1,10 @@
 {
   "version": "2026-10",
   "bundle": {
-    "archiveBytesMax": 1073741824,
-    "uncompressedBytesMax": 1610612736,
-    "fileBytesMax": 268435456,
-    "fileCountMax": 10000,
+    "archiveBytesMax": 4294967295,
+    "uncompressedBytesMax": 5368709120,
+    "fileBytesMax": 1073741824,
+    "fileCountMax": 25000,
     "compressionRatioMax": 200,
     "entryPoint": "index.html",
     "pathBytesMax": 768
@@ -945,11 +945,11 @@
     "reports": {
       "outstandingJobsPerOwnerMax": 20
     },
-    "batchEventsMax": 50,
+    "batchEventsMax": 200,
     "batchBytesMax": 65536,
     "flushIntervalMs": 10000,
     "requestTimeoutMs": 10000,
-    "eventsPerSessionMax": 200,
+    "eventsPerSessionMax": 5000,
     "runtime": {
       "sampleRate": 0.1,
       "sampleWindowMs": 5000,
@@ -1207,6 +1207,10 @@
       "max": 500
     },
     "playerReview": {
+      "min": 1,
+      "max": 2000
+    },
+    "gameFeedbackNote": {
       "min": 1,
       "max": 2000
     }
@@ -1820,7 +1824,6 @@
           "kaigen"
         ],
         "limits": "largeGameAssets",
-        "grant": "large-game",
         "autoSplit": {
           "fileBytesMin": 1048576
         },
@@ -1999,6 +2002,7 @@
     "deploy": {
       "perAccountPerDay": 5,
       "multipart": {
+        "aboveBytes": 67108864,
         "concurrency": 4
       },
       "uploadAttemptsMax": 3,
@@ -2191,7 +2195,7 @@
       "maintenanceRetryAfterSeconds": 60
     },
     "preview": {
-      "inventoryBytesMax": 8388608,
+      "inventoryBytesMax": 16777216,
       "documentBufferBytesMax": 33554432
     },
     "review": {
@@ -2206,7 +2210,7 @@
       "lobbyLabelCharsMax": 48,
       "lobbyDescriptionCharsMax": 120,
       "lobbySchemaBytesMax": 4096,
-      "boardCountMax": 10,
+      "boardCountMax": 25,
       "boardKeyCharsMax": 48,
       "boardLabelCharsMax": 60,
       "boardColumnsMax": 8,
@@ -2222,9 +2226,9 @@
     "sdk": {
       "handshakeTimeoutMs": 4000,
       "handshakeRetryMs": 500,
-      "coreGzipBytesMax": 15980,
+      "coreGzipBytesMax": 16360,
       "bridgeGzipBytesMax": 71680,
-      "adapterGzipBytesMax": 17210,
+      "adapterGzipBytesMax": 17590,
       "avatarGzipBytesMax": 3072,
       "radioGzipBytesMax": 8192,
       "radio": {
@@ -2255,7 +2259,7 @@
       ],
       "rateWindowMs": 60000,
       "eventBatchMs": 10000,
-      "eventsPerSessionPerMinute": 60,
+      "eventsPerSessionPerMinute": 600,
       "scoreRequestTimeoutMs": 5000,
       "lobbyRequestTimeoutMs": 10000,
       "lobbyRequestsPendingMax": 4,
@@ -2305,6 +2309,20 @@
         "extrapolationMsMax": 150,
         "cameraHalfLifeMs": 90
       }
+    },
+    "deployProgress": {
+      "minimumSamples": 3,
+      "referenceBytes": 1073741824,
+      "referenceFiles": 5000,
+      "setupWeight": 0.35,
+      "byteWeight": 0.4,
+      "fileWeight": 0.25,
+      "scaleMin": 0.25,
+      "scaleMax": 8,
+      "rateStaleMs": 30000,
+      "rateMinimumSeconds": 3,
+      "rateWindowSeconds": 30,
+      "rateSamplesMin": 3
     },
     "operations": {
       "idempotencyKeyCharsMax": 128,

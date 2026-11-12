@@ -1,5 +1,9 @@
 # opengame-jam changelog
 
+## 1.0.7
+
+A build can be 4 GiB zipped, 5 GiB unpacked and 25,000 files, from 1 GiB, 1.5 GiB and 10,000 files. OpenGame opens on 18 November 2026, the jam's kickoff, not 17 November: the site no longer opens a day before the rest.
+
 ## 1.0.6
 
 The site opens on one day and the CLI, uploads and the creator API on the next, the jam's kickoff. Until then an account outside the team is told that day, read from the launch clock.

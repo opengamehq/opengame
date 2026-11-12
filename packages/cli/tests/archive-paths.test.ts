@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -53,9 +54,10 @@ test("a valid compressible game retains deflated fallback when the STORE archive
     assert.equal(canonicalArchive([["index.html", html], ["payload.bin", payload]]), null);
     const archive = await createArchive(root.dir, manifest, new Output(true, () => {}), { incremental: true });
     assert.equal(archive.incremental, null);
-    assert.ok(archive.bytes.byteLength <= archiveLimit);
-    assert.equal(new DataView(archive.bytes.buffer, archive.bytes.byteOffset).getUint16(8, true), 8);
-    const extracted = unzipSync(archive.bytes);
+    const packed = readFileSync(archive.file);
+    assert.ok(packed.byteLength <= archiveLimit);
+    assert.equal(new DataView(packed.buffer, packed.byteOffset).getUint16(8, true), 8);
+    const extracted = unzipSync(packed);
     assert.deepEqual(Buffer.from(extracted["index.html"]!), html);
     assert.deepEqual(Buffer.from(extracted["payload.bin"]!), payload);
   } finally { LIMITS.platform.incrementalUpload.archiveBytesMax = originalLimit; await root.remove(); }
@@ -71,8 +73,8 @@ test("ordinary and incremental archive paths preserve literal prototype-related 
     for (const incremental of [false, true]) {
       const archive = await createArchive(root.dir, manifest, new Output(true, () => {}), { incremental });
       const decodedNames: string[] = [];
-      const unpacked = unzipSync(archive.bytes, { filter: member => { decodedNames.push(member.name); return member.name !== '__proto__'; } });
-      const isolated = unzipSync(archive.bytes, { filter: member => member.name === '__proto__' });
+      const unpacked = unzipSync(readFileSync(archive.file), { filter: member => { decodedNames.push(member.name); return member.name !== '__proto__'; } });
+      const isolated = unzipSync(readFileSync(archive.file), { filter: member => member.name === '__proto__' });
       assert.deepEqual(decodedNames.sort(), ["index.html", ...names].sort());
       for (const name of names) {
         const bytes = name === '__proto__' ? Object.getOwnPropertyDescriptor(isolated, name)?.value ?? Object.getPrototypeOf(isolated)

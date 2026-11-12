@@ -266,7 +266,7 @@ export async function vendorDependencies(input: Map<string, Uint8Array>, options
     if (response.status === 404) { await response.body?.cancel(); throw new CliError("vendor_missing", "A pinned dependency file is missing at its source. Bundle it locally with your build tool.", 1); }
     if (!response.ok || !response.body) { await response.body?.cancel(); throw new CliError("vendor_download", "A pinned dependency could not be downloaded. Retry, or include it through your build tool.", 5); }
     const declared = Number(response.headers.get("content-length"));
-    if (Number.isFinite(declared) && declared > policy.bytesPerFileMax) { await response.body.cancel(); throw new CliError("vendor_limit", "A dependency exceeds the per-file download allowance.", 1); }
+    if (Number.isFinite(declared) && declared > policy.bytesPerFileMax) { await response.body.cancel(); throw new CliError("vendor_limit", "A dependency exceeds the per-file download allowance. Bundle it locally with your build tool.", 1); }
     const chunks: Uint8Array[] = []; let bytes = 0;
     try {
       for await (const chunk of response.body) {
@@ -301,14 +301,14 @@ export async function vendorDependencies(input: Map<string, Uint8Array>, options
     if (!licenses.has(source.base)) {
       const metadata = await download(source.base + "package.json");
       let pkg: { name?: string; version?: string; license?: string };
-      try { pkg = JSON.parse(metadata.toString("utf8")); } catch { throw new CliError("vendor_license", "The dependency's package metadata could not be read.", 1); }
+      try { pkg = JSON.parse(metadata.toString("utf8")); } catch { throw new CliError("vendor_license", `The package metadata of ${source.package}@${source.version} could not be read, so its license could not be checked. Bundle it locally with your build tool after checking its license.`, 1); }
       if (pkg.name !== source.package || pkg.version !== source.version || typeof pkg.license !== "string" || !policy.licenses.includes(pkg.license)) throw new CliError("vendor_license", "The dependency does not declare an approved license for this pinned version. Bundle it after checking its license.", 1);
       let license: Buffer | undefined;
       for (const name of policy.licenseFiles) {
         try { license = await download(source.base + name); break; }
         catch (error) { if (!(error instanceof CliError) || error.code !== "vendor_missing") throw error; }
       }
-      if (!license?.byteLength) throw new CliError("vendor_license", "The dependency has no license text at its pinned source.", 1);
+      if (!license?.byteLength) throw new CliError("vendor_license", `${source.package}@${source.version} has no license text at its pinned source. Bundle it locally with your build tool after checking its license.`, 1);
       const licensePath = prefix + "LICENSE.txt";
       if (snapshot.has(licensePath)) throw new CliError("vendor_collision", "The vendor license path already exists. Remove the old staged copy, then retry.", 1);
       snapshot.set(licensePath, license);
@@ -365,22 +365,25 @@ export async function vendorCommand(root: string, flags: Record<string, string |
   const { inspectArchive } = await import("./archive");
   const { build } = await import("./deploy");
   const manifest = await loadManifest(root, output, safeReadFile);
-  if (flags.build && manifest.build?.command) await build(manifest.build.command, root, output);
+  if (flags.build && manifest.build?.command) await build(manifest.build.command, root, output, undefined, { install: !flags["no-install"], rerun: "opengame vendor --build" });
   const source = await outputFolder(root, manifest);
   const base = await realpath(root);
   const relative = typeof flags.output === "string" ? flags.output : ".opengame/vendor";
   if (!isBundlePath(relative)) throw new CliError("vendor_output", "Use --output with a new relative folder inside the project.", 2);
   const target = resolve(base, relative);
-  if (insideProject(target, source)) throw new CliError("vendor_output", "The staging folder cannot contain the source export.", 2);
+  if (insideProject(target, source)) throw new CliError("vendor_output", "The staging folder cannot contain the source export. Choose an --output folder that does not hold the build.output folder, or leave --output out to use .opengame/vendor.", 2);
   const replacing = await previousVendorOutput(target);
   const linked = linkedProject(await readProject(root, apiOrigin(), { readFile: safeReadFile }));
   const inspection = await inspectArchive(source, manifest, output, { vendor: true, artifacts: options.artifacts });
   assertNoReservedRuntimePaths(inspection.result.include);
   const staged = new Map<string, Uint8Array>();
-  for (const name of inspection.result.include) {
-    if (!isBundlePath(name)) throw new CliError("vendor_output", "The checked export contains an invalid path.", 1);
-    staged.set(name, inspection.snapshot.get(inspection.result.strippedRoot + name)!);
-  }
+  try {
+    for (const name of inspection.result.include) {
+      if (!isBundlePath(name)) throw new CliError("vendor_output", `The checked export contains a path that cannot be staged: ${name}. Rename it and anything that loads it, then run opengame vendor again.`, 1);
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop
+      staged.set(name, await inspection.snapshot.bytes(inspection.result.strippedRoot + name));
+    }
+  } finally { await inspection.snapshot.dispose(); }
   // The staged copy is the folder that gets deployed, so a retired cover stops here too.
   staged.set("opengame.json", Buffer.from(JSON.stringify({ ...withoutCover(manifest), build: { output: "." } }, null, 2) + "\n"));
   staged.set(".opengame/vendor-receipt.json", Buffer.from(JSON.stringify(inspection.packaging, null, 2) + "\n"));

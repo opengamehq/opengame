@@ -40,8 +40,8 @@ export async function pullCommand(root: string, flags: Record<string, string | b
     const token = active.token;
     api.tokenSource = active.source;
     await withProject(root, api.origin, async (state, save) => {
-      if (!state.gameId) throw new CliError("not_linked", "Run opengame link --game <id> before pulling website changes.");
-      if (state.deploy && !state.deploy.terminal) throw new CliError("deploy_in_progress", "This folder has an unfinished deploy. Run opengame status and finish that deploy before pulling website changes.");
+      if (!state.gameId) throw new CliError("not_linked", "Run opengame link --game <id> before pulling website changes. opengame games lists the ids.", undefined, { next: "opengame games" });
+      if (state.deploy && !state.deploy.terminal) throw new CliError("deploy_in_progress", "This folder has an unfinished deploy. Run opengame status and finish that deploy before pulling website changes.", undefined, { next: "opengame status --watch" });
       // A removed game's metadata was written into opengame.json with "Run opengame check"
       // after it, as if the folder could deploy it again.
       refuseRemoved(await readGame(api, token, state.gameId));

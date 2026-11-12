@@ -1,12 +1,13 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { constants } from "node:fs";
-import { open, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import { lstat, mkdir, open, readdir, rm, unlink } from "node:fs/promises";
+import { join, relative, resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 import { LIMITS, compiledCredentialPatterns } from "@opengame/shared";
 import { ERRORS, DEAD_UPLOAD_CODES, LISTING, OPERATION_STATUS, RELEASE_STATUS, SUBMISSION_OPEN, findingLabel, submissionStatus, operationNext, operationOutcome, creatorGamePath, deploymentPath, withoutCover,
-  type CreatorGame, type GameManifest, type OperationSummary, type RepairFinding, type Submission } from "@opengame/protocol";
+  incrementalArchiveBytes, type CreatorGame, type GameManifest, type OperationSummary, type RepairFinding, type Submission } from "@opengame/protocol";
+import { terminalDeploymentChecklist } from "./deployment-progress";
 import { operation, terminal, remember, readSavedOperation } from "./operation";
 import { readGame, refuseRemoved } from "./games";
 import { emitReview, followReview, readSubmission, reviewLine } from "./submit";
@@ -14,9 +15,9 @@ import { authCommand } from "./auth";
 import { readBootstrap } from "./bootstrap";
 import { Api, ApiError, UploadInterrupted } from "./http";
 import { activeToken } from "./credentials";
-import { loadManifest, outputFolder, replaceFile } from "./files";
-import { createArchive } from "./archive";
-import { assertSdkInstalled } from "./build-output";
+import { collectFiles, loadManifest, outputFolder, replaceFile } from "./files";
+import { archiveDigest, createArchive, readArchiveRange, type PackedArchive } from "./archive";
+import { lockfileInstall, missingDependencies, readBuildPackage } from "./build-output";
 import { ensureProjectIgnored, ensureDeployManifest, kindPhrase, provisionalFields } from "./init";
 import { readProject, savedSubmit, updateProject, validKey, withProject, type Project } from "./project";
 import { CliError, Output, terminalText } from "./output";
@@ -25,8 +26,8 @@ import type { PackagingReceipt } from "./packaging-receipt";
 import { showAllowance } from "./allowance";
 import { syncAchievements } from "./achievements";
 import { filesFromArchive, uploadMissingFiles } from "./incremental";
-import { uploadArchiveParts } from "./archive-parts";
-import { safeReadFile } from "./safe-fs";
+import { uploadArchiveParts, type ArchiveSource } from "./archive-parts";
+import { pythonAvailable, safeReadFile } from "./safe-fs";
 import { acceptedStatement, assertUnitySourceRoot, createUnityArchive, LARGE_ASSET_DELIVERY, planDelivery, readSmallUnityAssets, readUnityAsset, readUnityAssetPlan, unityFileUnion, unityInputDigest } from "./unity-assets";
 
 /** The asset plan a command was given. --external-assets takes any plan kind named in
@@ -52,8 +53,11 @@ async function serverLimits(api: Api, token: string) {
   if (!limits || !Number.isSafeInteger(limits.archiveBytesMax) || limits.archiveBytesMax < 1 || !Number.isSafeInteger(limits.fileCountMax) || limits.fileCountMax < 1) {
     throw new CliError("invalid_response", "The server limits could not be read. Run opengame deploy again.", 5);
   }
-  const capabilities = data.capabilities as { incrementalUpload?: unknown; archiveParts?: unknown } | undefined;
-  return { ...limits, incrementalUpload: capabilities?.incrementalUpload === true, archiveParts: capabilities?.archiveParts === true };
+  const capabilities = data.capabilities as { incrementalUpload?: unknown; archiveParts?: unknown; externalAssets?: unknown } | undefined;
+  /* The asset plan kinds this account may send file by file (bootstrap, 11 Nov 2026). A
+     server that names none, or predates the field, gets the archive as before. */
+  const externalAssets = Array.isArray(capabilities?.externalAssets) ? capabilities.externalAssets.filter((kind): kind is string => typeof kind === "string") : [];
+  return { ...limits, incrementalUpload: capabilities?.incrementalUpload === true, archiveParts: capabilities?.archiveParts === true, externalAssets };
 }
 
 const TAIL_BYTES = 4096;
@@ -101,15 +105,16 @@ function buildCommandLabel(command: string, secrets: string[] = []) {
   return label;
 }
 
-export async function build(command: string, root: string, output: Output, timeoutMs = LIMITS.platform.deploy.buildTimeoutMs) {
-  await assertSdkInstalled(root);
-  // A build can print an opaque environment value without its field name. Keep
-  // known secret values out of diagnostic transcripts as well as command labels.
-  const secrets = [...Object.entries(process.env).filter(([name]) => /PASSWORD|PASSWD|SECRET|TOKEN|API_KEY|ACCESS_KEY/i.test(name)).map(([, value]) => value ?? ""),
-    ...[...command.matchAll(SECRET_FIELD)].map(match => match[2] ?? match[3] ?? match[4] ?? ""),
-    ...[...command.matchAll(/Authorization\s*:\s*(?:Bearer|Basic)\s+([^\s"']+)/gi)].map(match => match[1]!)];
-  const diagnostic = (value: string) => buildCommandLabel(value, secrets);
-  output.emit({ type: "progress", stage: "build", message: `Running build command: ${diagnostic(command)}` });
+/** What a command run for the project ended with, and the last of what it printed. */
+type Ran = { code: number | null; error?: boolean; timedOut: boolean; tail: string };
+
+/**
+ * Runs one of the project's own commands (its build, or the install before it) the way the
+ * build has always run: under a shell, without the API token, with the terminal handed over
+ * to a person and the output captured in --json, in a process group of its own when piped,
+ * and stopped with everything it started at the time limit. `noun` names it in the notice.
+ */
+async function runProjectCommand(command: string, root: string, output: Output, timeoutMs: number, noun: string): Promise<Ran> {
   // A project's build is its own code. It has no reason to inherit the API token.
   const env = { ...process.env }; delete env.OPENGAME_TOKEN;
   const capture = output.json;
@@ -171,12 +176,148 @@ export async function build(command: string, root: string, output: Output, timeo
     child.on("close", code => finish({ code }));
   });
   if (leftRunning) output.emit({ type: "notice", code: "build_left_running",
-    message: "The build command finished but left a process running, so it was stopped before packaging. Start background tools outside the build command." });
+    message: `The ${noun} finished but left a process running, so it was stopped before packaging. Start background tools outside the ${noun}.` });
+  return { ...outcome, timedOut: Boolean(outcome.timedOut), tail };
+}
+
+/**
+ * The program a shell could not find, from what it printed: bash and macOS sh ("sh: vite:
+ * command not found"), dash ("sh: 1: vite: not found"), zsh ("command not found: vite") and
+ * cmd.exe ("'vite' is not recognized as an internal or external command"). Undefined when
+ * the command did not end that way.
+ */
+export function commandNotFound(code: number | null, tail: string): { tool?: string } | undefined {
+  const text = tail.replace(/\r/g, "");
+  const tool = /(?:^|\n)[^\n]*?:\s*(?:line \d+:\s*)?([^\s:'"]+): command not found/.exec(text)?.[1]
+    ?? /(?:^|\n)[^\n]*?:\s*\d+:\s*([^\s:'"]+): not found/.exec(text)?.[1]
+    ?? /command not found: ([^\s'"]+)/.exec(text)?.[1]
+    ?? /'([^'\n]+)' is not recognized as an internal or external command/.exec(text)?.[1];
+  if (tool) return { tool };
+  return code === 127 ? {} : undefined;
+}
+
+export type BuildOptions = {
+  /** false is --no-install: the build runs on whatever is installed. */
+  install?: boolean;
+  /** The command a person runs again once they have fixed what stopped this one. */
+  rerun?: string;
+};
+
+/** Why an install would leave devDependencies out, when this process's environment says it
+ * will: NODE_ENV=production, or npm's omit or production setting passed as npm_config_*. */
+function devOmitted(): string | undefined {
+  if (process.env.NODE_ENV === "production") return "NODE_ENV is production";
+  if ((process.env.npm_config_omit ?? "").split(/[\s,]+/).includes("dev")) return "npm's omit setting includes dev";
+  if (process.env.npm_config_production === "true") return "npm's production setting is on";
+  return undefined;
+}
+
+/** A folder for a shell command, quoted only when it has to be. */
+const shellPath = (path: string) => /^[\w./-]+$/.test(path) ? path : `'${path.replace(/'/g, "'\\''")}'`;
+
+/**
+ * Installs the project's dependencies from its lockfile when package.json names packages that
+ * are not installed, before the build that needs them. See missingDependencies in
+ * build-output.ts for what counts as installed and why the SDK's repository-only path is
+ * refused instead.
+ *
+ * Only a fresh checkout is installed unasked: the lockfile beside package.json, and no
+ * node_modules in the game's folder at all. Everything else is the creator's to run, and the
+ * error says what and where. A tree with some packages missing is not handed to npm ci, which
+ * deletes node_modules first and so takes linked and patched packages with it, and leaves
+ * nothing at all offline (review, 11 Nov 2026). A lockfile in a parent folder is a workspace's,
+ * and installing it touches every other package there. No lockfile means any install writes a
+ * new one into the creator's folder.
+ */
+async function installDependencies(root: string, output: Output, timeoutMs: number, options: BuildOptions) {
+  if (options.install === false) return;
+  const needed = await missingDependencies(root);
+  if (!needed) return;
+  const rerun = options.rerun ?? "opengame deploy";
+  const listed = needed.missing.slice(0, 5).join(", ") + (needed.missing.length > 5 ? ` and ${needed.missing.length - 5} more` : "");
+  const skip = `To build with what is installed, add --no-install.`;
+  const omitted = needed.dev.length ? devOmitted() : undefined;
+  const omission = omitted ? ` ${omitted}, so an install leaves out devDependencies such as ${needed.dev.slice(0, 3).join(", ")}, which the build needs. Unset it for the install.` : "";
+  const refuse = (message: string, next: string) => new CliError("dependencies_missing", `${message}${omission} ${skip}`, undefined, { next });
+  if (!needed.install) throw refuse(`Dependencies are not installed. Run npm install, then run ${rerun} again.`, "npm install");
+  const plan = needed.install;
+  if (plan.folder !== resolve(root)) {
+    const where = shellPath(relative(resolve(root), plan.folder) || ".");
+    throw refuse(`${listed} ${needed.missing.length === 1 ? "is" : "are"} not installed. This project's lockfile is in ${plan.folder}, a workspace this command does not install for you. Run ${plan.install} there, then run ${rerun} again.`, `cd ${where} && ${plan.install}`);
+  }
+  if (!needed.fresh) throw refuse(`${listed} ${needed.missing.length === 1 ? "is" : "are"} in package.json but not installed. Run ${plan.install}, then run ${rerun} again.`, plan.install);
+  if (omitted) throw refuse(`Dependencies are not installed.`, plan.install);
+  const { command } = needed.install;
+  output.emit({ type: "progress", stage: "install", message: `Installing dependencies (${command})` });
+  const ran = await runProjectCommand(command, root, output, timeoutMs, "install");
+  if (ran.code === 0) {
+    /* An install that succeeded and still left packages out was told to by a setting this
+       process cannot see (an .npmrc omit=dev, say). Building now would only fail on the
+       first missing tool, and the advice for that would be another install. */
+    const still = await missingDependencies(root);
+    if (still) throw new CliError("dependencies_missing", `${command} finished, but ${still.missing.slice(0, 5).join(", ")}${still.missing.length > 5 ? ` and ${still.missing.length - 5} more` : ""} ${still.missing.length === 1 ? "is" : "are"} still not installed. If they are devDependencies, check that npm's omit setting (in .npmrc) does not include dev. ${skip}`, undefined, { next: plan.install });
+    return;
+  }
+  const minutes = Math.max(1, Math.round(timeoutMs / 60_000));
+  const text = buildCommandLabel(ran.tail, environmentSecrets()).replace(/\r/g, "").split("\n").map(line => line.trimEnd()).filter(Boolean).slice(-30).join("\n").slice(-TAIL_BYTES);
+  const absent = commandNotFound(ran.code, ran.tail);
+  const fix = absent
+    ? `Install ${needed.install.manager}, which this project's lockfile asks for${needed.install.manager === "npm" ? "" : ` (corepack enable ${needed.install.manager} is one way)`}, or install the dependencies yourself, then run ${rerun} again.`
+    : ran.timedOut ? `Run ${command} yourself, then run ${rerun} --no-install.`
+    : `Fix the error ${command} printed, or install the dependencies yourself, then run ${rerun} again.`;
+  const finding: RepairFinding = { release: null, check: "build", checkVersion: CLI_VERSION, state: "failed", certainty: "certain", fault: "game",
+    evidence: { observed: ran.timedOut ? `${command} ran for ${minutes} minutes without finishing.`
+      : text ? `${command} exited${ran.code === null ? "" : ` with code ${ran.code}`}. Its last output:\n${text}`
+      : ran.error ? `${command} could not be started.`
+      : `${command} exited${ran.code === null ? "" : ` with code ${ran.code}`}${output.json ? " without printing anything" : ". Its output is above"}.`,
+      file: "package.json" },
+    fix, verify: `${command}, then ${rerun}`, retry: "after-fix" };
+  output.emit({ type: "finding", finding });
+  throw new CliError("install_failed", absent
+    ? `${listed} ${needed.missing.length === 1 ? "is" : "are"} not installed, and ${needed.install.manager} is not installed to install ${needed.missing.length === 1 ? "it" : "them"}. ${fix}`
+    : `Installing dependencies with ${command} failed. Its output is ${output.json ? "in the finding above" : "above"}.`,
+  undefined, { finding, ...(absent ? {} : { next: command }) });
+}
+
+/** Values a transcript must never carry, even printed without their field name. */
+const environmentSecrets = () => Object.entries(process.env).filter(([name]) => /PASSWORD|PASSWD|SECRET|TOKEN|API_KEY|ACCESS_KEY/i.test(name)).map(([, value]) => value ?? "");
+
+export async function build(command: string, root: string, output: Output, timeoutMs = LIMITS.platform.deploy.buildTimeoutMs, options: BuildOptions = {}) {
+  await installDependencies(root, output, timeoutMs, options);
+  // A build can print an opaque environment value without its field name. Keep
+  // known secret values out of diagnostic transcripts as well as command labels.
+  const secrets = [...environmentSecrets(),
+    ...[...command.matchAll(SECRET_FIELD)].map(match => match[2] ?? match[3] ?? match[4] ?? ""),
+    ...[...command.matchAll(/Authorization\s*:\s*(?:Bearer|Basic)\s+([^\s"']+)/gi)].map(match => match[1]!)];
+  const diagnostic = (value: string) => buildCommandLabel(value, secrets);
+  output.emit({ type: "progress", stage: "build", message: `Running build command: ${diagnostic(command)}` });
+  const capture = output.json;
+  const outcome = await runProjectCommand(command, root, output, timeoutMs, "build command");
   if (outcome.code === 0) return;
-  const timedOut = Boolean(outcome.timedOut);
+  const timedOut = outcome.timedOut;
   const minutes = Math.max(1, Math.round(timeoutMs / 60_000));
   const label = diagnostic(command);
-  const text = diagnostic(tail).replace(/\r/g, "").split("\n").map(line => line.trimEnd()).filter(Boolean).slice(-30).join("\n").slice(-TAIL_BYTES);
+  const text = diagnostic(outcome.tail).replace(/\r/g, "").split("\n").map(line => line.trimEnd()).filter(Boolean).slice(-30).join("\n").slice(-TAIL_BYTES);
+  /* Exit 127 is the shell saying it could not find the program. In a project with packages
+     that is nearly always a dependency nobody installed (vite, on 11 Nov 2026), and the
+     shell's own line names neither cause nor fix, so the error does. */
+  const absent = timedOut ? undefined : commandNotFound(outcome.code, outcome.tail);
+  const rerun = options.rerun ?? "opengame deploy";
+  let missing: { install: string; message: string } | undefined;
+  if (absent) {
+    const pkg = await readBuildPackage(root).catch(() => ({} as Awaited<ReturnType<typeof readBuildPackage>>));
+    const tool = absent.tool ? diagnostic(absent.tool) : undefined;
+    if (Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).length) {
+      // The adding install, never npm ci: this tree has a node_modules or the install step above would have filled it.
+      const plan = await lockfileInstall(root, pkg);
+      const there = plan && plan.folder !== resolve(root) ? plan.folder : undefined;
+      const install = plan?.install ?? "npm install";
+      missing = { install: there ? `cd ${shellPath(relative(resolve(root), there))} && ${install}` : install,
+        message: `The build could not find ${tool ?? "a program it runs"}, so the project's dependencies are probably not installed. Run ${install}${there ? ` in ${there}` : ""}, then run ${rerun} again.` };
+    } else {
+      missing = { install: "", message: `The build could not find ${tool ?? "a program it runs"}, so it is probably not installed on this machine. Install it, or put it on PATH, then run ${rerun} again.` };
+    }
+  }
   const finding: RepairFinding = { release: null, check: "build", checkVersion: CLI_VERSION, state: "failed", certainty: "certain", fault: "game",
     evidence: { observed: timedOut ? `The build command ran for ${minutes} minutes without finishing.`
       : text ? `The build command exited${outcome.code === null ? "" : ` with code ${outcome.code}`}. Its last output:\n${text}`
@@ -186,10 +327,14 @@ export async function build(command: string, root: string, output: Output, timeo
       : !capture ? `The build command exited${outcome.code === null ? "" : ` with code ${outcome.code}`}. Its output is above.`
       : `The build command exited${outcome.code === null ? "" : ` with code ${outcome.code}`} without printing anything.`,
       file: "opengame.json" },
-    fix: timedOut ? `Make ${label} finish within ${minutes} minutes, or build first and set build.output to the result.` : `Fix the error the build printed, then run ${label} until it succeeds.`,
+    fix: timedOut ? `Make ${label} finish within ${minutes} minutes, or build first and set build.output to the result.`
+      : missing ? missing.message
+      : `Fix the error the build printed, then run ${label} until it succeeds.`,
     verify: `${label}, then opengame deploy`, retry: "after-fix" };
   output.emit({ type: "finding", finding });
-  throw new CliError(timedOut ? "build_timeout" : "build_failed", timedOut ? `The build did not finish within ${minutes} minutes.` : `The build command failed. Its output is ${capture ? "in the finding above" : "above"}.`, 1, { finding });
+  throw new CliError(timedOut ? "build_timeout" : "build_failed", timedOut ? `The build did not finish within ${minutes} minutes. The finding's fix says how to make it finish or skip it.`
+    : missing ? missing.message
+    : `The build command failed. Its output is ${capture ? "in the finding above" : "above"}.`, 1, { finding, ...(missing?.install ? { next: missing.install } : {}) });
 }
 
 /**
@@ -198,10 +343,13 @@ export async function build(command: string, root: string, output: Output, timeo
  * the build by default, so skipping it is the creator's decision and is said out loud.
  */
 export async function prepareDeploy(root: string, output: Output, runBuild = true, options: { vendor?: boolean; incremental?: boolean;
-  unityAssets?: string | readonly string[]; unityOnly?: boolean; delivery?: string; noBuild?: boolean } = {}) {
+  unityAssets?: string | readonly string[]; unityOnly?: boolean; delivery?: string; noBuild?: boolean; workDirectory?: string;
+  /** Send a build too big for the file route file by file, through the large-game plan,
+   * when the server says this account may (deploy.ts serverLimits, externalAssets). */
+  autoAssets?: boolean } & BuildOptions = {}) {
   if (options.unityAssets && options.vendor) throw new CliError("conflicting_flags", "Use an asset plan without --vendor; the explicit asset plan preserves exported file paths and bytes.", 2);
   const manifest = await loadManifest(root, output, options.unityAssets ? safeReadFile : undefined);
-  if (runBuild && manifest.build?.command) await build(manifest.build.command, root, output);
+  if (runBuild && manifest.build?.command) await build(manifest.build.command, root, output, undefined, { install: options.install, rerun: options.rerun });
   // After the build, whose own output owns the terminal while it runs.
   await output.face();
   output.emit({ type: "progress", stage: "check", message: "Checking and packaging your game" });
@@ -227,18 +375,45 @@ export async function prepareDeploy(root: string, output: Output, runBuild = tru
   if (options.noBuild) output.emit({ type: "notice", code: "build_skipped", message: manifest.build?.command
     ? `--no-build skipped build.command in opengame.json, so anything it adds or changes in the export is not in this upload. Packaging ${where} as it is on disk.`
     : `opengame.json has no build command, so --no-build changed nothing. Packaging ${where} as it is on disk.` });
-  const archive = options.unityAssets
-    ? await createUnityArchive(folder, manifest, output, root, options.unityAssets, { unityOnly: options.unityOnly, delivery: options.delivery })
+  /* The owner's call, 11 Nov 2026: a big build goes file by file, so the server stores each file once
+     by its hash, skips the ones it already holds and never unpacks a zip. A build that
+     fits the file route keeps it; a bigger one becomes the large-game plan with its
+     assets chosen automatically, exactly as --external-assets auto. Measured from sizes
+     alone, before a byte is read. Without the server's word it is the archive, as before.
+     The plan hashes its files through the Python helper (safe-fs), and the archive falls back
+     to a Node reader where there is none, so on Windows or a machine without Python 3 a big
+     build keeps going as one archive, as every build did before the plan was chosen here. */
+  const unityAssets = options.unityAssets ?? (options.autoAssets && !options.vendor && await pythonAvailable() && await pastFileRoute(folder) ? "auto" : undefined);
+  if (unityAssets && !options.unityAssets) output.emit({ type: "notice", code: "external_assets_chosen",
+    message: "This build is large, so its bigger files are sent one at a time. Files OpenGame already has are skipped." });
+  const archive = unityAssets
+    ? await createUnityArchive(folder, manifest, output, root, unityAssets, { unityOnly: options.unityAssets ? options.unityOnly : false, delivery: options.delivery, workDirectory: options.workDirectory, planChosen: !options.unityAssets })
+      .catch(async (error: unknown) => {
+        /* A plan this command chose, which the build cannot take (its code alone is past
+           the file route, or the lane refuses a path), falls back to the archive, which
+           takes any build within the caps. A plan the creator named is theirs to fix. */
+        if (options.unityAssets || !(error instanceof CliError) || !["archive_limit", "unity_assets_plan", "unportable_name"].includes(error.code)) throw error;
+        output.emit({ type: "notice", code: "external_assets_fallback", message: "This build cannot be sent file by file, so it goes as one archive instead." });
+        return { ...await createArchive(folder, manifest, output, options), unityAssets: undefined };
+      })
     : { ...await createArchive(folder, manifest, output, options), unityAssets: undefined };
   return { manifest, archive };
 }
 
-async function cacheArchive(root: string, hash: string, bytes: Uint8Array, packaging: PackagingReceipt) {
+/** Whether the build's canonical file-route archive would be past what that route takes,
+ * from the sizes the folder walk reads (no file is opened). */
+async function pastFileRoute(folder: string) {
+  const { files } = await collectFiles(folder);
+  return files.length > LIMITS.bundle.fileCountMax || incrementalArchiveBytes(files.map(file => ({ path: file.path, byteSize: file.size })))
+    > Math.min(LIMITS.bundle.archiveBytesMax, LIMITS.platform.incrementalUpload.archiveBytesMax);
+}
+
+/** The archive packaging wrote, moved into the cache under its hash. It was written into
+ * .opengame (prepareDeploy's workDirectory), so this is a rename, not a second copy. */
+async function cacheArchive(root: string, hash: string, archive: PackedArchive, packaging: PackagingReceipt) {
   const path = join(root, ".opengame", `${hash}.zip`);
-  const temporary = path + "." + randomUUID();
+  const temporary = archive.file;
   try {
-    const handle = await open(temporary, "wx", 0o600);
-    try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
     await replaceFile(temporary, path);
     const receiptPath = join(root, ".opengame", `${hash}.packaging.json`);
     const receiptTemporary = receiptPath + "." + randomUUID();
@@ -250,23 +425,68 @@ async function cacheArchive(root: string, hash: string, bytes: Uint8Array, packa
   } finally { await unlink(temporary).catch(() => {}); }
 }
 
-async function cachedArchive(root: string, pending: NonNullable<Project["deploy"]>) {
+/** The saved archive, checked against the deploy it belongs to: its size, then its hash,
+ * read a slice at a time. Nothing but the path is kept, and the upload reads it a part at
+ * a time. A file transport archive is read whole (filesFromArchive), which its 200 MiB
+ * transport limit bounds. */
+async function cachedArchive(root: string, pending: NonNullable<Project["deploy"]>): Promise<PackedArchive> {
+  const file = join(root, ".opengame", `${pending.request.sha256}.zip`);
   let handle;
   try {
-    handle = await open(join(root, ".opengame", `${pending.request.sha256}.zip`), constants.O_RDONLY | constants.O_NOFOLLOW);
+    handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
     const stat = await handle.stat();
     if (!stat.isFile() || stat.size !== pending.request.byteSize || stat.size > LIMITS.bundle.archiveBytesMax) throw new Error();
-    const bytes = Buffer.alloc(stat.size);
+    const digest = archiveDigest();
+    const buffer = Buffer.allocUnsafe(Math.min(stat.size, 1 << 20) || 1);
     let read = 0;
-    while (read < bytes.length) {
-      const result = await handle.read(bytes, read, bytes.length - read, read);
+    while (read < stat.size) {
+      const result = await handle.read(buffer, 0, Math.min(buffer.length, stat.size - read), read);
       if (!result.bytesRead) break;
+      digest.update(buffer.subarray(0, result.bytesRead));
       read += result.bytesRead;
     }
-    if (read !== bytes.length || createHash("sha256").update(bytes).digest("hex") !== pending.request.sha256) throw new Error();
-    return bytes;
+    const verified = digest.finish();
+    if (read !== stat.size || verified.sha256 !== pending.request.sha256) throw new Error();
+    return { file, byteSize: stat.size, sha256: verified.sha256, blocks: verified.blocks };
   } catch { throw new CliError("archive_unavailable", "The saved upload archive is missing or changed. Run opengame status first. To start a new deploy, use opengame deploy --idempotency-key with a new key."); }
   finally { await handle?.close(); }
+}
+
+/** Every byte of an archive small enough to send whole: one PUT, or the file transport. */
+function wholeArchive(archive: PackedArchive): Promise<Uint8Array> {
+  return readArchiveRange(archive, 0, archive.byteSize);
+}
+
+/** Parts read from the file as they are sent, so memory is the parts in flight. */
+function archiveSource(archive: PackedArchive): ArchiveSource {
+  return { byteLength: archive.byteSize, read: (offset, length) => readArchiveRange(archive, offset, length) };
+}
+
+/** Packaging leftovers from a deploy that was stopped mid-way (Ctrl-C, a closed laptop):
+ * a snapshot folder can be the size of the build. Only run under the project lock, so no
+ * other deploy of this project is writing them, and only for ones a few hours old. */
+async function sweepPackaging(directory: string) {
+  const names = await readdir(directory).catch(() => [] as string[]);
+  for (const name of names) {
+    if (!/^(?:snapshot-[A-Za-z0-9]{6}|archive-[0-9a-f-]{36}\.zip)$/.test(name)) continue;
+    const path = join(directory, name);
+    // react-doctor-disable-next-line react-doctor/async-await-in-loop
+    const info = await lstat(path).catch(() => null);
+    // react-doctor-disable-next-line react-doctor/async-await-in-loop
+    if (info && !info.isSymbolicLink() && Date.now() - info.mtimeMs > 6 * 3600_000) await rm(path, { recursive: true, force: true });
+  }
+}
+
+/**
+ * What the deploy's page is for besides watching, said under its address when the folder
+ * left something for it: since 11 Nov 2026 init asks only the name, so the description and
+ * the genre are written there, by the person or their agent (`opengame details`), along
+ * with the jam entry. Nothing is said when the folder already says both.
+ */
+export function detailsLine(provisional: readonly string[] | undefined): string {
+  const owed = [provisional?.includes("description") ? "write its description" : null, provisional?.includes("genre") ? "choose its genre" : null]
+    .filter((item): item is string => item !== null);
+  return owed.length ? `\nOn that page, ${owed.join(" and ")}, and enter the jam once review passes. Your agent can set the description with opengame details --description.` : "";
 }
 
 /** The deploy's own page, which exists as soon as the operation does. */
@@ -355,9 +575,10 @@ export function nextWatchWait(now: number, deadline: number, delay: number): { r
 async function watch(api: Api, token: string, initial: Operation, output: Output, persist?: (op: Operation) => Promise<void>, timeoutMs = LIMITS.platform.operations.watchTimeoutMs) {
   let op = initial;
   const deadline = Date.now() + timeoutMs;
-  const describe = (value: Operation) => value.progress ? `${value.progress.code}:${value.progress.message}` : value.state;
+  const describe = (value: Operation) => `${value.progress ? `${value.progress.code}:${value.progress.message}` : value.state}${output.json ? "" : JSON.stringify(value.checks ?? [])}`;
   const say = (value: Operation) => output.emit({ type: "progress", stage: value.progress?.code ?? value.state, operation: value.id,
-    message: value.progress?.message ?? OPERATION_STATUS[value.state].message });
+    message: output.json ? value.progress?.message ?? OPERATION_STATUS[value.state].message
+      : terminalDeploymentChecklist({ state: value.state, stage: value.progress?.code, checks: value.checks }) });
   if (!terminal(op) && op.state !== "uploading") say(op);
   let misses = 0;
   let readNotBefore = 0;
@@ -439,7 +660,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
   const api = new Api();
   try {
     if (command === "deploy") {
-      const initialized = await ensureDeployManifest(root, flags);
+      const initialized = await ensureDeployManifest(root, flags, output);
       if (initialized) output.emit({ type: "notice", code: "initialized", message: initialized.message });
     }
     let active = await timed("credentials", () => activeToken(api.origin, Boolean(flags["token-stdin"])));
@@ -530,7 +751,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
       // Keep the exact checked bytes for this attempt. The disk copy remains
       // necessary for another process to resume, but re-reading and hashing it
       // immediately wastes a full archive read before every first upload.
-      let freshArchive: Uint8Array | undefined;
+      let freshArchive: PackedArchive | undefined;
       const saved = state.deploy;
       // Resume only a deploy whose bytes have not reached the server. One that is
       // queued or checking (after --no-wait, or a watch the shell killed) used to
@@ -582,19 +803,36 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
             if (remember(latest, state)) await save();
           } catch (error) { if (!(error instanceof CliError) || error.exitCode !== 5) throw error; }
         }
-        prepared = await timed("prepare", () => prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), incremental: limits.incrementalUpload && !incompatibleFileUpload, noBuild: Boolean(flags["no-build"]),
-          unityAssets: assetPlan?.plan ?? retainedAssets, unityOnly: assetPlan?.unityOnly, delivery: retainedAssets ? planDelivery(saved!.unityAssets) : undefined }));
+        const workDirectory = join(root, ".opengame");
+        await mkdir(workDirectory, { recursive: true, mode: 0o700 });
+        await sweepPackaging(workDirectory);
+        prepared = await timed("prepare", () => prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), incremental: limits.incrementalUpload && !incompatibleFileUpload, noBuild: Boolean(flags["no-build"]), install: !flags["no-install"], workDirectory,
+          /* A restart keeps the plan the saved deploy used, of whatever kind, with its
+             delivery named: left to the default, which only a Unity plan passes, a large-game
+             plan deploy chose by itself could never be restarted. */
+          unityAssets: assetPlan?.plan ?? retainedAssets, unityOnly: assetPlan?.unityOnly ?? (retainedAssets ? false : undefined),
+          autoAssets: !assetPlan && !retainedAssets && limits.externalAssets.includes("large-game-v1"), delivery: retainedAssets ? planDelivery(saved!.unityAssets) : undefined }));
         // The same bytes are already being checked: follow that deploy rather than
         // spend a second scan on an identical build.
-        if (!key && !restarted && saved && !saved.terminal && saved.uploaded && (saved.unityAssets?.inputDigest ?? saved.request.sha256) === (prepared.archive.unityAssets?.inputDigest ?? prepared.archive.sha256)) resume = true;
+        if (!key && !restarted && saved && !saved.terminal && saved.uploaded && (saved.unityAssets?.inputDigest ?? saved.request.sha256) === (prepared.archive.unityAssets?.inputDigest ?? prepared.archive.sha256)) {
+          resume = true;
+          await prepared.archive.dispose();
+        }
       }
       if (!resume) {
         const { manifest, archive } = prepared!;
-        await timed("cache", () => cacheArchive(root, archive.sha256, archive.bytes, archive.packaging));
-        freshArchive = archive.bytes;
+        await timed("cache", () => cacheArchive(root, archive.sha256, archive, archive.packaging));
+        freshArchive = { file: join(root, ".opengame", `${archive.sha256}.zip`), byteSize: archive.byteSize, sha256: archive.sha256, blocks: archive.blocks };
+        /* An archive that goes in one PUT, or by the file transport, is small, and is kept
+           in memory from here as it always was, so this attempt sends exactly the bytes it
+           checked even if the cached copy is overwritten under it. A larger one is read a
+           part at a time, each block checked against the digest taken as it was written. */
+        if (archive.byteSize <= Math.max(LIMITS.platform.deploy.multipart.aboveBytes, archive.incremental || archive.unityAssets ? LIMITS.platform.incrementalUpload.archiveBytesMax : 0)) {
+          freshArchive.bytes = await wholeArchive(freshArchive);
+        }
         const previousHash = state.deploy?.request.sha256;
         const provisional = await provisionalFields(root, manifest);
-        state.deploy = { key: restarted || !key ? randomUUID() : key, ...(archive.unityAssets ? { transport: planDelivery(archive.unityAssets), unityAssets: archive.unityAssets } : archive.incremental ? { transport: "files" as const } : {}), request: { ...(state.gameId ? { gameId: state.gameId } : {}), byteSize: archive.bytes.byteLength,
+        state.deploy = { key: restarted || !key ? randomUUID() : key, ...(archive.unityAssets ? { transport: planDelivery(archive.unityAssets), unityAssets: archive.unityAssets } : archive.incremental ? { transport: "files" as const } : {}), request: { ...(state.gameId ? { gameId: state.gameId } : {}), byteSize: archive.byteSize,
           fileCount: archive.fileCount, sha256: archive.sha256,
           // Build commands are local instructions, not game metadata. The cover is not
           // anything any more: OpenGame makes it after approval (archive.ts says so once).
@@ -621,7 +859,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
         // the words, and the server refuses it again without them.
         const statement = assetUpload ? acceptedStatement(delivery, flags["accept-statement"]) : undefined;
         const fileUpload = pending.transport === "files" || assetUpload;
-        const archiveBytes = fileUpload ? freshArchive ?? await timed("restore", () => cachedArchive(root, pending)) : undefined;
+        const archiveBytes = fileUpload ? await wholeArchive(freshArchive ?? await timed("restore", () => cachedArchive(root, pending))) : undefined;
         const fileManifest = archiveBytes ? filesFromArchive(archiveBytes) : undefined;
         const uploadFiles = assetUpload ? unityFileUnion(fileManifest!, pending.unityAssets!.assets, delivery) : fileManifest;
         // Unity keeps the route it always had; every later kind uses the general one.
@@ -643,7 +881,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
            now: a 1 GiB upload takes minutes, and somebody watching it should not need the
            terminal to find out how it went. Said once per deploy. */
         if (announced !== op.id) { announced = op.id; const url = deploymentUrl(api, op.id);
-          output.emit({ type: "notice", code: "deployment_page", url, message: `Follow this deploy at ${url}` }); }
+          output.emit({ type: "notice", code: "deployment_page", url, message: `Follow this deploy at ${url}${detailsLine(pending.request.provisional)}` }); }
         sayJam(op);
         if (op.state === "uploading" && fileUpload) {
           response = await timed("upload", () => uploadMissingFiles(api, token, op.id, archiveBytes!, uploadFiles!, response.files, output,
@@ -655,10 +893,12 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
           if (response.uploaded !== true && response.multipart !== undefined) {
             // Past multipart.aboveBytes the archive goes up in parts (archive-parts.ts),
             // and a rerun of the same deploy sends only the parts the server does not hold.
-            const bytes = freshArchive ?? await timed("restore", () => cachedArchive(root, pending));
-            await timed("upload", () => uploadArchiveParts(api, token, op.id, bytes, response.multipart, output));
+            const archive = freshArchive ?? await timed("restore", () => cachedArchive(root, pending));
+            await timed("upload", () => uploadArchiveParts(api, token, op.id, archiveSource(archive), response.multipart, output));
           } else if (response.uploaded !== true) {
-            const bytes = freshArchive ?? await timed("restore", () => cachedArchive(root, pending));
+            // One PUT is at most multipart.singlePutBytesMax, so this is the one place the
+            // whole archive is read into memory, and only a small one.
+            const bytes = await wholeArchive(freshArchive ?? await timed("restore", () => cachedArchive(root, pending)));
             const tries = LIMITS.platform.deploy.uploadAttemptsMax;
             // An interrupted PUT is retried here, each time with a fresh URL from the
             // server's own retry endpoint, which also answers `uploaded` when the bytes
@@ -700,7 +940,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
              than only that the token is not valid, so nobody goes looking for a lost upload. */
           response = await timed("confirm", () => api.json(`/api/v1/operations/${op.id}/upload`, { token, method: "PUT" })).catch(error => {
             if (error instanceof ApiError && error.code === "token_revoked") {
-              throw new CliError("token_revoked", `${error.message} It was revoked while this upload was in flight, so the upload was discarded and cannot be submitted.`, 3);
+              throw new CliError("token_revoked", `${error.message} It was revoked while this upload was in flight, so the upload was discarded and cannot be submitted. Run opengame login (or replace OPENGAME_TOKEN), then run opengame deploy to upload again.`, 3, { next: "opengame login" });
             }
             throw error;
           });
@@ -754,7 +994,11 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
        checks_pending: the terminal blocked and still had no answer. The deploy's page shows
        the checks as they run and offers Play when they pass. --wait keeps the old contract
        for a CI job that wants the outcome as an exit code. */
-    if (wait) ({ op, timedOut } = await timed("watch", () => watch(api, token, op, output, persist, timeout)));
+    if (wait) {
+      if (!output.json) output.emit({ type: "notice", code: "deployment_follow", message: `Follow along at ${deploymentUrl(api, op.id)}` });
+      ({ op, timedOut } = await timed("watch", () => watch(api, token, op, output, persist, timeout)));
+      if (!output.json) output.emit({ type: "progress", stage: "deployment", message: terminalDeploymentChecklist({ state: op.state, stage: op.progress?.code, checks: op.checks }) });
+    }
     if (op.state !== "failed" && op.state !== "expired") await reviewContinues(api, token, root, op, output);
     await syncAchievements(api, token, root, op, result.achievements, output);
     /* Achievements are saved once the preview is ready, and a plain deploy has gone by then.

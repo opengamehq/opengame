@@ -54,12 +54,12 @@ async function serverLimits(api: Api, token: string) {
   if (!limits || !Number.isSafeInteger(limits.archiveBytesMax) || limits.archiveBytesMax < 1 || !Number.isSafeInteger(limits.fileCountMax) || limits.fileCountMax < 1) {
     throw new CliError("invalid_response", "The server limits could not be read. Run opengame deploy again.", 5);
   }
-  const capabilities = data.capabilities as { incrementalUpload?: unknown; archiveParts?: unknown; fileParts?: unknown; externalAssets?: unknown } | undefined;
+  const capabilities = data.capabilities as { incrementalUpload?: unknown; archiveParts?: unknown; fileParts?: unknown; filePacks?: unknown; externalAssets?: unknown } | undefined;
   /* The asset plan kinds this account may send file by file (bootstrap, 11 Nov 2026). A
      server that names none, or predates the field, gets the archive as before. */
   const externalAssets = Array.isArray(capabilities?.externalAssets) ? capabilities.externalAssets.filter((kind): kind is string => typeof kind === "string") : [];
   return { ...limits, incrementalUpload: capabilities?.incrementalUpload === true, archiveParts: capabilities?.archiveParts === true,
-    fileParts: capabilities?.fileParts === true, externalAssets };
+    fileParts: capabilities?.fileParts === true, filePacks: capabilities?.filePacks === true, externalAssets };
 }
 
 const TAIL_BYTES = 4096;
@@ -891,7 +891,8 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
           response = await timed("upload", () => uploadMissingFiles(api, token, op.id, archiveBytes!, uploadFiles!, response.files, output,
             assetUpload ? { route: "assets", delivery, inputDigest: pending.unityAssets!.inputDigest, readFile: file => readUnityAsset(pending.unityAssets!.sourceRoot, file),
               readFiles: files => readSmallUnityAssets(pending.unityAssets!.sourceRoot, files), fileParts: limits.fileParts,
-              readPart: (file, offset, length) => readUnityAssetPart(pending.unityAssets!.sourceRoot, file, offset, length) } : { fileParts: limits.fileParts }));
+              readPart: (file, offset, length) => readUnityAssetPart(pending.unityAssets!.sourceRoot, file, offset, length), filePacks: limits.filePacks }
+              : { fileParts: limits.fileParts, filePacks: limits.filePacks }));
           op = operation(response.operation, op.id);
           if (remember(op, state)) await save();
         } else if (op.state === "uploading") {

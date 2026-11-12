@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { mkdtemp, rm, writeFile, appendFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { once } from "node:events";
@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { LIMITS } from "@opengame/shared";
 import { archivePartBytes, archivePartCount, type IncrementalFile } from "@opengame/protocol";
 import { canonicalArchive, uploadMissingFiles } from "../src/incremental";
-import { Gate, HELD_BYTES_MAX, Meter, sendFiles, TRANSPORT_HEADERS } from "../src/transport";
+import { Gate, HELD_BYTES_MAX, Meter, READ_AHEAD_BYTES_MAX, sendFiles, TRANSPORT_HEADERS } from "../src/transport";
 import { Api, UploadInterrupted } from "../src/http";
 import { CliError, Output } from "../src/output";
 import { safeReadLargeFile } from "../src/safe-fs";
@@ -28,7 +28,8 @@ function fakeServer(files: IncrementalFile[], options: { held?: Record<string, n
   const distinct = [...new Map(files.map(file => [file.sha256, file])).values()];
   const verified = new Set<string>(), parts = new Map<string, Set<number>>(Object.entries(options.held ?? {}).map(([hash, list]) => [hash, new Set(list)]));
   const log = { pageHeaders: [] as (Record<string, string> | undefined)[], verifies: [] as { hashes: string[]; timeoutMs?: number }[], signings: [] as number[][],
-    puts: 0, partPuts: [] as string[], checksums: [] as (string | undefined)[], live: 0, peak: 0, streams: new Set<number>() };
+    puts: 0, partPuts: [] as string[], checksums: [] as (string | undefined)[], live: 0, peak: 0, streams: new Set<number>(),
+    plans: 0, packs: [] as { files: number; bytes: number }[] };
   const attempts = new Map<string, number>();
   let missingOnce = options.missingOnce;
   // As the server pages: a cursor into every distinct file, listing the ones in that stretch still unverified.
@@ -42,7 +43,31 @@ function fakeServer(files: IncrementalFile[], options: { held?: Record<string, n
     try { await new Promise(resolve => setTimeout(resolve, 5)); return await work(); } finally { log.live--; }
   };
   const api = {
-    json: async (path: string, init: { body?: { hashes?: string[]; parts?: number[] }; headers?: Record<string, string>; timeoutMs?: number } = {}) => {
+    json: async (path: string, init: { body?: { hashes?: string[]; parts?: number[] }; headers?: Record<string, string>; timeoutMs?: number; bytes?: Uint8Array; responseBytesMax?: number } = {}) => {
+      if (path.endsWith("/files/plan")) {
+        log.plans++;
+        assert.equal(init.responseBytesMax, UPLOAD.planResponseBytesMax, "a plan's answer may be past the ordinary response cap");
+        return { files: distinct.filter(file => !verified.has(file.sha256)).map(file => ({ sha256: file.sha256, byteSize: file.byteSize })), totalFiles: distinct.length };
+      }
+      if (path.endsWith("/files/pack")) {
+        // The wire format file-packs.ts reads: a four-byte length, the JSON header, then the files end to end.
+        const body = Buffer.from(init.bytes!), length = body.readUInt32LE(0);
+        const head = JSON.parse(body.subarray(4, 4 + length).toString()) as { files: { sha256: string; byteSize: number }[] };
+        assert.ok(body.byteLength <= UPLOAD.bodyBytesMax, `a pack of ${body.byteLength} bytes`);
+        assert.ok(head.files.length <= UPLOAD.packFilesMax);
+        let at = 4 + length;
+        const fresh: string[] = [];
+        for (const file of head.files) {
+          assert.ok(file.byteSize <= UPLOAD.packFileBytesMax);
+          assert.equal(sha(body.subarray(at, at + file.byteSize)), file.sha256);
+          at += file.byteSize;
+          if (!verified.has(file.sha256)) fresh.push(file.sha256);
+          verified.add(file.sha256);
+        }
+        assert.equal(at, body.byteLength);
+        log.packs.push({ files: head.files.length, bytes: body.byteLength });
+        return { files: fresh.map(hash => ({ sha256: hash, byteSize: distinct.find(file => file.sha256 === hash)!.byteSize, verified: true })) };
+      }
       if (path.includes("?cursor=")) {
         log.pageHeaders.push(init.headers);
         return { files: pageAt(Number(new URL(path, "https://x.invalid").searchParams.get("cursor")), Number(init.headers?.["x-opengame-upload-page-files"] ?? UPLOAD.batchFilesMax)) };
@@ -250,4 +275,182 @@ test("a checksum PUT sends the header the server signed, and refuses one that na
   assert.deepEqual(seen, [{ checksum: base64 }, { checksum: undefined }]);
   await assert.rejects(api.uploadFile(upload(Buffer.from("f".repeat(64), "hex").toString("base64")), bytes, undefined, hash), { code: "invalid_upload" });
   assert.equal(seen.length, 2, "nothing was sent for a checksum naming other bytes");
+});
+
+test("with packs, 25,000 small files are a few dozen requests and no PUT, and files the server holds are not sent", async () => {
+  // 25,000 PUTs, sixteen at a time, took 68 s on an emulated 100 Mbps link with 40 ms of latency (12 Nov 2026).
+  const entries: [string, Uint8Array][] = Array.from({ length: 25_000 }, (_, index) => [`f/${String(index).padStart(5, "0")}.bin`, new Uint8Array(randomBytes(4096))]);
+  const archive = canonicalArchive(entries)!;
+  const tree = new Map(entries);
+  const fake = fakeServer(archive.files);
+  // Two files an earlier deploy left: neither is sent again.
+  for (const file of archive.files.slice(0, 2)) fake.verified.add(file.sha256);
+  const events: { type: string; files?: number; totalFiles?: number }[] = [];
+  await sendFiles(fake.api, "token", "operation", archive.files, (await fake.api.json("/x?cursor=0", { headers: TRANSPORT_HEADERS })).files,
+    new Output("jsonl", line => events.push(JSON.parse(line))), {
+    route: "files", packs: true, read: async (file, offset, length) => tree.get(file.path)!.subarray(offset, offset + length) });
+  assert.equal(events.filter(event => event.type === "progress").at(-1)?.files, 25_000, "the two the server held count as done, once");
+  assert.equal(fake.log.puts, 0, "no file went up on its own");
+  assert.equal(fake.log.plans, 1);
+  assert.ok(fake.log.packs.length <= 30, `${fake.log.packs.length} packs`);
+  assert.equal(fake.log.packs.reduce((sum, pack) => sum + pack.files, 0), 25_000 - 2);
+  assert.equal(fake.verified.size, 25_000);
+});
+
+test("with packs, a file past what a pack takes goes in parts, however much smaller than 64 MiB it is", async () => {
+  const middling = { path: "assets/texture.ktx2", byteSize: 2 * 1024 * 1024, sha256: sha(fill(0, 2 * 1024 * 1024)) };
+  const small = { bytes: new Uint8Array(randomBytes(100)) };
+  const files = [middling, { path: "index.html", byteSize: 100, sha256: sha(small.bytes) }];
+  const fake = fakeServer(files);
+  await sendFiles(fake.api, "token", "operation", files, (await fake.api.json("/x?cursor=0", { headers: TRANSPORT_HEADERS })).files, quiet(), {
+    route: "files", packs: true, read: async (file, offset, length) => file.path === "index.html" ? small.bytes : fill(offset, length) });
+  assert.deepEqual(fake.log.partPuts, [`${middling.sha256}:1`]);
+  assert.equal(fake.log.packs.length, 1);
+  assert.equal(fake.log.puts, 0);
+});
+
+test("with packs, tiny files are held to packFilesMax a pack, not only to its bytes", async () => {
+  const entries: [string, Uint8Array][] = Array.from({ length: 3_000 }, (_, index) => [`t/${String(index).padStart(4, "0")}.txt`, new TextEncoder().encode(`tiny ${index}`)]);
+  const archive = canonicalArchive(entries)!;
+  const tree = new Map(entries);
+  const fake = fakeServer(archive.files);
+  await sendFiles(fake.api, "token", "operation", archive.files, (await fake.api.json("/x?cursor=0", { headers: TRANSPORT_HEADERS })).files, quiet(), {
+    route: "files", packs: true, read: async (file, offset, length) => tree.get(file.path)!.subarray(offset, offset + length) });
+  assert.equal(fake.log.packs.length, Math.ceil(3_000 / UPLOAD.packFilesMax));
+  assert.ok(fake.log.packs.every(pack => pack.files <= UPLOAD.packFilesMax));
+});
+
+/* Four findings from Greptile's review of the 0.9.2 mirror (opengamehq/opengame#8): a failed verification was
+   dropped, a failure on a page before the last was an unhandled rejection, cleanup stopped waiting at the first
+   failure, and read-ahead held whole pages outside the memory gate. */
+
+const smallFiles = (count: number, size = 16) => {
+  const contents = Array.from({ length: count }, (_, index) => new Uint8Array(size).fill(index % 251).map((value, at) => at === 0 ? index & 0xff : at === 1 ? index >> 8 : value));
+  const files = contents.map((bytes, index) => ({ path: `f/${String(index).padStart(4, "0")}.bin`, byteSize: size, sha256: sha(bytes) }));
+  const byPath = new Map(files.map((file, index) => [file.path, contents[index]!]));
+  return { files, read: async (file: IncrementalFile, offset: number, length: number) => byPath.get(file.path)!.subarray(offset, offset + length), byPath };
+};
+const firstPage = async (api: Api) => (await api.json("/x?cursor=0", { headers: TRANSPORT_HEADERS })).files;
+
+test("a verification that fails on an early page fails the upload instead of being dropped", async () => {
+  const { files, read } = smallFiles(UPLOAD.pageFilesMax + 40);
+  const fake = fakeServer(files);
+  const json = fake.api.json.bind(fake.api);
+  let refused = 0;
+  (fake.api as unknown as { json: typeof json }).json = (async (path: string, init?: Parameters<typeof json>[1]) => {
+    if (path.endsWith("/files/verify") && !refused++) throw new CliError("upload_missing", "A file has not arrived.", 5);
+    return json(path, init);
+  }) as typeof json;
+  await assert.rejects(sendFiles(fake.api, "token", "operation", files, await firstPage(fake.api), quiet(), { route: "files", read }), { code: "upload_missing" });
+  assert.equal(refused >= 1, true);
+});
+
+test("a file that fails on a page before the last is the command's error, not an unhandled rejection", async t => {
+  const { files, read } = smallFiles(UPLOAD.pageFilesMax + 40);
+  const fake = fakeServer(files);
+  const json = fake.api.json.bind(fake.api), put = fake.api.uploadFile.bind(fake.api);
+  // The next page is slow to arrive, so the first page's failure settles while the loop waits for it.
+  (fake.api as unknown as { json: typeof json }).json = (async (path: string, init?: Parameters<typeof json>[1]) => {
+    if (path.includes("?cursor=") && !path.endsWith("cursor=0")) await new Promise(resolve => setTimeout(resolve, 100));
+    return json(path, init);
+  }) as typeof json;
+  (fake.api as unknown as { uploadFile: typeof put }).uploadFile = (async (...args: Parameters<typeof put>) => {
+    if (args[0] && (args[0] as unknown as { sha: string }).sha === files[3]!.sha256) throw new CliError("upload_refused", "Storage refused a file.", 5);
+    return put(...args);
+  }) as typeof put;
+  const unhandled: unknown[] = [];
+  const listener = (reason: unknown) => { unhandled.push(reason); };
+  process.on("unhandledRejection", listener);
+  t.after(() => { process.off("unhandledRejection", listener); });
+  await assert.rejects(sendFiles(fake.api, "token", "operation", files, await firstPage(fake.api), quiet(), { route: "files", read }), { code: "upload_refused" });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.deepEqual(unhandled, []);
+});
+
+test("after a failure nothing is still sending once the command has stopped, whole files or parts", async () => {
+  for (const shape of ["whole", "parts"] as const) {
+    const { files, read } = shape === "whole" ? smallFiles(40) : { files: [synthetic(6 * MULTIPART.partBytes, "stop")], read: async (_file: IncrementalFile, offset: number, length: number) => fill(offset, length) };
+    const fake = fakeServer(files);
+    let live = 0, calls = 0;
+    const slow = <T extends (...args: never[]) => Promise<unknown>>(original: T) => (async (...args: Parameters<T>) => {
+      const call = ++calls;
+      live++;
+      try {
+        if (call === 2) throw new CliError("upload_refused", "Storage refused a file.", 5);
+        await new Promise(resolve => setTimeout(resolve, 40));
+        return await original(...args);
+      } finally { live--; }
+    });
+    (fake.api as unknown as { uploadFile: unknown }).uploadFile = slow(fake.api.uploadFile.bind(fake.api));
+    (fake.api as unknown as { uploadPart: unknown }).uploadPart = slow(fake.api.uploadPart.bind(fake.api));
+    await assert.rejects(sendFiles(fake.api, "token", "operation", files, await firstPage(fake.api), quiet(), { route: "files", read }), { code: "upload_refused" });
+    assert.equal(live, 0, `${shape}: ${live} PUTs were still running when the command reported its failure`);
+  }
+});
+
+test("read-ahead takes no more than READ_AHEAD_BYTES_MAX of a page, and the rest are read one at a time", async () => {
+  const size = 1024 * 1024;
+  const { files, read, byPath } = smallFiles(UPLOAD.pageFilesMax + 20, size);
+  const fake = fakeServer(files);
+  const asked: number[] = [];
+  let readSingly = 0;
+  await sendFiles(fake.api, "token", "operation", files, await firstPage(fake.api), quiet(), { route: "files",
+    read: async (file, offset, length) => { readSingly++; return read(file, offset, length); },
+    readAhead: async rows => { asked.push(rows.reduce((sum, row) => sum + row.byteSize, 0)); return new Map(rows.map(row => [row.path, byPath.get(row.path)!])); } });
+  assert.equal(fake.verified.size, files.length);
+  assert.ok(asked.length >= 1 && asked.every(bytes => bytes <= READ_AHEAD_BYTES_MAX), `read ahead ${asked.map(bytes => bytes / size).join(", ")} MiB a page`);
+  assert.equal(readSingly, files.length - asked.reduce((sum, bytes) => sum + bytes / size, 0));
+});
+
+test("the failure reported is the first one, not a later part that gave up because of it", async () => {
+  const big = synthetic(6 * MULTIPART.partBytes, "first");
+  const fake = fakeServer([big]);
+  const put = fake.api.uploadPart.bind(fake.api);
+  // Part 1 is mid-PUT when part 3 finds the file changed; part 1's drop then comes from the stop, not the cause.
+  (fake.api as unknown as { uploadPart: typeof put }).uploadPart = (async (...args: Parameters<typeof put>) => {
+    if (new URL((args[0] as unknown as { url: string }).url).searchParams.get("part") === "1") {
+      await new Promise(resolve => setTimeout(resolve, 40));
+      throw new UploadInterrupted("the connection dropped");
+    }
+    return put(...args);
+  }) as typeof put;
+  await assert.rejects(sendFiles(fake.api, "token", "operation", [big], await firstPage(fake.api), quiet(), { route: "files",
+    read: async (_file, offset, length) => {
+      if (offset === 2 * MULTIPART.partBytes) throw new CliError("archive_unavailable", "A saved file changed.", 1);
+      return fill(offset, length);
+    } }), { code: "archive_unavailable" });
+});
+
+test("a PUT waiting to retry sends nothing new once something else has failed", async () => {
+  const { files, read } = smallFiles(2);
+  const fake = fakeServer(files);
+  const put = fake.api.uploadFile.bind(fake.api);
+  let retried = 0;
+  (fake.api as unknown as { uploadFile: typeof put }).uploadFile = (async (...args: Parameters<typeof put>) => {
+    if ((args[0] as unknown as { sha: string }).sha === files[0]!.sha256 && retried++ === 0) throw new UploadInterrupted("the connection dropped");
+    return put(...args);
+  }) as typeof put;
+  await assert.rejects(sendFiles(fake.api, "token", "operation", files, await firstPage(fake.api), quiet(), { route: "files",
+    read: async (file, offset, length) => {
+      if (file === files[1]) { await new Promise(resolve => setTimeout(resolve, 100)); throw new CliError("build_changed", "A file changed.", 1); }
+      return read(file, offset, length);
+    } }), { code: "build_changed" });
+  assert.equal(retried, 1, "the dropped PUT was not tried again after the deploy had failed");
+});
+
+test("with packs, a pack the server refuses is the command's error, and nothing is sent after it", async () => {
+  const { files, read } = smallFiles(3_000);
+  const fake = fakeServer(files);
+  const json = fake.api.json.bind(fake.api);
+  let packs = 0, after = 0, refusedAt = 0;
+  (fake.api as unknown as { json: typeof json }).json = (async (path: string, init?: Parameters<typeof json>[1]) => {
+    if (path.endsWith("/files/pack")) {
+      if (++packs === 2) { refusedAt = Date.now(); throw new CliError("upload_size_mismatch", "A file in the pack does not match its SHA-256 hash.", 1); }
+      if (refusedAt) after++;
+    }
+    return json(path, init);
+  }) as typeof json;
+  await assert.rejects(sendFiles(fake.api, "token", "operation", files, await firstPage(fake.api), quiet(), { route: "files", packs: true, read }),
+    { code: "upload_size_mismatch" });
+  assert.ok(after <= UPLOAD.concurrency, `${after} packs went up after the refusal; only those already started may finish`);
 });

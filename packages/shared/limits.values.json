@@ -1998,6 +1998,9 @@
       "chunkBytesMax": 1048576,
       "concurrency": 16,
       "pageFilesMax": 256,
+      "packFileBytesMax": 1048576,
+      "packFilesMax": 1024,
+      "planResponseBytesMax": 8388608,
       "verificationLeaseSeconds": 120,
       "assemblyLeaseSeconds": 600
     },

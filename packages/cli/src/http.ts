@@ -174,21 +174,22 @@ export class Api {
   constructor(readonly origin = apiOrigin()) { this.bypass = protectionBypassHeader(origin); }
   async close() { await this.dispatcher.close(); }
   private async send(path: string, options: { token?: string; body?: unknown; method?: string; idempotencyKey?: string; signal?: AbortSignal; gzip?: GzipBody;
-    headers?: UploadHeaders; timeoutMs?: number } = {}) {
+    headers?: UploadHeaders; timeoutMs?: number; bytes?: Uint8Array } = {}) {
     // A funnel step can legitimately contain ../assets or a backslash. Only the
     // route can traverse; query values must remain ordinary encoded data.
     const pathname = path.split("?", 1)[0]!;
     if (!pathname.startsWith("/api/v1/") || pathname.includes("..") || pathname.includes("\\")) throw new CliError("api_path", "The CLI made an invalid API path, so nothing was sent. That is a fault in the CLI, so write to team@opengame.io with the command you ran.");
-    const encoded = options.body === undefined ? undefined : encodeJsonBody(options.body, options.gzip);
+    const encoded = options.bytes ? { body: options.bytes, encoding: undefined, contentType: "application/octet-stream" }
+      : options.body === undefined ? undefined : { ...encodeJsonBody(options.body, options.gzip), contentType: "application/json" };
     // Every request answers inside http.timeoutMs, except one the caller knows takes longer: verifying a large file
     // sent in parts hashes the joined object on the server, inside its own lease (transport.ts).
     const timeout = AbortSignal.timeout(Math.max(LIMITS.platform.http.timeoutMs, options.timeoutMs ?? 0));
-    return await fetch(this.origin + path, { method: options.method ?? (options.body === undefined ? "GET" : "POST"),
+    return await fetch(this.origin + path, { method: options.method ?? (options.body === undefined && !options.bytes ? "GET" : "POST"),
         dispatcher: this.dispatcher, redirect: "error", signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
         headers: { accept: "application/json", "x-opengame-cli-version": CLI_VERSION, ...this.bypass, ...options.headers,
           ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
           ...(options.idempotencyKey ? { "idempotency-key": options.idempotencyKey } : {}),
-          ...(encoded ? { "content-type": "application/json" } : {}), ...(encoded?.encoding ? { "content-encoding": encoded.encoding } : {}) },
+          ...(encoded ? { "content-type": encoded.contentType } : {}), ...(encoded?.encoding ? { "content-encoding": encoded.encoding } : {}) },
         body: encoded?.body });
   }
   /**
@@ -200,6 +201,10 @@ export class Api {
   async json(path: string, options: { token?: string; body?: unknown; method?: string; idempotencyKey?: string; anyVersion?: boolean; signal?: AbortSignal; gzip?: GzipBody;
     /** What the upload routes read beside the request (transport.ts TRANSPORT_HEADERS). Never a credential. */
     headers?: UploadHeaders; timeoutMs?: number;
+    /** A raw body, sent as application/octet-stream: a pack of small files (transport.ts). */
+    bytes?: Uint8Array;
+    /** A larger answer than http.responseBytesMax, for the one request whose answer can be: an upload's plan. */
+    responseBytesMax?: number;
     /** Read a non-JSON success body of this content type, answered as `{ text }`. Refusals are still JSON. */
     text?: string } = {}): Promise<Record<string, unknown>> {
     let answered = false;
@@ -217,7 +222,7 @@ export class Api {
       if (reader) while (true) {
         const next = await reader.read(); if (next.done) break;
         bytes += next.value.byteLength;
-        if (bytes > LIMITS.platform.http.responseBytesMax) { await reader.cancel(); throw new Error(); }
+        if (bytes > (options.responseBytesMax ?? LIMITS.platform.http.responseBytesMax)) { await reader.cancel(); throw new Error(); }
         chunks.push(next.value);
       }
       // Only a body that arrived whole is an answer; a reset or a timeout mid-body is

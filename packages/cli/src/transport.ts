@@ -26,7 +26,8 @@ import { CliError, type Output } from "./output";
  *     files/{hash}/parts, read from disk a part at a time, so a drop costs one part and a rerun
  *     sends only the parts storage does not hold;
  *   - whole files and parts share one pool of incrementalUpload.concurrency PUTs, and the bytes
- *     held in memory for them are bounded by that many parts.
+ *     held in memory for them are bounded by that many parts, plus READ_AHEAD_BYTES_MAX for each of
+ *     the two pages whose small files may have been read ahead.
  */
 
 const UPLOAD = LIMITS.platform.incrementalUpload, MULTIPART = LIMITS.platform.deploy.multipart;
@@ -36,6 +37,18 @@ export const TRANSPORT_HEADERS: UploadHeaders = { "x-opengame-upload-checksum": 
 
 /** At most this many bytes of files and parts are held in memory for PUTs at once: a part per stream. */
 export const HELD_BYTES_MAX = UPLOAD.concurrency * MULTIPART.partBytes;
+
+/** A page's small files are read ahead together up to this many bytes, and the rest are read one at a time
+ * under the memory gate. Without the cap a page of 256 files of up to 1 MiB was read whole, outside the gate,
+ * and the next page beside it: about 512 MiB on top of HELD_BYTES_MAX (Greptile on the 0.9.2 mirror). */
+export const READ_AHEAD_BYTES_MAX = 2 * MULTIPART.partBytes;
+
+/** Waits for every task to settle, then rejects with the first failure if there was one. Promise.all rejects at
+ * the first failure while the rest are still reading and sending, and they then outlive the command. */
+async function settled(tasks: Promise<unknown>[]): Promise<void> {
+  const failure = (await Promise.allSettled(tasks)).find(result => result.status === "rejected");
+  if (failure) throw failure.reason;
+}
 
 /** Bytes `length` long from `offset` in a file of the plan. A whole file is offset 0 and its size. */
 export type ReadRange = (file: IncrementalFile, offset: number, length: number) => Promise<Uint8Array>;
@@ -94,6 +107,8 @@ export async function sendFiles(api: Api, token: string, operation: string, file
   readAhead?: (files: IncrementalFile[]) => Promise<Map<string, Uint8Array>>;
   /** Tests only: the clock the progress line's rate is measured against. */
   now?: () => number;
+  /** The server's bootstrap said filePacks: small files go in packs and the rest in parts (sendPacked below). */
+  packs?: boolean;
 }): Promise<Record<string, unknown>> {
   const byHash = new Map(files.map(file => [file.sha256, file]));
   const references = new Map<string, number>();
@@ -112,6 +127,13 @@ export async function sendFiles(api: Api, token: string, operation: string, file
   let current: Page = readPage(first, files, UPLOAD.pageFilesMax);
   const total = current.totalBytes;
   let doneBytes = current.reusedBytes, doneFiles = current.reusedFiles, failed = false;
+  /* The first failure, which is the one reported. Once `failed` is set, PUTs still in flight give up with
+     errors of their own (an interrupted PUT is not retried), and whichever of those settles first would
+     otherwise name the wrong cause. A failed verification is kept here too: its promise leaves the set when it
+     settles, so awaiting the set at the end would find nothing and complete an upload nobody confirmed. */
+  let firstFailure: { error: unknown } | null = null;
+  const fail = (error: unknown) => { failed = true; firstFailure ??= { error }; };
+  const stopIfFailed = () => { if (firstFailure) throw firstFailure.error; };
   const counted = new Set<string>(), inFlight = new Map<string, number>();
   let shown = -1, shownAt = 0;
   const report = (force = false) => {
@@ -149,8 +171,9 @@ export async function sendFiles(api: Api, token: string, operation: string, file
   const flush = () => {
     if (!waiting.length) return;
     const batch = waiting; waiting = [];
-    const run = verify(batch).finally(() => verifications.delete(run));
-    run.catch(() => {});
+    const run: Promise<void> = verify(batch)
+      .catch(fail)
+      .finally(() => verifications.delete(run));
     verifications.add(run);
   };
   const landed = (hash: string) => { waiting.push(hash); if (waiting.length >= UPLOAD.pageFilesMax) flush(); };
@@ -169,6 +192,8 @@ export async function sendFiles(api: Api, token: string, operation: string, file
         }
         output.emit({ type: "notice", code: "upload_retrying", message: `An upload was interrupted (${error.cause}). Trying it again, ${tries + 1} of ${LIMITS.platform.deploy.uploadAttemptsMax}; everything already sent is kept.` });
         await sleep(Math.min(8000, 1000 * 2 ** (tries - 1)));
+        // Something else failed during the wait: send nothing new, so the command can stop and say so.
+        if (failed) throw error;
         if (!await renew()) return;
       } finally { inFlight.delete(key); }
     }
@@ -234,7 +259,7 @@ export async function sendFiles(api: Api, token: string, operation: string, file
         };
         // One signing request for the first parts now, so the pool's workers do not each ask for their own.
         if (todo.length) await sign(todo.filter(part => !fresh(part)).slice(0, MULTIPART.partsPerRequestMax), state.partBytes);
-        await Promise.all(todo.map(part => streams.run(1, () => memory.run(archivePartBytes(item.byteSize, state.partBytes, part), async () => {
+        await settled(todo.map(part => streams.run(1, () => memory.run(archivePartBytes(item.byteSize, state.partBytes, part), async () => {
           if (failed) return;
           const size = archivePartBytes(item.byteSize, state.partBytes, part), offset = (part - 1) * state.partBytes;
           const bytes = await options.read(file, offset, size);
@@ -244,7 +269,7 @@ export async function sendFiles(api: Api, token: string, operation: string, file
             signed.delete(part); await ensure(part); return true;
           });
           doneBytes += size; report();
-        }))));
+        })).catch(error => { fail(error); throw error; })));
         // The bytes above counted as sent; verification counts the file, so take them back first.
         doneBytes -= todo.reduce((sum, part) => sum + archivePartBytes(item.byteSize, state.partBytes, part), 0);
       }
@@ -266,18 +291,94 @@ export async function sendFiles(api: Api, token: string, operation: string, file
      sending after the command says it stopped. */
   const queued: Promise<unknown>[] = [];
   const settle = (work: Promise<unknown>[]) => {
-    const all = Promise.all(work.map(task => task.catch(error => { failed = true; throw error; })));
+    const marked = work.map(task => task.catch(error => { fail(error); throw error; }));
+    // Cleanup waits for every task, not for the first failure; the page's own promise still fails fast.
+    queued.push(Promise.allSettled(marked));
+    const all = Promise.all(marked);
     all.catch(() => {});
-    queued.push(all);
     return all;
+  };
+  /* Packs (12 Nov 2026): one read of everything the upload still lacks, every file of at most packFileBytesMax sent
+     many to a request, and every other file in parts. No page is read past the first, so no URL is signed and left
+     unused, and 25,000 files of 4 KiB are 25 requests rather than 25,000 PUTs. */
+  const packPath = `/api/v1/operations/${operation}/files/pack`;
+  const sendPack = (items: Page["missing"]) => {
+    const weight = items.reduce((sum, item) => sum + item.byteSize, 0);
+    return streams.run(1, () => memory.run(weight, async () => {
+      if (failed) return;
+      const ahead = await options.readAhead?.(items.map(item => byHash.get(item.sha256)!)) ?? new Map<string, Uint8Array>();
+      const bodies: Uint8Array[] = [];
+      for (const item of items) {
+        const file = byHash.get(item.sha256)!;
+        // react-doctor-disable-next-line react-doctor/async-await-in-loop
+        const bytes = ahead.get(file.path) ?? await options.read(file, 0, file.byteSize);
+        if (bytes.byteLength !== item.byteSize || createHash("sha256").update(bytes).digest("hex") !== item.sha256) {
+          throw new CliError("archive_unavailable", "A saved file changed. Restore it, or start a new deploy.", 1);
+        }
+        bodies.push(bytes);
+      }
+      const head = Buffer.from(JSON.stringify({ files: items.map(item => ({ sha256: item.sha256, byteSize: item.byteSize })) }));
+      const length = Buffer.alloc(4); length.writeUInt32LE(head.byteLength);
+      const body = Buffer.concat([length, head, ...bodies]);
+      const key = `pack:${items[0]!.sha256}`;
+      inFlight.set(key, 0); report();
+      const answer = await retryShortly(output, () => api.json(packPath, { token, method: "POST", bytes: body,
+        // its share of the slowest supported rate, as a PUT's deadline is (http.ts put)
+        timeoutMs: Math.ceil(body.byteLength * UPLOAD.concurrency / LIMITS.platform.deploy.minimumUploadBytesPerSecond) * 1000 }))
+        .finally(() => inFlight.delete(key));
+      const listed = Array.isArray(answer.files) ? answer.files as { sha256?: unknown; verified?: unknown }[] : null;
+      if (!listed || listed.some(row => typeof row?.sha256 !== "string" || !items.some(item => item.sha256 === row.sha256) || row.verified !== true)) {
+        throw new CliError("invalid_response", "The server did not confirm the uploaded files. Retry the saved deploy.", 5);
+      }
+      // Those left out of the answer were verified before this pack; every one of them is verified now.
+      for (const item of items) count(item.sha256);
+    }));
+  };
+  /** Small files in plan order, in packs of at most bodyBytesMax as sent and packFilesMax files. */
+  const packed = (small: Page["missing"]) => {
+    const packs: Page["missing"][] = [];
+    let current: Page["missing"] = [], bytes = 16;
+    for (const item of small) {
+      // Each header row is about a hundred bytes; counted generously so the body never passes the cap.
+      const cost = item.byteSize + 120;
+      if (current.length && (bytes + cost > UPLOAD.bodyBytesMax || current.length >= UPLOAD.packFilesMax)) { packs.push(current); current = []; bytes = 16; }
+      current.push(item); bytes += cost;
+    }
+    if (current.length) packs.push(current);
+    return packs;
+  };
+  const sendPacked = async () => {
+    const answer = await retryShortly(output, () => api.json(`/api/v1/operations/${operation}/files/plan`, { token, method: "POST", responseBytesMax: UPLOAD.planResponseBytesMax }));
+    const rows = Array.isArray(answer.files) ? answer.files as { sha256?: unknown; byteSize?: unknown }[] : null;
+    if (!rows || rows.some(row => typeof row?.sha256 !== "string" || byHash.get(row.sha256)?.byteSize !== row.byteSize)) {
+      throw new CliError("invalid_response", "The server returned an invalid file upload plan. Retry the deploy.", 5);
+    }
+    const missing = new Set(rows.map(row => row.sha256 as string));
+    // Everything the plan does not name is already verified, by an earlier deploy or an earlier run of this one.
+    for (const hash of new Set(files.map(file => file.sha256))) if (!missing.has(hash)) count(hash);
+    const items = [...missing].map(hash => ({ sha256: hash, byteSize: byHash.get(hash)!.byteSize, upload: null }));
+    const small = items.filter(item => item.byteSize <= UPLOAD.packFileBytesMax);
+    await settle([...packed(small).map(sendPack), ...items.filter(item => item.byteSize > UPLOAD.packFileBytesMax).map(partFile)]);
   };
   let cursor = 0, older: Promise<unknown> = Promise.resolve();
   const seen = new Set<number>();
+  if (options.packs) {
+    // Counted from the plan instead of the first page.
+    doneBytes = 0; doneFiles = 0;
+  }
   report(true);
   try {
-    for (;;) {
+    // Packs end the way pages do, below: every verification waited for, and the first failure thrown.
+    if (options.packs) await sendPacked();
+    else for (;;) {
       const pending = current.missing.filter(item => !counted.has(item.sha256));
-      const ahead = await options.readAhead?.(pending.filter(item => item.byteSize <= MULTIPART.aboveBytes).map(item => byHash.get(item.sha256)!)) ?? new Map<string, Uint8Array>();
+      const early: IncrementalFile[] = [];
+      let aheadBytes = 0;
+      for (const item of pending) {
+        if (item.byteSize > MULTIPART.aboveBytes || aheadBytes + item.byteSize > READ_AHEAD_BYTES_MAX) continue;
+        aheadBytes += item.byteSize; early.push(byHash.get(item.sha256)!);
+      }
+      const ahead = early.length && options.readAhead ? await options.readAhead(early) : new Map<string, Uint8Array>();
       const pageCursor = cursor;
       const work = settle(pending.map(item => item.byteSize > MULTIPART.aboveBytes ? partFile(item) : wholeFile(item, pageCursor, ahead)));
       const next = current.nextCursor;
@@ -285,7 +386,11 @@ export async function sendFiles(api: Api, token: string, operation: string, file
       const following = next === null ? null : retryShortly(output, () => loadPage(next));
       following?.catch(() => {});
       await older;
+      stopIfFailed();
       older = work.then(() => flush());
+      // Awaited only after the next page arrives; until then a failure here must not be an unhandled rejection,
+      // which ends the process before the error and its next step are printed.
+      older.catch(() => {});
       if (next === null || !following) { await older; break; }
       seen.add(next);
       cursor = next;
@@ -293,10 +398,11 @@ export async function sendFiles(api: Api, token: string, operation: string, file
     }
     flush();
     await Promise.all(verifications);
+    stopIfFailed();
   } catch (error) {
-    failed = true;
+    fail(error);
     await Promise.allSettled([...queued, ...verifications]);
-    throw error;
+    throw firstFailure!.error;
   }
   report(true);
   return { verifiedFiles: doneFiles, verifiedBytes: doneBytes };

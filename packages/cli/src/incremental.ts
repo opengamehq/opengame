@@ -144,6 +144,8 @@ export async function uploadMissingFiles(api: Api, token: string, operation: str
   /** The server's bootstrap said `fileParts`: send through transport.ts, which pages, verifies and splits large
    * files the way that server takes them. Every server before 12 Nov 2026 gets the loop below. */
   fileParts?: boolean;
+  /** And says filePacks: small files go in packs (transport.ts). */
+  filePacks?: boolean;
   /** One part of an external asset, read from disk without the rest of it (fileParts only). */
   readPart?: (file: IncrementalFile, offset: number, length: number) => Promise<Uint8Array>;
 } = {}) {
@@ -161,7 +163,7 @@ export async function uploadMissingFiles(api: Api, token: string, operation: str
       throw new CliError("archive_unavailable", "A saved upload file is unavailable. Restore the source export and retry.", 1);
     };
     await sendFiles(api, token, operation, files, first, output, { route: route === "assets" ? "assets" : "files", delivery: options.delivery,
-      inputDigest: options.inputDigest, read,
+      inputDigest: options.inputDigest, read, packs: options.filePacks === true,
       ...(options.readFiles ? { readAhead: (rows: IncrementalFile[]) => options.readFiles!(rows.filter(file => !tree[file.path])) } : {}) });
     const totalBytes = files.reduce((sum, file) => sum + file.byteSize, 0);
     return completeUpload(api, token, operation, route, output, files.length, totalBytes, started);

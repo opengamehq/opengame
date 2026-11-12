@@ -234,3 +234,52 @@ export function generatedArtType(path: string, stored: string | undefined): stri
 export function isDocumentPath(path: string): boolean {
   return resolveContentType(path).contentType.startsWith("text/html");
 }
+
+/**
+ * Which paths a game host will serve at all, by what the file is.
+ *
+ * WHY, AND WHY NOW. Since 11 Nov 2026 the malware scan reads only the file types that can
+ * run or carry something that runs (executables, archives, documents, scripts and pages,
+ * SVG, anything whose bytes name no known format), and skips pictures, sounds, models,
+ * fonts and wasm whose bytes prove what they are. That is safe only if a skipped file can
+ * reach a player as nothing but what it claims to be, so this is the other half: a game
+ * origin never hands out an installer or an executable, and never lets anybody make a
+ * browser save a file it does not open.
+ *
+ * Three answers. An extension of a program or installer (BLOCKED) is refused whatever the
+ * request, compressed or not. An extension in TYPES is served as that type, with nosniff,
+ * as before. Any other extension, the opaque data files engines name as they please
+ * (`.bytes`, `.hza`, `.iwd`), is served as application/octet-stream only to a request that
+ * is not a navigation: a game's own fetch or XHR. A navigation to octet-stream is what
+ * makes a browser save a file, so that is refused. The Worker requires an explicit
+ * non-document `Sec-Fetch-Dest` (including `empty` for fetch/XHR); requests that send no
+ * fetch metadata fail closed.
+ */
+const BLOCKED = new Set([
+  "exe", "msi", "msix", "msp", "appx", "appxbundle", "dmg", "pkg", "mpkg", "app", "apk", "aab", "xapk", "ipa",
+  "deb", "rpm", "appimage", "snap", "flatpak", "run", "bat", "cmd", "com", "scr", "pif", "cpl", "msc",
+  "ps1", "psm1", "vbs", "vbe", "jse", "wsf", "wsh", "hta", "lnk", "reg", "inf", "gadget", "jar", "jnlp",
+  // Not `.so`: Emscripten names a side module that, and it is wasm.
+  "dll", "dylib", "sys", "drv", "ocx", "iso", "img", "vhd", "vhdx", "torrent", "command", "workflow",
+]);
+
+/** Destinations a browser fetches as a document or a plugin, which save octet-stream. */
+const NAVIGATION_DESTINATIONS = new Set(["document", "iframe", "frame", "embed", "object"]);
+/** Unknown opaque files are available only to an explicitly identified subresource fetch. */
+const NON_DOCUMENT_DESTINATIONS = new Set([
+  "", "empty", "audio", "audioworklet", "font", "image", "manifest", "paintworklet", "script", "serviceworker",
+  "sharedworker", "style", "track", "video", "worker", "xslt",
+]);
+
+export type GameFileAnswer = "serve" | "refuse";
+
+export function gameFileAnswer(path: string, headers: Headers): GameFileAnswer {
+  const outer = extensionOf(path);
+  const inner = ENCODINGS[outer] !== undefined ? extensionOf(path.slice(0, path.length - outer.length - 1)) : outer;
+  if (BLOCKED.has(outer) || BLOCKED.has(inner)) return "refuse";
+  if (TYPES[inner] !== undefined) return "serve";
+  const destination = headers.get("sec-fetch-dest");
+  const navigation = headers.get("sec-fetch-mode") === "navigate" ||
+    NAVIGATION_DESTINATIONS.has(destination ?? "");
+  return destination === null || navigation || !NON_DOCUMENT_DESTINATIONS.has(destination.toLowerCase()) ? "refuse" : "serve";
+}

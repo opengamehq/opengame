@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
@@ -33,7 +34,7 @@ test("archive contains exactly the checked normalized files and has a stable dig
     const first = await createArchive(root, manifest, silent);
     const second = await createArchive(root, manifest, silent);
     assert.equal(first.sha256, second.sha256);
-    assert.deepEqual(Object.keys(unzipSync(first.bytes)).sort(), ["game.js", "index.html"]);
+    assert.deepEqual(Object.keys(unzipSync(readFileSync(first.file))).sort(), ["game.js", "index.html"]);
     assert.equal(first.fileCount, 2);
     // A cover that does not exist used to refuse the package (cover_missing). Nothing reads
     // the field now, so the archive is the same bytes with it as without it.

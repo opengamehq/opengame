@@ -428,17 +428,18 @@ test("one file past the per-file cap is pointed at a plan only when the plan's o
   try {
     await mkdir(join(root.dir, "Build"));
     await writeFile(join(root.dir, "index.html"), "<title>Game</title>");
-    // Unity's lane takes a .data file of up to 512 MiB, so a 300 MiB one gets the plan.
-    await sparse(join(root.dir, "Build/game.data"), 300 * 1024 * 1024);
+    // Since 11 Nov 2026 one ordinary file may be 1 GiB, past Unity's lane (512 MiB) and
+    // Kaigen's (256 MiB), so a file over it is never sent to a plan that would refuse it.
+    const over = 1024 * 1024 * 1024 + 300 * 1024 * 1024;
+    await sparse(join(root.dir, "Build/game.data"), over);
     await assert.rejects(collectFiles(root.dir), (error: Error & { code?: string }) => error.code === "bundle_limit"
-      && error.message.startsWith("Build/game.data is 300 MiB, and one file can be at most 256 MiB.")
-      && /stay out of the upload in a Unity asset plan/.test(error.message) && /Otherwise split it/.test(error.message));
-    // Kaigen's lane is 256 MiB a file too, so a 300 MiB .hza is not sent to a plan that would refuse it.
+      && /^Build\/game\.data is [\d.]+ GiB, and one file can be at most 1 GiB\./.test(error.message)
+      && !/Unity asset plan/.test(error.message) && /[Ss]plit it/.test(error.message));
     await rm(join(root.dir, "Build/game.data"));
     await mkdir(join(root.dir, "cooked"));
-    await sparse(join(root.dir, "cooked/world.hza"), 300 * 1024 * 1024);
+    await sparse(join(root.dir, "cooked/world.hza"), over);
     await assert.rejects(collectFiles(root.dir), (error: Error & { code?: string }) => error.code === "bundle_limit"
-      && /^cooked\/world\.hza is 300 MiB/.test(error.message) && !/external-assets/.test(error.message) && /\. Split it/.test(error.message));
+      && /^cooked\/world\.hza is [\d.]+ GiB/.test(error.message) && !/external-assets/.test(error.message) && /\. Split it/.test(error.message));
   } finally { await root.remove(); }
 });
 

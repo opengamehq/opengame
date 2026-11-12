@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { readableBytes } from "../src/bytes";
 import assert from "node:assert/strict";
@@ -214,8 +215,8 @@ test("a decomposed name from macOS is packaged composed, the way a page asks for
   try {
     await writeFile(join(root.dir, "index.html"), "<!doctype html><title>x</title><img src=\"caf\u00e9.png\">");
     const stored = (await readdir(root.dir)).find(name => name.startsWith("caf"))!;
-    const archive = await createArchive(root.dir, manifest as never, quietOutput());
-    const names = Object.keys(unzipSync(archive.bytes));
+    const archive = await createArchive(root.dir, manifest as never, quietOutput()); const packedBytes = readFileSync(archive.file);
+    const names = Object.keys(unzipSync(packedBytes));
     assert.ok(names.includes("caf\u00e9.png"), `archive names: ${JSON.stringify(names)}; on disk: ${JSON.stringify(stored)}`);
     const run = await spawnCli(["check", root.dir, "--jsonl"], { stdin: "closed" });
     assert.ok(!run.stdout.includes("missing-ref"), "the composed reference should find the file");
@@ -233,10 +234,10 @@ test("a composed and a decomposed name for one file are refused rather than one 
 test("unicode names survive packaging, flagged as UTF-8", async () => {
   const root = await project({ "日本/絵.png": new Uint8Array([1]), "emoji_🎮.json": "{}", "Ünïcødé/naïve.txt": "x" });
   try {
-    const archive = await createArchive(root.dir, manifest as never, quietOutput());
-    assert.deepEqual(Object.keys(unzipSync(archive.bytes)).sort(), ["emoji_🎮.json", "index.html", "Ünïcødé/naïve.txt", "日本/絵.png"].sort());
+    const archive = await createArchive(root.dir, manifest as never, quietOutput()); const packedBytes = readFileSync(archive.file);
+    assert.deepEqual(Object.keys(unzipSync(packedBytes)).sort(), ["emoji_🎮.json", "index.html", "Ünïcødé/naïve.txt", "日本/絵.png"].sort());
     // General purpose bit 11 on every non-ASCII entry, or the archive stage reads the names as cp437.
-    const bytes = Buffer.from(archive.bytes);
+    const bytes = Buffer.from(packedBytes);
     for (let at = bytes.indexOf("PK\x01\x02"); at >= 0; at = bytes.indexOf("PK\x01\x02", at + 4)) {
       const name = bytes.subarray(at + 46, at + 46 + bytes.readUInt16LE(at + 28)).toString("utf8");
       if (/[^\x00-\x7f]/.test(name)) assert.ok(bytes.readUInt16LE(at + 8) & 0x800, `${name} is not flagged UTF-8`);
@@ -290,8 +291,8 @@ test("links are refused where they would be packaged and ignored where nothing i
 test("an empty file is a file", async () => {
   const root = await project({ "empty.bin": new Uint8Array(0), "levels/blank.json": "" });
   try {
-    const archive = await createArchive(root.dir, manifest as never, quietOutput());
-    const entries = unzipSync(archive.bytes);
+    const archive = await createArchive(root.dir, manifest as never, quietOutput()); const packedBytes = readFileSync(archive.file);
+    const entries = unzipSync(packedBytes);
     assert.equal(entries["empty.bin"]!.byteLength, 0);
     assert.equal(entries["levels/blank.json"]!.byteLength, 0);
   } finally { await root.remove(); }
@@ -332,36 +333,47 @@ test("a project exactly at the uncompressed limit is collected, and one byte mor
 });
 
 test("a game over the archive cap uncompressed, but under it compressed, is accepted as the web uploader accepts it", async () => {
-  const mib = 1048576, cap = LIMITS.bundle.archiveBytesMax, file = LIMITS.bundle.fileBytesMax;
+  /* The rule is a ratio, not a size: the archive stage holds the compressed bytes to the
+     cap, never the unpacked ones. At the real caps (4 GiB zipped, 1 GiB a file since
+     11 Nov 2026) this was a 4.4 GB tree written, deflated and read back whole, so the
+     caps are scaled to 32 MiB zipped and 16 MiB a file for the length of the test; the
+     archive stage reads LIMITS when it runs, so it is held to the scaled numbers. */
+  const mib = 1048576, bundle = LIMITS.bundle as { archiveBytesMax: number; fileBytesMax: number };
+  const real = { archiveBytesMax: bundle.archiveBytesMax, fileBytesMax: bundle.fileBytesMax };
+  bundle.archiveBytesMax = 32 * mib; bundle.fileBytesMax = 16 * mib;
+  const cap = bundle.archiveBytesMax, file = bundle.fileBytesMax;
   // Just over the archive cap in all, in files no bigger than bundle.fileBytesMax:
   // incompressible media at half the cap and level data at three fifths of it, each cut
-  // into as many files as the per-file cap needs (a 1 GiB cap is two media files and three
-  // of level data). One buffer of each is written under every name, so the test holds two
-  // files' worth of bytes however large the cap is.
+  // into as many files as the per-file cap needs. One buffer of each is written under
+  // every name, so the test holds two files' worth of bytes however large the cap is.
   const split = (total: number) => { const count = Math.ceil(total / file); return { count, size: Math.floor(total / count) }; };
   const media = split(Math.floor(cap * 0.5)), data = split(Math.floor(cap * 0.6));
   const total = media.count * media.size + data.count * data.size;
-  assert.ok(total > cap && total < LIMITS.bundle.uncompressedBytesMax);
   // Four symbols, so it deflates about four to one: compressible, nowhere near a bomb.
   const clip = randomBytes(media.size), levels = randomBytes(data.size).map(byte => 0x41 + (byte & 3));
-  const root = await project({
-    ...Object.fromEntries(Array.from({ length: media.count }, (_, n) => [`media/clip-${n}.mp4`, clip])),
-    ...Object.fromEntries(Array.from({ length: data.count }, (_, n) => [n ? `data/levels-${n + 1}.bin` : "data/levels.bin", levels])) });
+  let root: Awaited<ReturnType<typeof project>> | undefined;
   try {
-    const archive = await createArchive(root.dir, manifest as never, quietOutput());
-    assert.ok(archive.bytes.byteLength <= cap, `${Math.round(archive.bytes.byteLength / mib)} MiB`);
-    assert.ok(total / archive.bytes.byteLength < LIMITS.bundle.compressionRatioMax);
-    const entries = unzipSync(archive.bytes, { filter: file => file.name === "data/levels.bin" });
+    assert.ok(total > cap && total < LIMITS.bundle.uncompressedBytesMax && data.count > 1);
+    root = await project({
+      ...Object.fromEntries(Array.from({ length: media.count }, (_, n) => [`media/clip-${n}.mp4`, clip])),
+      ...Object.fromEntries(Array.from({ length: data.count }, (_, n) => [n ? `data/levels-${n + 1}.bin` : "data/levels.bin", levels])) });
+    const archive = await createArchive(root.dir, manifest as never, quietOutput()); const packedBytes = readFileSync(archive.file);
+    assert.ok(packedBytes.byteLength <= cap, `${Math.round(packedBytes.byteLength / mib)} MiB`);
+    assert.ok(total / packedBytes.byteLength < LIMITS.bundle.compressionRatioMax);
+    const entries = unzipSync(packedBytes, { filter: file => file.name === "data/levels.bin" });
     assert.equal(entries["data/levels.bin"]!.byteLength, data.size);
-  } finally { await root.remove(); }
+  } finally {
+    Object.assign(bundle, real);
+    await root?.remove();
+  }
 });
 
 test("an archive that would expand past the ratio guard is stored instead of deflated", async () => {
   // Zeros deflate about a thousand to one, which the archive stage reads as a bomb.
   const root = await project({ "data/zeros.bin": new Uint8Array(8 * 1048576) });
   try {
-    const archive = await createArchive(root.dir, manifest as never, quietOutput());
-    assert.ok(8 * 1048576 / archive.bytes.byteLength <= LIMITS.bundle.compressionRatioMax);
+    const archive = await createArchive(root.dir, manifest as never, quietOutput()); const packedBytes = readFileSync(archive.file);
+    assert.ok(8 * 1048576 / packedBytes.byteLength <= LIMITS.bundle.compressionRatioMax);
   } finally { await root.remove(); }
 });
 

@@ -130,6 +130,8 @@ export interface ReviewPolicy {
    * database can tell a release it held from one the switch held, which decides whether
    * the team is mailed (20261106001500_review_person_notify). */
   automaticPublishing?: boolean;
+  /** Held and inconclusive evidence requires a person, including quality checks. */
+  requireAllChecksPassed?: boolean;
   /** The review's target, from the upload. Measured and alerted on, never a verdict: the
    * engine does not read it (`recommend`). Carried so a recorded recommendation names the
    * target it was made under. limits.json, review.decisionDeadlineSeconds. */
@@ -571,9 +573,19 @@ function decide(input: ReviewInput): Recommendation {
   // The same checks whatever the manifest's multiplayer mode says. A `multiplayer-smoke`
   // receipt left from before the smoke was removed is in no list, so it decides nothing.
   const required = REQUIRED_CHECKS.filter(c => !shadowed.has(c) && !(skipped && c === "agent-playtest"));
-  const done = (outcome: ReviewOutcome, reasons: ReviewReason[], summary: string): Recommendation => ({
-    engineVersion: 1, quality: playtest?.quality ?? null, outcome, reasons, summary, tier: playtest?.tier ?? null, confidence: playtest?.confidence ?? null, policy,
-  });
+  const done = (outcome: ReviewOutcome, reasons: ReviewReason[], summary: string): Recommendation => {
+    if (outcome === "publish" && policy.requireAllChecksPassed) {
+      const unresolved = REQUIRED_CHECKS.map(check => state(input.receipts, check) ?? { check, state: "not run" as const })
+        .filter(receipt => receipt.state !== "passed" || receipt.shadow);
+      if (unresolved.length) {
+        outcome = "person";
+        reasons = unresolvedReasons(unresolved);
+        summary = "An automated check needs a person before publication.";
+      }
+    }
+    return { engineVersion: 1, quality: playtest?.quality ?? null, outcome, reasons, summary,
+      tier: playtest?.tier ?? null, confidence: playtest?.confidence ?? null, policy };
+  };
 
   const unsafe = REVIEW_CHECKS.safety.map(c => state(receipts, c)).filter((r): r is ReviewReceipt => r?.state === "failed" && r.fault !== "platform");
   if (unsafe.length) return done("block", unsafe.map(r => ({ code: "safety_failed", check: r.check, message: say(r, "A safety check failed.") })),
@@ -633,7 +645,7 @@ function decide(input: ReviewInput): Recommendation {
   const promised = receipts.some(r => !r.shadow && flaggedForPerson(r));
   if (!input.jam && !ourGap && !promised && qualityReturn(quality, policy, receipts)) {
     const reasons = qualityReasons(quality!);
-    if (policy.launchPolicy?.quality.provisional && !policy.autonomous) return done("person", reasons,
+    if (policy.launchPolicy?.quality.provisional && (!policy.autonomous || policy.requireAllChecksPassed)) return done("person", reasons,
       "Two separate reviews, backed by what the playtest measured, found nothing a player can play yet. The review's thresholds are still provisional, so a person confirms it.");
     return done("return", reasons, "Two separate reviews, backed by what the playtest measured, found nothing a player can play yet.");
   }
@@ -727,7 +739,7 @@ function decide(input: ReviewInput): Recommendation {
      release would come back as it was and nobody would look at its images. A confirmed game
      failure still returns first; that publishes nothing and the next upload asks again. */
   const imagesForAPerson = state(receipts, "image-flags")?.state === "inconclusive";
-  const failedRunReview = () => policy.autonomous && !input.jam && !imagesForAPerson
+  const failedRunReview = () => policy.autonomous && !policy.requireAllChecksPassed && !input.jam && !imagesForAPerson
     ? done("return", [{ code: "runtime_failed_run", check: "gpu-runtime", message: FAILED_RUN_RETURN }],
       "Our playtest stopped on our side. Submit the game again to rerun the checks.")
     : done("person", [{ code: "runtime_failed_run", check: "gpu-runtime",
@@ -738,7 +750,7 @@ function decide(input: ReviewInput): Recommendation {
      way the database would let it: what `publicationReady` says may publish does, and
      everything else goes back to the creator with what was seen. */
   const forAPerson = (list: ReviewReceipt[]) => {
-    if (!policy.autonomous) return done("person", unresolvedReasons(list), "A person reviews the unresolved check evidence.");
+    if (!policy.autonomous || policy.requireAllChecksPassed) return done("person", unresolvedReasons(list), "A person reviews the unresolved check evidence.");
     /* The exception to nobody coming. An image moderation could not leave to a model
        (self-harm, hate or harassment: the integrator's decision at the review lane's merge,
        5 Nov 2026) waits for a person whatever else is true, because a WW2 game and hate

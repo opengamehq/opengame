@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0
+
+- `og.player.stats()` reads the player's own entry on every leaderboard the game declares,
+  in one request to og-api's `GET /v1/player/stats`: the best run on each board and a
+  career board's row for all runs, so a game can read XP, levels and lifetime totals back.
+  The request names no player or game; og-api reads both from the session token. The local
+  mock answers from this browser's scores and reads career boards as empty. The core is
+  about 320 bytes gzip larger.
+- A game may declare 25 leaderboards (was 10). Events: 600 a minute per session (was 60),
+  5,000 a page session (was 200), 200 a flush (was 50). Scores: 300 a minute per session,
+  600 per player and 3,000 per address (were 60, 120 and 300).
+- The radio docs no longer ask a game to credit the music.
+
 ## 0.3.0
 
 - OG Radio: `@opengamehq/sdk/radio`, also `OpenGame.radio` in the injected global. A game

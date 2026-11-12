@@ -8,7 +8,7 @@ import { readAvatarLook } from "@opengame/shared/avatar-look";
 import { readCharacterRecipe } from "@opengame/shared/character-look-wire";
 import { sanitizeGameEventProps, type GameEventPolicy } from "@opengame/shared/game-events";
 import { Leaderboards, type Leaderboard, type LeaderboardConfig } from "./leaderboards.js";
-export type { Leaderboard, LeaderboardPage, ScoreEntry, ScoreMeta, ScoreReceipt } from "./leaderboards.js";
+export type { Leaderboard, LeaderboardPage, PlayerStat, PlayerStatEntry, PlayerStats, ScoreEntry, ScoreMeta, ScoreReceipt } from "./leaderboards.js";
 /** `dev.player` chooses the local mock's identity, so a game can be checked as a
  * guest, a signed-in player, or an account that has not claimed a handle yet.
  * `?og-dev-player=guest|signed-in|no-handle` on the page URL does the same. The
@@ -199,6 +199,9 @@ class Client {
     get signedIn() { return client.playerValue.signedIn; },
     get avatar() { return client.playerValue.avatar ?? null; },
     onChange: (listener: Listener<Player>) => subscribe(this.playerListeners, listener, this.playerValue),
+    /** The player's entry on each board the game declares, in one request: a career board's
+     * running totals (XP, lifetime totals) as well as their best runs. Fails like a board read. */
+    stats: () => this.boards.stats(),
     /* No credential() here, deliberately. There was one, documented as something to
        verify on the game's own server, and a published game cannot reach a server of
        its own: connect-src on opengame.gg names this platform's API and broker only,

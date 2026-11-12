@@ -63,6 +63,25 @@ test("a pending login keeps the server's pace, and one saved before the pace was
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
+test("a pace racing the save that clears a collected login never writes it back", async () => {
+  /* Greptile on opengamehq/opengame#7: a pace that read the entry before another run cleared
+     it replaced the file afterwards, and the spent login came back. */
+  const dir = await mkdtemp(join(tmpdir(), "og-pending-race-"));
+  try {
+    const origin = "https://a.example";
+    const pending = new PendingLogins(origin, dir);
+    const base = { origin, deviceCode: "d".repeat(43), userCode: "BCDF-GHJK", url: `${origin}/cli?code=BCDF-GHJK`,
+      expiresAt: new Date(Date.now() + 300_000).toISOString(), interval: 5, deviceName: "Laptop" };
+    const later = new Date(Date.now() + 30_000).toISOString();
+    for (let round = 0; round < 20; round++) {
+      await pending.save(base);
+      await Promise.all([pending.pace(base.deviceCode, 10, later), pending.pace(base.deviceCode, 15, later),
+        pending.save(null), pending.pace(base.deviceCode, 20, later)]);
+      assert.equal(await pending.read(), null, `round ${round}`);
+    }
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
 test("a jam upload token (oga_) is refused here with a sentence, not sent for /api/v1 to refuse", async () => {
   const jam = token.replace("ogt_", "oga_");
   const { suppliedToken } = await import("../src/credentials");

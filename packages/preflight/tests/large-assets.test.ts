@@ -19,11 +19,13 @@ const deferred = (row: ReturnType<typeof external>): PreflightFile => ({ path: r
 test('trusted Unity external assets retain union references and explicitly defer credentials', async () => {
   // Past one ordinary file's cap and inside the Unity lane's (512 MiB). It was one byte past
   // the whole tree's cap until that went to 1 GiB on 28 Oct 2026, past the lane's own.
-  const row = external(BUNDLE.fileBytesMax + 1);
+  // Since 11 Nov 2026 one ordinary file may be 1 GiB, past this lane's 512 MiB, so the
+  // row is the lane's largest and the ordinary refusal is asked only when it applies.
+  const row = external(Math.min(BUNDLE.fileBytesMax + 1, LIMITS.platform.largeAssets.fileBytesMax));
   assert.ok(row.byteSize <= LIMITS.platform.largeAssets.fileBytesMax);
   const files = [...boot(), deferred(row)];
   const ordinary = await preflight(files, { authoritative: true });
-  assert.ok(ordinary.findings.some(finding => finding.code === 'file-size' && finding.path === row.path));
+  assert.equal(ordinary.findings.some(finding => finding.code === 'file-size' && finding.path === row.path), row.byteSize > BUNDLE.fileBytesMax);
   const result = await platformPreflight(files, { externalAssets: [row] });
   assert.equal(result.ok, true);
   assert.equal(result.engine?.id, 'unity');
@@ -87,6 +89,10 @@ test('a bare file name a loader joins to a folder is satisfied by that file anyw
   assert.ok(absent.findings.some(row => row.code === 'missing-ref'), 'a name that is nowhere is still reported');
   const present = await preflight([...files, file('basis/basis_transcoder.wasm', 'wasm')], { authoritative: true });
   assert.ok(!present.findings.some(row => row.code === 'missing-ref'), JSON.stringify(present.findings));
+  // Built against the page, the name has one answer, and a copy in another folder is not it.
+  const pageBased = await preflight([file('index.html', '<script type="module" src="assets/main.js"></script>'),
+    file('assets/main.js', 'fetch(new URL("level.json", location.href));'), file('data/level.json', '{}')], { authoritative: true });
+  assert.ok(pageBased.findings.some(row => row.code === 'missing-ref'), JSON.stringify(pageBased.findings));
   // A path is still resolved the way it is written.
   const pathed = await preflight([file('index.html', '<script type="module" src="assets/glue.js"></script>'),
     file('assets/glue.js', 'fetch("levels/one.json");'), file('data/one.json', '{}')], { authoritative: true });

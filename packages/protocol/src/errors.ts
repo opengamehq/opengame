@@ -233,7 +233,7 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   jam_closed: say(input, "That jam is not taking entries now. Your private preview remains available. Marketplace submissions open separately.", 409),
   // After the close a game's entry that judges play fixes its live version, in the jam and on
   // the marketplace alike (platform_jam_entry_judged), so no retry and no flag changes it.
-  jam_entry_judged: say({ ...input, retry: "never" }, "The jam has closed and judges play the version of this game that was live then, so this release cannot replace it, in the jam or on the marketplace. It stays a private preview.", 409),
+  jam_entry_judged: say({ ...input, retry: "never" }, "The jam has closed and the version of this game that was live then is the one that is judged, so this release cannot replace it, in the jam or on the marketplace. It stays a private preview.", 409),
   // Its rules require that you own every asset and built it after kickoff, which a decomp or
   // a mod of somebody else's game cannot (game-kinds.json). Refused by the CLI from the local
   // manifest, by the submit route from the release, and by a trigger on jam_entries.

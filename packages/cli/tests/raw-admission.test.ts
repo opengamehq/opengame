@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -58,8 +59,8 @@ test("ordinary archive packages the original raw path/bytes and records source e
     const fixture = await tempDir("og-raw-archive-");
     try {
       await writeFile(join(fixture.dir, name), payload);
-      const archive = await createArchive(fixture.dir, manifest, silent());
-      const files = unzipSync(archive.bytes);
+      const archive = await createArchive(fixture.dir, manifest, silent()); const packedBytes = readFileSync(archive.file);
+      const files = unzipSync(packedBytes);
       assert.deepEqual(Object.keys(files), [name]);
       assert.deepEqual(Buffer.from(files[name]!), payload);
       assert.equal(archive.packaging.rawRuntimes?.[0]?.path, name);

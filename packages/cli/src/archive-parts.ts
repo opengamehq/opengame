@@ -20,13 +20,18 @@ import { CliError, type Output } from "./output";
  * runs out of tries stops the others taking new parts, and the ones in flight finish before
  * the failure is reported, so nothing is still sending after the command says it stopped.
  *
+ * The archive is read a part at a time from `source`, so a 4 GiB archive needs only the
+ * parts in flight in memory (11 Nov 2026; it was the whole archive as one buffer).
+ *
  * Returns "uploaded" when every part is in storage (or the object already is), and "left"
  * when the operation stopped uploading under it; the caller confirms either way, which is
  * what reports the operation's real state.
  */
-export async function uploadArchiveParts(api: Api, token: string, operation: string, bytes: Uint8Array, descriptor: unknown,
+export async function uploadArchiveParts(api: Api, token: string, operation: string, source: ArchiveSource | Uint8Array, descriptor: unknown,
   output: Output): Promise<"uploaded" | "left"> {
-  let parts = readParts(descriptor, bytes);
+  const archive: ArchiveSource = source instanceof Uint8Array
+    ? { byteLength: source.byteLength, read: async (offset, length) => source.subarray(offset, offset + length) } : source;
+  let parts = readParts(descriptor, archive);
   const startedAt = Date.now();
   const tries = LIMITS.platform.deploy.uploadAttemptsMax;
   // A confirmation that finds parts missing (a race, or storage that lost an answer) gets
@@ -50,8 +55,11 @@ export async function uploadArchiveParts(api: Api, token: string, operation: str
     const send = async (part: number) => {
       const size = archivePartBytes(parts.byteSize, parts.partBytes, part);
       const offset = (part - 1) * parts.partBytes;
-      // A copy is not needed: put() streams subarrays of this view and never keeps it.
-      const slice = bytes.subarray(offset, offset + size);
+      /* Read when its turn comes and dropped once it lands, so memory is the parts in
+         flight (concurrency x partBytes, 64 MiB), not the archive. The bytes are read once
+         and kept across this part's retries: a retry sends what the first try read. */
+      const slice = await archive.read(offset, size);
+      if (slice.byteLength !== size) throw new CliError("archive_unavailable", "The saved upload archive is missing or changed. Run opengame status first. To start a new deploy, use opengame deploy --idempotency-key with a new key.", 1);
       for (let attempt = 1; ; attempt++) {
         // react-doctor-disable-next-line react-doctor/async-await-in-loop
         const signed = await retryShortly(output, () => sign(api, token, operation, part, size));
@@ -101,7 +109,7 @@ export async function uploadArchiveParts(api: Api, token: string, operation: str
     // keep is sent again here rather than discovered by the confirmation.
     const fresh = await retryShortly(output, () => api.json(`/api/v1/operations/${operation}/upload`, { token, method: "POST" }));
     if (fresh.uploaded === true || !fresh.multipart) return fresh.uploaded === true ? "uploaded" : "left";
-    parts = readParts(fresh.multipart, bytes);
+    parts = readParts(fresh.multipart, archive);
     if (parts.uploadedParts.length === parts.partCount) return "uploaded";
     if (pass >= 2) {
       throw new CliError("upload_interrupted", `${parts.partCount - parts.uploadedParts.length} of ${parts.partCount} parts did not stay in storage. Run opengame deploy to resume the same operation.`, 5, { next: "opengame deploy", retry: "later" });
@@ -109,11 +117,15 @@ export async function uploadArchiveParts(api: Api, token: string, operation: str
   }
 }
 
+/** An archive the parts are cut from: a file on disk for a deploy (deploy.ts archiveSource),
+ * where `read` takes one part's bytes from it. */
+export type ArchiveSource = { byteLength: number; read(offset: number, length: number): Promise<Uint8Array> };
+
 /** The descriptor, held to the archive this machine is about to cut. A server that
  * describes a different archive is not followed. */
-function readParts(value: unknown, bytes: Uint8Array): ArchiveParts {
+function readParts(value: unknown, archive: ArchiveSource): ArchiveParts {
   const parsed = archivePartsSchema.safeParse(value);
-  if (!parsed.success || parsed.data.byteSize !== bytes.byteLength) {
+  if (!parsed.success || parsed.data.byteSize !== archive.byteLength) {
     throw new CliError("invalid_upload", "The server returned an invalid upload. Run opengame deploy again.", 5);
   }
   return parsed.data;

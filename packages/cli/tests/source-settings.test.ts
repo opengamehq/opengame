@@ -205,7 +205,8 @@ test("check reads through Python when an interpreter works, and through the Node
       const event = JSON.parse(line) as { type?: string; code?: string };
       if (event.type === "notice") notices.push(String(event.code));
     }));
-    assert.equal(Buffer.from(snapshot.get("index.html")!).toString(), "<!doctype html><title>Static export</title>");
+    assert.equal(Buffer.from(await snapshot.bytes("index.html")).toString(), "<!doctype html><title>Static export</title>");
+    await snapshot.dispose();
     return notices;
   };
   try {

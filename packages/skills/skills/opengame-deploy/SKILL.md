@@ -2,7 +2,7 @@
 name: opengame-deploy
 description: Put a browser game online with OpenGame, the marketplace and game jam for browser games. Packages the game, checks it locally, uploads it to a private preview only the owner can play, reads and fixes findings, then submits one exact release for review. Use when the person says deploy my game, put it online, host it, share it, upload it, publish it, get me a link, make it playable for friends, or asks where to put a browser game or a Three.js game.
 metadata:
-  version: "1.0.9"
+  version: "1.1.1"
 ---
 
 # Deploy a browser game to OpenGame
@@ -98,14 +98,14 @@ opengame login --continue --json
 
 Run these from the game folder.
 
-If the folder has no `opengame.json`, create one. Ask the creator whether it is a game, a world, a decomp or a mod; a decomp or a mod names the game it is based on:
+If the folder has no `opengame.json`, create one. The title is all it needs. A decomp or a mod says so with `--kind` and names the game it is based on:
 
 ```bash
 opengame init . --title "My game" --json
 opengame init . --title "Doom but blue" --kind mod --based-on "Doom" --json
 ```
 
-Then fill in `description` ({{n text.gameDescription.productMin}} characters or more) and `genre` in `opengame.json`. If the file already exists, leave `init` alone and edit the file.
+Do not ask the creator for a description or a genre before deploying. When you know them, pass `--description` ({{n text.gameDescription.productMin}} characters or more) and `--genre`; when you do not, init writes a placeholder description and a provisional genre, and the deploy prints its page, where the creator writes the description, chooses the genre and enters the jam. After the deploy you can set the description yourself with `opengame details --description "..." --json`. If the file already exists, leave `init` alone and edit the file.
 
 For a game that already exists on OpenGame, in a new checkout, link the folder first so the deploy does not create a second game:
 
@@ -175,7 +175,7 @@ opengame jams --json
 opengame submit --release <releaseId> --no-wait --json
 ```
 
-OpenGame decides where submissions go. When that is a jam, the submission is the creator's entry: read the form with `opengame jams <slug> --json`, ask the creator for their track, the models they used and any sponsor evidence, and pass them as `--track`, `--models`, `--sponsor` and `--evidence-<sponsor>`. A missing answer exits 2 and names the flag. A decomp or a mod cannot enter a jam.
+OpenGame decides where submissions go, and a ready deploy goes to review by itself. When that is a jam, the creator usually enters it on the deploy's page (`data.deploymentUrl`). To enter it from here instead, read the form with `opengame jams <slug> --json` and pass the track, the models they used and any sponsor evidence as `--track`, `--models`, `--sponsor` and `--evidence-<sponsor>`. A missing answer exits 2 and names the flag. A decomp or a mod cannot enter a jam.
 
 When `data.state` is `needs_certification`, give the creator `data.certifyUrl`, which the CLI also prints as a `certify_required` notice. They certify in their own browser that they have the rights to the game. You cannot do it for them. Follow the review with:
 

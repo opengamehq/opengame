@@ -377,10 +377,13 @@ export async function vendorCommand(root: string, flags: Record<string, string |
   const inspection = await inspectArchive(source, manifest, output, { vendor: true, artifacts: options.artifacts });
   assertNoReservedRuntimePaths(inspection.result.include);
   const staged = new Map<string, Uint8Array>();
-  for (const name of inspection.result.include) {
-    if (!isBundlePath(name)) throw new CliError("vendor_output", `The checked export contains a path that cannot be staged: ${name}. Rename it and anything that loads it, then run opengame vendor again.`, 1);
-    staged.set(name, inspection.snapshot.get(inspection.result.strippedRoot + name)!);
-  }
+  try {
+    for (const name of inspection.result.include) {
+      if (!isBundlePath(name)) throw new CliError("vendor_output", `The checked export contains a path that cannot be staged: ${name}. Rename it and anything that loads it, then run opengame vendor again.`, 1);
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop
+      staged.set(name, await inspection.snapshot.bytes(inspection.result.strippedRoot + name));
+    }
+  } finally { await inspection.snapshot.dispose(); }
   // The staged copy is the folder that gets deployed, so a retired cover stops here too.
   staged.set("opengame.json", Buffer.from(JSON.stringify({ ...withoutCover(manifest), build: { output: "." } }, null, 2) + "\n"));
   staged.set(".opengame/vendor-receipt.json", Buffer.from(JSON.stringify(inspection.packaging, null, 2) + "\n"));

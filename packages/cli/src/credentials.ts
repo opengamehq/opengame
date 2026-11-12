@@ -323,11 +323,21 @@ export class PendingLogins {
     });
     return written;
   }
-  /* Read, change and replace the whole file. The read is as late as it can be, just before
-     the write, so the window in which another process's change is lost is the replace itself;
-     there is no lock, because a lost pace only makes one poll early and the server paces it. */
+  /* Read, change and replace the whole file, under the same kind of lock the credentials
+     file takes. Without it a `--continue` that read the entry, then lost the race to one that
+     collected the token and cleared it, wrote the entry back, and the next `--continue` polled
+     a spent code (Greptile on opengamehq/opengame#7). Two `--continue` runs are expected, so a
+     held lock is waited for rather than refused, for about as long as one write takes. */
   private async update(change: (all: Record<string, PendingLogin>) => boolean) {
     await mkdir(dirname(this.file), { recursive: true, mode: 0o700 });
+    let release: () => Promise<void>;
+    try {
+      release = await lock(this.file, { realpath: false, stale: LIMITS.platform.credentials.lockStaleMs,
+        retries: { retries: 40, minTimeout: 25, maxTimeout: 250 }, onCompromised: () => {} });
+    } catch { throw new CliError("credential_busy", "Another CLI is updating this login. Wait a few seconds, then retry.", 3, { next: "opengame login --continue" }); }
+    try { await this.replace(change); } finally { await release(); }
+  }
+  private async replace(change: (all: Record<string, PendingLogin>) => boolean) {
     let all: Record<string, PendingLogin> = {};
     try { all = JSON.parse(await readFile(this.file, "utf8")) ?? {}; } catch { /* A missing or unreadable file starts empty. */ }
     if (!all || typeof all !== "object" || Array.isArray(all)) all = {};

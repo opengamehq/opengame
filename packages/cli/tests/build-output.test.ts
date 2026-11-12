@@ -96,17 +96,17 @@ test("a build over the size limit names its heaviest folders by their whole size
   const root = await mkdtemp(join(tmpdir(), "og-size-"));
   try {
     // Sparse files: their size is real to lstat and costs no disk. Each is under
-    // bundle.fileBytesMax (256 MiB), so only the total is over. Sorted a to h, the walk
-    // crosses 1.5 GiB inside g/, so a walk that stopped there would never have seen h/,
+    // bundle.fileBytesMax (1 GiB), so only the total is over. Sorted a to h, the walk
+    // crosses 5 GiB inside g/, so a walk that stopped there would never have seen h/,
     // the heaviest.
-    for (const [dir, mib] of [["a", 200], ["b", 200], ["c", 200], ["d", 200], ["e", 251], ["f", 252], ["g", 253], ["h", 255]] as const) {
+    for (const [dir, mib] of [["a", 700], ["b", 700], ["c", 700], ["d", 700], ["e", 700], ["f", 800], ["g", 900], ["h", 1000]] as const) {
       await mkdir(join(root, dir));
       const handle = await open(join(root, dir, "blob.bin"), "w");
       await handle.truncate(mib * 1048576); await handle.close();
     }
     await assert.rejects(collectFiles(root), (error: Error & { code?: string }) =>
-      error.code === "bundle_limit" && error.message.includes("The largest: h/ (255 MiB), g/ (253 MiB), f/ (252 MiB).")
-      && error.message.includes("1.8 GiB uncompressed, over the 1.5 GiB limit"));
+      error.code === "bundle_limit" && error.message.includes("The largest: h/ (1000 MiB), g/ (900 MiB), f/ (800 MiB).")
+      && error.message.includes("6.1 GiB uncompressed, over the 5 GiB limit"));
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
@@ -261,6 +261,6 @@ test("one file past the per-file limit is refused by name before anything is pac
     const over = await open(join(root, "over.bin"), "w");
     await over.truncate(LIMITS.bundle.fileBytesMax + 1); await over.close();
     await assert.rejects(collectFiles(root), (error: Error & { code?: string }) =>
-      error.code === "bundle_limit" && error.message.startsWith("over.bin is 257 MiB, and one file can be at most 256 MiB."));
+      error.code === "bundle_limit" && /^over\.bin is [\d.]+ GiB, and one file can be at most 1 GiB\./.test(error.message));
   } finally { await rm(root, { recursive: true, force: true }); }
 });

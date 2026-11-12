@@ -1,12 +1,12 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { constants } from "node:fs";
-import { open, unlink } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, rm, unlink } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 import { LIMITS, compiledCredentialPatterns } from "@opengame/shared";
 import { ERRORS, DEAD_UPLOAD_CODES, LISTING, OPERATION_STATUS, RELEASE_STATUS, SUBMISSION_OPEN, findingLabel, submissionStatus, operationNext, operationOutcome, creatorGamePath, deploymentPath, withoutCover,
-  type CreatorGame, type GameManifest, type OperationSummary, type RepairFinding, type Submission } from "@opengame/protocol";
+  incrementalArchiveBytes, type CreatorGame, type GameManifest, type OperationSummary, type RepairFinding, type Submission } from "@opengame/protocol";
 import { operation, terminal, remember, readSavedOperation } from "./operation";
 import { readGame, refuseRemoved } from "./games";
 import { emitReview, followReview, readSubmission, reviewLine } from "./submit";
@@ -14,8 +14,8 @@ import { authCommand } from "./auth";
 import { readBootstrap } from "./bootstrap";
 import { Api, ApiError, UploadInterrupted } from "./http";
 import { activeToken } from "./credentials";
-import { loadManifest, outputFolder, replaceFile } from "./files";
-import { createArchive } from "./archive";
+import { collectFiles, loadManifest, outputFolder, replaceFile } from "./files";
+import { archiveDigest, createArchive, readArchiveRange, type PackedArchive } from "./archive";
 import { lockfileInstall, missingDependencies, readBuildPackage } from "./build-output";
 import { ensureProjectIgnored, ensureDeployManifest, kindPhrase, provisionalFields } from "./init";
 import { readProject, savedSubmit, updateProject, validKey, withProject, type Project } from "./project";
@@ -25,7 +25,7 @@ import type { PackagingReceipt } from "./packaging-receipt";
 import { showAllowance } from "./allowance";
 import { syncAchievements } from "./achievements";
 import { filesFromArchive, uploadMissingFiles } from "./incremental";
-import { uploadArchiveParts } from "./archive-parts";
+import { uploadArchiveParts, type ArchiveSource } from "./archive-parts";
 import { safeReadFile } from "./safe-fs";
 import { acceptedStatement, assertUnitySourceRoot, createUnityArchive, LARGE_ASSET_DELIVERY, planDelivery, readSmallUnityAssets, readUnityAsset, readUnityAssetPlan, unityFileUnion, unityInputDigest } from "./unity-assets";
 
@@ -52,8 +52,11 @@ async function serverLimits(api: Api, token: string) {
   if (!limits || !Number.isSafeInteger(limits.archiveBytesMax) || limits.archiveBytesMax < 1 || !Number.isSafeInteger(limits.fileCountMax) || limits.fileCountMax < 1) {
     throw new CliError("invalid_response", "The server limits could not be read. Run opengame deploy again.", 5);
   }
-  const capabilities = data.capabilities as { incrementalUpload?: unknown; archiveParts?: unknown } | undefined;
-  return { ...limits, incrementalUpload: capabilities?.incrementalUpload === true, archiveParts: capabilities?.archiveParts === true };
+  const capabilities = data.capabilities as { incrementalUpload?: unknown; archiveParts?: unknown; externalAssets?: unknown } | undefined;
+  /* The asset plan kinds this account may send file by file (bootstrap, 11 Nov 2026). A
+     server that names none, or predates the field, gets the archive as before. */
+  const externalAssets = Array.isArray(capabilities?.externalAssets) ? capabilities.externalAssets.filter((kind): kind is string => typeof kind === "string") : [];
+  return { ...limits, incrementalUpload: capabilities?.incrementalUpload === true, archiveParts: capabilities?.archiveParts === true, externalAssets };
 }
 
 const TAIL_BYTES = 4096;
@@ -339,7 +342,10 @@ export async function build(command: string, root: string, output: Output, timeo
  * the build by default, so skipping it is the creator's decision and is said out loud.
  */
 export async function prepareDeploy(root: string, output: Output, runBuild = true, options: { vendor?: boolean; incremental?: boolean;
-  unityAssets?: string | readonly string[]; unityOnly?: boolean; delivery?: string; noBuild?: boolean } & BuildOptions = {}) {
+  unityAssets?: string | readonly string[]; unityOnly?: boolean; delivery?: string; noBuild?: boolean; workDirectory?: string;
+  /** Send a build too big for the file route file by file, through the large-game plan,
+   * when the server says this account may (deploy.ts serverLimits, externalAssets). */
+  autoAssets?: boolean } & BuildOptions = {}) {
   if (options.unityAssets && options.vendor) throw new CliError("conflicting_flags", "Use an asset plan without --vendor; the explicit asset plan preserves exported file paths and bytes.", 2);
   const manifest = await loadManifest(root, output, options.unityAssets ? safeReadFile : undefined);
   if (runBuild && manifest.build?.command) await build(manifest.build.command, root, output, undefined, { install: options.install, rerun: options.rerun });
@@ -368,18 +374,42 @@ export async function prepareDeploy(root: string, output: Output, runBuild = tru
   if (options.noBuild) output.emit({ type: "notice", code: "build_skipped", message: manifest.build?.command
     ? `--no-build skipped build.command in opengame.json, so anything it adds or changes in the export is not in this upload. Packaging ${where} as it is on disk.`
     : `opengame.json has no build command, so --no-build changed nothing. Packaging ${where} as it is on disk.` });
-  const archive = options.unityAssets
-    ? await createUnityArchive(folder, manifest, output, root, options.unityAssets, { unityOnly: options.unityOnly, delivery: options.delivery })
+  /* The owner's call, 11 Nov 2026: a big build goes file by file, so the server stores each file once
+     by its hash, skips the ones it already holds and never unpacks a zip. A build that
+     fits the file route keeps it; a bigger one becomes the large-game plan with its
+     assets chosen automatically, exactly as --external-assets auto. Measured from sizes
+     alone, before a byte is read. Without the server's word it is the archive, as before. */
+  const unityAssets = options.unityAssets ?? (options.autoAssets && !options.vendor && await pastFileRoute(folder) ? "auto" : undefined);
+  if (unityAssets && !options.unityAssets) output.emit({ type: "notice", code: "external_assets_chosen",
+    message: "This build is large, so its bigger files are sent one at a time. Files OpenGame already has are skipped." });
+  const archive = unityAssets
+    ? await createUnityArchive(folder, manifest, output, root, unityAssets, { unityOnly: options.unityAssets ? options.unityOnly : false, delivery: options.delivery, workDirectory: options.workDirectory })
+      .catch(async (error: unknown) => {
+        /* A plan this command chose, which the build cannot take (its code alone is past
+           the file route, or the lane refuses a path), falls back to the archive, which
+           takes any build within the caps. A plan the creator named is theirs to fix. */
+        if (options.unityAssets || !(error instanceof CliError) || !["archive_limit", "unity_assets_plan", "unportable_name"].includes(error.code)) throw error;
+        output.emit({ type: "notice", code: "external_assets_fallback", message: "This build cannot be sent file by file, so it goes as one archive instead." });
+        return { ...await createArchive(folder, manifest, output, options), unityAssets: undefined };
+      })
     : { ...await createArchive(folder, manifest, output, options), unityAssets: undefined };
   return { manifest, archive };
 }
 
-async function cacheArchive(root: string, hash: string, bytes: Uint8Array, packaging: PackagingReceipt) {
+/** Whether the build's canonical file-route archive would be past what that route takes,
+ * from the sizes the folder walk reads (no file is opened). */
+async function pastFileRoute(folder: string) {
+  const { files } = await collectFiles(folder);
+  return files.length > LIMITS.bundle.fileCountMax || incrementalArchiveBytes(files.map(file => ({ path: file.path, byteSize: file.size })))
+    > Math.min(LIMITS.bundle.archiveBytesMax, LIMITS.platform.incrementalUpload.archiveBytesMax);
+}
+
+/** The archive packaging wrote, moved into the cache under its hash. It was written into
+ * .opengame (prepareDeploy's workDirectory), so this is a rename, not a second copy. */
+async function cacheArchive(root: string, hash: string, archive: PackedArchive, packaging: PackagingReceipt) {
   const path = join(root, ".opengame", `${hash}.zip`);
-  const temporary = path + "." + randomUUID();
+  const temporary = archive.file;
   try {
-    const handle = await open(temporary, "wx", 0o600);
-    try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
     await replaceFile(temporary, path);
     const receiptPath = join(root, ".opengame", `${hash}.packaging.json`);
     const receiptTemporary = receiptPath + "." + randomUUID();
@@ -391,23 +421,68 @@ async function cacheArchive(root: string, hash: string, bytes: Uint8Array, packa
   } finally { await unlink(temporary).catch(() => {}); }
 }
 
-async function cachedArchive(root: string, pending: NonNullable<Project["deploy"]>) {
+/** The saved archive, checked against the deploy it belongs to: its size, then its hash,
+ * read a slice at a time. Nothing but the path is kept, and the upload reads it a part at
+ * a time. A file transport archive is read whole (filesFromArchive), which its 200 MiB
+ * transport limit bounds. */
+async function cachedArchive(root: string, pending: NonNullable<Project["deploy"]>): Promise<PackedArchive> {
+  const file = join(root, ".opengame", `${pending.request.sha256}.zip`);
   let handle;
   try {
-    handle = await open(join(root, ".opengame", `${pending.request.sha256}.zip`), constants.O_RDONLY | constants.O_NOFOLLOW);
+    handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
     const stat = await handle.stat();
     if (!stat.isFile() || stat.size !== pending.request.byteSize || stat.size > LIMITS.bundle.archiveBytesMax) throw new Error();
-    const bytes = Buffer.alloc(stat.size);
+    const digest = archiveDigest();
+    const buffer = Buffer.allocUnsafe(Math.min(stat.size, 1 << 20) || 1);
     let read = 0;
-    while (read < bytes.length) {
-      const result = await handle.read(bytes, read, bytes.length - read, read);
+    while (read < stat.size) {
+      const result = await handle.read(buffer, 0, Math.min(buffer.length, stat.size - read), read);
       if (!result.bytesRead) break;
+      digest.update(buffer.subarray(0, result.bytesRead));
       read += result.bytesRead;
     }
-    if (read !== bytes.length || createHash("sha256").update(bytes).digest("hex") !== pending.request.sha256) throw new Error();
-    return bytes;
+    const verified = digest.finish();
+    if (read !== stat.size || verified.sha256 !== pending.request.sha256) throw new Error();
+    return { file, byteSize: stat.size, sha256: verified.sha256, blocks: verified.blocks };
   } catch { throw new CliError("archive_unavailable", "The saved upload archive is missing or changed. Run opengame status first. To start a new deploy, use opengame deploy --idempotency-key with a new key."); }
   finally { await handle?.close(); }
+}
+
+/** Every byte of an archive small enough to send whole: one PUT, or the file transport. */
+function wholeArchive(archive: PackedArchive): Promise<Uint8Array> {
+  return readArchiveRange(archive, 0, archive.byteSize);
+}
+
+/** Parts read from the file as they are sent, so memory is the parts in flight. */
+function archiveSource(archive: PackedArchive): ArchiveSource {
+  return { byteLength: archive.byteSize, read: (offset, length) => readArchiveRange(archive, offset, length) };
+}
+
+/** Packaging leftovers from a deploy that was stopped mid-way (Ctrl-C, a closed laptop):
+ * a snapshot folder can be the size of the build. Only run under the project lock, so no
+ * other deploy of this project is writing them, and only for ones a few hours old. */
+async function sweepPackaging(directory: string) {
+  const names = await readdir(directory).catch(() => [] as string[]);
+  for (const name of names) {
+    if (!/^(?:snapshot-[A-Za-z0-9]{6}|archive-[0-9a-f-]{36}\.zip)$/.test(name)) continue;
+    const path = join(directory, name);
+    // react-doctor-disable-next-line react-doctor/async-await-in-loop
+    const info = await lstat(path).catch(() => null);
+    // react-doctor-disable-next-line react-doctor/async-await-in-loop
+    if (info && !info.isSymbolicLink() && Date.now() - info.mtimeMs > 6 * 3600_000) await rm(path, { recursive: true, force: true });
+  }
+}
+
+/**
+ * What the deploy's page is for besides watching, said under its address when the folder
+ * left something for it: since 11 Nov 2026 init asks only the name, so the description and
+ * the genre are written there, by the person or their agent (`opengame details`), along
+ * with the jam entry. Nothing is said when the folder already says both.
+ */
+export function detailsLine(provisional: readonly string[] | undefined): string {
+  const owed = [provisional?.includes("description") ? "write its description" : null, provisional?.includes("genre") ? "choose its genre" : null]
+    .filter((item): item is string => item !== null);
+  return owed.length ? `\nOn that page, ${owed.join(" and ")}, and enter the jam once review passes. Your agent can set the description with opengame details --description.` : "";
 }
 
 /** The deploy's own page, which exists as soon as the operation does. */
@@ -671,7 +746,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
       // Keep the exact checked bytes for this attempt. The disk copy remains
       // necessary for another process to resume, but re-reading and hashing it
       // immediately wastes a full archive read before every first upload.
-      let freshArchive: Uint8Array | undefined;
+      let freshArchive: PackedArchive | undefined;
       const saved = state.deploy;
       // Resume only a deploy whose bytes have not reached the server. One that is
       // queued or checking (after --no-wait, or a watch the shell killed) used to
@@ -723,19 +798,33 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
             if (remember(latest, state)) await save();
           } catch (error) { if (!(error instanceof CliError) || error.exitCode !== 5) throw error; }
         }
-        prepared = await timed("prepare", () => prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), incremental: limits.incrementalUpload && !incompatibleFileUpload, noBuild: Boolean(flags["no-build"]), install: !flags["no-install"],
-          unityAssets: assetPlan?.plan ?? retainedAssets, unityOnly: assetPlan?.unityOnly, delivery: retainedAssets ? planDelivery(saved!.unityAssets) : undefined }));
+        const workDirectory = join(root, ".opengame");
+        await mkdir(workDirectory, { recursive: true, mode: 0o700 });
+        await sweepPackaging(workDirectory);
+        prepared = await timed("prepare", () => prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), incremental: limits.incrementalUpload && !incompatibleFileUpload, noBuild: Boolean(flags["no-build"]), install: !flags["no-install"], workDirectory,
+          unityAssets: assetPlan?.plan ?? retainedAssets, unityOnly: assetPlan?.unityOnly,
+          autoAssets: !assetPlan && !retainedAssets && limits.externalAssets.includes("large-game-v1"), delivery: retainedAssets ? planDelivery(saved!.unityAssets) : undefined }));
         // The same bytes are already being checked: follow that deploy rather than
         // spend a second scan on an identical build.
-        if (!key && !restarted && saved && !saved.terminal && saved.uploaded && (saved.unityAssets?.inputDigest ?? saved.request.sha256) === (prepared.archive.unityAssets?.inputDigest ?? prepared.archive.sha256)) resume = true;
+        if (!key && !restarted && saved && !saved.terminal && saved.uploaded && (saved.unityAssets?.inputDigest ?? saved.request.sha256) === (prepared.archive.unityAssets?.inputDigest ?? prepared.archive.sha256)) {
+          resume = true;
+          await prepared.archive.dispose();
+        }
       }
       if (!resume) {
         const { manifest, archive } = prepared!;
-        await timed("cache", () => cacheArchive(root, archive.sha256, archive.bytes, archive.packaging));
-        freshArchive = archive.bytes;
+        await timed("cache", () => cacheArchive(root, archive.sha256, archive, archive.packaging));
+        freshArchive = { file: join(root, ".opengame", `${archive.sha256}.zip`), byteSize: archive.byteSize, sha256: archive.sha256, blocks: archive.blocks };
+        /* An archive that goes in one PUT, or by the file transport, is small, and is kept
+           in memory from here as it always was, so this attempt sends exactly the bytes it
+           checked even if the cached copy is overwritten under it. A larger one is read a
+           part at a time, each block checked against the digest taken as it was written. */
+        if (archive.byteSize <= Math.max(LIMITS.platform.deploy.multipart.aboveBytes, archive.incremental || archive.unityAssets ? LIMITS.platform.incrementalUpload.archiveBytesMax : 0)) {
+          freshArchive.bytes = await wholeArchive(freshArchive);
+        }
         const previousHash = state.deploy?.request.sha256;
         const provisional = await provisionalFields(root, manifest);
-        state.deploy = { key: restarted || !key ? randomUUID() : key, ...(archive.unityAssets ? { transport: planDelivery(archive.unityAssets), unityAssets: archive.unityAssets } : archive.incremental ? { transport: "files" as const } : {}), request: { ...(state.gameId ? { gameId: state.gameId } : {}), byteSize: archive.bytes.byteLength,
+        state.deploy = { key: restarted || !key ? randomUUID() : key, ...(archive.unityAssets ? { transport: planDelivery(archive.unityAssets), unityAssets: archive.unityAssets } : archive.incremental ? { transport: "files" as const } : {}), request: { ...(state.gameId ? { gameId: state.gameId } : {}), byteSize: archive.byteSize,
           fileCount: archive.fileCount, sha256: archive.sha256,
           // Build commands are local instructions, not game metadata. The cover is not
           // anything any more: OpenGame makes it after approval (archive.ts says so once).
@@ -762,7 +851,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
         // the words, and the server refuses it again without them.
         const statement = assetUpload ? acceptedStatement(delivery, flags["accept-statement"]) : undefined;
         const fileUpload = pending.transport === "files" || assetUpload;
-        const archiveBytes = fileUpload ? freshArchive ?? await timed("restore", () => cachedArchive(root, pending)) : undefined;
+        const archiveBytes = fileUpload ? await wholeArchive(freshArchive ?? await timed("restore", () => cachedArchive(root, pending))) : undefined;
         const fileManifest = archiveBytes ? filesFromArchive(archiveBytes) : undefined;
         const uploadFiles = assetUpload ? unityFileUnion(fileManifest!, pending.unityAssets!.assets, delivery) : fileManifest;
         // Unity keeps the route it always had; every later kind uses the general one.
@@ -784,7 +873,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
            now: a 1 GiB upload takes minutes, and somebody watching it should not need the
            terminal to find out how it went. Said once per deploy. */
         if (announced !== op.id) { announced = op.id; const url = deploymentUrl(api, op.id);
-          output.emit({ type: "notice", code: "deployment_page", url, message: `Follow this deploy at ${url}` }); }
+          output.emit({ type: "notice", code: "deployment_page", url, message: `Follow this deploy at ${url}${detailsLine(pending.request.provisional)}` }); }
         sayJam(op);
         if (op.state === "uploading" && fileUpload) {
           response = await timed("upload", () => uploadMissingFiles(api, token, op.id, archiveBytes!, uploadFiles!, response.files, output,
@@ -796,10 +885,12 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
           if (response.uploaded !== true && response.multipart !== undefined) {
             // Past multipart.aboveBytes the archive goes up in parts (archive-parts.ts),
             // and a rerun of the same deploy sends only the parts the server does not hold.
-            const bytes = freshArchive ?? await timed("restore", () => cachedArchive(root, pending));
-            await timed("upload", () => uploadArchiveParts(api, token, op.id, bytes, response.multipart, output));
+            const archive = freshArchive ?? await timed("restore", () => cachedArchive(root, pending));
+            await timed("upload", () => uploadArchiveParts(api, token, op.id, archiveSource(archive), response.multipart, output));
           } else if (response.uploaded !== true) {
-            const bytes = freshArchive ?? await timed("restore", () => cachedArchive(root, pending));
+            // One PUT is at most multipart.singlePutBytesMax, so this is the one place the
+            // whole archive is read into memory, and only a small one.
+            const bytes = await wholeArchive(freshArchive ?? await timed("restore", () => cachedArchive(root, pending)));
             const tries = LIMITS.platform.deploy.uploadAttemptsMax;
             // An interrupted PUT is retried here, each time with a fresh URL from the
             // server's own retry endpoint, which also answers `uploaded` when the bytes

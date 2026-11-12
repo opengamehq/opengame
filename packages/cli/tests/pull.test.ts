@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, rm, writeFile, symlink } from "node:fs/promises";
@@ -174,7 +175,7 @@ test("a cover named in opengame.json is not uploaded, and nothing about its file
     await symlink(join(root, "cover.png"), join(root, "linked.png"));
     await writeFile(join(root, "huge.png"), Buffer.alloc(LIMITS.platform.moderation.imageBytesMax + 1));
     const plain = await createArchive(join(root, "dist"), metadata, new Output(true, () => {}));
-    assert.deepEqual(Object.keys(unzipSync(plain.bytes)), ["index.html"]);
+    assert.deepEqual(Object.keys(unzipSync(readFileSync(plain.file))), ["index.html"]);
     for (const cover of ["cover.png", ".env.png", "linked.png", "../cover.png", "huge.png", "missing.png"]) {
       const events: { type: string; code?: string; message?: string }[] = [];
       const archive = await createArchive(join(root, "dist"), { ...metadata, cover }, new Output("jsonl", line => events.push(JSON.parse(line))));
@@ -185,6 +186,6 @@ test("a cover named in opengame.json is not uploaded, and nothing about its file
     await writeFile(join(root, "dist/wrapper/index.html"), '<!doctype html><title>Game</title><img src="cover.png">');
     await writeFile(join(root, "dist/wrapper/cover.png"), picture);
     const inside = await createArchive(join(root, "dist"), { ...metadata, cover: "dist/wrapper/cover.png" }, new Output(true, () => {}));
-    assert.deepEqual(Object.keys(unzipSync(inside.bytes)).sort(), ["cover.png", "index.html"]);
+    assert.deepEqual(Object.keys(unzipSync(readFileSync(inside.file))).sort(), ["cover.png", "index.html"]);
   } finally { await rm(root, { recursive: true, force: true }); }
 });

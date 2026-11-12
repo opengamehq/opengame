@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "d96c7aaeb1690cd5b6527f02babadc58eca8ccd3"
+    "commit": "8f8269360f98648cdfae97bccc53a99f8d7aceef"
   },
-  "digest": "c15265ce9f5e4a0e9057fb91c7ab7cdf048e6f1541f09756027ab4ca3de65ce2",
+  "digest": "bd11c200ccf56a06bb9bef660f38d9e9777979c6f1b0d211a624acb60c93ae3c",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -183,14 +183,14 @@
     },
     {
       "path": "api-reference/openapi.json",
-      "bytes": 1345735,
-      "sha256": "c97a27175d106393dc4c92bfd903cfabff817e8dfb5ff20af938598f565f13ce",
+      "bytes": 1378590,
+      "sha256": "22e13e914fe5bbf784e6661265784d18f4f2e3fa79cc8c4e8d40a602423b5d6e",
       "executable": false
     },
     {
       "path": "infra/worker/src/content-types.ts",
-      "bytes": 9941,
-      "sha256": "f6190fe174732ea41049e096c3d48cd33b48ea8f10a0938de29776c1f55de39f",
+      "bytes": 12975,
+      "sha256": "42718f7e33b1c022d3272e67711edb3197a293720895cd66f4fbcc43240c344a",
       "executable": false
     },
     {
@@ -208,7 +208,7 @@
     {
       "path": "package-lock.json",
       "bytes": 27908,
-      "sha256": "4ecb1e6055dc2758b6c5571b5c7682f394f365a0ce439c2402723ac91202620a",
+      "sha256": "eff4c7778b349c0cd5708ffe69f19bb48d885e88117c71bf914fa91a6df8b66d",
       "executable": false
     },
     {
@@ -219,20 +219,20 @@
     },
     {
       "path": "packages/cli/AGENTS.md",
-      "bytes": 19182,
-      "sha256": "32ca65a5bceb7340d1d1626c21a454d80e90d2576370e0263092ca93b45a038b",
+      "bytes": 20026,
+      "sha256": "a00d10297a86c2e8858fac89d10bd6a29413c350a9d77c5c2103708520a600da",
       "executable": false
     },
     {
       "path": "packages/cli/CHANGELOG.md",
-      "bytes": 7589,
-      "sha256": "e8c9c8276cf69e9e64bec91b492f34f9af627a60f76eed705dc4437118622e1d",
+      "bytes": 8519,
+      "sha256": "8074717e35807b9afb8e49570466774ea023e7ce159d3a84491829af42fb3558",
       "executable": false
     },
     {
       "path": "packages/cli/README.md",
-      "bytes": 10282,
-      "sha256": "03cc3276e620be00e35131bc461fc9c0a4b2c6d98e09a1e34f5ea1d7c49a8c7a",
+      "bytes": 10819,
+      "sha256": "a4e34afdeca2fd0edf0f0a94cddff27f20b8416f267e380cc3d10236ac410f1e",
       "executable": false
     },
     {
@@ -279,14 +279,14 @@
     },
     {
       "path": "packages/cli/src/archive-parts.ts",
-      "bytes": 8263,
-      "sha256": "956ea3942d5b987f8f4d94cb0c9f439f3e3a88a963f7c7eab28734639893f0b2",
+      "bytes": 9322,
+      "sha256": "cbedc43ca17776e34b91d3ed2a04346132282826c583236eb0b80068d2862c8c",
       "executable": false
     },
     {
       "path": "packages/cli/src/archive.ts",
-      "bytes": 17380,
-      "sha256": "742b71077c7fe2ed1ad7d4061b99c80e31c580f0a70652414fe55dffee2967f3",
+      "bytes": 25413,
+      "sha256": "add51387fc86a7e0aed20f7185cbf59d825a9b163e703e57ce11254af96474a5",
       "executable": false
     },
     {
@@ -321,20 +321,20 @@
     },
     {
       "path": "packages/cli/src/cli.ts",
-      "bytes": 56435,
-      "sha256": "d09303feac839f2b92318ad6f6c815e18113b0a4060b7bf5e7213e05c8f01bb5",
+      "bytes": 57156,
+      "sha256": "7243fde3831816899b4a3e010e7f0437d9237da023675cea27406d1f15730afb",
       "executable": false
     },
     {
       "path": "packages/cli/src/credentials.ts",
-      "bytes": 19612,
-      "sha256": "0d52719aff1ca5b8947769d2ac5d5dd728ca2202f226b543b79941b1e5f8b2df",
+      "bytes": 20367,
+      "sha256": "93a0840c0628248b987a261efdc62ba18223fee3fdc4119fa9b5faca1ed0a43c",
       "executable": false
     },
     {
       "path": "packages/cli/src/deploy.ts",
-      "bytes": 73443,
-      "sha256": "af2dd47db254d1a559310b0b99416dc21b1cf37c576eeb14d648befee247b272",
+      "bytes": 80430,
+      "sha256": "a8b3c1e68fbf5b2d7e3fcd585ca9d9ec3d6157954e3f4a4849db350cdfccadf3",
       "executable": false
     },
     {
@@ -399,14 +399,14 @@
     },
     {
       "path": "packages/cli/src/incremental.ts",
-      "bytes": 19944,
-      "sha256": "7ff2e63f6544217a11ed7b6f3611578f2f5d17c08174aff2c0a71f723b705d6e",
+      "bytes": 20770,
+      "sha256": "fe479237278aacf2509b6bee933e5d9f5554f8209aeaa7eb39a10c23fa24676a",
       "executable": false
     },
     {
       "path": "packages/cli/src/init.ts",
-      "bytes": 36929,
-      "sha256": "fe27f259e7078911b2e6605cdaf492a83bb00510a10b858434fdb824d90e5142",
+      "bytes": 36416,
+      "sha256": "e11d1b3a77e33f7f2daabfc9cfb79db41aa006d6729440e50c31c0fd11764c05",
       "executable": false
     },
     {
@@ -429,8 +429,8 @@
     },
     {
       "path": "packages/cli/src/limits-allowlist.json",
-      "bytes": 7683,
-      "sha256": "2914507ccb7c45ab20729835bd0b3b054e1c8eafdb5b45f290150ccb1e79f9cf",
+      "bytes": 7793,
+      "sha256": "2005ad9dc176a46213d578c2c6204404e7f3720ed41e1a92f65c0d005a9bb878",
       "executable": false
     },
     {
@@ -459,8 +459,8 @@
     },
     {
       "path": "packages/cli/src/packaging-receipt.ts",
-      "bytes": 2503,
-      "sha256": "b9a82f73ee80dc80ac17b7ecf6b3e4c9429de9bea16ba7da1f5397ecff5146fb",
+      "bytes": 2526,
+      "sha256": "33cf1292e82197caca1160daf30fcd976fc08af424f8081382225fb6887538b3",
       "executable": false
     },
     {
@@ -471,8 +471,8 @@
     },
     {
       "path": "packages/cli/src/preflight.ts",
-      "bytes": 5015,
-      "sha256": "bdcc6be6afdb6ca31d50268cbf35f6fa3e77df4c5522e51fe67bfa73e2435f66",
+      "bytes": 6344,
+      "sha256": "23a0989f2d5486f92648bb09288daa3e5fb6f5a7e5be3a45fcf9fda835ee1110",
       "executable": false
     },
     {
@@ -513,20 +513,26 @@
     },
     {
       "path": "packages/cli/src/safe-fs.py",
-      "bytes": 11448,
-      "sha256": "d1b3106f2f7ee73bbc30f156b25300533b011a2f4c153096732153b13084b30b",
+      "bytes": 14572,
+      "sha256": "4e3a78dbf30a566f3124e0c67bd716fc9bad6e9d4993b572c9e2c6580cd82e93",
       "executable": false
     },
     {
       "path": "packages/cli/src/safe-fs.ts",
-      "bytes": 20040,
-      "sha256": "da361298101b5027d3b5abded77c96f3ecef44100643cee1474f2054a5b65c2a",
+      "bytes": 22313,
+      "sha256": "d2559e6ca5e3fccb8fd8a76c400eb18f7b5af5dcbcd84fc647329e4a61c854e5",
       "executable": false
     },
     {
       "path": "packages/cli/src/skills.ts",
       "bytes": 22884,
       "sha256": "669d08880b082b0d3d79daa524889553d362e75dfc2983950614e0d6a3c340b5",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/src/snapshot.ts",
+      "bytes": 10231,
+      "sha256": "a3f359defd7d5f7bd32c6a19b7c2d3f275785ae5c34deaa46a23fad837d57ae0",
       "executable": false
     },
     {
@@ -549,8 +555,8 @@
     },
     {
       "path": "packages/cli/src/submit.ts",
-      "bytes": 29638,
-      "sha256": "2220d41f6617cbcb2c406ffca3d0c91d041a5eca7ff88ec8a81763774463a615",
+      "bytes": 28531,
+      "sha256": "0b734a7f0d17940b9b366da7cd9d9df80a220782759ab05d1899b0d391d124af",
       "executable": false
     },
     {
@@ -567,8 +573,8 @@
     },
     {
       "path": "packages/cli/src/unity-assets.ts",
-      "bytes": 24124,
-      "sha256": "29261e2fb2dfa1145c4e586ef386400c24e9eb7cf74e83539b3fe6e88e20ba37",
+      "bytes": 24245,
+      "sha256": "b6e88ea93b2ca3f4bf180b675ec37a86d7b6949cad367f847fa73f787e37be9e",
       "executable": false
     },
     {
@@ -585,8 +591,8 @@
     },
     {
       "path": "packages/cli/src/vendor.ts",
-      "bytes": 31588,
-      "sha256": "2b2c0e724938e10a7ac1214e5cb5401e47e88cf1ba4c51e65a16e9474c752dbf",
+      "bytes": 31737,
+      "sha256": "d61ad30fed00ad52feded507ccc95169eddc66a856887445acf02cb9d10efef3",
       "executable": false
     },
     {
@@ -669,14 +675,20 @@
     },
     {
       "path": "packages/cli/tests/archive-paths.test.ts",
-      "bytes": 6015,
-      "sha256": "e85fd94ed94eb7513a694e237fa974c4e564aba0ff65791683ee9ccaef1de9b8",
+      "bytes": 6100,
+      "sha256": "93f85c9e012a4aad2a4841382d6951b504630a56c4f132a88f6e3f7c2baa2a7e",
       "executable": false
     },
     {
       "path": "packages/cli/tests/auth.test.ts",
-      "bytes": 27489,
-      "sha256": "a15316909863e7405deb80e46efeebc5ff8449c62c7555f9d3e6b9f99fdc5574",
+      "bytes": 28596,
+      "sha256": "a56a48e50cb5cbddb109b718a095de1edd574a3df96941728b9a9fd3ddcc1b5f",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/big-upload.test.ts",
+      "bytes": 12451,
+      "sha256": "57cbf290d9eb01d177b63901eabe29560a0a5d34616368286f9722753614d8fe",
       "executable": false
     },
     {
@@ -705,26 +717,26 @@
     },
     {
       "path": "packages/cli/tests/build-output.test.ts",
-      "bytes": 18193,
-      "sha256": "57facd41cb60c3d8ffa203dd2920a6764297d16f7723a3ca98d147d65c7cdfac",
+      "bytes": 18187,
+      "sha256": "bedaa366384e408a90e35d2c585e666f86e9afec0b9c08e6f44de338dc2b118e",
       "executable": false
     },
     {
       "path": "packages/cli/tests/compressed-assets.test.ts",
-      "bytes": 7419,
-      "sha256": "2506ca5e793a945f59127a7a9627670524c33e8c2fe9daf8dc4ebffc93765e5c",
+      "bytes": 7472,
+      "sha256": "a77f5d213a91c2db26af0122863cf744e7186ed837f3fed1a64f5cf0627b0125",
       "executable": false
     },
     {
       "path": "packages/cli/tests/deploy.test.ts",
-      "bytes": 42974,
-      "sha256": "c3f70d98a150cf788d63814a7888b88b700c15beb6a5bfba5973dce98be5ede3",
+      "bytes": 43027,
+      "sha256": "bb30f2e4a5b622d54995c133b6a303e0ae18fb40b5c1848831d89d6db49c7a3a",
       "executable": false
     },
     {
       "path": "packages/cli/tests/dev.test.ts",
-      "bytes": 34314,
-      "sha256": "9c04ba6626ab24cdc19229fc2572461b341e558fdaa1c707c8607b6e83d08895",
+      "bytes": 34298,
+      "sha256": "b2931dbadc521d0ce8de56d8d92ee27c1106a49393a8d2288ffadeaee9512227",
       "executable": false
     },
     {
@@ -741,8 +753,8 @@
     },
     {
       "path": "packages/cli/tests/environments.test.ts",
-      "bytes": 35213,
-      "sha256": "ee39ed5e3160479177c317b4c2f811bb75cc181f8968f576821c1c49dbeafccf",
+      "bytes": 36206,
+      "sha256": "b3423409412c5f4c938622b828805cbcc89f2d5242929e638f6ac5ca03da8390",
       "executable": false
     },
     {
@@ -974,6 +986,12 @@
       "executable": false
     },
     {
+      "path": "packages/cli/tests/fixtures/pack-memory.ts",
+      "bytes": 1007,
+      "sha256": "c6a5dfb4feeccfcf5771c48ec9bb6dbf671b2310fe8f968a704cffb2e5823002",
+      "executable": false
+    },
+    {
       "path": "packages/cli/tests/games.test.ts",
       "bytes": 23476,
       "sha256": "d4fa587ddd1815109d17f3f2551327fc485ace411b709f7c85d67a169301d41b",
@@ -981,14 +999,14 @@
     },
     {
       "path": "packages/cli/tests/incremental.test.ts",
-      "bytes": 17228,
-      "sha256": "c3c48d431539c343e067db9e19f5dcdc129c7eae3e608baf229d10c0760ecfbe",
+      "bytes": 17220,
+      "sha256": "ddf5e3a71d2f703764d4001bcc94f01b051c42f0fd802973f0405eb3d8065b10",
       "executable": false
     },
     {
       "path": "packages/cli/tests/init-guesses.test.ts",
-      "bytes": 15240,
-      "sha256": "5043c51db1a65fa2d5126a55770676064ae3ced35f674d4b481a8005e37feaa1",
+      "bytes": 19614,
+      "sha256": "96fb4f739c4b61c2199869f004e63a8e6dba098d96b15758e43f795fb210daa6",
       "executable": false
     },
     {
@@ -1005,8 +1023,8 @@
     },
     {
       "path": "packages/cli/tests/kinds.test.ts",
-      "bytes": 13855,
-      "sha256": "eaaf17c6562de07a0f7f41320c5cfdb650af85f84471b8d8ca7975c17590aac2",
+      "bytes": 11386,
+      "sha256": "154c564e3d64ba8a53808a602b9b707a58ef3feaaf6f7e9fac5c128b0139ffb3",
       "executable": false
     },
     {
@@ -1083,14 +1101,14 @@
     },
     {
       "path": "packages/cli/tests/pull.test.ts",
-      "bytes": 14306,
-      "sha256": "ed8c82319d09c3e528a87a8128f7f9f29e9a799a2b50b4786f3678f3b5816abf",
+      "bytes": 14372,
+      "sha256": "7cc7cc19772fdbd61701bdb19c5f76602dd47e91fb5a3705fbd840c6ad479079",
       "executable": false
     },
     {
       "path": "packages/cli/tests/raw-admission.test.ts",
-      "bytes": 8564,
-      "sha256": "21bc09f9cc895804f34ac08504f84f352658c32e7abaeed6d7da86b178bd94f0",
+      "bytes": 8650,
+      "sha256": "ea9d64e758e33f5b5342876961028428fbd5e3cd682a7af215e99b8bc79d9b3a",
       "executable": false
     },
     {
@@ -1149,8 +1167,8 @@
     },
     {
       "path": "packages/cli/tests/source-settings.test.ts",
-      "bytes": 14970,
-      "sha256": "f7e82396fc8ddc214ce8091df6d55b8ef24d89b3ce45c81f91648755c7a69077",
+      "bytes": 15007,
+      "sha256": "a34889abb1e9653b21dda0d6bd959d9eb0f695c4e2e4f0947e63f5b9bb1949e7",
       "executable": false
     },
     {
@@ -1179,8 +1197,8 @@
     },
     {
       "path": "packages/cli/tests/submit.test.ts",
-      "bytes": 48021,
-      "sha256": "adcf13d4a76980123d6c2ce731ff109c32a65e96ab22303b865a024869da6caf",
+      "bytes": 48331,
+      "sha256": "e0defa33b33c2c9444296735091cda5eacd6d96c68a48d892a586aa3354da0ba",
       "executable": false
     },
     {
@@ -1197,8 +1215,8 @@
     },
     {
       "path": "packages/cli/tests/unity-assets.test.ts",
-      "bytes": 36550,
-      "sha256": "6ee97c5329150e2382276842dfe16bd34c21496497e2def226efd3facc07a0b6",
+      "bytes": 36612,
+      "sha256": "37b02cdcb26833ca623254237486a33e78ce5293c09fa5b4d89bc0400433bcd8",
       "executable": false
     },
     {
@@ -1245,8 +1263,8 @@
     },
     {
       "path": "packages/preflight/src/defold-archive.ts",
-      "bytes": 17836,
-      "sha256": "1127e9e0f2160eeabd7a1811f9f372ff54f5a8f8e914c3f225ef92f97dec76d5",
+      "bytes": 18142,
+      "sha256": "398f60f5f90bf394bdbdd14975a95bc2ac66cfddcc431ca8d087d10ed58a8778",
       "executable": false
     },
     {
@@ -1281,8 +1299,8 @@
     },
     {
       "path": "packages/preflight/src/index.ts",
-      "bytes": 231345,
-      "sha256": "a6fa77821300a8908b70a288e0cb0c38b678d4ba966a072aa12d1f09ae5117d4",
+      "bytes": 231617,
+      "sha256": "2e0d54b55e8e3ac8ac71b2be95788403114407131f5ec34b8911cbce9ab02e58",
       "executable": false
     },
     {
@@ -1311,8 +1329,8 @@
     },
     {
       "path": "packages/preflight/src/raw-runtime.ts",
-      "bytes": 25397,
-      "sha256": "718a2f6342ddca00543a76f39734a2bec11b607d4822c8a1c4613b1ebecb8f4a",
+      "bytes": 25603,
+      "sha256": "06cdf93bd0a9cf863a10dcdd34a62acc5b00018e35201f76051acec50ba6d7ee",
       "executable": false
     },
     {
@@ -1503,8 +1521,8 @@
     },
     {
       "path": "packages/preflight/tests/large-assets.test.ts",
-      "bytes": 26186,
-      "sha256": "781bf50c8dc5c21efd016a533a13687b32b74092b8ad67720e5391d1585f7237",
+      "bytes": 26902,
+      "sha256": "e57fa4ffda5dd9aed545d97d7528afe0a15798d10c6820a008bb3f310c86ce5f",
       "executable": false
     },
     {
@@ -1575,8 +1593,8 @@
     },
     {
       "path": "packages/protocol/src/bootstrap.ts",
-      "bytes": 3139,
-      "sha256": "9c46a6fef591bce51e3c626665f39e4f44d8d8eb3db2c1065ab1faf46ebf9c64",
+      "bytes": 3551,
+      "sha256": "6243b95451f0bd0410f91db29060185064d2dbb42d7ebcd84348459467e1a2e7",
       "executable": false
     },
     {
@@ -1587,8 +1605,8 @@
     },
     {
       "path": "packages/protocol/src/deploy-source.ts",
-      "bytes": 3228,
-      "sha256": "193ab4f4633dd0e2578dc6b4882b8d0cf7579d110157deaa7402ff27bb427c28",
+      "bytes": 4183,
+      "sha256": "86e4f1c2a9d5aceee8b88a7da073c4bef43f3470aa8bdcb50467ece1e3dd0911",
       "executable": false
     },
     {
@@ -1599,8 +1617,8 @@
     },
     {
       "path": "packages/protocol/src/errors.ts",
-      "bytes": 54976,
-      "sha256": "0d17314c34203ffa4a35ef406676f401e5bbfbe2c5990d6e1ebf810a82b7d21e",
+      "bytes": 54990,
+      "sha256": "c39be1d0d25cc337e56d584f894e19a8353b9dc85d03ede3794c3079e4c97272",
       "executable": false
     },
     {
@@ -1653,8 +1671,8 @@
     },
     {
       "path": "packages/protocol/src/review.ts",
-      "bytes": 58793,
-      "sha256": "94bbff75d3689000fc0186feec5530b0cc1d4f277bf9c157703d0566e06f6e40",
+      "bytes": 59492,
+      "sha256": "823b641586834ee616c8ddd19b4bf03719247ebccee9d419da457ba582459413",
       "executable": false
     },
     {
@@ -1773,8 +1791,8 @@
     },
     {
       "path": "packages/sdk/AGENTS.md",
-      "bytes": 17112,
-      "sha256": "0241429196a39e788f618cbbe2bad0821b7836fcd577d17ec90c149d3ac0aac9",
+      "bytes": 17547,
+      "sha256": "9951062dd5b1fbc5e954f170f126037061e9b52b706b07325cdd8ec22c90f11d",
       "executable": false
     },
     {
@@ -1785,14 +1803,14 @@
     },
     {
       "path": "packages/sdk/CHANGELOG.md",
-      "bytes": 5884,
-      "sha256": "1af77a37e2f74b71a1247ce0530549402339c8ae6e7555f834c44518d879993c",
+      "bytes": 6675,
+      "sha256": "37f7d320f1de43cbfcd13958346375a945e8855e3c6efc9e2a928798da10ba73",
       "executable": false
     },
     {
       "path": "packages/sdk/README.md",
-      "bytes": 29454,
-      "sha256": "f212ea0f50d1b6c1f674b4c465af1e768437927a026019bf562b34280600a6aa",
+      "bytes": 30400,
+      "sha256": "5cf9984c45b68025736566c8e8169aa75560f7455ec8caf0df5fea9b25df55bf",
       "executable": false
     },
     {
@@ -1834,7 +1852,7 @@
     {
       "path": "packages/sdk/package.json",
       "bytes": 2290,
-      "sha256": "e29fb4904cc2a4957da0144d4f2435c2fdce58927aeb9747f147b155a30eba47",
+      "sha256": "28c377222ebbcd263583e7d3982d5e572eeb062c3210bdf4be86137cf883f227",
       "executable": false
     },
     {
@@ -1881,8 +1899,8 @@
     },
     {
       "path": "packages/sdk/src/index.ts",
-      "bytes": 41234,
-      "sha256": "6568737c7d22067cee1159b6d39146f0207035f1a21ff77382fed86e922960eb",
+      "bytes": 41507,
+      "sha256": "d49a462c0b42c23cbd4d3d16e24e621d556702ffc6e21afc0392b61e89a0eb71",
       "executable": false
     },
     {
@@ -1893,8 +1911,8 @@
     },
     {
       "path": "packages/sdk/src/leaderboards.ts",
-      "bytes": 32773,
-      "sha256": "15183ce64bbd5a017b8d7e5116d26f2b37ca0e9ba44e5d4db6a34ee12830b0d6",
+      "bytes": 36932,
+      "sha256": "d9284c2f8fd39aa718db3efed06e1e86618abda7d5a64811b16ae2f89a841b10",
       "executable": false
     },
     {
@@ -1917,8 +1935,8 @@
     },
     {
       "path": "packages/sdk/src/radio.ts",
-      "bytes": 18251,
-      "sha256": "c233f7133caadab506e8f9393c95c2036467dd8770cea51073c41796469dbf32",
+      "bytes": 18298,
+      "sha256": "80e17929ea10270f262a39e5b9c3cb51be1d694cbf00280d73bd0edc470f50a6",
       "executable": false
     },
     {
@@ -1965,8 +1983,8 @@
     },
     {
       "path": "packages/sdk/tests/core.test.mjs",
-      "bytes": 58178,
-      "sha256": "0a2457e70e4276bec2971f05d3717e9d352459e0e609ef29ae8201bbe9833537",
+      "bytes": 58187,
+      "sha256": "61c749508c679ff94f8c55d1c62d41073423743d21b2125c9b2fbe1c788c3a12",
       "executable": false
     },
     {
@@ -2055,8 +2073,8 @@
     },
     {
       "path": "packages/sdk/tests/leaderboards.test.mjs",
-      "bytes": 26484,
-      "sha256": "73a801c57156242c54db770e6c71e568956a7b280121f456cdee79f1d4675528",
+      "bytes": 29981,
+      "sha256": "935ef622a8e58a4146c3e8e906de11a6e9d806e3667c38fa47c75ba1b1352d20",
       "executable": false
     },
     {
@@ -2103,32 +2121,32 @@
     },
     {
       "path": "packages/shared/genres.json",
-      "bytes": 7934,
-      "sha256": "3bcb8cdb448e0b767e69d1d2178bbe5fad8b3e477c9645c5a29e283b0a528bea",
+      "bytes": 14289,
+      "sha256": "e34e8e95a67dcd625ce146f767ec8bb27752122986f391fa711ec946b1c6a0ad",
       "executable": false
     },
     {
       "path": "packages/shared/launch.json",
       "bytes": 339,
-      "sha256": "08aebef0e962b99c7fe179950c42bd6ae5c694cdc649905a53c18db0ca42809f",
+      "sha256": "eda35fc6da5d7192ccf572cf0ac78b5ff5f80e34645740570dd4830b36bd0a16",
       "executable": false
     },
     {
       "path": "packages/shared/limits.browser.json",
-      "bytes": 47322,
-      "sha256": "f8511da45f9a6ccba9047ad908abc7c004eeb83fac8127a367fb46cf5067ed0e",
+      "bytes": 47425,
+      "sha256": "d4293ad0db1316bb0cdd280a6f9214c6b56132ff2a258aa1ea5e693788899384",
       "executable": false
     },
     {
       "path": "packages/shared/limits.json",
-      "bytes": 63955,
-      "sha256": "996f56b70e2a72d9783a46d33e66d0b96749870385e90435ede4d4b3f9dc9624",
+      "bytes": 64028,
+      "sha256": "151344878f3e5be1cbf3d2e2e6bfa3162afd0755a00c6cb467bf74fd78df8e26",
       "executable": false
     },
     {
       "path": "packages/shared/limits.values.json",
-      "bytes": 63955,
-      "sha256": "996f56b70e2a72d9783a46d33e66d0b96749870385e90435ede4d4b3f9dc9624",
+      "bytes": 64028,
+      "sha256": "151344878f3e5be1cbf3d2e2e6bfa3162afd0755a00c6cb467bf74fd78df8e26",
       "executable": false
     },
     {
@@ -2325,8 +2343,8 @@
     },
     {
       "path": "packages/shared/src/genres.ts",
-      "bytes": 4596,
-      "sha256": "91c25dbfc1fda57c9bcecbaf7b110aa31e2191b8da9396cecb96dcf8b6f3b9b0",
+      "bytes": 6835,
+      "sha256": "5d7bcfa11c20f35f95fd87e4ae5205eccd81610aa3363521ae46abc47b16eba7",
       "executable": false
     },
     {
@@ -2349,14 +2367,14 @@
     },
     {
       "path": "packages/shared/src/large-assets.ts",
-      "bytes": 15561,
-      "sha256": "51f20ea212537216c0d77b5b71f76a9d92de5e855325cabbb21f320760e73cd4",
+      "bytes": 15624,
+      "sha256": "1c5fea661957f63310b2b403705b684b25402236de8002956c754d9f384906a6",
       "executable": false
     },
     {
       "path": "packages/shared/src/launch-clock.ts",
-      "bytes": 15963,
-      "sha256": "6653d5c137e6c06f8742bd04047880a1fad88112189f501c9fe912b551a844fd",
+      "bytes": 15978,
+      "sha256": "8d281b60f1f532ccb5ada5f71b39e160f4d764aaaea864130c142e2570c91dfb",
       "executable": false
     },
     {
@@ -2409,8 +2427,8 @@
     },
     {
       "path": "packages/shared/src/serving-inventory.ts",
-      "bytes": 3609,
-      "sha256": "9c97d4a51d1cab1421ab9cc08692f4071e39d6444bec0875fc398f4d0e733cc0",
+      "bytes": 5182,
+      "sha256": "ce0c3adcaf95beac073f25f4137d82c64680235171ea1ad428277378452672bf",
       "executable": false
     },
     {
@@ -2487,8 +2505,8 @@
     },
     {
       "path": "packages/skills/CHANGELOG.md",
-      "bytes": 1250,
-      "sha256": "79fa5175322facef81e808269fef7beb903bb8bbc67690bd42e42b637ebb9273",
+      "bytes": 2182,
+      "sha256": "d3142129f8b0df365bc552492218aa31bb60e6698dd96adcc9f291b2c18859c8",
       "executable": false
     },
     {
@@ -2518,7 +2536,7 @@
     {
       "path": "packages/skills/package.json",
       "bytes": 1488,
-      "sha256": "dde82843e32ae947f6e3b55b28885dbe2d50c10fd258636bf84b13643d902144",
+      "sha256": "c1db429831f563a6809e227f0ae60df05083ed7dffa135ddabe1246271a93a6d",
       "executable": false
     },
     {
@@ -2529,8 +2547,8 @@
     },
     {
       "path": "packages/skills/skills.lock.json",
-      "bytes": 6381,
-      "sha256": "3c25b588ac1c9c0b03eb3dc883b8b788e8749c651a7c6f8a29ffdca6ab8cff5d",
+      "bytes": 6382,
+      "sha256": "bb8d1e6518482c116d059004e1961aee0af4d02df0992f03527e9642aece5964",
       "executable": false
     },
     {
@@ -2547,14 +2565,14 @@
     },
     {
       "path": "packages/skills/skills/opengame-api/CHANGELOG.md",
-      "bytes": 565,
-      "sha256": "b6442be25803602c40dc8d2574e2a314ec0b1fa17321e096150a9ded9b5ad791",
+      "bytes": 696,
+      "sha256": "cf14806a7fc708f663586425f4d57664492cb6ead92e1ba3bf19d51f6b2683c1",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-api/SKILL.md",
       "bytes": 4247,
-      "sha256": "33b6d9237c3672ba419080e7fcdd7acbb02cd9a84ef8d40a15159d0ae25fc838",
+      "sha256": "9d37f4e8fe7e08f55664ca6ce4a43a69d4a47a55404a7c35f15d3c93d19fa9af",
       "executable": false
     },
     {
@@ -2649,26 +2667,26 @@
     },
     {
       "path": "packages/skills/skills/opengame-cli/CHANGELOG.md",
-      "bytes": 1714,
-      "sha256": "8b4e71b9797d3b83e998e088e92034058d6365d4c33ef176cf5cebed5d255c79",
+      "bytes": 2045,
+      "sha256": "178049b668051778b431c935f30ceac8bc4d5b087e7e4574a0aa5eaf5db919d8",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-cli/SKILL.md",
-      "bytes": 10750,
-      "sha256": "631b961d0aaf42ed7ec97fc9115723ab2216778989bf8aa5880f08ee29a3a6b7",
+      "bytes": 10922,
+      "sha256": "c3979f37b021bcabf161040529684823adc33ab29ace77239f634b2d12dbf200",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-deploy/CHANGELOG.md",
-      "bytes": 2407,
-      "sha256": "a6cad8351f1121bd83a41a11d129359e3a71754ad0d3e246e3665b733f548ec0",
+      "bytes": 3087,
+      "sha256": "7760dd8366503d376f828085eaa0aadf1c69e78b8856b0cc9186d20388f2bbdc",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-deploy/SKILL.md",
-      "bytes": 12184,
-      "sha256": "72237742e8a1f383080949643c0b443c91db9a7413cd15343358f9465eee63bc",
+      "bytes": 12619,
+      "sha256": "2a7af07aeba752924efd6d5f858001e7a5d671eaa7d82651bcda0e71ddc539b6",
       "executable": false
     },
     {
@@ -2679,8 +2697,8 @@
     },
     {
       "path": "packages/skills/skills/opengame-deploy/references/manifest.md",
-      "bytes": 4552,
-      "sha256": "f94a3d810fd96e77e57f655fe9604fca86491a3f25f207aa91022e75ce073a63",
+      "bytes": 4937,
+      "sha256": "fe5c4f9f3f4a4f96538a4b3a26f489e2f74e75a6ac3f893509ee0d49f0f8c97a",
       "executable": false
     },
     {
@@ -2769,14 +2787,14 @@
     },
     {
       "path": "packages/skills/skills/opengame-jam/CHANGELOG.md",
-      "bytes": 659,
-      "sha256": "715661d98af32b568f35daddede7a8698d0750a08d09c3e4caeb57e617f3cbbe",
+      "bytes": 890,
+      "sha256": "addd638a44e87f315d393fc8506d5c0afedfc44301607b863117994f4e32b085",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-jam/SKILL.md",
       "bytes": 5974,
-      "sha256": "c156d0b1383b34d8969929a1b1057b9c6d54aa91a697490349f169dc9db36db3",
+      "sha256": "cecd001be7cf009203f0efbcfeb5d6500a226a62758ea27f0876fd26602e0862",
       "executable": false
     },
     {
@@ -2907,14 +2925,14 @@
     },
     {
       "path": "packages/skills/skills/opengame-router/CHANGELOG.md",
-      "bytes": 671,
-      "sha256": "23e1a0d60a33e3521b0a2bf6989ae9130e064a816c33ba0f05a172351cfcbbac",
+      "bytes": 802,
+      "sha256": "ef34c57240e8b100666e67ea777884c7c4e65508a239d9499c0cb5389b1eac0c",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-router/SKILL.md",
       "bytes": 2883,
-      "sha256": "b9cd9a08810ca6563132840e26cffbb01225b22d24ea6f24f854960b31e77924",
+      "sha256": "7a1768314313518a702e9312513f6e88d7d6121911ba3254f7ca93014239579f",
       "executable": false
     },
     {
@@ -2943,14 +2961,14 @@
     },
     {
       "path": "packages/skills/skills/opengame-sdk/CHANGELOG.md",
-      "bytes": 1788,
-      "sha256": "37d98206910c68cbafaa80d27db304010d1157931130994406845e592fed303c",
+      "bytes": 2065,
+      "sha256": "d0dacacd819d7057c8265c67e9371282836c76d76601525ea248c06680d30a02",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-sdk/SKILL.md",
-      "bytes": 16035,
-      "sha256": "1a3b66c09bd3bbbf691e06b18fa554e4d8d92984227ad70ccf061900bd89f64f",
+      "bytes": 16036,
+      "sha256": "c6470391c2276c654365abd948082db0ab8b62d44af8dcc5d56765d840b02695",
       "executable": false
     },
     {
@@ -2973,14 +2991,14 @@
     },
     {
       "path": "packages/skills/skills/opengame-sdk/references/leaderboards.md",
-      "bytes": 5505,
-      "sha256": "0364caa95714680266e7b22126662573a261f5646d0a96b975a2eacfb7ce0e10",
+      "bytes": 6147,
+      "sha256": "b649f3012818ecb94b7559103372a7ac482cf24083ff91a40bbfb4aec93c7c3e",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-sdk/references/radio.md",
-      "bytes": 4015,
-      "sha256": "3eaff2d4bfac4108005d4e202a50f0c3eacc96405cf0f72fc87e98cbe40e3b47",
+      "bytes": 4043,
+      "sha256": "51e1d5f160e4007d9f6caee9a808de51f82bfd2018ba025869c266b4fbd6672c",
       "executable": false
     },
     {
@@ -3063,8 +3081,8 @@
     },
     {
       "path": "packages/skills/tests/build.test.mjs",
-      "bytes": 27808,
-      "sha256": "34c430c93fa205254599f83d76da0549d515b258a964abe418e648b5bb844848",
+      "bytes": 28046,
+      "sha256": "e2c8c1048b30b29cb4505a7d745971b260fa1d1068e04c20251eac42d2d55b4b",
       "executable": false
     },
     {
@@ -3471,14 +3489,14 @@
     },
     {
       "path": "skills/opengame-api/CHANGELOG.md",
-      "bytes": 565,
-      "sha256": "b6442be25803602c40dc8d2574e2a314ec0b1fa17321e096150a9ded9b5ad791",
+      "bytes": 696,
+      "sha256": "cf14806a7fc708f663586425f4d57664492cb6ead92e1ba3bf19d51f6b2683c1",
       "executable": false
     },
     {
       "path": "skills/opengame-api/SKILL.md",
       "bytes": 4214,
-      "sha256": "5db95f592347bd391c8d03364994215ace4ffc63c7433ddbb17989f7255cde1c",
+      "sha256": "b93dbe0e69ec6004b4cdb1d83e30718d3e631ccf95cdedd00ac935a554040e40",
       "executable": false
     },
     {
@@ -3573,26 +3591,26 @@
     },
     {
       "path": "skills/opengame-cli/CHANGELOG.md",
-      "bytes": 1714,
-      "sha256": "8b4e71b9797d3b83e998e088e92034058d6365d4c33ef176cf5cebed5d255c79",
+      "bytes": 2045,
+      "sha256": "178049b668051778b431c935f30ceac8bc4d5b087e7e4574a0aa5eaf5db919d8",
       "executable": false
     },
     {
       "path": "skills/opengame-cli/SKILL.md",
-      "bytes": 10744,
-      "sha256": "5fb9980e516b888762180bd2179d3da795ca8c1a2b4cb01744741759daec54f1",
+      "bytes": 10916,
+      "sha256": "a233e44dde59b033654a22d3fb900bf5d8aa45cd2265dc4bd6dacd3e258f068f",
       "executable": false
     },
     {
       "path": "skills/opengame-deploy/CHANGELOG.md",
-      "bytes": 2407,
-      "sha256": "a6cad8351f1121bd83a41a11d129359e3a71754ad0d3e246e3665b733f548ec0",
+      "bytes": 3087,
+      "sha256": "7760dd8366503d376f828085eaa0aadf1c69e78b8856b0cc9186d20388f2bbdc",
       "executable": false
     },
     {
       "path": "skills/opengame-deploy/SKILL.md",
-      "bytes": 12045,
-      "sha256": "b1853489e576bf2d46b2fbddb160a943eef2005298a50a1378a81b4937f397bd",
+      "bytes": 12480,
+      "sha256": "dfd28b0c0296c14948d18c68b301dd2f6bc375de29d78356efda3758184e4a7f",
       "executable": false
     },
     {
@@ -3603,14 +3621,14 @@
     },
     {
       "path": "skills/opengame-deploy/references/manifest.md",
-      "bytes": 4833,
-      "sha256": "7c048c4060044208ffd9811e502ddbf0837f5d77fab3d56ed15b97cc550efab1",
+      "bytes": 5218,
+      "sha256": "3f651d06ca8e1aa7e9fc69c6c4b327f017661472cbadb692ba8ffad8f19da798",
       "executable": false
     },
     {
       "path": "skills/opengame-deploy/references/packaging.md",
       "bytes": 6619,
-      "sha256": "5d173c21c463c2370a803d8985376bb2a33f3239a24c5456dd63f24f1bfdb9b8",
+      "sha256": "82c2ec30ab27d6a08c167e09a4af68134e6ef4207859b9e8655d6213d4bb2114",
       "executable": false
     },
     {
@@ -3693,14 +3711,14 @@
     },
     {
       "path": "skills/opengame-jam/CHANGELOG.md",
-      "bytes": 659,
-      "sha256": "715661d98af32b568f35daddede7a8698d0750a08d09c3e4caeb57e617f3cbbe",
+      "bytes": 890,
+      "sha256": "addd638a44e87f315d393fc8506d5c0afedfc44301607b863117994f4e32b085",
       "executable": false
     },
     {
       "path": "skills/opengame-jam/SKILL.md",
       "bytes": 5832,
-      "sha256": "a66e2b7e186cb8be3e1ba20993ba7cf1e916221b25b62c18373ed107251a6ed0",
+      "sha256": "2c4145df9bc8ac28b1ccebf8889b12a39c83cca7c1a89df5a0fb4129fe8d31f7",
       "executable": false
     },
     {
@@ -3831,14 +3849,14 @@
     },
     {
       "path": "skills/opengame-router/CHANGELOG.md",
-      "bytes": 671,
-      "sha256": "23e1a0d60a33e3521b0a2bf6989ae9130e064a816c33ba0f05a172351cfcbbac",
+      "bytes": 802,
+      "sha256": "ef34c57240e8b100666e67ea777884c7c4e65508a239d9499c0cb5389b1eac0c",
       "executable": false
     },
     {
       "path": "skills/opengame-router/SKILL.md",
       "bytes": 2869,
-      "sha256": "66c669ef9b3116690a004fc074217cc51b60dbe6bafc0d5b5bc61669446583b3",
+      "sha256": "508c246139ba17b55ddac4cf6d544b26dd853f71a91c494d51532738d7db013b",
       "executable": false
     },
     {
@@ -3867,14 +3885,14 @@
     },
     {
       "path": "skills/opengame-sdk/CHANGELOG.md",
-      "bytes": 1788,
-      "sha256": "37d98206910c68cbafaa80d27db304010d1157931130994406845e592fed303c",
+      "bytes": 2065,
+      "sha256": "d0dacacd819d7057c8265c67e9371282836c76d76601525ea248c06680d30a02",
       "executable": false
     },
     {
       "path": "skills/opengame-sdk/SKILL.md",
-      "bytes": 16039,
-      "sha256": "5de8333cee644b3c2ae17bbdbda48337637e1c0fdff3eeafd1d24ad2bcca1ff0",
+      "bytes": 16041,
+      "sha256": "2a35ccbefce9194e63e8ec7c85a2a70cf3a5a06d534b8cab34dd3f6c9c6c0326",
       "executable": false
     },
     {
@@ -3897,14 +3915,14 @@
     },
     {
       "path": "skills/opengame-sdk/references/leaderboards.md",
-      "bytes": 5303,
-      "sha256": "7fcc49d4493958ddb305fd518f3d6514644ca1e2644111749949b09af9a8fe1b",
+      "bytes": 5945,
+      "sha256": "4439937932acd12fe0e8009fc6616621b0466e4292398005fe675c9a39b4f327",
       "executable": false
     },
     {
       "path": "skills/opengame-sdk/references/radio.md",
-      "bytes": 3864,
-      "sha256": "f3d92c7dc726e937a5cb7a1f892017bf2a55381e8079d142dbd13da1e86a3ff3",
+      "bytes": 3892,
+      "sha256": "ff8a2db8fe57b0ba0ba0c804419e5c13d7ebee187e268f26fa148c82fad00cd7",
       "executable": false
     },
     {

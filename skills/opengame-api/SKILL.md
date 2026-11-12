@@ -2,12 +2,12 @@
 name: opengame-api
 description: Call the OpenGame creator API directly over HTTPS. Covers the base URL, creator tokens and scopes, the OpenAPI document, the error shape and retry fields, deploying without the CLI, and checking whether OpenGame is open. Use when the person wants to deploy from their own tool or CI without the CLI, asks about the OpenGame REST API, api/v1, openapi.json or a creator token, or an API call returned an error code you need to read.
 metadata:
-  version: "1.0.4"
+  version: "1.0.5"
 ---
 
 # Call the OpenGame creator API
 
-OpenGame opens on 17 November 2026, and the creator API on 18 November. Until 18 November, every route except the status route and sign-in answers 403
+OpenGame opens on 18 November 2026, and the creator API on 18 November. Until 18 November, every route except the status route and sign-in answers 403
 with the error `not_launched` and the message "OpenGame opens for creators on 18 November." for any account
 outside the OpenGame team. Check before anything else:
 

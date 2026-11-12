@@ -166,6 +166,34 @@ export async function safeSnapshot(folder: string, options: { externalAssets?: R
   return { ...collected, snapshot };
 }
 
+/** safeSnapshot's reads, copied into `destination` (a private folder the caller made)
+ * instead of returned. Each file lands as its index in `files`, and comes back with the
+ * size and SHA-256 of the bytes copied. The reply is a few hundred bytes a file however
+ * large the files are, so one job takes a few thousand files. */
+export async function safeCopySnapshot(folder: string, destination: string, options: { externalAssets?: ReadonlySet<string>; externalDelivery?: string; rootIdentity?: DirectoryIdentity; words?: ReadWords } = {}) {
+  if (options.rootIdentity) await safeDirectoryIdentity(folder, options.rootIdentity);
+  const collected = await collectFiles(folder, { externalAssets: options.externalAssets, externalDelivery: options.externalDelivery });
+  const identity = options.rootIdentity ? await safeDirectoryIdentity(collected.root, options.rootIdentity) : await safeDirectoryIdentity(collected.root);
+  if (options.rootIdentity && collected.root !== folder) throw new CliError("build_changed", "The selected export root changed during collection.", 1);
+  const rows = collected.files.map((file, index) => ({ path: file.path, relative: relative(collected.root, file.source).split(sep).join("/"), size: file.size, target: String(index) }));
+  const copied: { path: string; size: number; sha256: string; file: string }[] = [];
+  let left = LIMITS.bundle.uncompressedBytesMax;
+  for (let start = 0; start < rows.length; start += COPY_BATCH_FILES) {
+    const batch = rows.slice(start, start + COPY_BATCH_FILES);
+    const reply = await filesystem({ operation: "copy", root: collected.root, identity, destination, maximum: left, files: batch }, options.words);
+    const digests = reply.digests;
+    if (!Array.isArray(digests) || digests.length !== batch.length) throw helperBroke();
+    digests.forEach((row: unknown, index) => {
+      const expected = batch[index]!;
+      if (!Array.isArray(row) || row[0] !== expected.path || row[1] !== expected.size || typeof row[2] !== "string" || !/^[0-9a-f]{64}$/.test(row[2])) throw helperBroke();
+      copied.push({ path: expected.path, size: expected.size, sha256: row[2], file: expected.target });
+      left -= expected.size;
+    });
+  }
+  return { ...collected, copied };
+}
+const COPY_BATCH_FILES = 2048;
+
 /** Files in runs of at most `cap` bytes, in order, and a file bigger than `cap` in a run
  * of its own.
  *

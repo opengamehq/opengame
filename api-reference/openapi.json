@@ -330,6 +330,7 @@
               "invalid_score_query",
               "host and board are required",
               "board is required",
+              "invalid_query",
               "rejected",
               "not_found",
               "method_not_allowed",
@@ -663,7 +664,7 @@
               "boardCountMax": {
                 "type": "integer",
                 "examples": [
-                  10
+                  25
                 ]
               },
               "boardKeyCharsMax": {
@@ -797,7 +798,7 @@
           },
           "fileCount": {
             "type": "integer",
-            "maximum": 10000,
+            "maximum": 25000,
             "minimum": 1
           },
           "sha256": {
@@ -830,7 +831,7 @@
           },
           "files": {
             "minItems": 1,
-            "maxItems": 10000,
+            "maxItems": 25000,
             "type": "array",
             "items": {
               "type": "object",
@@ -845,7 +846,7 @@
                 "byteSize": {
                   "type": "integer",
                   "minimum": 0,
-                  "maximum": 268435456
+                  "maximum": 1073741824
                 }
               },
               "required": [
@@ -906,13 +907,14 @@
             "additionalProperties": false
           },
           "provisional": {
-            "maxItems": 2,
+            "maxItems": 3,
             "type": "array",
             "items": {
               "type": "string",
               "enum": [
                 "genre",
-                "controls"
+                "controls",
+                "description"
               ]
             }
           }
@@ -975,7 +977,7 @@
           },
           "fileCount": {
             "type": "integer",
-            "maximum": 10000,
+            "maximum": 25000,
             "description": "Files in the boot archive.",
             "minimum": 1
           },
@@ -1010,7 +1012,7 @@
           },
           "files": {
             "minItems": 1,
-            "maxItems": 10000,
+            "maxItems": 25000,
             "type": "array",
             "items": {
               "type": "object",
@@ -1025,7 +1027,7 @@
                 "byteSize": {
                   "type": "integer",
                   "minimum": 0,
-                  "maximum": 268435456
+                  "maximum": 1073741824
                 }
               },
               "required": [
@@ -1087,13 +1089,14 @@
             "additionalProperties": false
           },
           "provisional": {
-            "maxItems": 2,
+            "maxItems": 3,
             "type": "array",
             "items": {
               "type": "string",
               "enum": [
                 "genre",
-                "controls"
+                "controls",
+                "description"
               ]
             }
           },
@@ -1244,12 +1247,12 @@
               "totalFiles": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 10000
+                "maximum": 25000
               },
               "totalBytes": {
                 "type": "integer",
                 "minimum": 0,
-                "maximum": 1610612736
+                "maximum": 5368709120
               },
               "cursor": {
                 "type": "integer",
@@ -1327,12 +1330,12 @@
               "totalFiles": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 10000
+                "maximum": 25000
               },
               "totalBytes": {
                 "type": "integer",
                 "minimum": 0,
-                "maximum": 14495514624
+                "maximum": 18253611008
               },
               "cursor": {
                 "type": "integer",
@@ -1602,7 +1605,7 @@
             "description": "Legacy, accepted and ignored. OpenGame multiplayer was removed, so no value here turns anything on. Old manifests that say `p2p` still deploy and are reviewed and published like single-player games. Leave it out, or write `{ \"mode\": \"none\", \"maxPlayers\": 1 }`."
           },
           "leaderboards": {
-            "maxItems": 10,
+            "maxItems": 25,
             "type": "array",
             "items": {
               "type": "object",
@@ -11774,7 +11777,7 @@
                 "example": {
                   "launched": false,
                   "access": true,
-                  "opensAt": "2026-11-17T08:00:00.000Z",
+                  "opensAt": "2026-11-18T08:00:00.000Z",
                   "creatorsOpenAt": "2026-11-18T08:00:00.000Z",
                   "entriesCloseAt": "2026-12-19T08:00:00.000Z",
                   "deploysFrozen": false
@@ -12016,10 +12019,10 @@
                       "type": "object",
                       "examples": [
                         {
-                          "archiveBytesMax": 1073741824,
-                          "uncompressedBytesMax": 1610612736,
-                          "fileBytesMax": 268435456,
-                          "fileCountMax": 10000,
+                          "archiveBytesMax": 4294967295,
+                          "uncompressedBytesMax": 5368709120,
+                          "fileBytesMax": 1073741824,
+                          "fileCountMax": 25000,
                           "compressionRatioMax": 200,
                           "entryPoint": "index.html",
                           "pathBytesMax": 768
@@ -12071,10 +12074,10 @@
                   "minimumCliVersion": "0.2.0",
                   "packagingContract": "1",
                   "bundle": {
-                    "archiveBytesMax": 1073741824,
-                    "uncompressedBytesMax": 1610612736,
-                    "fileBytesMax": 268435456,
-                    "fileCountMax": 10000,
+                    "archiveBytesMax": 4294967295,
+                    "uncompressedBytesMax": 5368709120,
+                    "fileBytesMax": 1073741824,
+                    "fileCountMax": 25000,
                     "compressionRatioMax": 200,
                     "entryPoint": "index.html",
                     "pathBytesMax": 768
@@ -12121,7 +12124,7 @@
                     },
                     "manifest": {
                       "bytesMax": 65536,
-                      "boardCountMax": 10,
+                      "boardCountMax": 25,
                       "boardKeyCharsMax": 48,
                       "boardLabelCharsMax": 60,
                       "pathCharsMax": 512,
@@ -12143,8 +12146,8 @@
                     },
                     "heldBytes": {
                       "used": 121089,
-                      "max": 30064771072,
-                      "remaining": 30064649983
+                      "max": 120259084288,
+                      "remaining": 120258963199
                     },
                     "submissionsPerDay": {
                       "used": 1,
@@ -12332,10 +12335,10 @@
                       "type": "object",
                       "examples": [
                         {
-                          "archiveBytesMax": 1073741824,
-                          "uncompressedBytesMax": 1610612736,
-                          "fileBytesMax": 268435456,
-                          "fileCountMax": 10000,
+                          "archiveBytesMax": 4294967295,
+                          "uncompressedBytesMax": 5368709120,
+                          "fileBytesMax": 1073741824,
+                          "fileCountMax": 25000,
                           "compressionRatioMax": 200,
                           "entryPoint": "index.html",
                           "pathBytesMax": 768
@@ -12355,10 +12358,10 @@
                   "minimumCliVersion": "0.2.0",
                   "packagingContract": "1",
                   "bundle": {
-                    "archiveBytesMax": 1073741824,
-                    "uncompressedBytesMax": 1610612736,
-                    "fileBytesMax": 268435456,
-                    "fileCountMax": 10000,
+                    "archiveBytesMax": 4294967295,
+                    "uncompressedBytesMax": 5368709120,
+                    "fileBytesMax": 1073741824,
+                    "fileCountMax": 25000,
                     "compressionRatioMax": 200,
                     "entryPoint": "index.html",
                     "pathBytesMax": 768
@@ -12405,7 +12408,7 @@
                     },
                     "manifest": {
                       "bytesMax": 65536,
-                      "boardCountMax": 10,
+                      "boardCountMax": 25,
                       "boardKeyCharsMax": 48,
                       "boardLabelCharsMax": 60,
                       "pathCharsMax": 512,
@@ -12427,8 +12430,8 @@
                     },
                     "heldBytes": {
                       "used": 121089,
-                      "max": 30064771072,
-                      "remaining": 30064649983
+                      "max": 120259084288,
+                      "remaining": 120258963199
                     },
                     "submissionsPerDay": {
                       "used": 1,
@@ -12726,7 +12729,7 @@
                   "byteSize": {
                     "type": "integer",
                     "minimum": 1,
-                    "maximum": 1073741824,
+                    "maximum": 4294967295,
                     "examples": [
                       40363
                     ]
@@ -12734,7 +12737,7 @@
                   "fileCount": {
                     "type": "integer",
                     "minimum": 1,
-                    "maximum": 10000,
+                    "maximum": 25000,
                     "examples": [
                       2
                     ]
@@ -13333,7 +13336,7 @@
             "schema": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 10000,
+              "maximum": 25000,
               "default": 0
             },
             "description": "Use nextCursor from the previous file page."
@@ -13778,6 +13781,531 @@
         ]
       }
     },
+    "/api/v1/operations/{id}/files/plan": {
+      "post": {
+        "tags": [
+          "Deploys"
+        ],
+        "operationId": "readFileUploadPlan",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "List every file the deploy still needs",
+        "description": "For a file deploy. Returns the SHA-256 and size of every manifest file not yet verified, in hash order, and the deploy's total distinct file count. It signs no URLs and spends no upload attempts: read pages from `GET /api/v1/operations/{id}/files` for those. Send no body. Safe to repeat. Requires the deploy scope for this operation. A deploy holds at most 25000 files, or a large-asset plan's own count.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Operation UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every hash still to upload and confirm. `files` is empty once all are verified.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "operation",
+                    "files",
+                    "totalFiles"
+                  ],
+                  "properties": {
+                    "operation": {
+                      "$ref": "#/components/schemas/Operation"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "sha256",
+                          "byteSize"
+                        ],
+                        "properties": {
+                          "sha256": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
+                          },
+                          "byteSize": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      }
+                    },
+                    "totalFiles": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Distinct content hashes in the deploy, verified or not."
+                    }
+                  }
+                },
+                "example": {
+                  "operation": {
+                    "id": "d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
+                    "engine": null,
+                    "build": null,
+                    "state": "uploading",
+                    "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                    "buildId": "f8e2b6d0-4c9a-4e13-a7f5-1d3c9b0e8a62",
+                    "releaseId": null,
+                    "error": null,
+                    "createdAt": "2026-10-21T14:29:47Z",
+                    "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
+                    "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
+                    "previewUrl": null,
+                    "progress": {
+                      "code": "upload",
+                      "label": "Uploading",
+                      "message": "Waiting for your archive to finish uploading. Run opengame deploy to resume it.",
+                      "waitingOn": "you",
+                      "fault": null,
+                      "since": "2026-10-21T14:29:47Z"
+                    },
+                    "findings": [],
+                    "next": "opengame deploy"
+                  },
+                  "files": [
+                    {
+                      "sha256": "bb3645559c296672f00b1612316401f3d6c23e3747e393fe36a92513646d3ab3",
+                      "byteSize": 38211
+                    }
+                  ],
+                  "totalFiles": 2
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This token was made without the Deploy permission. Make one that has it at https://opengame.io/settings/tokens."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: no operation with that UUID is in this account. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "not_found",
+                  "message": "This operation was not found."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`upload_expired`: the deploy ran out of time to upload. Start a new deploy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "upload_expired",
+                  "message": "This upload expired before the archive arrived. Run opengame deploy to start a new one.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`temporarily_unavailable`: OpenGame could not read the plan. Wait `retryAfterSeconds`, then send it again. A ZIP deploy has no file plan and gets this answer too, so read it with `GET /api/v1/operations/{id}` instead.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "temporarily_unavailable",
+                  "message": "OpenGame could not finish this request. Try again shortly.",
+                  "retry": "later",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246",
+                  "retryAfterSeconds": 30
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39/files/plan' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
+          }
+        ]
+      }
+    },
+    "/api/v1/operations/{id}/files/verify": {
+      "post": {
+        "tags": [
+          "Deploys"
+        ],
+        "operationId": "confirmFileUploads",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Verify a page of uploaded files",
+        "description": "For a file deploy. Call after the storage PUTs for a page succeed, naming up to 32 hashes from the manifest. The server checks each stored object's size and SHA-256 checksum, or reads its bytes when storage has no checksum for it, and records the whole page at once. Hashes already verified are accepted and left out of the answer. If any file fails, none in the page is recorded. Safe to repeat. Requires the deploy scope.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Operation UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "hashes"
+                ],
+                "properties": {
+                  "hashes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 32,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "examples": [
+                      [
+                        "bb3645559c296672f00b1612316401f3d6c23e3747e393fe36a92513646d3ab3"
+                      ]
+                    ],
+                    "description": "SHA-256 hashes from the file manifest whose PUT has finished."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The files this call verified. Empty when every hash was already verified, or when the operation has already left uploading.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "operation",
+                    "files"
+                  ],
+                  "properties": {
+                    "operation": {
+                      "$ref": "#/components/schemas/Operation"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "sha256",
+                          "byteSize",
+                          "verified"
+                        ],
+                        "properties": {
+                          "sha256": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
+                          },
+                          "byteSize": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "verified": {
+                            "const": true,
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "operation": {
+                    "id": "d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
+                    "engine": null,
+                    "build": null,
+                    "state": "uploading",
+                    "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                    "buildId": "f8e2b6d0-4c9a-4e13-a7f5-1d3c9b0e8a62",
+                    "releaseId": null,
+                    "error": null,
+                    "createdAt": "2026-10-21T14:29:47Z",
+                    "statusUrl": "/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
+                    "publicId": "tq7m4x2k9p",
+                    "gameOrigin": "https://k3v9q2m7x4ab.opengame.gg",
+                    "previewUrl": null,
+                    "progress": {
+                      "code": "upload",
+                      "label": "Uploading",
+                      "message": "Waiting for your archive to finish uploading. Run opengame deploy to resume it.",
+                      "waitingOn": "you",
+                      "fault": null,
+                      "since": "2026-10-21T14:29:47Z"
+                    },
+                    "findings": [],
+                    "next": "opengame deploy"
+                  },
+                  "files": [
+                    {
+                      "sha256": "bb3645559c296672f00b1612316401f3d6c23e3747e393fe36a92513646d3ab3",
+                      "byteSize": 38211,
+                      "verified": true
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_request`: there is no body, or a hash is not part of this deploy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "invalid_request",
+                  "message": "This file is not part of the deploy."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: the credential cannot deploy this operation's game or change this deploy, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "forbidden",
+                  "message": "This token was made without the Deploy permission. Make one that has it at https://opengame.io/settings/tokens."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: no operation with that UUID is in this account. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "not_found",
+                  "message": "This operation was not found."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`upload_size_mismatch`: a stored object is missing, or its size or checksum does not match its hash, so nothing in the page was recorded. A file whose PUT never arrived can be sent again while its URL is valid and the page verified again; otherwise start a new deploy. `build_conflict`: the operation left uploading while the page was checked, so read the operation. `upload_expired`: start a new deploy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "upload_size_mismatch",
+                  "message": "The uploaded archive has a different size. Start a new deploy with the original archive.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`body_too_large`: the body is over `platform.incrementalUpload.bodyBytesMax` (4194304) bytes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "body_too_large",
+                  "message": "The request body is too large."
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`content_type`: send `Content-Type: application/json`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "content_type",
+                  "message": "Send a JSON request body."
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: the body is JSON but `hashes` is missing, empty, longer than the limit or holds something other than lowercase SHA-256 hex. Fix the body; sending it again unchanged fails the same way. Quote `requestId` when you report another cause.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`temporarily_unavailable`. With `retry` set to `never`: file uploads are off, so use `POST /api/v1/deploys`. With `retry` set to `later` and `retryAfterSeconds`: the review budget is paused, or storage could not be read, so wait and verify the page again. Or `platform_unconfigured`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "temporarily_unavailable",
+                  "message": "File uploads are temporarily unavailable. Upload a ZIP archive instead.",
+                  "retry": "never"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/operations/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39/files/verify' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\" \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"hashes\": [\n    \"bb3645559c296672f00b1612316401f3d6c23e3747e393fe36a92513646d3ab3\"\n  ]\n}'"
+          }
+        ]
+      }
+    },
     "/api/v1/operations/{id}/files/complete": {
       "post": {
         "tags": [
@@ -14202,7 +14730,7 @@
             }
           },
           "403": {
-            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1` or `large-game-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14522,7 +15050,7 @@
             }
           },
           "403": {
-            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1` or `large-game-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14700,7 +15228,7 @@
             "schema": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 10000,
+              "maximum": 25000,
               "default": 0
             },
             "description": "Use nextCursor from the previous page."
@@ -32712,7 +33240,7 @@
             }
           },
           "409": {
-            "description": "A refusal the message explains: `release_not_ready`, `release_token_revoked`, `release_superseded` (a newer release is already in review or live), `release_publishing`, `review_open_elsewhere`, `qa_destination_game_mismatch` (the game already uses the other destination, including a release its deploy already sent to the usual review), `jam_entry_in_review`, `jam_closed`, `jam_not_open` (the release's deploy began before the jam opened, so deploy again once it opens), `at_entry_limit`, `invalid_jam_answers`, `kind_not_in_jam` (the jam takes games and worlds, and this release is a decomp or a mod), `jam_entry_judged` (the jam has closed and judges play this game's entry, so no other version of it can go live), `submission_destination_mismatch` (`jam: null` for a jam, or, from a CLI before 0.3.4, jam answers for a release its deploy already sent to review, where the message says where the entry is made), `idempotency_conflict`, or `handle_required` (claim a handle at `url`).",
+            "description": "A refusal the message explains: `release_not_ready`, `release_token_revoked`, `release_superseded` (a newer release is already in review or live), `release_publishing`, `review_open_elsewhere`, `qa_destination_game_mismatch` (the game already uses the other destination, including a release its deploy already sent to the usual review), `jam_entry_in_review`, `jam_closed`, `jam_not_open` (the release's deploy began before the jam opened, so deploy again once it opens), `at_entry_limit`, `invalid_jam_answers`, `kind_not_in_jam` (the jam takes games and worlds, and this release is a decomp or a mod), `jam_entry_judged` (the jam has closed and this game's entry is the version being judged, so no other version of it can go live), `submission_destination_mismatch` (`jam: null` for a jam, or, from a CLI before 0.3.4, jam answers for a release its deploy already sent to review, where the message says where the entry is made), `idempotency_conflict`, or `handle_required` (claim a handle at `url`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -33489,7 +34017,7 @@
           }
         ],
         "summary": "Record the game's own events",
-        "description": "A batch of named events with allowlisted properties. Each event counts against per-session (60 a minute), per-player and per-address budgets; events over budget are counted in `limited` and not stored. String values that look like contact details are dropped. A malformed event is counted in `refused` without failing the rest. Traffic from datacenters and known bots is answered with `filtered: true` and not stored. A private preview's events are accepted and marked, and no rollup counts them. While OpenGame is not taking analytics events, a batch whose events carry `eventId` gets 503 `analytics_unavailable` and should be kept.",
+        "description": "A batch of named events with allowlisted properties. At most 200 events a request. Each event counts against per-session (600 a minute), per-player (1200) and per-address (3000) budgets; events over budget are counted in `limited` and not stored. String values that look like contact details are dropped. A malformed event is counted in `refused` without failing the rest. Traffic from datacenters and known bots is answered with `filtered: true` and not stored. A private preview's events are accepted and marked, and no rollup counts them. While OpenGame is not taking analytics events, a batch whose events carry `eventId` gets 503 `analytics_unavailable` and should be kept.",
         "requestBody": {
           "required": true,
           "content": {
@@ -33514,7 +34042,7 @@
                 "properties": {
                   "events": {
                     "type": "array",
-                    "maxItems": 60,
+                    "maxItems": 200,
                     "items": {
                       "type": "object",
                       "required": [
@@ -34804,6 +35332,300 @@
             "lang": "bash",
             "label": "cURL",
             "source": "curl --request POST \\\n  --url 'https://api.opengame.gg/v1/scores' \\\n  --header \"Authorization: Bearer $OPENGAME_SESSION\" \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"board\": \"rounds\",\n  \"value\": 12,\n  \"stats\": {\n    \"kills\": 167,\n    \"downs\": 3,\n    \"time\": 1047\n  },\n  \"tags\": {\n    \"mode\": \"solo\"\n  }\n}'"
+          }
+        ]
+      }
+    },
+    "/v1/player/stats": {
+      "servers": [
+        {
+          "url": "https://api.opengame.gg",
+          "description": "Game API"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Scores"
+        ],
+        "operationId": "readPlayerStats",
+        "security": [
+          {
+            "gameSession": []
+          }
+        ],
+        "summary": "Read the player's entry on every board",
+        "description": "The session player's best accepted entry on each active board the game declares, in key order, and on a career board their row for all runs. `og.player.stats()` in the SDK. The request takes no parameters: the game and the player come from the session, so it cannot read another player or another game, and any query string is a 400. Never cached. Rate limited as `me()` is, per session, player and address. A private preview reads its own boards.",
+        "responses": {
+          "200": {
+            "description": "One line per board, with the player's entry or null.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "boards",
+                    "source"
+                  ],
+                  "properties": {
+                    "boards": {
+                      "type": "array",
+                      "maxItems": 25,
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "board",
+                          "label",
+                          "keep",
+                          "entry"
+                        ],
+                        "properties": {
+                          "board": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "keep": {
+                            "enum": [
+                              "best",
+                              "runs",
+                              "career"
+                            ]
+                          },
+                          "entry": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "required": [
+                              "score",
+                              "stats",
+                              "tags",
+                              "meta",
+                              "created_at",
+                              "imported"
+                            ],
+                            "properties": {
+                              "score": {
+                                "type": "number"
+                              },
+                              "stats": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "number"
+                                }
+                              },
+                              "tags": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "string"
+                                }
+                              },
+                              "meta": {
+                                "type": "object"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "examples": [
+                                  "2026-10-20T09:12:30Z"
+                                ]
+                              },
+                              "imported": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "source": {
+                      "const": "game_reported",
+                      "type": "string"
+                    },
+                    "preview": {
+                      "type": "boolean"
+                    },
+                    "disclaimer": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "source": "game_reported",
+                  "disclaimer": "Reported by the game. Not verified by OpenGame.",
+                  "boards": [
+                    {
+                      "board": "career",
+                      "label": "Career",
+                      "keep": "career",
+                      "entry": {
+                        "score": 12450,
+                        "stats": {
+                          "kills": 318,
+                          "played": 41
+                        },
+                        "tags": {},
+                        "meta": {},
+                        "created_at": "2026-11-11T19:04:12Z",
+                        "imported": false
+                      }
+                    },
+                    {
+                      "board": "matches",
+                      "label": "Matches",
+                      "keep": "runs",
+                      "entry": {
+                        "score": 610,
+                        "stats": {
+                          "kills": 14
+                        },
+                        "tags": {},
+                        "meta": {},
+                        "created_at": "2026-11-11T19:04:12Z",
+                        "imported": false
+                      }
+                    },
+                    {
+                      "board": "time_trial",
+                      "label": "Time trial",
+                      "keep": "best",
+                      "entry": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_query`: the request carried a query string. The route takes none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameError"
+                },
+                "example": {
+                  "error": "invalid_query"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`token_rejected`: `reason` says why and `mint` says where a new session comes from. `session_rejected`: the player changed identity. Ask the page for a new session either way.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameError"
+                },
+                "example": {
+                  "error": "token_rejected",
+                  "reason": "expired",
+                  "mint": "https://opengame.io"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`origin_not_allowed`, `origin_mismatch`, `host_not_live`, `preview_session_mismatch` or `embed_not_allowed`; on a preview, `preview_unavailable`, including a preview that has ended.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameError"
+                },
+                "example": {
+                  "error": "origin_not_allowed"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: the game is gone.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameError"
+                },
+                "example": {
+                  "error": "not_found"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "`method_not_allowed`. `Allow` lists `GET` and `OPTIONS`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameError"
+                },
+                "example": {
+                  "error": "method_not_allowed"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: `scope` names the budget that ran out. Wait for `Retry-After`, which is 60 seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameError"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "scope": "token"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`, sent without CORS headers, so a frame sees a failed request. Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameError"
+                },
+                "example": {
+                  "error": "internal_error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`upstream_error`: OpenGame could not read the boards. Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameError"
+                },
+                "example": {
+                  "error": "upstream_error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`not_configured` or `rate_limit_unavailable`, or `unavailable` with `reason` `stats_unavailable` while storage cannot answer this read yet. Not caused by the request. Retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameError"
+                },
+                "example": {
+                  "error": "not_configured"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request GET \\\n  --url 'https://api.opengame.gg/v1/player/stats' \\\n  --header \"Authorization: Bearer $OPENGAME_SESSION\""
           }
         ]
       }

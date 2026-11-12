@@ -1104,8 +1104,11 @@ export async function preflight(
          KTX2Loader there, and was told the file was missing because the glue beside the
          bundler's copy names it bare. Neither base this check knows is the one the loader
          uses, so the file being in the folder at all is the evidence there is. */
-      if (ref.kind === "runtime" && /\.[cm]?js$/i.test(sourcePath) && !ref.value.includes("/")
-          && fileNames.has(ref.value)) continue;
+      /* Not a name built against the page's own address, `new URL("level.json", location.href)`:
+         that has one answer, the bundle root, and a file of the name elsewhere does not
+         serve it (Greptile on opengamehq/opengame#7). */
+      if (ref.kind === "runtime" && ref.base !== "document" && /\.[cm]?js$/i.test(sourcePath)
+          && !ref.value.includes("/") && fileNames.has(ref.value)) continue;
 
       /* The candidate to talk about. For a case mismatch it has to be the one
          that actually matched, or the sentence names two paths that have

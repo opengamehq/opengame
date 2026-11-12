@@ -27,6 +27,18 @@
 - An error that has a next step prints it as `Try: <command>`, and many errors that only
   said what went wrong now also say what to do. A build failure no longer repeats its
   next step.
+- `opengame init` asks a person one thing, the game's name, with what it read from
+  index.html, package.json or the folder offered as the answer. It no longer asks what you
+  are making, which game a mod is based on, a description or a genre. `--kind`,
+  `--based-on`, `--description` and `--genre` still set any of them.
+- With no description of its own, a project gets a placeholder sentence, which a deploy
+  marks provisional. The deploy prints its page, where you write the description, choose
+  the genre and enter the jam; the game cannot publish with the placeholder.
+- `opengame submit` no longer walks a person through the jam's form. With no jam answer
+  named, it prints the deploy's page, where the entry is made, and sends nothing. Agents
+  still answer with `--track`, `--models` and `--sponsor`.
+- Needs the website from the same release: an older server refuses `description` in a
+  deploy's provisional fields.
 - `opengame check` and deploy no longer refuse a game for the `http://yandex.com/bots` entry
   in PostHog's bot list, which is text the library matches against and never requests.
   PeerJS's default public relays are one note instead of three warnings, and a file a

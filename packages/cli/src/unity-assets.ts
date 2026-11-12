@@ -285,14 +285,14 @@ export async function readUnityAssetPlan(folder: string, projectRoot: string, pl
 }
 
 export async function createUnityArchive(folder: string, manifest: GameManifest, output: Output, projectRoot: string, planPath: string | readonly string[],
-  options: { unityOnly?: boolean; delivery?: string } = {}) {
-  const { assets, sourceRoot, sourceIdentity, delivery, auto } = await readUnityAssetPlan(folder, projectRoot, planPath, { ...options, output });
-  const archive = await createArchive(folder, manifest, output, { incremental: true, externalAssets: new Set(assets.map(file => file.path)), externalDelivery: delivery, rootIdentity: sourceIdentity });
-  if (!archive.incremental) throw new CliError("archive_limit", "The boot archive must fit the canonical file-upload limits. Send more of its files as external assets, then deploy again.", 1);
+  options: { unityOnly?: boolean; delivery?: string; workDirectory?: string } = {}) {
+  const { assets, sourceRoot, sourceIdentity, delivery, auto } = await readUnityAssetPlan(folder, projectRoot, planPath, { unityOnly: options.unityOnly, delivery: options.delivery, output });
+  const archive = await createArchive(folder, manifest, output, { incremental: true, externalAssets: new Set(assets.map(file => file.path)), externalDelivery: delivery, rootIdentity: sourceIdentity, workDirectory: options.workDirectory });
+  if (!archive.incremental) { await archive.dispose(); throw new CliError("archive_limit", "The boot archive must fit the canonical file-upload limits. Send more of its files as external assets, then deploy again.", 1); }
   unityFileUnion(archive.incremental, assets, delivery);
-  const unityAssets: UnityAssetsState = { assets, sourceRoot, inputDigest: unityInputDigest({ sha256: archive.sha256, byteSize: archive.bytes.byteLength }, assets, delivery),
+  const unityAssets: UnityAssetsState = { assets, sourceRoot, inputDigest: unityInputDigest({ sha256: archive.sha256, byteSize: archive.byteSize }, assets, delivery),
     ...(delivery === LARGE_ASSET_DELIVERY ? {} : { delivery }) };
-  if (auto) output.emit({ type: "notice", code: "external_assets_auto", message: `Chose ${files(assets.length, "file")} to send separately (${readableBytes(assets.reduce((sum, file) => sum + file.byteSize, 0))}). The boot archive keeps ${files(archive.fileCount, "file")} (${readableBytes(archive.bytes.byteLength)}).` });
+  if (auto) output.emit({ type: "notice", code: "external_assets_auto", message: `Chose ${files(assets.length, "file")} to send separately (${readableBytes(assets.reduce((sum, file) => sum + file.byteSize, 0))}). The boot archive keeps ${files(archive.fileCount, "file")} (${readableBytes(archive.byteSize)}).` });
   for (const notice of assetPlanNotices(delivery, assets.length)) output.emit(notice);
   return { ...archive, unityAssets };
 }

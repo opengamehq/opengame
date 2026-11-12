@@ -3,7 +3,7 @@ import { access } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { LIMITS, gameKindOrDefault, kindEntersJam } from "@opengame/shared";
-import { ERRORS, EXIT, RELEASE_STATUS, SUBMISSION_OPEN, heldMessage, submissionStatus, jamFormSchema, submissionDestinationSchema, repairFindingSchema, returnedMessage, submissionSchema, validateJamAnswers,
+import { ERRORS, EXIT, RELEASE_STATUS, SUBMISSION_OPEN, deploymentPath, heldMessage, submissionStatus, jamFormSchema, submissionDestinationSchema, repairFindingSchema, returnedMessage, submissionSchema, validateJamAnswers,
   type GameManifest, type JamAnswers, type JamForm, type RepairFinding, type Submission } from "@opengame/protocol";
 import { openBrowser, trustedBrowserUrl } from "./browser";
 import { activeToken } from "./credentials";
@@ -12,7 +12,7 @@ import { readGame } from "./games";
 import { Api, ApiError } from "./http";
 import { CliError, Output, agentMode, terminalText } from "./output";
 import { readProject, savedSubmit, validKey, withProject, type SubmitRequest } from "./project";
-import { ask, choose, chooseMany, confirm } from "./prompt";
+import { confirm } from "./prompt";
 
 type Flags = Record<string, string | boolean>;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,8 +24,10 @@ const list = (value: string | boolean | undefined) => typeof value === "string" 
  * Agents name the release (`--release`, which `deploy --json` prints as `releaseId`) and
  * answer the jam with flags; a missing answer exits 2 and names the flag that supplies it.
  * A person in a terminal is offered the newest ready release of the linked game and asked
- * to confirm it, and walks the jam's form with arrow keys. The form comes from the server,
- * so nothing here knows about any particular jam.
+ * to confirm it. Since 11 Nov 2026 they are no longer walked through the jam's form: a
+ * person who names no jam answer is given the deploy's page, where the entry is made, and
+ * nothing is sent. The form comes from the server, so nothing here knows about any
+ * particular jam.
  *
  * Certification is a person's statement and only happens in a browser. When the server
  * answers `needs_certification` this prints the page, opens it for a person, and waits
@@ -77,7 +79,16 @@ export async function submitCommand(root: string, flags: Flags, output: Output) 
     // is chosen, and again in the confirmation, so a person answers knowing where it goes.
     if (qa) output.emit({ type: "notice", code: "qa_destination", message: "Sending to review for the QA destination. It enters no jam, and a reviewer decides whether it is published unlisted." });
     const release = await chooseRelease(api, token, root, flags, inProject, person, output);
-    const jam = qa ? null : await chooseDestination(api, token, root, flags, inProject, person, output);
+    const destination = qa ? null : await chooseDestination(api, token, root, flags, inProject, person, output);
+    if (destination === "page") {
+      // Nothing is sent: the deploy already went to review, and the entry is made on its page.
+      const url = await releasePage(api, token, root, inProject, release);
+      if (!flags["no-browser"]) openBrowser(url, true, api.origin);
+      output.emit({ type: "result", command: "submit", data: { submitted: false, url,
+        message: `Your deploy is already in review. Enter the jam on its page, where you choose the track, the models you used and any sponsor track:\n${url}\nAn agent can enter it from here instead with --track, --models and --sponsor.` } });
+      return;
+    }
+    const jam = destination;
     const request: SubmitRequest = qa ? { releaseId: release, jam: null, destination: "qa" } : { releaseId: release, jam };
 
     const post = async (retryKey: string) =>
@@ -246,8 +257,8 @@ export async function chooseRelease(api: Api, token: string, root: string, flags
   return releaseId;
 }
 
-async function chooseDestination(api: Api, token: string, root: string, flags: Flags, inProject: boolean, person: boolean, output: Output):
-  Promise<JamAnswers | null> {
+export async function chooseDestination(api: Api, token: string, root: string, flags: Flags, inProject: boolean, person: boolean, output: Output):
+  Promise<JamAnswers | null | "page"> {
   const raw = await api.json("/api/v1/jams", { token });
   const selected = submissionDestinationSchema.safeParse(raw.submissionDestination);
   if (!selected.success) throw new CliError("invalid_response", "The server did not provide a submission destination. Contact the OpenGame team, then retry.", 5);
@@ -272,8 +283,14 @@ async function chooseDestination(api: Api, token: string, root: string, flags: F
     evidence: Object.fromEntries(Object.entries(flags).filter(([k, v]) => k.startsWith("evidence-") && typeof v === "string")
       .map(([k, v]) => [k.slice("evidence-".length), v as string])),
   };
-  const genre = person && inProject ? await loadManifest(root).then(m => m.genre, () => undefined) : undefined;
-  const checked = person ? await answerJamForm(form, answers, TERMINAL, genre, output) : validateJamAnswers(form, answers);
+  /* A person is no longer walked through the jam's form here (the owner's call, 11 Nov 2026: the CLI
+     collects the minimum, and the rest is filled in on a private page). Their deploy went to
+     review by itself, and its page is where the track, the models and the sponsor tracks are
+     chosen, so a person who named none of them is sent there. An agent still answers with
+     flags, and a missing one still exits 2 naming the flag. */
+  const asked = Boolean(answers.track) || answers.models!.length > 0 || answers.sponsors!.length > 0 || Object.keys(answers.evidence!).length > 0;
+  if (person && !asked) return "page";
+  const checked = validateJamAnswers(form, answers);
   if (!checked.ok) throw new CliError("jam_answers_required", checked.problems.map(p => `${p.flag}: ${p.message}`).join("\n"), EXIT.input);
   output.emit({ type: "notice", code: "jam", message: summary(form, checked.answers) });
   return checked.answers;
@@ -293,56 +310,20 @@ export function refuseJamKind(manifest: Pick<GameManifest, "kind" | "basedOn"> |
   throw new CliError("kind_not_in_jam", `opengame.json says this is a ${kind}${manifest?.basedOn ? ` of ${manifest.basedOn}` : ""}. ${ERRORS.kind_not_in_jam!.message!} Nothing was submitted.`, EXIT.input);
 }
 
-export interface Prompts { choose: typeof choose; chooseMany: typeof chooseMany; ask: typeof ask }
-const TERMINAL: Prompts = { choose, chooseMany, ask };
-
 /**
- * The form, in a terminal: only the answers the flags did not already give, and then
- * only the answers that are wrong.
- *
- * A mistake is asked again rather than ending the command. Exiting on a models list one
- * short of the minimum threw away the track, sponsors and notes the person had already
- * given, and sent them back to the start of a form they had just walked. So each field
- * the validator names is cleared and asked again, with its sentence printed first, and
- * every other answer stands.
+ * The deploy page of the release being submitted, for a person sent there to enter the jam:
+ * the linked game's newest deploy when it made this release, which is the usual case, and
+ * the account's games otherwise. Read loosely, since a failed read changes one link.
  */
-export async function answerJamForm(form: JamForm, answers: Partial<JamAnswers>, prompts: Prompts, genre: string | undefined, output: Output) {
-  let last = "";
-  for (;;) {
-    await walkForm(form, answers, prompts, genre);
-    const checked = validateJamAnswers(form, answers);
-    if (checked.ok) return checked;
-    // The same problems after asking again means no answer the menus offer can fix them
-    // (a jam whose form lists fewer models than it requires), so stop and say so.
-    const seen = JSON.stringify(checked.problems);
-    if (seen === last) return checked;
-    last = seen;
-    output.emit({ type: "notice", code: "jam_answers", message: checked.problems.map(p => terminalText(p.message)).join("\n") });
-    for (const field of new Set(checked.problems.map(p => p.field))) delete answers[field];
-  }
-}
-
-async function walkForm(form: JamForm, answers: Partial<JamAnswers>, prompts: Prompts, genre: string | undefined) {
-  if (!answers.track) {
-    const options = form.track.options.map(o => ({ value: o.value, label: o.label, hint: o.value === genre ? "from your opengame.json" : null }));
-    answers.track = await prompts.choose(form.track.label, options, Math.max(0, options.findIndex(o => o.value === genre)));
-  }
-  while ((answers.models?.length ?? 0) < form.models.min && form.models.options.length >= form.models.min) {
-    answers.models = await prompts.chooseMany(`${form.models.label} (at least ${form.models.min})`,
-      form.models.options.map(o => ({ value: o.value, label: o.label, hint: o.provider && o.provider !== o.label ? o.provider : null })), answers.models ?? []);
-  }
-  const providers = new Set(form.models.options.filter(o => answers.models!.includes(o.value)).map(o => o.provider));
-  const unlocked = form.sponsors.options.filter(o => !o.provider || providers.has(o.provider));
-  if (!answers.sponsors?.length && unlocked.length) {
-    answers.sponsors = await prompts.chooseMany(form.sponsors.label,
-      unlocked.map(o => ({ value: o.value, label: o.label, hint: o.provider ? `open because you listed a ${o.provider} model` : null })));
-  }
-  for (const sponsor of answers.sponsors ?? []) {
-    if (answers.evidence?.[sponsor]) continue;
-    const track = form.sponsors.options.find(o => o.value === sponsor);
-    const note = await prompts.ask(`${track?.evidenceLabel ?? form.evidence.label}? One or two sentences, or Enter to skip.`);
-    answers.evidence = { ...answers.evidence, ...(note ? { [sponsor]: note } : {}) };
-  }
+export async function releasePage(api: Api, token: string, root: string, inProject: boolean, releaseId: string): Promise<string> {
+  try {
+    const state = inProject ? await readProject(root, api.origin) : null;
+    if (state?.gameId) {
+      const latest = (await readGame(api, token, state.gameId)).latestOperation;
+      if (latest && latest.releaseId === releaseId) return api.origin + deploymentPath(latest.id);
+    }
+  } catch { /* the account's games, below */ }
+  return `${api.origin}/settings/games`;
 }
 
 function summary(form: JamForm, answers: JamAnswers) {

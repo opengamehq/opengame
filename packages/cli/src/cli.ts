@@ -59,12 +59,12 @@ const basedOnFlag = (when: string): Flag => ({ name: "based-on", type: "string",
 /** One table drives parsing, `help` and `help --json`, so the schema an agent
  * reads is the parser it is talking to. */
 const commands: Record<string, { args?: string; description: string; flags: Flag[]; examples?: string[] }> = {
-  init: { args: "[dir]", description: "Create opengame.json for an existing game. When one is already there, fill in the fields it leaves blank and keep the rest.", flags: [
-    { name: "title", type: "string", description: "Game title. Without it, read from index.html's title, then package.json, then the folder name." }, { name: "description", type: "string", description: `One or two sentences about the game, ${LIMITS.text.gameDescription.productMin} to ${LIMITS.text.gameDescription.max} characters.` },
+  init: { args: "[dir]", description: "Create opengame.json for an existing game. A person at a terminal is asked the game's name and nothing else; the description, genre, jam entry and the rest are filled in on the deploy's page, by you or your agent. When opengame.json is already there, fill in the fields it leaves blank and keep the rest.", flags: [
+    { name: "title", type: "string", description: "Game title. Without it, read from index.html's title, then package.json, then the folder name, and a person at a terminal can confirm or change it." }, { name: "description", type: "string", description: `One or two sentences about the game, ${LIMITS.text.gameDescription.productMin} to ${LIMITS.text.gameDescription.max} characters. Without it, package.json's or the page's own description when it fits, and otherwise a placeholder you replace on the deploy's page before the game can publish.` },
     { name: "output", type: "string", description: "Static build folder. Required when several outputs contain index.html." },
     { name: "engine", type: "string", values: [...ENGINE_IDS], description: "Engine export recipe. Otherwise detect source markers and built-export signatures; unknown projects use custom." },
-    { name: "genre", type: "string", description: `A genre slug. Without it, guessed from the title, the description and package.json's keywords. When they name none, init asks a person in a terminal and sets ${FALLBACK_GENRE} for everyone else, and says so. A wrong one lists the slugs.` },
-    kindFlag("What you are making. Without it, init asks a person in a terminal, with game selected, and makes a game for everyone else."), basedOnFlag(""), json],
+    { name: "genre", type: "string", description: `A genre slug. Without it, guessed from the title, the description and package.json's keywords. When they name none, init sets ${FALLBACK_GENRE} for now and says so, and you choose the real one on the deploy's page. A wrong one lists the slugs.` },
+    kindFlag("What you are making. Without it, a game. init does not ask."), basedOnFlag(""), json],
     examples: ['opengame init . --title "My game"', 'opengame init . --kind mod --based-on "Doom"'] },
   dev: { args: "[dir]", description: "Serve a local export with game-runtime headers. Under a contract that adds the SDK, pages also get the host runtime and SDK, as they do when hosted. If the contract supports opting out, sdk.inject: false leaves out the SDK.", flags: [
     { name: "port", type: "string", description: "Loopback port. Zero (the default) chooses a free port." },
@@ -174,7 +174,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "dry-run", type: "boolean", description: "Print the install command without running it." },
     { name: "allow-downgrade", type: "boolean", description: "Install the server's version even when it is older than this one." }, json] },
   version: { description: "Print the CLI version.", flags: [json] },
-  submit: { args: "[dir]", description: "Send one release to review, and enter it in a jam.", flags: [
+  submit: { args: "[dir]", description: "Send one release to review, and enter it in a jam. A deploy goes to review by itself, so this is mostly for agents entering a jam with flags. A person who names no jam answer is given the deploy's page, where the track, models and sponsor tracks are chosen, and nothing is sent.", flags: [
     { name: "release", type: "string", description: "The release id to submit: releaseId from opengame status --json once the deploy is ready, or from opengame deployments --json. Agents must name it." },
     /* The window in /rules' own words ("Between entries opening and entries closing, deploy
        your game"), which is the rule the server holds this flag to: when the deploy BEGAN,
@@ -477,8 +477,9 @@ async function main() {
     if (initialized) output.emit({ type: "notice", code: "initialized", message: initialized.message });
     const assetPlan = assetPlanFlag(flags);
     const { archive } = await prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), unityAssets: assetPlan?.plan, unityOnly: assetPlan?.unityOnly, noBuild: Boolean(flags["no-build"]), install: !flags["no-install"], rerun: "opengame deploy --dry-run" });
-    output.emit({ type: "result", command, data: { ok: true, ...(archive.unityAssets ? { delivery: planDelivery(archive.unityAssets), assets: archive.unityAssets.assets, inputDigest: archive.unityAssets.inputDigest } : {}), files: archive.fileCount, bytes: archive.bytes.byteLength, sha256: archive.sha256, packaging: archive.packaging,
+    output.emit({ type: "result", command, data: { ok: true, ...(archive.unityAssets ? { delivery: planDelivery(archive.unityAssets), assets: archive.unityAssets.assets, inputDigest: archive.unityAssets.inputDigest } : {}), files: archive.fileCount, bytes: archive.byteSize, sha256: archive.sha256, packaging: archive.packaging,
       message: `Checked and packaged ${archive.fileCount} files. Nothing was uploaded. Server safety checks still run before a preview.` } });
+    await archive.dispose();
     return;
   }
   if (command === "check") {
@@ -491,14 +492,17 @@ async function main() {
       const { archive } = await prepareDeploy(root, output, Boolean(flags.build), { vendor: Boolean(flags.vendor), unityAssets: assetPlan.plan, unityOnly: assetPlan.unityOnly, install: !flags["no-install"], rerun: "opengame check --build" });
       const delivery = planDelivery(archive.unityAssets);
       const statement = largeAssetStatement(delivery);
-      output.emit({ type: "result", command, data: { ok: true, delivery, files: archive.fileCount, bytes: archive.bytes.byteLength,
+      output.emit({ type: "result", command, data: { ok: true, delivery, files: archive.fileCount, bytes: archive.byteSize,
         assets: archive.unityAssets!.assets, inputDigest: archive.unityAssets!.inputDigest, packaging: archive.packaging, sourceSettings,
         limits: { boot: LIMITS.bundle, assets: largeAssetLimits(delivery) }, ...(statement ? { statement } : {}),
         message: assetPlanSummary(archive.fileCount, archive.unityAssets!.assets.length, statement ?? undefined) } });
+      await archive.dispose();
       return;
     }
     if (flags.build && manifest.build?.command) await build(manifest.build.command, root, output, undefined, { install: !flags["no-install"], rerun: "opengame check --build" });
     const inspection = await inspectArchive(await outputFolder(root, manifest), manifest, output, { vendor: Boolean(flags.vendor) });
+    // check reads no byte after this; the copy it checked goes now.
+    await inspection.snapshot.dispose();
     output.emit({ type: "result", command, data: { ok: true, files: inspection.result.fileCount, bytes: inspection.result.totalBytes,
       excluded: inspection.excluded, findings: inspection.findings, packaging: inspection.packaging, limits: LIMITS.bundle, sourceSettings,
       // check is the step before dev, and it said nothing about one: next was null and

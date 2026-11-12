@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { writeFile, readFile, open, lstat, access, realpath, readdir, mkdir, unlink } from "node:fs/promises";
+import { writeFile, readFile, open, lstat, realpath, readdir, mkdir, unlink } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { sourceGameFor } from "@opengame/shared/source-games";
 import { DEFAULT_GAME_KIND, GAME_KINDS, GAME_KIND_SLUGS, GENRES, GENRE_SLUGS, LIMITS, gameKind, gameKindOrDefault, inferGenre, isGameKind, kindNeedsBasedOn,
@@ -8,7 +8,8 @@ import { DEFAULT_GAME_KIND, GAME_KINDS, GAME_KIND_SLUGS, GENRES, GENRE_SLUGS, LI
   parseGameKind, slurTextProblem, type GameKind } from "@opengame/shared";
 import { isBundlePath, manifestSchema, manifestCredentialIssue, type DeployProvisional } from "@opengame/protocol";
 import { CliError } from "./output";
-import { detectBuildOutput, readBuildPackage } from "./build-output";
+import type { Output } from "./output";
+import { detectBuildOutput, lockfileInstall, readBuildPackage } from "./build-output";
 import { engineSetup, ENGINE_PRESETS, GENERIC_EXPORT, namedEngine, projectText } from "./engines";
 import { ask, choose } from "./prompt";
 import { folderArgument, replaceFile, withoutBom } from "./files";
@@ -241,7 +242,7 @@ function genreNote(genre: string): string {
   return `Genre: init could not tell the genre from the title and description, so it set ${genre}. If that is wrong, change genre in opengame.json to one of ${GENRE_SLUGS.join(", ")}.`;
 }
 
-export async function initProject(root: string, flags: Record<string, string | boolean>, options: { interactive?: boolean; prompts?: InitPrompts } = {}) {
+export async function initProject(root: string, flags: Record<string, string | boolean>, options: { interactive?: boolean; prompts?: InitPrompts; output?: Output } = {}) {
   const pkg = await readBuildPackage(root);
   const html = await projectText(await realpath(root), "index.html") ?? "";
   const title = typeof flags.title === "string" ? flags.title : html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() ?? pkg.name ?? basename(root);
@@ -252,7 +253,7 @@ export async function initProject(root: string, flags: Record<string, string | b
   if (genre && !GENRE_SLUGS.includes(genre as typeof GENRE_SLUGS[number])) throw new CliError("genre_invalid", `Choose --genre from ${GENRE_SLUGS.join(", ")}.`);
   // Read before anything is asked, so a person with a finished opengame.json is asked nothing.
   const existing = await existingManifest(root);
-  if (existing) return fillManifest(root, existing.manifest, existing.text, { title, description, genre, flags, html, pkg, interactive: options.interactive, prompts });
+  if (existing) return fillManifest(root, existing.manifest, existing.text, { title, description, genre, flags, html, pkg, interactive: options.interactive, prompts, output: options.output });
   let guessedGenre = false;
   if (options.interactive) {
     kind ??= await askKind(prompts);
@@ -265,6 +266,7 @@ export async function initProject(root: string, flags: Record<string, string | b
   if (kindNeedsBasedOn(kind) && basedOn === null) {
     throw new CliError("based_on_required", `A ${kind} needs the name of the game it is made from. Add --based-on "<game name>", for example --kind ${kind} --based-on "Doom".`);
   }
+  options.output?.emit({ type: "progress", stage: "init:project", message: "Looking at your project" });
   const sourceRoot = await realpath(root);
   let engine = await engineSetup(sourceRoot, pkg, typeof flags.engine === "string" ? flags.engine : undefined, typeof flags.output === "string" ? flags.output : undefined);
   const selected = await detectBuildOutput(root, pkg, typeof flags.output === "string" ? flags.output : undefined, engine);
@@ -279,10 +281,10 @@ export async function initProject(root: string, flags: Record<string, string | b
   }
   engine.output = output;
   // The lockfile says which package manager the project uses; npm in a pnpm
-  // project installs a second tree and can build something else.
-  const exists = async (name: string) => access(join(root, name)).then(() => true, () => false);
-  const runner = await exists("pnpm-lock.yaml") ? "pnpm run build" : await exists("yarn.lock") ? "yarn build"
-    : await exists("bun.lockb") || await exists("bun.lock") ? "bun run build" : "npm run build";
+  // project installs a second tree and can build something else. The same reading picks
+  // the install a deploy runs first (deploy.ts, installDependencies).
+  const manager = (await lockfileInstall(root, pkg))?.manager ?? "npm";
+  const runner = manager === "yarn" ? "yarn build" : `${manager} run build`;
   // Blazor package scripts often prepare CSS in wwwroot. The selected export still
   // needs publishing after that step; running only the script shipped stale bytes or
   // left a fresh project's publish/wwwroot missing. Do not infer what a script does.
@@ -456,7 +458,7 @@ const blank = (value: unknown) => value === undefined || value === null || (type
  */
 async function fillManifest(root: string, existing: Record<string, unknown>, original: string, context: {
   title: string; description: string; genre: string | null; flags: Record<string, string | boolean>; html: string;
-  pkg: { description?: unknown; keywords?: unknown }; interactive?: boolean; prompts: InitPrompts;
+  pkg: { description?: unknown; keywords?: unknown }; interactive?: boolean; prompts: InitPrompts; output?: Output;
 }) {
   const { flags } = context;
   const filled: Record<string, unknown> = {};
@@ -480,6 +482,7 @@ async function fillManifest(root: string, existing: Record<string, unknown>, ori
   }
   let detected: Control[] | null = null;
   if (blank(existing.controls)) {
+    context.output?.emit({ type: "progress", stage: "init:project", message: "Looking at your project" });
     const sourceRoot = await realpath(root);
     const engineId = await engineSetup(sourceRoot, await readBuildPackage(root), typeof flags.engine === "string" ? flags.engine : undefined).then(engine => engine.id, () => "unknown");
     detected = await detectControls(sourceRoot, context.html, engineId);
@@ -538,8 +541,8 @@ export function kindPhrase(kind: string | null | undefined, basedOn: string | nu
 const made = (kind: GameKind, basedOn: string | null) => { const phrase = kindPhrase(kind, basedOn); return phrase ? ` for ${phrase}` : ""; };
 
 /** Infer only an absent manifest. An ambiguous build output needs a creator's choice. */
-export async function ensureDeployManifest(root: string, flags: Record<string, string | boolean>) {
+export async function ensureDeployManifest(root: string, flags: Record<string, string | boolean>, output?: Output) {
   try { await lstat(join(root, "opengame.json")); return null; }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
-  return initProject(root, flags);
+  return initProject(root, flags, { output });
 }

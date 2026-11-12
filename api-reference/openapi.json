@@ -24783,7 +24783,9 @@
                             ]
                           },
                           "version": {
-                            "type": "integer"
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "The version's number as the game's page shows it. A game can start its shown numbering after earlier versions, which are then left out of this list. Name a version by its `id`."
                           }
                         }
                       }
@@ -33600,37 +33602,6 @@
                   "limited": 0,
                   "acceptedIds": [],
                   "filtered": true
-                }
-              }
-            }
-          },
-          "202": {
-            "description": "Accepted by the older path, for events sent without `eventId`. Nothing is named, so do not retry.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "accepted",
-                    "refused",
-                    "limited"
-                  ],
-                  "properties": {
-                    "accepted": {
-                      "type": "integer"
-                    },
-                    "refused": {
-                      "type": "integer"
-                    },
-                    "limited": {
-                      "type": "integer"
-                    }
-                  }
-                },
-                "example": {
-                  "accepted": 1,
-                  "refused": 0,
-                  "limited": 0
                 }
               }
             }

@@ -708,8 +708,9 @@ test("people read findings grouped by file with the fix written out, and errors 
   assert.match(out[1]!, /^ {2}Blocker: src\/keys\.js line 3/);
   assert.match(out[2]!, /^ {2}Fix: Delete it/);
   assert.ok(out.includes("  Worth a look: Could not confirm Three.js."));
-  assert.ok(out.at(-1)!.startsWith("Then run "));
-  assert.deepEqual(err, ["A server check refused this build.", "Next: opengame check"]);
+  assert.equal(out.at(-1), "Then run opengame check, then opengame deploy.");
+  // The "Then run" line just asked for opengame check, so the error does not ask again.
+  assert.deepEqual(err, ["A server check refused this build."]);
   assert.ok(!out.join("\n").includes("\x1b"));
 });
 

@@ -110,7 +110,7 @@ export async function inspectArchive(folder: string, manifest: GameManifest, out
   if (defaults) output.emit({ type: "notice", code: "engine-default", message: `${defaults === 1 ? "One note" : `${defaults} notes`} about names the engine uses but never loads ${defaults === 1 ? "is" : "are"} hidden. ${defaults === 1 ? "It needs" : "They need"} no change; opengame check --json shows ${defaults === 1 ? "it" : "them"}.` });
   if (!result.ok) throw new CliError("check_failed", "This build has blockers. Fix them, then run opengame check again.", 1);
   const raw = matchedRawRuntime(result, snapshot);
-  if (!result.hasEntryPoint && !raw) throw new CliError("entry_missing", "The export has no HTML entry or complete parser-validated raw payload matching these bytes.", 1);
+  if (!result.hasEntryPoint && !raw) throw new CliError("entry_missing", "The export has no index.html or complete parser-validated raw payload matching these bytes. Run the build, or point build.output in opengame.json at the folder that holds index.html, then run opengame check again.", 1);
   const packaging = packagingReceipt(snapshot, result.include, result.strippedRoot, collected.excluded, originalHashes, dependencies, originalRaw ? [originalRaw] : raw ? [raw] : []);
   output.emit({ type: "progress", stage: "package", message: `Checked ${result.fileCount} files (${readableBytes(result.totalBytes)})`, files: result.fileCount, bytes: result.totalBytes, limits: LIMITS.bundle });
   return { result, snapshot, excluded: collected.excluded, findings, packaging };
@@ -162,7 +162,7 @@ export async function createArchive(folder: string, manifest: GameManifest, outp
      data compress well enough to fit, which the web uploader's deflated zip accepts. The
      guard is the whole archive's ratio, so it is checked on the result, and an archive
      past it is built again stored, which is the most a game can ever expand by. */
-  if (options.externalAssets && result.strippedRoot) throw new CliError("unity_assets_plan", "The export must have index.html at its root; external asset paths are never rewritten.", 2);
+  if (options.externalAssets && result.strippedRoot) throw new CliError("unity_assets_plan", "The export must have index.html at its root, because external asset paths are never rewritten. Point build.output in opengame.json at the folder that holds index.html, and write the asset plan's paths from there.", 2);
   const incremental = options.incremental ? canonicalArchive(entries) : null;
   if (options.externalAssets && !incremental) {
     /* canonicalArchive refuses for a path as readily as for a size, and this used to say

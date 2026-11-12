@@ -185,7 +185,7 @@ test('a KTX1 texture in a format the server cannot decode is refused at check ti
 test('external ICE findings are unchanged by SDK-looking markers in the same or another file', async () => {
   const { preflight } = await import('../src/index');
   const html = '<!doctype html><html><body><script type="module" src="sdk.js"></script><script type="module" src="peer.js"></script></body></html>';
-  const peer = 'const config = { iceServers: [{ urls: "turn:eu-0.turn.peerjs.com:3478" }] };';
+  const peer = 'const config = { iceServers: [{ urls: "turn:relay.mygame.example:3478" }] };';
   const relayFindings = (result: Awaited<ReturnType<typeof preflight>>) => result.findings.filter(finding => finding.code === 'ice-server');
   const baseline = relayFindings(await preflight([file('index.html', html), file('sdk.js', 'export {};'), file('peer.js', peer)]));
   assert.equal(baseline.length, 1);
@@ -209,9 +209,11 @@ test('configured ICE destinations stay allowed while foreign destinations remain
   const result = await preflight([file('index.html', page), file('game.js', `const marker = "relay_unavailable"; const urls = [${configured}, "stun:stun.l.google.com:19302", "turns:relay.example.com:443"];`)]);
   const relays = result.findings.filter(finding => finding.code === 'ice-server');
   assert.equal(relays.length, 2);
-  assert.ok(relays.some(finding => finding.title.includes('stun.l.google.com')));
-  assert.ok(relays.some(finding => finding.title.includes('relay.example.com')));
-  assert.ok(relays.every(finding => finding.severity === 'warning' && finding.ours === undefined));
+  // A relay of the game's own choosing is the warning; a library's public default is a note.
+  assert.deepEqual(relays.filter(finding => finding.severity === 'warning').map(finding => finding.title),
+    ['game.js line 1 names the relay relay.example.com.']);
+  assert.match(relays.find(finding => finding.severity === 'note')?.title ?? '', /stun\.l\.google\.com/);
+  assert.ok(relays.every(finding => finding.ours === undefined));
 });
 
 test('optional account guidance does not block a standalone game or claim lost local saves', async () => {

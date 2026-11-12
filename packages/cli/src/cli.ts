@@ -46,6 +46,9 @@ const unityAssets: Flag = { name: "unity-assets", type: "string", only: "Unity, 
 const acceptStatement: Flag = { name: "accept-statement", type: "string", only: "Unity, Kaigen and large-game exports", description: "Accept the publication statement for a Kaigen asset plan, using the version opengame check prints beside its words. Unity and large-game-v1 plans need none." };
 const human: Flag = { name: "human", type: "boolean", description: "Print for a person even when a coding agent's variable such as CLAUDECODE is set. Prompts still need a terminal." };
 const noBrowser: Flag = { name: "no-browser", type: "boolean", description: "Print the URL instead of opening a browser." };
+/* deploy and check --build install a project's missing packages from its lockfile before the
+   build (deploy.ts, installDependencies); this is the way to build on whatever is installed. */
+const noInstall = (who: string): Flag => ({ name: "no-install", type: "boolean", description: `Build with what is installed. Without it, when package.json names packages that are not installed and the folder has no node_modules yet, ${who} installs them from the lockfile beside package.json (npm ci, pnpm install --frozen-lockfile, yarn install or bun install). Otherwise it stops and names the install command to run, and where.` });
 /* The four kinds come from packages/shared/game-kinds.json, so help lists what init takes
    and a fifth kind reaches both without an edit here. `values` is help only; initProject
    is what refuses a wrong one, through kindFlags. */
@@ -66,15 +69,16 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
   dev: { args: "[dir]", description: "Serve a local export with game-runtime headers. Under a contract that adds the SDK, pages also get the host runtime and SDK, as they do when hosted. If the contract supports opting out, sdk.inject: false leaves out the SDK.", flags: [
     { name: "port", type: "string", description: "Loopback port. Zero (the default) chooses a free port." },
     { name: "contract", type: "string", description: contractHelp() },
-    { name: "build", type: "boolean", description: "Run the manifest build before serving an immutable snapshot." },
+    { name: "build", type: "boolean", description: "Run the manifest build before serving an immutable snapshot." }, noInstall("--build"),
     { name: "external-assets", type: "string", only: "Unity, Kaigen and large-game exports", description: "The asset plan or auto selection used by check and deploy. Planned files are served from disk on request; the remaining export must fit the ordinary limits. This command serves locally without hashing or uploading." }, json],
     examples: ["opengame dev . --build", `opengame dev . --contract ${THREADED_TARGET}`, "opengame dev . --external-assets kaigen-assets.json"] },
   vendor: { args: "[dir]", description: "Create a separate export with dependencies downloaded at their exact versions, rewritten and hashed.", flags: [
     { name: "output", type: "string", description: "New staging folder inside the project. Defaults to .opengame/vendor; existing folders are never overwritten." },
-    { name: "build", type: "boolean", description: "Run the manifest build before vendoring." }, json], examples: ["opengame vendor . --output vendored"] },
+    { name: "build", type: "boolean", description: "Run the manifest build before vendoring." }, noInstall("--build"), json], examples: ["opengame vendor . --output vendored"] },
   check: { args: "[dir]", description: "Find local build and asset problems before uploading.", flags: [externalAssets, unityAssets,
     { name: "vendor", type: "boolean", description: "Download dependencies from approved sources at the exact versions your code names into the packaging copy, with hashes and licenses." },
-    { name: "build", type: "boolean", description: "Run the build command from opengame.json first, so the check reads fresh output." }, json],
+    { name: "build", type: "boolean", description: "Run the build command from opengame.json first, so the check reads fresh output." },
+    noInstall("--build"), json],
     examples: ["opengame check .", "opengame check . --build --json"] },
   deploy: { args: "[dir]", description: "Build, check and upload a release, then return with the address of its deployment page, where the checks run and the private preview plays once they pass. Add --wait to stay until they finish. Once the preview is ready, the achievements opengame.json declares are saved by deploy --wait or by the next opengame status in this folder. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted.", flags: [externalAssets, unityAssets, acceptStatement,
     { name: "title", type: "string", description: "Title when deploy creates a missing manifest." },
@@ -85,6 +89,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "vendor", type: "boolean", description: "Download dependencies from approved sources at the exact versions your code names into the packaging copy, with hashes and licenses." },
     { name: "dry-run", type: "boolean", description: "Build, check and package without uploading. With --no-build, check and package only." },
     { name: "no-build", type: "boolean", description: "Skip the build command in opengame.json and package build.output as it is, when the export is already built and its command cannot run here, such as a Godot or Emscripten toolchain on another machine. A command that changes the export, such as one that adds the SDK, is skipped too." },
+    noInstall("deploy"),
     { name: "idempotency-key", type: "string", description: "Retry key. Reuse it to resume one deploy; a new one starts another." },
     { name: "metadata", type: "string", values: ["preserve", "local"], default: "preserve", description: "preserve keeps newer website edits to the title, description and other product fields. local replaces them with opengame.json." },
     { name: "wait", type: "boolean", description: `Stay until the checks finish, up to ${LIMITS.platform.operations.watchTimeoutMs / 1000} seconds, and exit with their outcome. For CI that needs the result as an exit code.` },
@@ -228,6 +233,7 @@ const ENV = [
   { name: "COLORTERM", description: "truecolor or 24bit draws the character in full color; anything else uses the 256-color palette." },
   { name: "COLORFGBG", description: "Read to tell a light terminal from a dark one, so the character's outline suits it. Most terminals are taken as dark." },
   { name: "OPENGAME_DEBUG", description: "Set to 1 to print the stack of an unexpected error to stderr." },
+  { name: "NODE_ENV", description: "production makes package installs leave out devDependencies, where build tools such as Vite usually are. Then deploy and --build do not install a project's packages themselves, and the error says why. npm's omit=dev, set as npm_config_omit, counts the same." },
 ];
 /* OPENGAME_TEST_SKIP_LAUNCH_CHECK (launch.ts) is read and deliberately not listed here. It is
    for this package's own test suite, and this list is what `help`, `help --json` and the
@@ -428,14 +434,15 @@ async function main() {
   if (!Object.hasOwn(commands, command)) throw unknownCommand(command);
   const supported = commands[command]!.flags.map(flag => flag.name);
   for (const key of Object.keys(flags)) {
-    if (!GLOBAL.includes(key) && !supported.includes(key) && !(command === "submit" && EVIDENCE.test(key))) throw new CliError("unsupported_flag", `The ${command} command does not use --${key}. Run opengame ${command} --help.`);
+    if (!GLOBAL.includes(key) && !supported.includes(key) && !(command === "submit" && EVIDENCE.test(key))) throw new CliError("unsupported_flag", `The ${command} command does not use --${key}. Run opengame ${command} --help.`, undefined, { next: `opengame ${command} --help` });
   }
   const launch = BEFORE_LAUNCH.has(command) ? { deploysFrozen: false } : await requireLaunched(Boolean(flags["token-stdin"]));
   const takesFolder = Boolean(commands[command]!.args?.includes("dir"));
   // token takes create|list|revoke and jams a slug: one argument each, like a folder.
   // skills takes its action first, then the folder.
   if (positional.length > (command === "skills" || command === "achievements" ? 2 : commands[command]!.args ? 1 : 0)) {
-    throw new CliError("arguments", takesFolder ? "Supply one project folder." : `The ${command} command does not accept ${positional.length > 1 ? "these arguments" : "a project folder"}.`);
+    throw new CliError("arguments", `${takesFolder ? "Supply one project folder." : `The ${command} command does not accept ${positional.length > 1 ? "these arguments" : "a project folder"}.`} Run opengame ${command} --help to see what it takes.`,
+      undefined, { next: `opengame ${command} --help` });
   }
   // Pointed at the build folder, these use the project that names it (projectFor). The
   // state commands are here too, so `status` from dist finds the deploy `deploy dist` made.
@@ -464,12 +471,12 @@ async function main() {
   if (command === "releases" || command === "rollback") { await releasesCommand(command, root, command === "rollback" ? positional[0] : undefined, flags, output); return; }
   if (command === "dev") { await devCommand(root, flags, output); return; }
   if (command === "vendor") { await vendorCommand(root, flags, output); return; }
-  if (command === "init") { output.emit({ type: "result", command, data: await initProject(root, flags, { interactive: !output.json && !agentMode() && Boolean(process.stdin.isTTY) }) }); return; }
+  if (command === "init") { output.emit({ type: "result", command, data: await initProject(root, flags, { interactive: !output.json && !agentMode() && Boolean(process.stdin.isTTY), output }) }); return; }
   if (command === "deploy" && flags["dry-run"]) {
-    const initialized = await ensureDeployManifest(root, flags);
+    const initialized = await ensureDeployManifest(root, flags, output);
     if (initialized) output.emit({ type: "notice", code: "initialized", message: initialized.message });
     const assetPlan = assetPlanFlag(flags);
-    const { archive } = await prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), unityAssets: assetPlan?.plan, unityOnly: assetPlan?.unityOnly, noBuild: Boolean(flags["no-build"]) });
+    const { archive } = await prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), unityAssets: assetPlan?.plan, unityOnly: assetPlan?.unityOnly, noBuild: Boolean(flags["no-build"]), install: !flags["no-install"], rerun: "opengame deploy --dry-run" });
     output.emit({ type: "result", command, data: { ok: true, ...(archive.unityAssets ? { delivery: planDelivery(archive.unityAssets), assets: archive.unityAssets.assets, inputDigest: archive.unityAssets.inputDigest } : {}), files: archive.fileCount, bytes: archive.bytes.byteLength, sha256: archive.sha256, packaging: archive.packaging,
       message: `Checked and packaged ${archive.fileCount} files. Nothing was uploaded. Server safety checks still run before a preview.` } });
     return;
@@ -481,7 +488,7 @@ async function main() {
     for (const diagnostic of sourceSettings.diagnostics) output.emit({ type: "notice", code: diagnostic.code,
       message: `${diagnostic.severity === "warning" ? "Warning: " : ""}${diagnostic.message} ${diagnostic.fix}`, paths: [diagnostic.path] });
     if (assetPlan) {
-      const { archive } = await prepareDeploy(root, output, Boolean(flags.build), { vendor: Boolean(flags.vendor), unityAssets: assetPlan.plan, unityOnly: assetPlan.unityOnly });
+      const { archive } = await prepareDeploy(root, output, Boolean(flags.build), { vendor: Boolean(flags.vendor), unityAssets: assetPlan.plan, unityOnly: assetPlan.unityOnly, install: !flags["no-install"], rerun: "opengame check --build" });
       const delivery = planDelivery(archive.unityAssets);
       const statement = largeAssetStatement(delivery);
       output.emit({ type: "result", command, data: { ok: true, delivery, files: archive.fileCount, bytes: archive.bytes.byteLength,
@@ -490,7 +497,7 @@ async function main() {
         message: assetPlanSummary(archive.fileCount, archive.unityAssets!.assets.length, statement ?? undefined) } });
       return;
     }
-    if (flags.build && manifest.build?.command) await build(manifest.build.command, root, output);
+    if (flags.build && manifest.build?.command) await build(manifest.build.command, root, output, undefined, { install: !flags["no-install"], rerun: "opengame check --build" });
     const inspection = await inspectArchive(await outputFolder(root, manifest), manifest, output, { vendor: Boolean(flags.vendor) });
     output.emit({ type: "result", command, data: { ok: true, files: inspection.result.fileCount, bytes: inspection.result.totalBytes,
       excluded: inspection.excluded, findings: inspection.findings, packaging: inspection.packaging, limits: LIMITS.bundle, sourceSettings,

@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.9.0
+
+- `opengame login --continue` no longer loses a login you already allowed. Each run
+  started from the first polling interval and polled again as its time ran out, so a
+  script or agent running it over and over was told to slow down every time, until the
+  next poll it was allowed fell after the code expired. It now keeps the pace the server
+  sets between runs and never polls early. The server also hands over an allowed login on
+  the next poll whatever its pace, so 0.8.0 recovers too.
+- `opengame deploy`, `check --build`, `dev --build` and `vendor --build` install your
+  dependencies before the build in a fresh checkout (a lockfile and no `node_modules`), with
+  the command the lockfile names (`npm ci`, `pnpm install --frozen-lockfile`, `yarn install`
+  or `bun install`). When `node_modules` is there but packages are missing, or the lockfile
+  is in a parent workspace, or there is none, they stop and name the missing packages and
+  the install to run, so nothing you installed is wiped. `--no-install` skips the step. A
+  build that fails with "command not found" now says the tool is probably not installed.
+- `opengame init` on a Vite or other bundler project sets the export folder to the
+  bundler's output (`dist`, or `build.outDir` from vite.config) and no longer picks an
+  `index.html` inside `src/`. It also reads a project's files in far fewer passes, so it
+  no longer sits silent for many seconds after the last question.
+- In a terminal, the CLI shows a spinner with a line saying what it is doing while a
+  command works, and the time once it passes five seconds. Scripts, `--json`, `--jsonl`
+  and agents get no spinner.
+- Questions and the summary after them line up in one column, with one blank line around
+  the form, and long lines wrap inside the terminal.
+- An error that has a next step prints it as `Try: <command>`, and many errors that only
+  said what went wrong now also say what to do. A build failure no longer repeats its
+  next step.
+- `opengame check` and deploy no longer refuse a game for the `http://yandex.com/bots` entry
+  in PostHog's bot list, which is text the library matches against and never requests.
+  PeerJS's default public relays are one note instead of three warnings, and a file a
+  loader asks for by bare name (KTX2Loader's `basis_transcoder.wasm`, a Draco decoder) is
+  no longer reported missing when it is in the bundle under another folder.
+
 ## 0.8.0
 
 - `opengame init` guesses a genre from the title, the description, the page's meta

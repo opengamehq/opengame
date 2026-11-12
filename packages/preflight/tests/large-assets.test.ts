@@ -77,6 +77,22 @@ test('external allowance cannot hide a missing static script', async () => {
   assert.equal(missing.findings.find(finding => finding.code === 'missing-import')?.severity, 'blocker');
 });
 
+/* Trailer Park Warfare, 12 Nov 2026: three.js's KTX2Loader is pointed at basis/ and asks for
+   basis_transcoder.wasm there, and the Emscripten glue the bundler copied into assets/ names
+   the file bare. Read beside the glue, it was "not in the folder". */
+test('a bare file name a loader joins to a folder is satisfied by that file anywhere in the bundle', async () => {
+  const glue = 'function findWasmBinary(){var f="basis_transcoder.wasm";return locateFile(f)}';
+  const files = [file('index.html', '<script type="module" src="assets/glue.js"></script>'), file('assets/glue.js', glue)];
+  const absent = await preflight(files, { authoritative: true });
+  assert.ok(absent.findings.some(row => row.code === 'missing-ref'), 'a name that is nowhere is still reported');
+  const present = await preflight([...files, file('basis/basis_transcoder.wasm', 'wasm')], { authoritative: true });
+  assert.ok(!present.findings.some(row => row.code === 'missing-ref'), JSON.stringify(present.findings));
+  // A path is still resolved the way it is written.
+  const pathed = await preflight([file('index.html', '<script type="module" src="assets/glue.js"></script>'),
+    file('assets/glue.js', 'fetch("levels/one.json");'), file('data/one.json', '{}')], { authoritative: true });
+  assert.ok(pathed.findings.some(row => row.code === 'missing-ref'));
+});
+
 test('external reference names only affect exact and case-sensitive existence checks', async () => {
   const files = [file('index.html', '<script src="main.js"></script>'),
     file('main.js', 'fetch("StreamingAssets/level.json");')];

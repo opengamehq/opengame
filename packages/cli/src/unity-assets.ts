@@ -80,7 +80,7 @@ async function walkExport(sourceRoot: string, folder: string, visit: (path: stri
     for (const entry of await readdir(full, { withFileTypes: true })) {
       const path = relative ? `${relative}/${entry.name}` : entry.name;
       if (isExcludedPath(path) || entry.name === "opengame.json" || path === "opengame-assets") continue;
-      if (entry.isSymbolicLink()) throw new CliError("symlink", "An external asset must be a regular file inside the build folder.", 1);
+      if (entry.isSymbolicLink()) throw new CliError("symlink", `${path} is a symlink. External assets must be regular files inside the build folder, so copy the actual file there in its place.`, 1);
       if (entry.isDirectory()) await walk(path);
       else if (entry.isFile()) visit(path, (await lstat(join(full, entry.name))).size);
     }
@@ -188,7 +188,7 @@ export function assetPlanNotices(delivery: string, count: number) {
 export function acceptedStatement(delivery: string, accepted: unknown) {
   const statement = largeAssetStatement(delivery);
   if (!statement) {
-    if (accepted !== undefined) throw new CliError("invalid_flag", "This asset plan asks for no statement, so --accept-statement does not apply.", 2);
+    if (accepted !== undefined) throw new CliError("invalid_flag", "This asset plan asks for no statement, so --accept-statement does not apply. Remove --accept-statement, then deploy again.", 2);
     return undefined;
   }
   if (accepted !== statement.version) {
@@ -288,7 +288,7 @@ export async function createUnityArchive(folder: string, manifest: GameManifest,
   options: { unityOnly?: boolean; delivery?: string } = {}) {
   const { assets, sourceRoot, sourceIdentity, delivery, auto } = await readUnityAssetPlan(folder, projectRoot, planPath, { ...options, output });
   const archive = await createArchive(folder, manifest, output, { incremental: true, externalAssets: new Set(assets.map(file => file.path)), externalDelivery: delivery, rootIdentity: sourceIdentity });
-  if (!archive.incremental) throw new CliError("archive_limit", "The boot archive must fit the canonical file-upload limits.", 1);
+  if (!archive.incremental) throw new CliError("archive_limit", "The boot archive must fit the canonical file-upload limits. Send more of its files as external assets, then deploy again.", 1);
   unityFileUnion(archive.incremental, assets, delivery);
   const unityAssets: UnityAssetsState = { assets, sourceRoot, inputDigest: unityInputDigest({ sha256: archive.sha256, byteSize: archive.bytes.byteLength }, assets, delivery),
     ...(delivery === LARGE_ASSET_DELIVERY ? {} : { delivery }) };

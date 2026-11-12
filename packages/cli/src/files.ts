@@ -149,8 +149,9 @@ export function assertNoReservedRuntimePaths(paths: Iterable<string>) {
 }
 
 export async function collectFiles(folder: string, options: { externalAssets?: ReadonlySet<string>; externalDelivery?: string } = {}) {
-  if (options.externalAssets && [...options.externalAssets].some(path => !isLargeAssetPath(path, options.externalDelivery) || isExcludedPath(path))) {
-    throw new CliError("unity_assets_plan", "Only files the asset plan's kind admits can leave the boot archive.", 2);
+  const refused = options.externalAssets && [...options.externalAssets].find(path => !isLargeAssetPath(path, options.externalDelivery) || isExcludedPath(path));
+  if (refused !== undefined) {
+    throw new CliError("unity_assets_plan", `${refused} cannot be sent separately under this asset plan: only files the plan's kind admits can leave the boot archive. Take it out of the plan's assets, then run the command again.`, 2);
   }
   const root = await realpath(folder).catch(() => { throw new CliError("folder_missing", "The build folder does not exist. Check build.output in opengame.json."); });
   const files: CollectedFile[] = [];
@@ -188,10 +189,10 @@ export async function collectFiles(folder: string, options: { externalAssets?: R
         excluded.push(bundlePath); continue;
       }
       if (options.externalAssets?.has(bundlePath)) {
-        if (unportableName(entry.name)) throw new CliError("unportable_name", "An external asset has a nonportable name.", 1);
-        if (!entry.isFile() || entry.isSymbolicLink()) throw new CliError("symlink", "An external asset must be a regular file inside the build folder.", 1);
+        if (unportableName(entry.name)) throw new CliError("unportable_name", `${bundlePath} is an external asset with a name that cannot be uploaded. Rename it, and any reference to it.`, 1);
+        if (!entry.isFile() || entry.isSymbolicLink()) throw new CliError("symlink", `${bundlePath} is an external asset, so it must be a regular file inside the build folder, not a folder or a link. Name files in the asset plan, and copy the actual file in place of a link.`, 1);
         const twin = sameComposedName(composed, bundlePath, path.relative(root, full));
-        if (twin) throw new CliError("unicode_collision", "External assets must have distinct portable paths.", 1);
+        if (twin) throw new CliError("unicode_collision", `${twin} are the same name written two ways, and would be one external asset once uploaded. Keep one of them.`, 1);
         continue;
       }
       if (over) {
@@ -323,7 +324,7 @@ export async function projectFor(folder: string, output?: Output, buildNote?: st
 export async function outputFolder(root: string, manifest: GameManifest): Promise<string> {
   const base = await realpath(root);
   const folder = await realpath(path.resolve(root, manifest.build?.output ?? ".")).catch(() => { throw new CliError("folder_missing", "The build folder does not exist. Run your build command first."); });
-  if (!insideProject(base, folder)) throw new CliError("output_outside_project", "build.output must stay inside the project folder.");
+  if (!insideProject(base, folder)) throw new CliError("output_outside_project", "build.output must stay inside the project folder. Set it in opengame.json to a folder inside the project, such as dist.");
   return folder;
 }
 

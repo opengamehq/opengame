@@ -97,6 +97,9 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   ...AUTH,
   // The game or its files.
   check_failed: game, build_failed: game, build_timeout: game, deploy_failed: game, bundle_limit: game,
+  /* The CLI installing a project's packages before its build (packages/cli deploy.ts):
+     none installed and no lockfile to install from, or the lockfile's install failed. */
+  dependencies_missing: game, install_failed: game,
   archive_limit: game, symlink: game, special_file: game, unportable_name: game, unicode_collision: game, build_changed: game,
   manifest_invalid: game, manifest_unreadable: game, folder_missing: game,
   reserved_runtime_path: game, entry_missing: game, vendor_hash: game,

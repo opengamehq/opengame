@@ -1,11 +1,11 @@
-import { readdir } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { lstat, readdir, realpath } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { isBundlePath, type GameManifest, type GameRequirements } from "@opengame/protocol";
 import { LIMITS } from "@opengame/shared";
 import { detectEngine, ENGINE_NAMES, engineFileKind, type EngineId } from "../../preflight/src/engines";
 import { withoutBom } from "./files";
 import { CliError } from "./output";
-import { safeReadFile } from "./safe-fs";
+import { safeReadFile, safeReadFiles } from "./safe-fs";
 import { guidePage, namedEngine } from "./engine-guides.mjs";
 import { THREADED_CONTRACT, THREADED_MOVES } from "@opengame/shared/runtime-contracts";
 import { CURRENT_CONTRACT } from "../../../infra/worker/src/contracts";
@@ -56,7 +56,21 @@ export const ENGINE_PRESETS = Object.fromEntries(ENGINE_IDS.map(id => [id, { id,
  * game from players whose browser could have run it. */
 export type EngineSetup = { id: string; name: string; output: string; evidence: string; command?: string; sourceRoot?: string; outputAmbiguous?: boolean; outputKnown?: boolean; instructions: string; docs: string; requires?: GameRequirements };
 
+/* Every read goes through the Python helper (safe-fs.ts), one process per call, and init
+   asked it about some forty files that are not there and every text file of a Vite
+   project's source: 231 helper processes and nearly 4 s on a 200-file project on Linux, more
+   on macOS, while the terminal sat silent after the genre question (11 Nov 2026). So a name
+   is looked at with lstat first, and only a regular file within the limit costs a helper,
+   and projectTexts reads a batch in one. lstat decides nothing about safety: the helper still
+   opens every byte it returns without following a link, and refuses one swapped in after. */
+async function readable(root: string, name: string, bytesMax: number): Promise<number | undefined> {
+  if (!isBundlePath(name)) return undefined;
+  const info = await lstat(join(root, name)).catch(() => null);
+  return info?.isFile() && info.size <= bytesMax ? info.size : undefined;
+}
+
 export async function projectText(root: string, name: string, bytesMax = LIMITS.platform.packagingRepair.textBytesMax): Promise<string | undefined> {
+  if (await readable(root, name, bytesMax) === undefined) return undefined;
   try {
     return withoutBom((await safeReadFile(root, name, bytesMax)).toString("utf8"));
   } catch (error) {
@@ -66,6 +80,37 @@ export async function projectText(root: string, name: string, bytesMax = LIMITS.
     if (["ENOENT", "ENOTDIR", "ELOOP"].includes((error as NodeJS.ErrnoException).code ?? "")) return undefined;
     throw error;
   }
+}
+
+/**
+ * projectText for many names in one helper process: the regular files among them, in order,
+ * while they fit in `budget` bytes together, each at most `bytesMax`. A name that is absent,
+ * not a regular file or does not fit is left out, as projectText leaves it undefined. When the
+ * batch is refused (a file changed size, or a link sits in its path) each file is asked again
+ * on its own, so one bad file costs its own evidence and not everybody else's.
+ */
+export async function projectTexts(root: string, names: readonly string[], options: { bytesMax?: number; budget?: number } = {}): Promise<Map<string, string>> {
+  const bytesMax = options.bytesMax ?? LIMITS.platform.packagingRepair.textBytesMax;
+  let budget = options.budget ?? Infinity;
+  const base = await realpath(root);
+  const files: { path: string; byteSize: number }[] = [];
+  for (const name of new Set(names)) {
+    const size = await readable(base, name, Math.min(bytesMax, budget));
+    if (size === undefined) continue;
+    files.push({ path: name, byteSize: size }); budget -= size;
+  }
+  const texts = new Map<string, string>();
+  if (!files.length) return texts;
+  try {
+    for (const [name, bytes] of await safeReadFiles(base, files)) texts.set(name, withoutBom(bytes.toString("utf8")));
+  } catch (error) {
+    if (!(error instanceof CliError) || error.code !== "build_changed") throw error;
+    for (const file of files) {
+      const text = await projectText(base, file.path, file.byteSize);
+      if (text !== undefined) texts.set(file.path, text);
+    }
+  }
+  return texts;
 }
 
 type SourceSettingDiagnostic = {
@@ -235,27 +280,30 @@ async function detectSourceEngine(root: string, pkg: { dependencies?: Record<str
   const entries = await readdir(root, { withFileTypes: true });
   const names = entries.filter(entry => entry.isFile() && !entry.isSymbolicLink()).map(entry => entry.name);
   const has = (pattern: RegExp) => names.find(name => pattern.test(name));
-  for (const [marker, id] of [["hzproject.hzt", "kaigen"], ["ProjectSettings/ProjectVersion.txt", "unity"], ["project.godot", "godot"], ["game.project", "defold"], ["conf.lua", "love2d"], ["config.lua", "solar2d"], ["options.rpy", "renpy"], ["game/options.rpy", "renpy"], [".luaurc", "luau"], ["main.lua", "lua"], ["build.zig", "zig"], ["Package.swift", "swift"], ["Trunk.toml", "rust"]]) {
+  const markers = [["hzproject.hzt", "kaigen"], ["ProjectSettings/ProjectVersion.txt", "unity"], ["project.godot", "godot"], ["game.project", "defold"], ["conf.lua", "love2d"], ["config.lua", "solar2d"], ["options.rpy", "renpy"], ["game/options.rpy", "renpy"], [".luaurc", "luau"], ["main.lua", "lua"], ["build.zig", "zig"], ["Package.swift", "swift"], ["Trunk.toml", "rust"]] as const;
+  const csproj = has(/\.csproj$/i);
+  // Every file this asks about, in one helper process, and none at all when none is there.
+  const texts = await projectTexts(root, [...markers.map(([marker]) => marker), "pubspec.yaml", "Cargo.toml", ".cargo/config.toml", "go.mod", "project.json", ...(csproj ? [csproj] : [])]);
+  for (const [marker, id] of markers) {
     // Any Rojo project file, not only the default name: `rojo build foo.project.json` is as
     // common, and every one of them builds for Roblox.
-    if (id === "luau" && (await readdir(root).catch(() => [] as string[])).some(name => name.endsWith(".project.json"))) continue;
-    if (await projectText(root, marker!) !== undefined) return { id: id!, evidence: marker! };
+    if (id === "luau" && entries.some(entry => entry.name.endsWith(".project.json"))) continue;
+    if (texts.has(marker)) return { id, evidence: marker };
   }
   for (const [pattern, id] of [[/\.yyp$/i, "gamemaker"], [/\.c3p$/i, "construct"], [/\.gbsproj$/i, "gbstudio"], [/\.p8$/i, "pico8"]] as const) {
     const name = has(pattern); if (name) return { id, evidence: name };
   }
-  const pubspec = await projectText(root, "pubspec.yaml");
+  const pubspec = texts.get("pubspec.yaml");
   if (pubspec && /\bflutter\s*:/.test(pubspec)) return { id: /\bflame\s*:/.test(pubspec) ? "flame" : "flutter", evidence: "pubspec.yaml" };
-  const cargo = await projectText(root, "Cargo.toml"), cargoConfig = await projectText(root, ".cargo/config.toml");
+  const cargo = texts.get("Cargo.toml"), cargoConfig = texts.get(".cargo/config.toml");
   if (cargo && /wasm32|wasm-bindgen|web-sys|js-sys/.test(cargo + (cargoConfig ?? ""))) return { id: /\bbevy\b/.test(cargo) ? "bevy" : "rust", evidence: "Cargo.toml (web target)" };
-  const go = await projectText(root, "go.mod");
+  const go = texts.get("go.mod");
   if (go) return { id: /hajimehoshi\/ebiten/.test(go) ? "ebiten" : "go", evidence: "go.mod" };
-  const csproj = has(/\.csproj$/i);
   if (csproj) {
-    const text = await projectText(root, csproj) ?? "";
+    const text = texts.get(csproj) ?? "";
     return { id: /Kni|KNI|nkast/.test(text) ? "kni" : /MonoGame/.test(text) ? "monogame" : /Stride/.test(text) ? "stride" : "dotnet", evidence: csproj };
   }
-  const project = await projectText(root, "project.json");
+  const project = texts.get("project.json");
   if (project && /"(?:gdVersion|firstLayout|layouts)"/.test(project)) return { id: "gdevelop", evidence: "project.json (editor metadata)" };
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   const packages: [string, string][] = [["three", "threejs"], ["phaser", "phaser"], ["pixi.js", "pixijs"], ["@babylonjs/core", "babylonjs"], ["babylonjs", "babylonjs"], ["playcanvas", "playcanvas"], ["excalibur", "excalibur"], ["kaplay", "kaplay"], ["melonjs", "melonjs"], ["littlejsengine", "littlejs"], ["react", "react"], ["pyodide", "pyodide"], ["wasmoon", "wasmoon"], ["luau-web", "luau"], ["@luau-rs/luau", "luau"], ["@ruffle-rs/ruffle", "ruffle"], ["js-dos", "jsdos"]];
@@ -377,14 +425,11 @@ export async function engineSetup(root: string, pkg: Parameters<typeof detectSou
  * 5 Nov 2026, which the checker does not count as evidence. A compressed script is left
  * out because this reads raw text and does not decode it; the read is partial anyway. */
 export async function detectExportEngine(root: string, paths: string[]) {
-  const sources: { path: string; text: string }[] = [];
-  let remaining = LIMITS.platform.packagingRepair.textBytesMax;
-  for (const path of paths.filter(name => engineFileKind(name) === "text" && !/\.(?:gz|br|unityweb)$/i.test(name))) {
-    if (remaining <= 0) break;
-    const text = await projectText(root, path, remaining);
-    if (text === undefined || Buffer.byteLength(text) > remaining) continue;
-    remaining -= Buffer.byteLength(text); sources.push({ path, text });
-  }
+  // One helper process for the folder, within the same byte budget the reads one by one had.
+  const budget = LIMITS.platform.packagingRepair.textBytesMax;
+  const wanted = paths.filter(name => engineFileKind(name) === "text" && !/\.(?:gz|br|unityweb)$/i.test(name));
+  const texts = await projectTexts(root, wanted, { bytesMax: budget, budget });
+  const sources = wanted.filter(path => texts.has(path)).map(path => ({ path, text: texts.get(path)! }));
   const found = detectEngine(paths, sources, { complete: false });
   const id = String(found.id);
   return { ...found, id: id === "unknown" || id === "none" ? "custom" : id };

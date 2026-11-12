@@ -164,6 +164,25 @@ test('a URL in a list of plain words is a value, not a request', async () => {
   assert.deepEqual((await blocked('var a=["one","https://ko-fi.com/maker","two"];')).map((f) => f.severity), ['warning']);
 });
 
+/* The same list in posthog-js's newer builds, one string split on commas. It refused
+   Trailer Park Warfare on 12 Nov 2026, whose agent took analytics out to get through. */
+const POSTHOG_BOTS_ONE_STRING = 'var fe=`amazonbot,backlinksextendedbot,facebookcatalog,http://yandex.com/bots,hubspot,ia_archiver,screaming frog`.split(",");';
+
+test('a URL that is one item of a comma-separated string of words is not a request', async () => {
+  const report = await inspect(POSTHOG_BOTS_ONE_STRING);
+  assert.deepEqual(report.findings.filter((f) => f.code === 'outbound-origin'), []);
+  assert.equal(report.ok, true);
+  // Still a request when it starts the string, ends a template expression or is an argument.
+  for (const code of [
+    'fetch(`http://yandex.com/bots,hubspot`)',
+    'fetch(`${base},http://yandex.com/bots,x`)',
+    'go(a,http://yandex.com/bots,b)',
+  ]) {
+    const origin = (await inspect(code)).findings.filter((f) => f.code === 'outbound-origin');
+    assert.ok(origin.some((f) => f.severity === 'blocker'), code);
+  }
+});
+
 test('plain http next to a string is still a request when the shape is a request', async () => {
   for (const code of [
     'x.open("GET","http://yandex.com/bots");',

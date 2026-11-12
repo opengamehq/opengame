@@ -246,7 +246,7 @@ function readPipedToken(): Promise<string> {
     const data = (chunk: Buffer | string) => {
       clearTimeout(timer);
       size += chunk.length;
-      if (size > LIMITS.platform.credentials.stdinBytesMax) { finish(new CliError("token_stdin", "The token input is too long.")); return; }
+      if (size > LIMITS.platform.credentials.stdinBytesMax) { finish(new CliError("token_stdin", "The token input is too long. Pipe only the token from OpenGame settings, or set OPENGAME_TOKEN.")); return; }
       chunks.push(Buffer.from(chunk));
       timer = setTimeout(quiet, waitMs);
     };
@@ -267,8 +267,15 @@ export async function activeToken(origin: string, stdin: boolean): Promise<{ tok
 
 /** A device login waiting for the person to press Allow. Kept so an agent whose
  * shell returns output only when a command exits can start the login, show the
- * code, and finish it with a second command instead of minting a new code. */
-export interface PendingLogin { origin: string; deviceCode: string; userCode: string; url: string; expiresAt: string; interval: number; deviceName: string }
+ * code, and finish it with a second command instead of minting a new code.
+ *
+ * `interval` is the server's current pace, raised by every slow_down, and `nextPollAt` the
+ * earliest this machine may poll again. Both are carried between commands because each
+ * --continue is a new process: one that started from the original interval polled early,
+ * the server answered slow_down and stretched the pace, and on 11 Nov 2026 a login the
+ * person had allowed was paced past its own expiry and never collected. Files written
+ * before then have no `nextPollAt`, which reads as "poll after one interval", as before. */
+export interface PendingLogin { origin: string; deviceCode: string; userCode: string; url: string; expiresAt: string; interval: number; deviceName: string; nextPollAt?: string }
 
 export class PendingLogins {
   readonly file: string;
@@ -286,15 +293,45 @@ export class PendingLogins {
       if (!value || typeof value.deviceCode !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(value.deviceCode) || typeof value.userCode !== "string" ||
         typeof value.url !== "string" || !value.url.startsWith(this.origin + "/cli?code=") || !Number.isFinite(Date.parse(value.expiresAt)) ||
         !Number.isFinite(value.interval) || value.interval < LIMITS.platform.device.pollIntervalSeconds) return null;
-      return Date.parse(value.expiresAt) > Date.now() ? value : null;
+      if (!(Date.parse(value.expiresAt) > Date.now())) return null;
+      // A pace that cannot be read is dropped rather than losing the login: it only ever
+      // makes the next poll wait, and the server still paces whatever arrives.
+      if (value.nextPollAt !== undefined && (typeof value.nextPollAt !== "string" || !Number.isFinite(Date.parse(value.nextPollAt)))) {
+        const rest = { ...value };
+        delete rest.nextPollAt;
+        return rest;
+      }
+      return value;
     } catch { return null; }
     finally { await handle?.close(); }
   }
   async save(value: PendingLogin | null) {
+    await this.update((all) => { if (value) all[this.origin] = value; else delete all[this.origin]; return true; });
+  }
+  /** Records the server's pace for the login still saved here, and only for that one. Two
+   * `--continue` processes can poll the same code: when one collects the token it clears
+   * this entry, and the other's pace, saved from an answer it had before that, used to write
+   * the entry back, so the next `--continue` reported an expired code to somebody signed in.
+   * Returns whether anything was written. */
+  async pace(deviceCode: string, interval: number, nextPollAt: string) {
+    let written = false;
+    await this.update((all) => {
+      const entry = all[this.origin];
+      if (!entry || entry.deviceCode !== deviceCode) return false;
+      all[this.origin] = { ...entry, interval, nextPollAt };
+      return (written = true);
+    });
+    return written;
+  }
+  /* Read, change and replace the whole file. The read is as late as it can be, just before
+     the write, so the window in which another process's change is lost is the replace itself;
+     there is no lock, because a lost pace only makes one poll early and the server paces it. */
+  private async update(change: (all: Record<string, PendingLogin>) => boolean) {
     await mkdir(dirname(this.file), { recursive: true, mode: 0o700 });
     let all: Record<string, PendingLogin> = {};
     try { all = JSON.parse(await readFile(this.file, "utf8")) ?? {}; } catch { /* A missing or unreadable file starts empty. */ }
-    if (value) all[this.origin] = value; else delete all[this.origin];
+    if (!all || typeof all !== "object" || Array.isArray(all)) all = {};
+    if (!change(all)) return;
     for (const [origin, entry] of Object.entries(all)) if (!(Date.parse(entry?.expiresAt) > Date.now())) delete all[origin];
     const temp = this.file + "." + randomBytes(8).toString("hex");
     try {

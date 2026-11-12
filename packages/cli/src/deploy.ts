@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { constants } from "node:fs";
 import { open, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 import { LIMITS, compiledCredentialPatterns } from "@opengame/shared";
@@ -16,7 +16,7 @@ import { Api, ApiError, UploadInterrupted } from "./http";
 import { activeToken } from "./credentials";
 import { loadManifest, outputFolder, replaceFile } from "./files";
 import { createArchive } from "./archive";
-import { assertSdkInstalled } from "./build-output";
+import { lockfileInstall, missingDependencies, readBuildPackage } from "./build-output";
 import { ensureProjectIgnored, ensureDeployManifest, kindPhrase, provisionalFields } from "./init";
 import { readProject, savedSubmit, updateProject, validKey, withProject, type Project } from "./project";
 import { CliError, Output, terminalText } from "./output";
@@ -101,15 +101,16 @@ function buildCommandLabel(command: string, secrets: string[] = []) {
   return label;
 }
 
-export async function build(command: string, root: string, output: Output, timeoutMs = LIMITS.platform.deploy.buildTimeoutMs) {
-  await assertSdkInstalled(root);
-  // A build can print an opaque environment value without its field name. Keep
-  // known secret values out of diagnostic transcripts as well as command labels.
-  const secrets = [...Object.entries(process.env).filter(([name]) => /PASSWORD|PASSWD|SECRET|TOKEN|API_KEY|ACCESS_KEY/i.test(name)).map(([, value]) => value ?? ""),
-    ...[...command.matchAll(SECRET_FIELD)].map(match => match[2] ?? match[3] ?? match[4] ?? ""),
-    ...[...command.matchAll(/Authorization\s*:\s*(?:Bearer|Basic)\s+([^\s"']+)/gi)].map(match => match[1]!)];
-  const diagnostic = (value: string) => buildCommandLabel(value, secrets);
-  output.emit({ type: "progress", stage: "build", message: `Running build command: ${diagnostic(command)}` });
+/** What a command run for the project ended with, and the last of what it printed. */
+type Ran = { code: number | null; error?: boolean; timedOut: boolean; tail: string };
+
+/**
+ * Runs one of the project's own commands (its build, or the install before it) the way the
+ * build has always run: under a shell, without the API token, with the terminal handed over
+ * to a person and the output captured in --json, in a process group of its own when piped,
+ * and stopped with everything it started at the time limit. `noun` names it in the notice.
+ */
+async function runProjectCommand(command: string, root: string, output: Output, timeoutMs: number, noun: string): Promise<Ran> {
   // A project's build is its own code. It has no reason to inherit the API token.
   const env = { ...process.env }; delete env.OPENGAME_TOKEN;
   const capture = output.json;
@@ -171,12 +172,148 @@ export async function build(command: string, root: string, output: Output, timeo
     child.on("close", code => finish({ code }));
   });
   if (leftRunning) output.emit({ type: "notice", code: "build_left_running",
-    message: "The build command finished but left a process running, so it was stopped before packaging. Start background tools outside the build command." });
+    message: `The ${noun} finished but left a process running, so it was stopped before packaging. Start background tools outside the ${noun}.` });
+  return { ...outcome, timedOut: Boolean(outcome.timedOut), tail };
+}
+
+/**
+ * The program a shell could not find, from what it printed: bash and macOS sh ("sh: vite:
+ * command not found"), dash ("sh: 1: vite: not found"), zsh ("command not found: vite") and
+ * cmd.exe ("'vite' is not recognized as an internal or external command"). Undefined when
+ * the command did not end that way.
+ */
+export function commandNotFound(code: number | null, tail: string): { tool?: string } | undefined {
+  const text = tail.replace(/\r/g, "");
+  const tool = /(?:^|\n)[^\n]*?:\s*(?:line \d+:\s*)?([^\s:'"]+): command not found/.exec(text)?.[1]
+    ?? /(?:^|\n)[^\n]*?:\s*\d+:\s*([^\s:'"]+): not found/.exec(text)?.[1]
+    ?? /command not found: ([^\s'"]+)/.exec(text)?.[1]
+    ?? /'([^'\n]+)' is not recognized as an internal or external command/.exec(text)?.[1];
+  if (tool) return { tool };
+  return code === 127 ? {} : undefined;
+}
+
+export type BuildOptions = {
+  /** false is --no-install: the build runs on whatever is installed. */
+  install?: boolean;
+  /** The command a person runs again once they have fixed what stopped this one. */
+  rerun?: string;
+};
+
+/** Why an install would leave devDependencies out, when this process's environment says it
+ * will: NODE_ENV=production, or npm's omit or production setting passed as npm_config_*. */
+function devOmitted(): string | undefined {
+  if (process.env.NODE_ENV === "production") return "NODE_ENV is production";
+  if ((process.env.npm_config_omit ?? "").split(/[\s,]+/).includes("dev")) return "npm's omit setting includes dev";
+  if (process.env.npm_config_production === "true") return "npm's production setting is on";
+  return undefined;
+}
+
+/** A folder for a shell command, quoted only when it has to be. */
+const shellPath = (path: string) => /^[\w./-]+$/.test(path) ? path : `'${path.replace(/'/g, "'\\''")}'`;
+
+/**
+ * Installs the project's dependencies from its lockfile when package.json names packages that
+ * are not installed, before the build that needs them. See missingDependencies in
+ * build-output.ts for what counts as installed and why the SDK's repository-only path is
+ * refused instead.
+ *
+ * Only a fresh checkout is installed unasked: the lockfile beside package.json, and no
+ * node_modules in the game's folder at all. Everything else is the creator's to run, and the
+ * error says what and where. A tree with some packages missing is not handed to npm ci, which
+ * deletes node_modules first and so takes linked and patched packages with it, and leaves
+ * nothing at all offline (review, 11 Nov 2026). A lockfile in a parent folder is a workspace's,
+ * and installing it touches every other package there. No lockfile means any install writes a
+ * new one into the creator's folder.
+ */
+async function installDependencies(root: string, output: Output, timeoutMs: number, options: BuildOptions) {
+  if (options.install === false) return;
+  const needed = await missingDependencies(root);
+  if (!needed) return;
+  const rerun = options.rerun ?? "opengame deploy";
+  const listed = needed.missing.slice(0, 5).join(", ") + (needed.missing.length > 5 ? ` and ${needed.missing.length - 5} more` : "");
+  const skip = `To build with what is installed, add --no-install.`;
+  const omitted = needed.dev.length ? devOmitted() : undefined;
+  const omission = omitted ? ` ${omitted}, so an install leaves out devDependencies such as ${needed.dev.slice(0, 3).join(", ")}, which the build needs. Unset it for the install.` : "";
+  const refuse = (message: string, next: string) => new CliError("dependencies_missing", `${message}${omission} ${skip}`, undefined, { next });
+  if (!needed.install) throw refuse(`Dependencies are not installed. Run npm install, then run ${rerun} again.`, "npm install");
+  const plan = needed.install;
+  if (plan.folder !== resolve(root)) {
+    const where = shellPath(relative(resolve(root), plan.folder) || ".");
+    throw refuse(`${listed} ${needed.missing.length === 1 ? "is" : "are"} not installed. This project's lockfile is in ${plan.folder}, a workspace this command does not install for you. Run ${plan.install} there, then run ${rerun} again.`, `cd ${where} && ${plan.install}`);
+  }
+  if (!needed.fresh) throw refuse(`${listed} ${needed.missing.length === 1 ? "is" : "are"} in package.json but not installed. Run ${plan.install}, then run ${rerun} again.`, plan.install);
+  if (omitted) throw refuse(`Dependencies are not installed.`, plan.install);
+  const { command } = needed.install;
+  output.emit({ type: "progress", stage: "install", message: `Installing dependencies (${command})` });
+  const ran = await runProjectCommand(command, root, output, timeoutMs, "install");
+  if (ran.code === 0) {
+    /* An install that succeeded and still left packages out was told to by a setting this
+       process cannot see (an .npmrc omit=dev, say). Building now would only fail on the
+       first missing tool, and the advice for that would be another install. */
+    const still = await missingDependencies(root);
+    if (still) throw new CliError("dependencies_missing", `${command} finished, but ${still.missing.slice(0, 5).join(", ")}${still.missing.length > 5 ? ` and ${still.missing.length - 5} more` : ""} ${still.missing.length === 1 ? "is" : "are"} still not installed. If they are devDependencies, check that npm's omit setting (in .npmrc) does not include dev. ${skip}`, undefined, { next: plan.install });
+    return;
+  }
+  const minutes = Math.max(1, Math.round(timeoutMs / 60_000));
+  const text = buildCommandLabel(ran.tail, environmentSecrets()).replace(/\r/g, "").split("\n").map(line => line.trimEnd()).filter(Boolean).slice(-30).join("\n").slice(-TAIL_BYTES);
+  const absent = commandNotFound(ran.code, ran.tail);
+  const fix = absent
+    ? `Install ${needed.install.manager}, which this project's lockfile asks for${needed.install.manager === "npm" ? "" : ` (corepack enable ${needed.install.manager} is one way)`}, or install the dependencies yourself, then run ${rerun} again.`
+    : ran.timedOut ? `Run ${command} yourself, then run ${rerun} --no-install.`
+    : `Fix the error ${command} printed, or install the dependencies yourself, then run ${rerun} again.`;
+  const finding: RepairFinding = { release: null, check: "build", checkVersion: CLI_VERSION, state: "failed", certainty: "certain", fault: "game",
+    evidence: { observed: ran.timedOut ? `${command} ran for ${minutes} minutes without finishing.`
+      : text ? `${command} exited${ran.code === null ? "" : ` with code ${ran.code}`}. Its last output:\n${text}`
+      : ran.error ? `${command} could not be started.`
+      : `${command} exited${ran.code === null ? "" : ` with code ${ran.code}`}${output.json ? " without printing anything" : ". Its output is above"}.`,
+      file: "package.json" },
+    fix, verify: `${command}, then ${rerun}`, retry: "after-fix" };
+  output.emit({ type: "finding", finding });
+  throw new CliError("install_failed", absent
+    ? `${listed} ${needed.missing.length === 1 ? "is" : "are"} not installed, and ${needed.install.manager} is not installed to install ${needed.missing.length === 1 ? "it" : "them"}. ${fix}`
+    : `Installing dependencies with ${command} failed. Its output is ${output.json ? "in the finding above" : "above"}.`,
+  undefined, { finding, ...(absent ? {} : { next: command }) });
+}
+
+/** Values a transcript must never carry, even printed without their field name. */
+const environmentSecrets = () => Object.entries(process.env).filter(([name]) => /PASSWORD|PASSWD|SECRET|TOKEN|API_KEY|ACCESS_KEY/i.test(name)).map(([, value]) => value ?? "");
+
+export async function build(command: string, root: string, output: Output, timeoutMs = LIMITS.platform.deploy.buildTimeoutMs, options: BuildOptions = {}) {
+  await installDependencies(root, output, timeoutMs, options);
+  // A build can print an opaque environment value without its field name. Keep
+  // known secret values out of diagnostic transcripts as well as command labels.
+  const secrets = [...environmentSecrets(),
+    ...[...command.matchAll(SECRET_FIELD)].map(match => match[2] ?? match[3] ?? match[4] ?? ""),
+    ...[...command.matchAll(/Authorization\s*:\s*(?:Bearer|Basic)\s+([^\s"']+)/gi)].map(match => match[1]!)];
+  const diagnostic = (value: string) => buildCommandLabel(value, secrets);
+  output.emit({ type: "progress", stage: "build", message: `Running build command: ${diagnostic(command)}` });
+  const capture = output.json;
+  const outcome = await runProjectCommand(command, root, output, timeoutMs, "build command");
   if (outcome.code === 0) return;
-  const timedOut = Boolean(outcome.timedOut);
+  const timedOut = outcome.timedOut;
   const minutes = Math.max(1, Math.round(timeoutMs / 60_000));
   const label = diagnostic(command);
-  const text = diagnostic(tail).replace(/\r/g, "").split("\n").map(line => line.trimEnd()).filter(Boolean).slice(-30).join("\n").slice(-TAIL_BYTES);
+  const text = diagnostic(outcome.tail).replace(/\r/g, "").split("\n").map(line => line.trimEnd()).filter(Boolean).slice(-30).join("\n").slice(-TAIL_BYTES);
+  /* Exit 127 is the shell saying it could not find the program. In a project with packages
+     that is nearly always a dependency nobody installed (vite, on 11 Nov 2026), and the
+     shell's own line names neither cause nor fix, so the error does. */
+  const absent = timedOut ? undefined : commandNotFound(outcome.code, outcome.tail);
+  const rerun = options.rerun ?? "opengame deploy";
+  let missing: { install: string; message: string } | undefined;
+  if (absent) {
+    const pkg = await readBuildPackage(root).catch(() => ({} as Awaited<ReturnType<typeof readBuildPackage>>));
+    const tool = absent.tool ? diagnostic(absent.tool) : undefined;
+    if (Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).length) {
+      // The adding install, never npm ci: this tree has a node_modules or the install step above would have filled it.
+      const plan = await lockfileInstall(root, pkg);
+      const there = plan && plan.folder !== resolve(root) ? plan.folder : undefined;
+      const install = plan?.install ?? "npm install";
+      missing = { install: there ? `cd ${shellPath(relative(resolve(root), there))} && ${install}` : install,
+        message: `The build could not find ${tool ?? "a program it runs"}, so the project's dependencies are probably not installed. Run ${install}${there ? ` in ${there}` : ""}, then run ${rerun} again.` };
+    } else {
+      missing = { install: "", message: `The build could not find ${tool ?? "a program it runs"}, so it is probably not installed on this machine. Install it, or put it on PATH, then run ${rerun} again.` };
+    }
+  }
   const finding: RepairFinding = { release: null, check: "build", checkVersion: CLI_VERSION, state: "failed", certainty: "certain", fault: "game",
     evidence: { observed: timedOut ? `The build command ran for ${minutes} minutes without finishing.`
       : text ? `The build command exited${outcome.code === null ? "" : ` with code ${outcome.code}`}. Its last output:\n${text}`
@@ -186,10 +323,14 @@ export async function build(command: string, root: string, output: Output, timeo
       : !capture ? `The build command exited${outcome.code === null ? "" : ` with code ${outcome.code}`}. Its output is above.`
       : `The build command exited${outcome.code === null ? "" : ` with code ${outcome.code}`} without printing anything.`,
       file: "opengame.json" },
-    fix: timedOut ? `Make ${label} finish within ${minutes} minutes, or build first and set build.output to the result.` : `Fix the error the build printed, then run ${label} until it succeeds.`,
+    fix: timedOut ? `Make ${label} finish within ${minutes} minutes, or build first and set build.output to the result.`
+      : missing ? missing.message
+      : `Fix the error the build printed, then run ${label} until it succeeds.`,
     verify: `${label}, then opengame deploy`, retry: "after-fix" };
   output.emit({ type: "finding", finding });
-  throw new CliError(timedOut ? "build_timeout" : "build_failed", timedOut ? `The build did not finish within ${minutes} minutes.` : `The build command failed. Its output is ${capture ? "in the finding above" : "above"}.`, 1, { finding });
+  throw new CliError(timedOut ? "build_timeout" : "build_failed", timedOut ? `The build did not finish within ${minutes} minutes. The finding's fix says how to make it finish or skip it.`
+    : missing ? missing.message
+    : `The build command failed. Its output is ${capture ? "in the finding above" : "above"}.`, 1, { finding, ...(missing?.install ? { next: missing.install } : {}) });
 }
 
 /**
@@ -198,10 +339,10 @@ export async function build(command: string, root: string, output: Output, timeo
  * the build by default, so skipping it is the creator's decision and is said out loud.
  */
 export async function prepareDeploy(root: string, output: Output, runBuild = true, options: { vendor?: boolean; incremental?: boolean;
-  unityAssets?: string | readonly string[]; unityOnly?: boolean; delivery?: string; noBuild?: boolean } = {}) {
+  unityAssets?: string | readonly string[]; unityOnly?: boolean; delivery?: string; noBuild?: boolean } & BuildOptions = {}) {
   if (options.unityAssets && options.vendor) throw new CliError("conflicting_flags", "Use an asset plan without --vendor; the explicit asset plan preserves exported file paths and bytes.", 2);
   const manifest = await loadManifest(root, output, options.unityAssets ? safeReadFile : undefined);
-  if (runBuild && manifest.build?.command) await build(manifest.build.command, root, output);
+  if (runBuild && manifest.build?.command) await build(manifest.build.command, root, output, undefined, { install: options.install, rerun: options.rerun });
   // After the build, whose own output owns the terminal while it runs.
   await output.face();
   output.emit({ type: "progress", stage: "check", message: "Checking and packaging your game" });
@@ -439,7 +580,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
   const api = new Api();
   try {
     if (command === "deploy") {
-      const initialized = await ensureDeployManifest(root, flags);
+      const initialized = await ensureDeployManifest(root, flags, output);
       if (initialized) output.emit({ type: "notice", code: "initialized", message: initialized.message });
     }
     let active = await timed("credentials", () => activeToken(api.origin, Boolean(flags["token-stdin"])));
@@ -582,7 +723,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
             if (remember(latest, state)) await save();
           } catch (error) { if (!(error instanceof CliError) || error.exitCode !== 5) throw error; }
         }
-        prepared = await timed("prepare", () => prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), incremental: limits.incrementalUpload && !incompatibleFileUpload, noBuild: Boolean(flags["no-build"]),
+        prepared = await timed("prepare", () => prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), incremental: limits.incrementalUpload && !incompatibleFileUpload, noBuild: Boolean(flags["no-build"]), install: !flags["no-install"],
           unityAssets: assetPlan?.plan ?? retainedAssets, unityOnly: assetPlan?.unityOnly, delivery: retainedAssets ? planDelivery(saved!.unityAssets) : undefined }));
         // The same bytes are already being checked: follow that deploy rather than
         // spend a second scan on an identical build.
@@ -700,7 +841,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
              than only that the token is not valid, so nobody goes looking for a lost upload. */
           response = await timed("confirm", () => api.json(`/api/v1/operations/${op.id}/upload`, { token, method: "PUT" })).catch(error => {
             if (error instanceof ApiError && error.code === "token_revoked") {
-              throw new CliError("token_revoked", `${error.message} It was revoked while this upload was in flight, so the upload was discarded and cannot be submitted.`, 3);
+              throw new CliError("token_revoked", `${error.message} It was revoked while this upload was in flight, so the upload was discarded and cannot be submitted. Run opengame login (or replace OPENGAME_TOKEN), then run opengame deploy to upload again.`, 3, { next: "opengame login" });
             }
             throw error;
           });

@@ -28,7 +28,8 @@ import { syncAchievements } from "./achievements";
 import { filesFromArchive, uploadMissingFiles } from "./incremental";
 import { uploadArchiveParts, type ArchiveSource } from "./archive-parts";
 import { pythonAvailable, safeReadFile } from "./safe-fs";
-import { acceptedStatement, assertUnitySourceRoot, createUnityArchive, LARGE_ASSET_DELIVERY, planDelivery, readSmallUnityAssets, readUnityAsset, readUnityAssetPlan, unityFileUnion, unityInputDigest } from "./unity-assets";
+import { acceptedStatement, assertUnitySourceRoot, createUnityArchive, LARGE_ASSET_DELIVERY, planDelivery, readSmallUnityAssets, readUnityAsset, readUnityAssetPart, readUnityAssetPlan, unityFileUnion, unityInputDigest } from "./unity-assets";
+import { TRANSPORT_HEADERS } from "./transport";
 
 /** The asset plan a command was given. --external-assets takes any plan kind named in
  * the plan file; --unity-assets is the original spelling and takes Unity's only. */
@@ -53,11 +54,12 @@ async function serverLimits(api: Api, token: string) {
   if (!limits || !Number.isSafeInteger(limits.archiveBytesMax) || limits.archiveBytesMax < 1 || !Number.isSafeInteger(limits.fileCountMax) || limits.fileCountMax < 1) {
     throw new CliError("invalid_response", "The server limits could not be read. Run opengame deploy again.", 5);
   }
-  const capabilities = data.capabilities as { incrementalUpload?: unknown; archiveParts?: unknown; externalAssets?: unknown } | undefined;
+  const capabilities = data.capabilities as { incrementalUpload?: unknown; archiveParts?: unknown; fileParts?: unknown; filePacks?: unknown; externalAssets?: unknown } | undefined;
   /* The asset plan kinds this account may send file by file (bootstrap, 11 Nov 2026). A
      server that names none, or predates the field, gets the archive as before. */
   const externalAssets = Array.isArray(capabilities?.externalAssets) ? capabilities.externalAssets.filter((kind): kind is string => typeof kind === "string") : [];
-  return { ...limits, incrementalUpload: capabilities?.incrementalUpload === true, archiveParts: capabilities?.archiveParts === true, externalAssets };
+  return { ...limits, incrementalUpload: capabilities?.incrementalUpload === true, archiveParts: capabilities?.archiveParts === true,
+    fileParts: capabilities?.fileParts === true, filePacks: capabilities?.filePacks === true, externalAssets };
 }
 
 const TAIL_BYTES = 4096;
@@ -871,7 +873,9 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
              row, so World at War's 26,200 files are a 3.9 MB request: past bodyBytesMax and
              past the 4.5 MB Vercel takes. Only this route reads gzip, and a body that fits
              is still sent plain (encodeJsonBody). */
-          ...(assetUpload ? { gzip: { sentMax: LIMITS.platform.incrementalUpload.bodyBytesMax, decodedMax: LIMITS.platform.incrementalUpload.assetPlanBodyBytesMax } } : {}) }));
+          ...(assetUpload ? { gzip: { sentMax: LIMITS.platform.incrementalUpload.bodyBytesMax, decodedMax: LIMITS.platform.incrementalUpload.assetPlanBodyBytesMax } } : {}),
+          // A server that says fileParts signs checksum PUTs and answers long pages for a client that asks (transport.ts).
+          ...(fileUpload && limits.fileParts ? { headers: TRANSPORT_HEADERS } : {}) }));
         if (assetUpload && (response.delivery !== delivery || response.inputDigest !== pending.unityAssets!.inputDigest)) {
           throw new CliError("invalid_response", "The server returned a different asset identity. Keep the saved deploy and retry.", 5);
         }
@@ -886,7 +890,9 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
         if (op.state === "uploading" && fileUpload) {
           response = await timed("upload", () => uploadMissingFiles(api, token, op.id, archiveBytes!, uploadFiles!, response.files, output,
             assetUpload ? { route: "assets", delivery, inputDigest: pending.unityAssets!.inputDigest, readFile: file => readUnityAsset(pending.unityAssets!.sourceRoot, file),
-              readFiles: files => readSmallUnityAssets(pending.unityAssets!.sourceRoot, files) } : {}));
+              readFiles: files => readSmallUnityAssets(pending.unityAssets!.sourceRoot, files), fileParts: limits.fileParts,
+              readPart: (file, offset, length) => readUnityAssetPart(pending.unityAssets!.sourceRoot, file, offset, length), filePacks: limits.filePacks }
+              : { fileParts: limits.fileParts, filePacks: limits.filePacks }));
           op = operation(response.operation, op.id);
           if (remember(op, state)) await save();
         } else if (op.state === "uploading") {

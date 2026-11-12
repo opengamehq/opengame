@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.9.3
+
+0.9.2 was not published, so this release carries its changes too.
+
+- Large and many-file deploys go up as fast as your connection allows. Against a server
+  that offers it, `opengame deploy` sends up to 16 uploads at once, asks the server for 256
+  files at a time instead of 32, and has them checked a page at a time rather than one by
+  one. Storage checks each file's SHA-256 as it arrives, so the server no longer reads your
+  files back to confirm them.
+- Builds with many small files go up in a handful of requests. Files of up to 1 MiB go
+  together, up to 1,024 or 4 MiB to a request, and the server checks every file's SHA-256
+  as before. 25,000 files of 4 KiB that took about a minute on a 100 Mbps connection take
+  about ten seconds.
+- Any file over 1 MiB goes up in 16 MiB parts, read from disk a part at a time, so a large
+  export never sits in memory whole. A dropped connection costs one part, and running
+  `opengame deploy` again sends only the parts that have not arrived. Archives sent in parts
+  ask for their upload addresses many at a time.
+- While it uploads, the CLI shows how much has gone, how fast and about how long is left.
+- A deploy whose files the server is still putting together is followed until it is, rather
+  than ending at "Upload pending".
+- When an upload fails, the deploy stops with the error and the command to run next once
+  every upload in flight has stopped. A failed check of a page of files now stops the deploy
+  too, and the CLI reads at most 32 MiB of small files ahead of their uploads.
+
 ## 0.9.1
 
 - `opengame deploy --wait` shows the deployment checklist shared with Drop and prints the page where upload, checks, review and publication update live. JSON output keeps its existing event format.

@@ -96,9 +96,21 @@ def execute(job, stream=None):
                     total += before.st_size
                     if total > job["maximum"]:
                         raise OverLimit("file limit")
-                    data = source.read(before.st_size + 1)
+                    span = job.get("range") if job["operation"] == "read-binary" else None
+                    if span is None:
+                        data = source.read(before.st_size + 1)
+                        wanted = before.st_size
+                    else:
+                        # One part of a large asset: only these bytes reach memory, so a
+                        # gigabyte goes up in parts without being held whole.
+                        offset, wanted = span.get("offset"), span.get("length")
+                        if (type(offset) is not int or type(wanted) is not int or offset < 0 or wanted < 0
+                                or offset + wanted > before.st_size):
+                            raise ValueError("invalid range")
+                        source.seek(offset)
+                        data = source.read(wanted)
                     after = os.fstat(source.fileno())
-                    if len(data) != before.st_size or (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+                    if len(data) != wanted or (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (after.st_size, after.st_mtime_ns, after.st_ctime_ns):
                         raise ValueError("file changed")
                 unchanged()
                 # Per-file ancestors are no longer needed once bytes are in memory.

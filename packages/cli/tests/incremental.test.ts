@@ -270,3 +270,22 @@ test("file progress advances only after verification and follows missing-hash pa
   assert.equal(events.at(-1)?.files, 2);
   assert.deepEqual(result, { operation: { state: "queued" } });
 });
+
+test("a completion still assembling on the server is asked again until the operation is queued", async () => {
+  // Since 12 Nov 2026 the server answers completion before a slow assembly lands. A CLI that took that answer as the
+  // end of the upload reported "Upload pending" for a deploy that was about to be checked.
+  const archive = canonicalArchive([["index.html", Buffer.from("a")]])!;
+  const only = archive.files[0]!;
+  let completes = 0;
+  const api = {
+    uploadFile: async () => {},
+    json: async (path: string) => {
+      if (!path.endsWith("/complete")) return {};
+      return completes++ === 0 ? { operation: { state: "uploading" }, assembling: true } : { operation: { state: "queued" } };
+    },
+  } as unknown as Api;
+  const result = await uploadMissingFiles(api, "token", "operation", archive.bytes, archive.files,
+    { missing: [{ ...only, upload: { sha: only.sha256 } }], reusedFiles: 0, reusedBytes: 0, totalFiles: 1, totalBytes: 1, nextCursor: null }, new Output(true, () => {}));
+  assert.equal(completes, 2);
+  assert.deepEqual(result, { operation: { state: "queued" } });
+});

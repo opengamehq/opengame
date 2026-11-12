@@ -1,5 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import { archivePartBytes, archivePartsSchema, archivePartUploadSchema, type ArchiveParts } from "@opengame/protocol";
+import { archivePartBytes, archivePartsSchema, archivePartUploadSchema, type ArchivePartUpload, type ArchiveParts } from "@opengame/protocol";
 import { LIMITS } from "@opengame/shared";
 import { Api, UploadInterrupted } from "./http";
 import { retryShortly } from "./incremental";
@@ -52,6 +52,27 @@ export async function uploadArchiveParts(api: Api, token: string, operation: str
     };
     report();
     let next = 0, failed = false, left = false;
+    /* Signed URLs, asked for a request's worth at a time (partsPerRequestMax) for the parts next in the queue, and
+       asked for again once near the end of their life. One request a part was 256 round trips for a 4 GiB archive,
+       each in front of a part that on a fast link takes less time to send than the request took to answer. */
+    const signed = new Map<number, { value: ArchivePartUpload; at: number }>();
+    const signing = new Map<number, Promise<"left" | void>>();
+    const usable = (part: number) => { const held = signed.get(part); return !!held && Date.now() - held.at < held.value.expiresInSeconds * 900; };
+    const signedPart = async (part: number): Promise<ArchivePartUpload | "left"> => {
+      if (usable(part)) return signed.get(part)!.value;
+      const already = signing.get(part);
+      if (already) { if (await already === "left") return "left"; return signedPart(part); }
+      const from = queue.indexOf(part);
+      const batch = [part, ...queue.slice(from + 1).filter(number => !usable(number) && !signing.has(number))].slice(0, LIMITS.platform.deploy.multipart.partsPerRequestMax);
+      const job = retryShortly(output, () => signMany(api, token, operation, batch, parts)).then(list => {
+        if (list === "left") return "left" as const;
+        for (const value of list) signed.set(value.partNumber, { value, at: Date.now() });
+      });
+      for (const number of batch) signing.set(number, job);
+      try { if (await job === "left") return "left"; } finally { for (const number of batch) signing.delete(number); }
+      if (!usable(part)) throw new CliError("invalid_upload", "The server returned an invalid upload. Run opengame deploy again.", 5);
+      return signed.get(part)!.value;
+    };
     const send = async (part: number) => {
       const size = archivePartBytes(parts.byteSize, parts.partBytes, part);
       const offset = (part - 1) * parts.partBytes;
@@ -62,17 +83,18 @@ export async function uploadArchiveParts(api: Api, token: string, operation: str
       if (slice.byteLength !== size) throw new CliError("archive_unavailable", "The saved upload archive is missing or changed. Run opengame status first. To start a new deploy, use opengame deploy --idempotency-key with a new key.", 1);
       for (let attempt = 1; ; attempt++) {
         // react-doctor-disable-next-line react-doctor/async-await-in-loop
-        const signed = await retryShortly(output, () => sign(api, token, operation, part, size));
-        if (signed === "left") { left = true; return; }
+        const url = await signedPart(part);
+        if (url === "left") { left = true; return; }
         try {
           // react-doctor-disable-next-line react-doctor/async-await-in-loop
-          await api.uploadPart(signed, slice, sent => { inFlight.set(part, sent); report(); });
+          await api.uploadPart(url, slice, sent => { inFlight.set(part, sent); report(); }, LIMITS.platform.deploy.multipart.concurrency);
           inFlight.delete(part);
           landed += size;
           report();
           return;
         } catch (error) {
           inFlight.delete(part);
+          signed.delete(part);
           if (!(error instanceof UploadInterrupted)) throw error;
           /* 404 is storage no longer knowing the upload: it was completed by another run, or
              discarded. Re-signing would name the same upload again, so the server is asked
@@ -131,15 +153,17 @@ function readParts(value: unknown, archive: ArchiveSource): ArchiveParts {
   return parsed.data;
 }
 
-/** One part's signed URL, checked against the part this machine meant to send. */
-async function sign(api: Api, token: string, operation: string, part: number, size: number) {
-  const answer = await api.json(`/api/v1/operations/${operation}/upload/parts`, { token, method: "POST", body: { parts: [part] } });
+/** Signed URLs for these parts, each checked against the part this machine meant to send: its number and its
+ * exact length from the plan. "left" when the operation left uploading (expired, or confirmed by another run). */
+async function signMany(api: Api, token: string, operation: string, numbers: number[], plan: ArchiveParts) {
+  const answer = await api.json(`/api/v1/operations/${operation}/upload/parts`, { token, method: "POST", body: { parts: numbers } });
   const list = Array.isArray(answer.parts) ? answer.parts : null;
-  // An operation that left uploading (expired, or confirmed by another run) signs nothing.
   if (list && list.length === 0) return "left" as const;
-  const signed = archivePartUploadSchema.safeParse(list?.[0]);
-  if (!list || list.length !== 1 || !signed.success || signed.data.partNumber !== part || signed.data.headers["content-length"] !== String(size)) {
+  const rows = (list ?? []).map(value => archivePartUploadSchema.safeParse(value));
+  if (!list || list.length !== numbers.length || rows.some((row, index) => !row.success || row.data.partNumber !== numbers[index]
+    || row.data.headers["content-length"] !== String(archivePartBytes(plan.byteSize, plan.partBytes, numbers[index]!)))) {
     throw new CliError("invalid_upload", "The server returned an invalid upload. Run opengame deploy again.", 5);
   }
-  return signed.data;
+  return rows.map(row => row.data as ArchivePartUpload);
 }
+

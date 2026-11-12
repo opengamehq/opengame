@@ -309,6 +309,15 @@ export async function readUnityAsset(sourceRoot: string, file: LargeAssetFile): 
   return savedAsset(file, await safeReadLargeFile(sourceRoot, file.path, file.byteSize));
 }
 
+/** `length` bytes from `offset` in a saved asset, which must still be the size the plan recorded. A part is
+ * not hashed on its own: the server hashes the joined file, and a file changed since the plan fails there. */
+export async function readUnityAssetPart(sourceRoot: string, file: LargeAssetFile, offset: number, length: number): Promise<Uint8Array> {
+  const bytes = await safeReadLargeFile(sourceRoot, file.path, file.byteSize, undefined, { offset, length, size: file.byteSize })
+    .catch(() => { throw new CliError("build_changed", SAVED_ASSET_CHANGED, 1); });
+  if (bytes.byteLength !== length) throw new CliError("build_changed", SAVED_ASSET_CHANGED, 1);
+  return bytes;
+}
+
 /** Files at or under this size are read several to a helper job during upload. A page of
  * missing files is at most incrementalUpload.batchFilesMax long, so what is held ahead of
  * the upload is at most that many of these. */

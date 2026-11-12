@@ -26,6 +26,14 @@ export const bootstrapSchema = z.object({
      multipart: true). Absent from every server before 4 Nov 2026, so a CLI sends one PUT to
      those, as it always did. */
   capabilities: z.object({ incrementalUpload: z.boolean(), archiveParts: z.boolean().optional(),
+    /* fileParts: the file and large-asset routes take long pages (x-opengame-upload-page-files),
+       verify a page of any of their files on files/verify, and take a large file in parts
+       (files/{hash}/parts). Absent before 12 Nov 2026, so a CLI keeps 32-file pages, one
+       verification a file and one PUT a file against those. */
+    fileParts: z.boolean().optional(),
+    /* filePacks: small files go to files/pack many to a request, and a file past
+       incrementalUpload.packFileBytesMax may go in parts. Absent before 12 Nov 2026. */
+    filePacks: z.boolean().optional(),
     /* The asset plan kinds this account may send file by file now (11 Nov 2026): the lane
        is open to it and the server is taking per-file uploads. A CLI sends a build too big
        for the file route through large-game-v1 when it is listed, and as one archive when

@@ -1538,14 +1538,19 @@
       "archiveBytesMax": 209715200,
       "batchFilesMax": 32,
       "chunkBytesMax": 1048576,
-      "concurrency": 8,
+      "concurrency": 16,
+      "pageFilesMax": 256,
+      "packFileBytesMax": 1048576,
+      "packFilesMax": 1024,
       "verificationLeaseSeconds": 120
     },
     "deploy": {
       "perAccountPerDay": 5,
+      "minimumUploadBytesPerSecond": 150000,
       "multipart": {
         "aboveBytes": 67108864,
-        "concurrency": 4
+        "concurrency": 16,
+        "partsPerRequestMax": 64
       },
       "uploadAttemptsMax": 3,
       "uploadTimeoutMs": 600000,

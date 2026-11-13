@@ -1,5 +1,6 @@
 import type { EngineMetadata, BuildMetadata } from "./engine";
 import type { GameManifest } from "./manifest";
+import { isRetiredCheck } from "./review";
 
 export type ReceiptState = "passed" | "failed" | "inconclusive" | "not run" | "provider unavailable";
 export type CheckGroup = "safety" | "eligibility" | "quality";
@@ -97,5 +98,10 @@ export const RECEIPT_CONTRACTS: Readonly<Record<string, { preview: readonly Chec
  * their receipts on the same release, and those are not a deploy's to report.
  * A contract this code does not know has none (its deploy fails as ours). */
 export function previewChecks(receiptContract: string | null | undefined): readonly CheckRequirement[] {
-  return receiptContract && Object.hasOwn(RECEIPT_CONTRACTS, receiptContract) ? RECEIPT_CONTRACTS[receiptContract]!.preview : [];
+  // A retired check is nothing a deploy waits on or reports any more, on any contract
+  // (RETIRED_CHECKS in review.ts): 20261112190000 finalizes every
+  // release without one, so these lists describe what a release was once checked for, and
+  // what a deploy shows is that read past the retired checks.
+  return receiptContract && Object.hasOwn(RECEIPT_CONTRACTS, receiptContract)
+    ? RECEIPT_CONTRACTS[receiptContract]!.preview.filter(check => !isRetiredCheck(check.check)) : [];
 }

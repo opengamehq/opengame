@@ -11,10 +11,11 @@ test("terminal checklist mirrors the deployment page's stages", () => {
     assert.equal(line.includes("Live [x]"), false);
   }
 });
-test("the terminal completes Live only after publication and includes Details only when owed", () => {
+// Details is always a step since 13 Nov 2026, so the page's count holds still (J-opus-13).
+test("the terminal completes Live only after publication and ticks Details once confirmed", () => {
   const submission = { state: "awaiting_details" as const, submittedAt: "2026-11-12T06:00:00Z", outcome: null, live: null, hold: null };
   assert.match(terminalDeploymentChecklist({ state: "ready", submission }), /Details \[! \]/);
   const published = terminalDeploymentChecklist({ state: "ready", submission: { ...submission, state: "published" } });
   assert.match(published, /Live \[x\]/);
-  assert.doesNotMatch(published, /Details/);
+  assert.match(published, /Details \[x\]/);
 });

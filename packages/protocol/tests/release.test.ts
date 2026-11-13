@@ -33,12 +33,20 @@ test("contract 3 requires no text-policy pass for a preview or a publication", (
   // Earlier contracts are unchanged: a release checked under them keeps its rules.
   assert.ok(checks("2", "preview").includes("text-policy") && checks("2", "publish").includes("text-policy"));
   assert.ok(!checks("1", "publish").includes("text-policy"));
+});
+
+// The minimal checks (12 Nov 2026) are the database's change, not a new contract: a web
+// deploy freezing a contract the database did not know yet would be refused.
+test("new releases keep contract 3, and the minimal checks are on", () => {
   assert.equal(LIMITS.platform.receiptContract, "3");
+  assert.equal((LIMITS.platform.deploy as { minimalChecks?: boolean }).minimalChecks, true);
 });
 
 test("a deploy reports only its contract's preview checks", async () => {
   const { previewChecks } = await import("../src/release");
-  assert.deepEqual(previewChecks("2").map(check => check.check).sort(), ["archive", "desktop", "engine", "images", "malware", "preflight", "secrets", "text-policy"]);
+  // Contract 2 named the malware, credential, image and text checks; they are retired, so
+  // a deploy on it reports the file checks alone, as every contract does.
+  assert.deepEqual(previewChecks("2").map(check => check.check).sort(), ["archive", "desktop", "engine", "preflight"]);
   assert.equal(previewChecks("2").some(check => ["boot", "playtest", "agent-playtest"].includes(check.check)), false);
   assert.deepEqual(previewChecks("9"), []);
   assert.deepEqual(previewChecks(null), []);

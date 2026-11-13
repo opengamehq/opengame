@@ -4,6 +4,7 @@ import { platformPreflight } from '../src/platform';
 import type { PreflightFile } from '../src/index';
 import { gzipSync } from 'node:zlib';
 import { compressedTextReaders } from '../src/node-compression';
+import "./credential-checks-on";
 
 const file = (path: string, content: string): PreflightFile => ({ path, size: Buffer.byteLength(content), text: async () => content });
 const page = '<!doctype html><html><body><canvas id="game"></canvas><script src="game.js"></script></body></html>';

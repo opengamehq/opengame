@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.9.4
+
+- `opengame check` warns about a missing favicon, web manifest or touch icon, or one named with
+  the wrong case, and about a missing image preload, rather than refusing the build: none of
+  them stops a game from starting. A missing script or stylesheet still blocks.
+- An icon's link reads as an icon however many attributes come before its `href`, so a
+  long `<link rel="icon" type=... sizes=... href=...>` with a wrong-case file warns too.
+- `opengame status` leads with review's return when it sent the build back, rather than
+  "Private preview ready" above it. The preview link follows.
+- A large Brotli or gzip file (a Unity `.data.br` over about 21 MB) is read on Node 18, whose
+  buffers stop at 4 GiB, instead of being reported as unreadable.
+- `opengame init` names a game from its page's `<title>` or package.json only when that names a
+  game. "Game Development Assignment", "index" or "Unity WebGL Player" give way to the folder's
+  name, a long name is cut at a word and never inside a bracket, and a name nobody typed is sent
+  as a suggestion the deploy's page can improve on.
+- When the server's checks refuse a deploy, the error names the first file and what to change.
+- `init` says the controls it found once, in words, and `check` says server packaging checks
+  still run before a preview.
+- The deployment checklist reads an estimate as "About 2 to 5 min", not with a dash, and keeps
+  Details as a step from the start, so the count does not change under you.
+
 ## 0.9.3
 
 0.9.2 was not published, so this release carries its changes too.

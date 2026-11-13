@@ -4,7 +4,7 @@
     "title": "OpenGame API",
     "version": "1",
     "summary": "Deploy games from a terminal, and give a running game identity and leaderboards.",
-    "description": "Two origins share this document.\n\n- **https://opengame.io/api/v1** is the creator API. The CLI, CI and your own tools call it with a creator token (`ogt_`). An older `oga_` jam upload token is refused. The creator API never runs inside a game.\n- **https://api.opengame.gg/v1** is the game API. A running game calls it with the session token the OpenGame page handed it.\n\nBefore launch, every creator route except `GET /api/v1/status` and sign-in answers 403 `not_launched` to an account outside the OpenGame team. `GET /api/v1/status` returns whether OpenGame is launched and whether your account may use it.\n\nAn account without access to the creator API gets 403 `not_member`, and a suspended or deleted account gets 403 `account_inactive`. Analytics, audience and embed routes add their own rules, listed on each operation.\n\nCreator analytics take no filters. Any filter parameter is refused with `filters_removed`; use the breakdown rows in the weekly report instead."
+    "description": "Two origins share this document.\n\n- **https://opengame.io/api/v1** is the creator API. The CLI, CI and your own tools call it with a creator token (`ogt_`). An older `oga_` jam upload token is refused. The creator API never runs inside a game.\n- **https://api.opengame.gg/v1** is the game API. A running game calls it with the session token the OpenGame page handed it.\n\nEvery creator route takes any signed-in account, before launch as after it. `GET /api/v1/status` returns whether OpenGame is launched and whether your account may use it.\n\nAn account without access to the creator API gets 403 `not_member`, and a suspended or deleted account gets 403 `account_inactive`. Analytics, audience and embed routes add their own rules, listed on each operation.\n\nCreator analytics take no filters. Any filter parameter is refused with `filters_removed`; use the breakdown rows in the weekly report instead."
   },
   "servers": [
     {
@@ -907,14 +907,15 @@
             "additionalProperties": false
           },
           "provisional": {
-            "maxItems": 3,
+            "maxItems": 4,
             "type": "array",
             "items": {
               "type": "string",
               "enum": [
                 "genre",
                 "controls",
-                "description"
+                "description",
+                "title"
               ]
             }
           }
@@ -1089,14 +1090,15 @@
             "additionalProperties": false
           },
           "provisional": {
-            "maxItems": 3,
+            "maxItems": 4,
             "type": "array",
             "items": {
               "type": "string",
               "enum": [
                 "genre",
                 "controls",
-                "description"
+                "description",
+                "title"
               ]
             }
           },
@@ -11372,7 +11374,7 @@
           }
         ],
         "summary": "Rename your handle",
-        "description": "Rename the signed-in account's handle, as Settings does, through the same function: the same rate limits, the same moderation and the same uniqueness check. The old handle keeps pointing at the account and is never given to anybody else. Only a browser session or the token `opengame login` makes can do this; a token made in settings cannot, whatever its permissions, and neither can one pinned to a game. What `opengame handle` sends.",
+        "description": "Rename the signed-in account's handle, as Settings does, through the same function: the same rate limits, the same moderation and the same uniqueness check. The old handle becomes free for anyone to claim at once, the account's games keep their /g links, and its profile address changes. Only a browser session or the token `opengame login` makes can do this; a token made in settings cannot, whatever its permissions, and neither can one pinned to a game. What `opengame handle` sends.",
         "requestBody": {
           "required": true,
           "content": {
@@ -11446,7 +11448,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential is not a browser session or the `opengame login` token, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential is not a browser session or the `opengame login` token, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11720,7 +11722,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11839,7 +11841,7 @@
           {}
         ],
         "summary": "Check whether OpenGame is open to creators",
-        "description": "Returns whether OpenGame is open to creators, whether the account behind the credential may use it, and when deploys stop. The site opens by itself at `opensAt`; the CLI, uploads and every other creator route open a day later, at `creatorsOpenAt`, the jam's kickoff; deploys stop at `entriesCloseAt`. Works with no credential, and before `creatorsOpenAt`, when every other creator route answers 403 `not_launched` to an account outside the team. `deploysFrozen` is true once entries have closed, after which every deploy is refused with `entries_closed`. The CLI calls this before every command except `version`, `help`, `login`, `logout` and `whoami`, stops with exit code 7 when neither `launched` nor `access` is `true`, and stops `deploy` when `deploysFrozen` is true.",
+        "description": "Returns whether OpenGame is open to creators, whether the account behind the credential may use it, and when deploys stop. The site opens by itself at `opensAt`, and to a caller with no account the creator platform opens at `creatorsOpenAt`, the jam's kickoff; any signed-in account may use it already, so `access` is `true` for one. Deploys stop at `entriesCloseAt`. Works with no credential. `deploysFrozen` is true once entries have closed, after which every deploy is refused with `entries_closed`. The CLI calls this before every command except `version`, `help`, `login`, `logout` and `whoami`, stops with exit code 7 when neither `launched` nor `access` is `true`, and stops `deploy` when `deploysFrozen` is true.",
         "responses": {
           "200": {
             "description": "The launch state, and this caller's access.",
@@ -12008,7 +12010,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12342,7 +12344,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12621,7 +12623,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13027,7 +13029,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: this token is pinned to another game, lacks the Deploy permission, or a browser request came from another site. Use a token for this game. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: this token is pinned to another game, lacks the Deploy permission, or a browser request came from another site. Use a token for this game. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13306,7 +13308,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the token cannot deploy this game, or a browser request came from another site. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the token cannot deploy this game, or a browser request came from another site. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13582,7 +13584,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13830,7 +13832,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14149,7 +14151,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14418,7 +14420,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14674,7 +14676,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14945,7 +14947,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game or change this deploy, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game or change this deploy, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15232,7 +15234,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15496,7 +15498,7 @@
             }
           },
           "403": {
-            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15816,7 +15818,7 @@
             }
           },
           "403": {
-            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16108,7 +16110,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16356,7 +16358,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16629,7 +16631,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16890,7 +16892,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: this credential cannot read this deploy, because it has neither `deploy` nor `read` for the operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: this credential cannot read this deploy, because it has neither `deploy` nor `read` for the operation's game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -17119,7 +17121,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -17374,7 +17376,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -17661,7 +17663,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential cannot deploy this operation's game, or a browser request came from another site. `insufficient_scope`: the credential cannot change this deploy. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -17891,8 +17893,8 @@
                       },
                       "status": {
                         "key": "review",
-                        "label": "With a person",
-                        "message": "A person reviews your game before it can be published."
+                        "label": "In review",
+                        "message": "This release is still in review. You do not need to do anything."
                       }
                     }
                   ],
@@ -17931,7 +17933,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -18130,8 +18132,8 @@
                     },
                     "status": {
                       "key": "review",
-                      "label": "With a person",
-                      "message": "A person reviews your game before it can be published."
+                      "label": "In review",
+                      "message": "This release is still in review. You do not need to do anything."
                     },
                     "submission": {
                       "id": "6b0d3f9e-2a7c-4d18-9f4b-3e6a1c8d5b02",
@@ -18190,7 +18192,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -18346,8 +18348,8 @@
                       "fileCount": 1203,
                       "by": "laptop cli",
                       "reason": {
-                        "observed": "A file in this build looks like it holds a credential.",
-                        "fix": "Remove the credential from the build, rotate it, then deploy again."
+                        "observed": "This upload contains a native program that a player could download and run: tools/setup.exe (a .exe file).",
+                        "fix": "Remove tools/setup.exe from the build, then deploy again."
                       },
                       "url": "https://opengame.io/settings/deployments/d4a7c1e9-3b6f-4a28-9e05-7c2b8f1d6a39",
                       "previewUrl": null
@@ -18373,7 +18375,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope, or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope, or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -18554,7 +18556,7 @@
                       "createdAt": "2026-10-21T16:42:09.000Z",
                       "title": "Tide Runner",
                       "status": "review",
-                      "label": "With a person",
+                      "label": "In review",
                       "live": false,
                       "newest": true,
                       "cleaned": false,
@@ -18610,7 +18612,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential has neither the `read` nor the `deploy` scope. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -18823,7 +18825,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `account_banned`: the account is banned and the release is not one the game already served. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `account_banned`: the account is banned and the release is not one the game already served. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -18991,7 +18993,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: a banned creator is no longer a member; a banned tester or staff member can still unpublish, as on the website. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: a banned creator is no longer a member; a banned tester or staff member can still unpublish, as on the website. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19172,7 +19174,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19407,7 +19409,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `words_refused`: this account cannot edit its games. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `words_refused`: this account cannot edit its games. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19644,7 +19646,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential is not a browser session or the `opengame login` token with the `submit` permission, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: a banned creator is no longer a member; a banned tester or staff member can still delete, as on the website. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential is not a browser session or the `opengame login` token with the `submit` permission, or a browser request came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: a banned creator is no longer a member; a banned tester or staff member can still delete, as on the website. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19852,7 +19854,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `jam_entry_held` is re-entry's, and is not sent here. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: a banned creator is no longer a member; a banned tester or staff member can still withdraw, as on the page. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `jam_entry_held` is re-entry's, and is not sent here. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: a banned creator is no longer a member; a banned tester or staff member can still withdraw, as on the page. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -20017,7 +20019,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `jam_entry_held`: this account cannot enter the jam right now. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential does not have the `submit` scope on this game, or a browser request came from another site. `jam_entry_held`: this account cannot enter the jam right now. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -20237,7 +20239,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the credential has neither `read` nor `deploy`, or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the credential has neither `read` nor `deploy`, or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -20422,7 +20424,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the request used a token rather than a browser session, or came from a page that is not OpenGame. Open the game page while signed in. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the request used a token rather than a browser session, or came from a page that is not OpenGame. Open the game page while signed in. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -20648,7 +20650,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`: the request used a token rather than a browser session, or came from a page that is not OpenGame. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`forbidden`: the request used a token rather than a browser session, or came from a page that is not OpenGame. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -20900,7 +20902,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks `read` or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks `read` or is pinned to another game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -23896,7 +23898,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -24485,7 +24487,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -24707,7 +24709,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -25005,7 +25007,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -25220,7 +25222,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the credential has no `read` scope for this game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the credential has no `read` scope for this game. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -25484,7 +25486,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the credential has no `deploy` scope for this game, or is retiring one, or saving words its named deploy did not declare, without the `submit` scope. `forbidden`: a browser change came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the credential has no `deploy` scope for this game, or is retiring one, or saving words its named deploy did not declare, without the `submit` scope. `forbidden`: a browser change came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -25687,7 +25689,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -25888,7 +25890,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks `deploy`, or lacks `read` for the answer after a save that already happened, or is pinned to another game. `forbidden`: a browser change came from another site. `embed_unavailable`: the settings were saved but could not be read back for the edge, so read them again. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks `deploy`, or lacks `read` for the answer after a save that already happened, or is pinned to another game. `forbidden`: a browser change came from another site. `embed_unavailable`: the settings were saved but could not be read back for the edge, so read them again. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -26201,7 +26203,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -26378,7 +26380,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the scope this operation names, or is pinned to another game. `forbidden`: a browser change came from another site. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`.",
+            "description": "`insufficient_scope`: the token lacks the scope this operation names, or is pinned to another game. `forbidden`: a browser change came from another site. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -26717,7 +26719,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the scope this operation names, or is pinned to another game. `forbidden`: a browser change came from another site. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `entries_closed`: entries have closed, so `start` changed nothing, and `retry` is `never`.",
+            "description": "`insufficient_scope`: the token lacks the scope this operation names, or is pinned to another game. `forbidden`: a browser change came from another site. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `entries_closed`: entries have closed, so `start` changed nothing, and `retry` is `never`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27033,7 +27035,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token is limited to one game or has no `deploy` scope. `forbidden`: the game does not allow remixing under a supported license, or a browser request came from another site. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token is limited to one game or has no `deploy` scope. `forbidden`: the game does not allow remixing under a supported license, or a browser request came from another site. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27322,7 +27324,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the credential has no `deploy` scope for this game. `forbidden`: a browser change came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the credential has no `deploy` scope for this game. `forbidden`: a browser change came from another site. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27826,7 +27828,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -28060,7 +28062,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -28334,7 +28336,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -28531,7 +28533,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -29104,7 +29106,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -29340,7 +29342,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `forbidden`: a browser change did not come from the OpenGame site. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `forbidden`: a browser change did not come from the OpenGame site. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -29968,7 +29970,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -30173,7 +30175,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -30381,7 +30383,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -30558,7 +30560,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -30740,7 +30742,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -30949,7 +30951,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -31125,7 +31127,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -31779,7 +31781,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -32012,7 +32014,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -32280,7 +32282,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks the `read` scope or is pinned to another game. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -32442,7 +32444,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: a token was used, and this operation takes a browser session only. `forbidden`: the change did not come from the OpenGame site, so open the page on OpenGame and try again. `account_banned`: on a change only, OpenGame's moderators have banned the account. Reads still answer. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -32587,7 +32589,7 @@
                   },
                   "preferences": {
                     "publicPassport": false,
-                    "audienceOverlap": true
+                    "audienceOverlap": false
                   },
                   "lifetime": {
                     "visibleMs": 14520000,
@@ -32853,7 +32855,7 @@
           }
         ],
         "summary": "Choose what your play history shares",
-        "description": "Browser session only, from the OpenGame site. Send both settings.",
+        "description": "Browser session only, from the OpenGame site. Send both settings. Passport sharing is off for now, so both must be false.",
         "requestBody": {
           "required": true,
           "content": {
@@ -32869,16 +32871,16 @@
                   "publicPassport": {
                     "type": "boolean",
                     "examples": [
-                      true
+                      false
                     ],
-                    "description": "Show lifetime totals on your public profile. Off by default."
+                    "description": "Show lifetime totals on your public profile. Off for now: `true` is refused."
                   },
                   "audienceOverlap": {
                     "type": "boolean",
                     "examples": [
                       false
                     ],
-                    "description": "Include your play in the overlap between games that creators see. Off by default. Turning it off takes you out of any overlap already shown."
+                    "description": "Include your play in the overlap between games that creators see. Off for now: `true` is refused."
                   }
                 }
               }
@@ -32906,7 +32908,7 @@
             }
           },
           "400": {
-            "description": "`invalid_request`: both settings are needed, as booleans, and nothing else.",
+            "description": "`invalid_request`: both settings are needed, as booleans, and nothing else, and passport sharing is off for now, so either one `true` is refused.",
             "content": {
               "application/json": {
                 "schema": {
@@ -33010,7 +33012,7 @@
           {
             "lang": "bash",
             "label": "cURL",
-            "source": "curl --request PATCH \\\n  --url 'https://opengame.io/api/v1/audience/preferences' \\\n  --cookie \"$OPENGAME_BROWSER_COOKIE\" \\\n  --header 'Origin: https://opengame.io' \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"publicPassport\": true,\n  \"audienceOverlap\": false\n}'"
+            "source": "curl --request PATCH \\\n  --url 'https://opengame.io/api/v1/audience/preferences' \\\n  --cookie \"$OPENGAME_BROWSER_COOKIE\" \\\n  --header 'Origin: https://opengame.io' \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"publicPassport\": false,\n  \"audienceOverlap\": false\n}'"
           }
         ]
       }
@@ -33285,7 +33287,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: use an account-wide token with the `read` scope. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: use an account-wide token with the `read` scope. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -33523,7 +33525,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: use an account-wide token with the `read` scope. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: use an account-wide token with the `read` scope. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -33976,7 +33978,7 @@
             }
           },
           "403": {
-            "description": "`insufficient_scope`: the token lacks `submit` on this game. `qa_destination_not_permitted`: the account has no QA grant. `forbidden`: a browser request came from another origin. `entries_closed`: the jam has closed and this game is entered in it, so it can make no version live but its entry's own and nothing was submitted. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`insufficient_scope`: the token lacks `submit` on this game. `qa_destination_not_permitted`: the account has no QA grant. `forbidden`: a browser request came from another origin. `entries_closed`: the jam has closed and this game is entered in it, so it can make no version live but its entry's own and nothing was submitted. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -34217,7 +34219,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -34436,7 +34438,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -34678,7 +34680,7 @@
             }
           },
           "403": {
-            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: until the creator API opens, the day after the site, an account outside the team cannot use it. The message names the day.",
+            "description": "`not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {

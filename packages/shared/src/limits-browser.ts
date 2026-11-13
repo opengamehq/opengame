@@ -401,6 +401,120 @@ export function clampCharacters(value: string, max: number): string {
 }
 
 /**
+ * A page's <title> as a person reads it, for naming a game from its index.html, or "" when it
+ * has none. One reader for the CLI's init and the browser's Drop, which read the same folder
+ * and used to disagree on "Tetris &amp; Co" (launch E2E, B-9, 13 Nov 2026). Entities decoded,
+ * whitespace collapsed, and cut to the title limit by characters, then trimmed, so the cut
+ * never leaves half an emoji or a trailing space. This one does shorten, unlike the caps in
+ * `text`, because it is a suggestion the creator sees in a field before anything is sent.
+ */
+export function pageTitle(html: string): string {
+  // Not a title inside a comment or an inline SVG, which names a shape rather than the page.
+  const visible = html.replace(/<!--[\s\S]*?-->/g, "").replace(/<svg\b[\s\S]*?<\/svg>/gi, "");
+  const raw = /<title[^>]*>([^<]+)<\/title>/i.exec(visible)?.[1] ?? "";
+  const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", nbsp: " " };
+  const text = raw.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (whole, code: string) => {
+    if (code[0] !== "#") return named[code.toLowerCase()] ?? whole;
+    const n = code[1]?.toLowerCase() === "x" ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+    return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : whole;
+  });
+  /* A page title often carries the tool's name beside the game's, as Unity's template does
+     ("Unity WebGL Player | Sliding Puzzle"), so a part between separators that is only
+     boilerplate goes and the rest stays as written. A title that is only boilerplate is no
+     title (launch E2E, J-opus-E5: a Phaser game reached the CLI as "Game Development
+     Assignment"). */
+  const pieces = text.replace(/\s+/g, " ").trim().split(/(\s+[|·•–—-]\s+|\s*\|\s*)/);
+  const kept: string[] = [];
+  for (let i = 0; i < pieces.length; i += 2) {
+    const part = pieces[i]!.trim();
+    if (!part || isGenericTitle(part)) continue;
+    if (kept.length) kept.push(pieces[i - 1]!);
+    kept.push(part);
+  }
+  const fitted = fitTitle(kept.join(""));
+  return fitted && !isGenericTitle(fitted) ? fitted : "";
+}
+
+/* Words that say what a page is rather than which game it is. A title made of nothing else
+   ("index", "Untitled", "Unity WebGL Player", "Game Development Assignment", "My Phaser
+   Game") names no game, so it is never offered as one. A real name that uses one of these
+   words beside its own ("Space Game", "The Assignment") keeps it, because a word outside
+   this list makes the title somebody's. */
+const BOILERPLATE = new Set(["a", "an", "the", "my", "our", "your", "new", "of", "for", "and", "in", "with", "to", "by",
+  "game", "games", "gamedev", "development", "dev", "assignment", "homework", "coursework", "project", "projects", "untitled",
+  "index", "home", "page", "document", "doc", "default", "title", "test", "testing", "demo", "template", "example", "sample",
+  "starter", "boilerplate", "app", "application", "build", "builds", "export", "web", "webgl", "webgl2",
+  "webgpu", "html", "html5", "js", "javascript", "typescript", "canvas", "player", "unity", "godot", "engine", "phaser",
+  "phaser3", "pixi", "pixijs", "threejs", "three.js", "babylon", "babylonjs", "babylon.js", "playcanvas",
+  "defold", "gamemaker", "emscripten", "wasm", "webassembly", "vite", "react", "localhost", "loading", "version", "course"]);
+
+/** Whether a title names no game: empty, or every word of it is boilerplate. */
+export function isGenericTitle(title: string): boolean {
+  // Letters and digits of any script: a title in Japanese or Cyrillic is a name, not "no words".
+  const words = title.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "").split(/[^\p{L}\p{N}.]+/u).filter(Boolean);
+  return words.length === 0 || words.every(word => BOILERPLATE.has(word.replace(/^\.+|\.+$/g, "")));
+}
+
+/**
+ * A title cut to the limit without cutting a word or a bracket in half, or "" when nothing
+ * that long reads as a title. "PhaserJS 3 Platform Game (The Wizard of Christchurch)" was
+ * cut to "PhaserJS 3 Platform Game (The Wizard of" (launch E2E, J-opus-E5): this gives
+ * "PhaserJS 3 Platform Game" instead, dropping a bracket it cannot close and whatever
+ * punctuation the cut leaves dangling. A title already within the limit is only trimmed.
+ */
+export function fitTitle(value: string, max: number = LIMITS.text.gameTitle.max): string {
+  const text = value.replace(/\s+/g, " ").trim();
+  if ([...text].length <= max) return text;
+  let cut = clampCharacters(text, max);
+  // Back to the last whole word, unless the cut already fell on a space.
+  if ([...text][max] !== " ") cut = cut.replace(/\s*\S*$/, "");
+  // An opening bracket left without its partner goes, with everything after it.
+  const pairs: Record<string, string> = { "(": ")", "[": "]", "{": "}", "“": "”", "‘": "’", "«": "»" };
+  for (;;) {
+    const stack: number[] = [];
+    for (let i = 0; i < cut.length; i++) {
+      const ch = cut[i]!;
+      if (ch in pairs) stack.push(i);
+      else if (stack.length && pairs[cut[stack.at(-1)!]!] === ch) stack.pop();
+    }
+    const quotes = [...cut.matchAll(/"/g)].map(match => match.index!);
+    const open = stack.length ? stack[0]! : quotes.length % 2 ? quotes.at(-1)! : -1;
+    if (open < 0) break;
+    cut = cut.slice(0, open);
+  }
+  cut = cut.replace(/[\s,;:|·•–—\-/&+]+$/, "").trim();
+  return [...cut].length >= LIMITS.text.gameTitle.productMin ? cut : "";
+}
+
+/**
+ * The name a new game starts with, by the order a creator would expect (launch E2E,
+ * J-astra-E9, 13 Nov 2026): what they typed; what review read from the game; the page's own
+ * <title> or the manifest's name when either names a game; and last the folder. Every
+ * candidate is fitted to the limit without cutting a word, and boilerplate never wins over
+ * something later in the list. The CLI's init and Drop both call this, so one folder gets
+ * one name whichever way it arrives.
+ */
+export function chooseTitle(candidates: { typed?: string | null; detected?: string | null; page?: string | null; named?: string | null; folder?: string | null }): string {
+  if (candidates.typed?.trim()) return candidates.typed.trim();
+  for (const candidate of [candidates.detected, candidates.page, readableName(candidates.named)]) {
+    const fitted = fitTitle(candidate ?? "");
+    if (fitted && !isGenericTitle(fitted)) return fitted;
+  }
+  /* The folder, even when it is boilerplate: something has to name the game, and the creator
+     sees it before anything is sent. */
+  const folder = readableName(candidates.folder);
+  return fitTitle(folder) || clampCharacters(folder, LIMITS.text.gameTitle.max).trim();
+}
+
+/** A package or folder name as a title: "dodge-the-creeps" is "Dodge the creeps". A name with spaces or capitals is the creator's spelling and kept. */
+function readableName(name: string | null | undefined): string {
+  const text = (name ?? "").trim();
+  if (!text || /\s/.test(text) || text !== text.toLowerCase()) return text.replace(/\s+/g, " ");
+  const spaced = text.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+  return spaced ? spaced[0]!.toUpperCase() + spaced.slice(1) : "";
+}
+
+/**
  * What is wrong with this text, as a sentence, or null when it fits.
  *
  * The point of returning prose rather than a boolean is that every caller would

@@ -83,6 +83,9 @@ test("a refused deploy streams its findings and exits 1 with the first one attac
     assert.deepEqual([error.type, error.code, error.next, error.retry], ["error", "deploy_checks_failed", "opengame check", "after-fix"]);
     assert.equal(error.finding.check, "secrets");
     assert.match(error.message, /A check refused this upload/);
+    /* The error names the file and the change itself (launch E2E, J-opus-E2): read alone, it
+       said only that "each failed check's finding names the file". */
+    assert.equal(error.message, "A check refused this upload. src/keys.js line 3 contains what looks like an AWS key. Delete it, then rotate it.");
     assert.doesNotMatch(error.message, /upload page/);
   } finally { await h.close(); }
 });
@@ -750,7 +753,7 @@ test("people read findings grouped by file with the fix written out, and errors 
   assert.equal(out.filter(line => line === "src/keys.js").length, 1);
   assert.match(out[1]!, /^ {2}Blocker: src\/keys\.js line 3/);
   assert.match(out[2]!, /^ {2}Fix: Delete it/);
-  assert.ok(out.includes("  Worth a look: Could not confirm Three.js."));
+  assert.ok(out.includes("  Note: Could not confirm Three.js."));
   assert.equal(out.at(-1), "Then run opengame check, then opengame deploy.");
   // The "Then run" line just asked for opengame check, so the error does not ask again.
   assert.deepEqual(err, ["A server check refused this build."]);
@@ -903,7 +906,7 @@ test("check names the missing files and does not call a warning a blocker", asyn
     const plain: string[] = [];
     const output = new Output(false, line => plain.push(line), () => {}, "plain", () => {});
     output.emit({ type: "finding", finding: found }); output.finish();
-    assert.ok(plain.some(line => line.startsWith("  Worth a look: ")), plain.join("\n"));
+    assert.ok(plain.some(line => line.startsWith("  Note: ")), plain.join("\n"));
     assert.ok(!plain.some(line => line.startsWith("Then run")), "a warning asks for no next command");
   } finally { await h.close(); }
 });

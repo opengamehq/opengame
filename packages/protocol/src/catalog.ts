@@ -263,7 +263,7 @@ export const ACCOUNT_HANDLE_API_PATH = "/api/v1/account/handle";
 export const accountHandleRequestSchema = z.strictObject({ handle: z.string().max(256) });
 export const accountHandleSchema = z.object({
   handle: z.string().min(1),
-  /** The handle it replaced, which keeps pointing at this account and is never reissued. */
+  /** The handle it replaced, which is now free for anyone to claim. */
   previous: z.string().nullable(),
   url: z.string(),
 });

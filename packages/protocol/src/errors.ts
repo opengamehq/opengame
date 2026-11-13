@@ -21,7 +21,7 @@
  * `retry` uses the repair-finding vocabulary (`RepairFinding.retry`), because a refusal
  * is a finding about the caller rather than about a game.
  */
-import { LIMITS, TEXT } from "@opengame/shared/browser";
+import { JAM_KIND_REFUSAL, LIMITS, TEXT } from "@opengame/shared/browser";
 import { ENTRIES_CLOSED_MESSAGE, KICKOFF_COPY } from "@opengame/shared/launch-clock";
 import { studioExperimentRefusals } from "./experiments";
 import { ANALYTICS_CLI_OUTDATED, ANALYTICS_FILTERS_REMOVED } from "./analytics";
@@ -237,7 +237,7 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   // Its rules require that you own every asset and built it after kickoff, which a decomp or
   // a mod of somebody else's game cannot (game-kinds.json). Refused by the CLI from the local
   // manifest, by the submit route from the release, and by a trigger on jam_entries.
-  kind_not_in_jam: say(input, "The jam takes games and worlds. Decomps and mods can go on OpenGame but cannot enter it.", 409),
+  kind_not_in_jam: say(input, JAM_KIND_REFUSAL, 409),
   invalid_jam_answers: say(input, "The jam answers do not match the jam's current form. Run opengame jams <slug> to see it, then submit again.", 409),
   metadata_conversion_required: say(input, "This game's current settings cannot be represented in opengame.json. Review your local settings, then deploy with --metadata=local to use them."),
   invalid_metadata_revision: say(input, "Your local metadata revision is newer than this game's. Check which game your project is linked to, then pull its current metadata before deploying again."),
@@ -296,7 +296,7 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   // Browser-only appeals (the private game page). Each is a reason, not an outage. These
   // sentences were a second table in apps/web's submit.ts, which had already drifted from
   // this one and alone knew release_unavailable.
-  appeal_used: say(input, "This release has already been appealed. Deploy an updated release to submit again.", 409),
+  appeal_used: say(input, "This release has already been appealed. Upload an updated release to send it again.", 409),
   not_returned: say(input, "Only a release returned with fixes can be appealed.", 409),
   invalid_appeal: say(input, `Say in a sentence or two what the review missed, up to ${TEXT.platformAppeal.max.toLocaleString("en-US")} characters.`, 409),
   superseded: say(input, "A newer release of this game is already in review, so this one cannot be appealed.", 409),

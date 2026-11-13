@@ -2,17 +2,17 @@
 name: opengame-jam
 description: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, and submits one exact release as an entry with the person's own answers, leaving the certification to the person. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
 metadata:
-  version: "1.0.7"
+  version: "1.0.8"
 ---
 
 # Enter an OpenGame jam
 
-OpenGame opens on 18 November 2026. Jam entries open on 18 November and close on
+OpenGame opens on 18 November 2026. The jam kicks off on 18 November, and entries close on
 18 December, 11:59 pm PT; after the close every deploy path answers `entries_closed`.
 
-Until 18 November, entries stay closed: the CLI and the API answer
-"OpenGame opens for creators on 18 November." to everybody outside the OpenGame team,
-so no entry can be submitted. The game can still be made ready: build it, play it, and gather the answers below.
+Any signed-in account can enter the launch jam now, before 18 November as well as
+after it. A CLI with no login hears "OpenGame opens for creators on 18 November." until
+then: run `opengame login` first.
 
 A jam is an extra destination for a game already on OpenGame. Games go to the
 marketplace; a jam entry is one exact release submitted with the jam's answers,

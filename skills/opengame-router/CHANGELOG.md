@@ -1,5 +1,9 @@
 # opengame-router changelog
 
+## 1.0.7
+
+Any signed-in account can use the CLI, the creator API, uploads and jam entries before launch, so a `not_launched` answer means the request came with no account: sign in (`opengame login`) and run it again rather than waiting for 18 November.
+
 ## 1.0.6
 
 OpenGame opens on 18 November 2026, the jam's kickoff, not 17 November: the site no longer opens a day before the rest.

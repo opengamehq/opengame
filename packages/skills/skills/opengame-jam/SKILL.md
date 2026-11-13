@@ -2,17 +2,17 @@
 name: opengame-jam
 description: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, and submits one exact release as an entry with the person's own answers, leaving the certification to the person. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
 metadata:
-  version: "1.0.7"
+  version: "1.0.8"
 ---
 
 # Enter an OpenGame jam
 
-OpenGame opens on {{launch opens}}. Jam entries open on {{launch kickoff}} and close on
+OpenGame opens on {{launch opens}}. The jam kicks off on {{launch kickoff}}, and entries close on
 {{launch close}}; after the close every deploy path answers `entries_closed`.
 
-Until {{launch kickoff}}, entries stay closed: the CLI and the API answer
-"OpenGame opens for creators on {{launch kickoff}}." to everybody outside the OpenGame team,
-so no entry can be submitted. The game can still be made ready: build it, play it, and gather the answers below.
+Any signed-in account can enter the launch jam now, before {{launch kickoff}} as well as
+after it. A CLI with no login hears "OpenGame opens for creators on {{launch kickoff}}." until
+then: run `opengame login` first.
 
 A jam is an extra destination for a game already on OpenGame. Games go to the
 marketplace; a jam entry is one exact release submitted with the jam's answers,

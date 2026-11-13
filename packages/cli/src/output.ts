@@ -175,7 +175,7 @@ export function pixelBar(fraction: number, cells = 16) {
   return `${"█".repeat(whole)}${edge}${ansi("2", "░".repeat(track))} ${percent}`;
 }
 
-const LABEL_COLOR = { "Blocker": "31", "Check with a person": "33", "Waiting on us": "36", "Stopped on our side": "36", "Worth a look": "2" } as const;
+const LABEL_COLOR = { "Blocker": "31", "Check with a person": "33", "Waiting on us": "36", "Stopped on our side": "36", "Note": "2" } as const;
 function label(finding: RepairFinding, ended: boolean): { text: string; color: string } {
   const text = findingLabel(finding, { ended });
   return { text, color: LABEL_COLOR[text] };

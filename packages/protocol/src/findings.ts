@@ -103,13 +103,11 @@ const CHECKS: Record<string, { label: string; observed: string; fix: string; pas
     fix: "Export a Three.js build of your game." },
   desktop: { label: "desktop layout check", passed: "It fits a desktop window.",  observed: "This build uses a layout that does not fit a desktop window.",
     fix: "Remove any portrait lock and let the game resize with the window." },
-  // An image the safety check held fails the deploy too (image_needs_review), whether
-  // moderation flagged a category the content policy does not serve or the vision check
-  // was unsure about a minor. No clearance exists to wait for, so replacing the image is
-  // the only way forward. The receipt's own sentences name which; this is the fallback.
+  // Image review is retired (RETIRED_CHECKS, 12 Nov 2026): no deploy writes this receipt
+  // and none waits for or is refused by it, so an inconclusive one blocks nothing. The
+  // copy stays so an older release's receipt still reads in sentences.
   images: { label: "image review", passed: "Every image passed review.",  observed: "An image in this build was flagged by the image check.", serverOnly: true,
-    fix: "Replace or remove the flagged image.",
-    inconclusiveBlocks: "Replace the held image with a different one, then deploy again." },
+    fix: "Nothing to change. Image review no longer runs." },
   "text-policy": { label: "text review", passed: "The text review found nothing to change.",  observed: "Some text in this game was flagged by the text policy.", serverOnly: true,
     fix: "Reword the flagged text in opengame.json or in the game." },
 };
@@ -296,15 +294,17 @@ export function receiptFindings(receipts: readonly FindingReceipt[], options: { 
       // name is a note in either mode. The manual mode's "a reviewer confirms the engine
       // before publishing" promised every creator a person checking their game.
       const observed = undecided
-          ? (named ? `We detected ${named}. We test whether it runs in the playtest, so the engine name is only a note.`
-            : "We could not tell which engine made this build. We test whether it runs in the playtest, so this is only a note.")
+          ? (named ? `Built with ${/^custom$/i.test(named) ? "custom code" : named}. The playtest checks that it runs.`
+            : "We could not tell which engine made this build. The playtest checks that it runs.")
         : detail.observed ?? (platform
         ? `The ${text.label} ${receipt.state === "not run" ? "has not run yet" : "was unavailable"}.`
         : receipt.state === "inconclusive" ? `The ${text.label} could not confirm this build from its files alone.` : text.observed);
       // Our outage never asks for a code change, whatever the row says. A row that says
       // "nothing to change" keeps its own words, though: on a deploy the outage ended,
       // "We will retry this check" was untrue, and the receipt's "Deploy again later" was right.
-      const fix = undecided ? "Your game does not need to change."
+      // Plain information (launch E2E judges, J-opus-3): "Your game does not need to change"
+      // answered a question nobody had asked and read as a verdict somebody had reached.
+      const fix = undecided ? "Nothing to do."
         : fault === "platform" ? (detail.fix && /^Nothing to change\b/i.test(detail.fix) ? detail.fix
           : ended ? "Nothing to change in your game. Run opengame deploy again later." : "Nothing to change in your game. We will retry this check.")
         // The pipeline's own sentence usually already says a reviewer confirms it; adding
@@ -419,7 +419,7 @@ const STAGE_COPY: Record<OperationStage["code"], Omit<OperationStage, "code" | "
   upload: { label: "Uploading", message: "Waiting for your archive to finish uploading. Run opengame deploy to resume it.", waitingOn: "you" },
   queued: { label: "Queued", message: "Queued for checks. Nothing to do.", waitingOn: "opengame" },
   preparing: { label: "Preparing", message: "Preparing your release. Nothing to do.", waitingOn: "opengame" },
-  scanning: { label: "Checking", message: "Checking files, malware and secrets. Nothing to do.", waitingOn: "opengame" },
+  scanning: { label: "Checking", message: "Checking your files and engine. Nothing to do.", waitingOn: "opengame" },
   waiting: { label: RELEASE_STATUS.waiting.label, message: RELEASE_STATUS.waiting.message, waitingOn: "opengame" },
   images: { label: "Checking images", message: "Reviewing the images in your build. Nothing to do.", waitingOn: "opengame" },
   text: { label: "Checking text", message: "Reviewing your title, description and in-game text. Nothing to do.", waitingOn: "opengame" },
@@ -427,7 +427,8 @@ const STAGE_COPY: Record<OperationStage["code"], Omit<OperationStage, "code" | "
   failed: { label: RELEASE_STATUS.blocked.label, message: RELEASE_STATUS.blocked.message, waitingOn: "you" },
   expired: { label: RELEASE_STATUS.expired.label, message: RELEASE_STATUS.expired.message, waitingOn: "you" },
 };
-const SCAN_CHECKS = ["archive", "malware", "secrets", "preflight", "engine", "desktop"];
+// The file checks a deploy runs since 12 Nov 2026 (RETIRED_CHECKS in review.ts says what left).
+const SCAN_CHECKS = ["archive", "preflight", "engine", "desktop"];
 
 /**
  * A presentation of the readiness function's progress, read from the same durable
@@ -463,9 +464,9 @@ export function operationStage(operation: { state: string; hasCandidate: boolean
   const states = new Map(receipts.filter(receipt => !shadowed(receipt.check, receipt.evidence)).map(receipt => [receipt.check, receipt.state]));
   if (persisted === "waiting" || operation.providerDown || [...states.values()].some(state => state === "provider unavailable" || state === "not run")) return make("waiting", "platform");
   if (persisted) return make(persisted);
-  if (!SCAN_CHECKS.every(check => states.has(check))) return make("scanning");
-  if (!states.has("images")) return make("images");
-  return make("text");
+  // No image or text stage follows the file checks on the minimal checks; a deploy that
+  // still reads "images" or "text" from an older check_stage says so above.
+  return make("scanning");
 }
 
 /**
@@ -481,7 +482,8 @@ export function operationStage(operation: { state: string; hasCandidate: boolean
  * An answer short of passed is named the way its finding is labelled (`findingLabel`),
  * so a row cannot contradict the finding above it. An inconclusive archive or image
  * blocks the deploy and is "failed" here, as its finding is a Blocker. Any other
- * inconclusive answer, and a shadow receipt, goes to a person: "advisory". Our outage is
+ * inconclusive answer, and a shadow receipt, is "advisory": noted, never waited on, since
+ * publication waits for no person (12 Nov 2026). Our outage is
  * "held" while the deploy is still going and "stopped" once it has ended, since nobody is
  * retrying a check on a finished deploy.
  */
@@ -512,7 +514,7 @@ export function checkProgress(wanted: readonly { check: string }[], receipts: re
  * or an image the safety check held, which the pipeline marks
  * `retry: "after-fix"` because no clearance exists for it to wait for. One a
  * person will settle later (`retry: "never"`) is not. */
-export type FindingLabel = "Blocker" | "Check with a person" | "Waiting on us" | "Stopped on our side" | "Worth a look";
+export type FindingLabel = "Blocker" | "Check with a person" | "Waiting on us" | "Stopped on our side" | "Note";
 /** `ended`: the deploy the finding belongs to has finished. Our fault on a finished deploy
  * is not something to wait on, because nobody is retrying it: the creator deploys again
  * later. It was labelled "Waiting on us" under a strip saying the deploy had stopped, so
@@ -524,13 +526,13 @@ export function findingLabel(finding: Pick<RepairFinding, "fault" | "state" | "r
   // The bot's "no control changed the screen" carries retry "after-fix" because its fix
   // is the creator's to try, and that alone made the console print "Blocker" in red over
   // a release that went on to a person and was published.
-  if (finding.state === "inconclusive" && finding.check !== undefined && (REVIEW_CHECKS.playtest as readonly string[]).includes(finding.check)) return AUTONOMOUS ? "Worth a look" : "Check with a person";
+  if (finding.state === "inconclusive" && finding.check !== undefined && (REVIEW_CHECKS.playtest as readonly string[]).includes(finding.check)) return AUTONOMOUS ? "Note" : "Check with a person";
   // A local warning the deploy carried past: inconclusive, the game's to judge,
   // and nothing to wait for. It was labelled "Blocker" over a fix that said
   // "ignore this", on a deploy that went on to be ready.
-  if (finding.state === "inconclusive" && finding.fault === "game" && finding.retry === "now") return "Worth a look";
+  if (finding.state === "inconclusive" && finding.fault === "game" && finding.retry === "now") return "Note";
   // Autonomous, nobody is coming to check it: the automatic review reads it at submission.
-  if (finding.retry === "never" || (finding.state === "inconclusive" && finding.fault !== "game" && finding.retry !== "after-fix")) return AUTONOMOUS ? "Worth a look" : "Check with a person";
+  if (finding.retry === "never" || (finding.state === "inconclusive" && finding.fault !== "game" && finding.retry !== "after-fix")) return AUTONOMOUS ? "Note" : "Check with a person";
   return "Blocker";
 }
 

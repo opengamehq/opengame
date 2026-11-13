@@ -481,6 +481,9 @@ async function fillManifest(root: string, existing: Record<string, unknown>, ori
   let { genre } = context;
   // The name is the one question, as for a new file (askTitle), and only for a blank one.
   if (blank(existing.title)) filled.title = context.interactive && typeof flags.title !== "string" ? await askTitle(context.title, context.prompts) : context.title;
+  /* A blank title filled from the page or the folder is a guess, as for a new file, Enter on the
+     offered name included (Greptile on opengamehq/opengame#9). */
+  const guessedTitle = "title" in filled && typeof flags.title !== "string" && filled.title === context.title;
   const description = blank(existing.description) ? context.description : String(existing.description);
   if (blank(existing.description)) filled.description = description;
   // The guess reads the file's own words, which is what the game says about itself now.
@@ -526,8 +529,9 @@ async function fillManifest(root: string, existing: Record<string, unknown>, ori
     await replaceFile(temporary, path);
   } finally { await unlink(temporary).catch(() => {}); }
   await ensureProjectIgnored(root);
-  await recordGuesses(root, { ...(guessedGenre ? { genre: genre! } : {}), ...("controls" in filled && !detected ? { controls: filled.controls as string[] } : {}) },
-    Object.keys(filled).filter(field => field === "genre" || field === "controls"));
+  await recordGuesses(root, { ...(guessedGenre ? { genre: genre! } : {}), ...("controls" in filled && !detected ? { controls: filled.controls as string[] } : {}),
+    ...(guessedTitle ? { title: filled.title as string } : {}) },
+    Object.keys(filled).filter(field => field === "genre" || field === "controls" || field === "title"));
   const names = Object.keys(filled);
   /* Every flag init could have used and did not: a value the file already sets, and the
      flags that only shape a new file (what it is, and where its build goes). */

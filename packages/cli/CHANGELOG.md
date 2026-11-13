@@ -5,6 +5,10 @@
 - `opengame check` warns about a missing favicon, web manifest or touch icon, or one named with
   the wrong case, and about a missing image preload, rather than refusing the build: none of
   them stops a game from starting. A missing script or stylesheet still blocks.
+- An icon's link reads as an icon however many attributes come before its `href`, so a
+  long `<link rel="icon" type=... sizes=... href=...>` with a wrong-case file warns too.
+- `opengame status` leads with review's return when it sent the build back, rather than
+  "Private preview ready" above it. The preview link follows.
 - A large Brotli or gzip file (a Unity `.data.br` over about 21 MB) is read on Node 18, whose
   buffers stop at 4 GiB, instead of being reported as unreadable.
 - `opengame init` names a game from its page's `<title>` or package.json only when that names a

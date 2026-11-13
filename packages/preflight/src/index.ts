@@ -4209,6 +4209,9 @@ interface Reference {
   optional?: boolean;
 }
 
+/** How far back from an attribute its tag's `<` is looked for; a tag longer than this is read from the sixty characters before the attribute. */
+const TAG_READ_MAX = 2048;
+
 /**
  * Whether a `<script>` or `<link>` the parser meets has to load for the game to start. Every
  * script does, and a link only when it is a stylesheet, a module preload, or a preload of a
@@ -4267,11 +4270,15 @@ function* extractReferences(path: string, text: string, inert: Span[]): Generato
   if (/\.html?$/i.test(path)) {
     /* A `<script src>` or a `<link href>` is loaded by the parser before anything
        runs, so it is static. Every other attribute is content the page asks for
-       afterwards. The tag is read off the text just before the attribute, which is
-       enough for the markup a build step writes and wrong only for an attribute
-       more than sixty characters into its tag, where it degrades to a warning. */
+       afterwards. The tag is read from its own `<`, as far back as TAG_READ_MAX: it was the
+       sixty characters before the attribute until 13 Nov 2026, and `<link rel="icon"
+       type="image/png" sizes="32x32" href=...>` starts its href past that, so a wrong-case
+       icon was not seen as an icon and refused a working export (Greptile on
+       opengamehq/opengame#9). */
     for (const m of text.matchAll(/\b(?:src|href|data-src|poster)\s*=\s*["']([^"']+)["']/gi)) {
-      const before = text.slice(Math.max(0, (m.index ?? 0) - 60), m.index ?? 0);
+      const at = m.index ?? 0;
+      const open = text.lastIndexOf("<", at);
+      const before = open >= 0 && at - open <= TAG_READ_MAX && !text.slice(open, at).includes(">") ? text.slice(open, at) : text.slice(Math.max(0, at - 60), at);
       const tag = /<(script|link)\b[^<>]*$/i.exec(before);
       const blocks = tag ? blocksStart(tag, text, m.index ?? 0) : false;
       const ref = reference(m[1], m.index ?? 0, blocks ? "static" : "runtime");

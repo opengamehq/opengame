@@ -334,3 +334,22 @@ test("a boilerplate page title loses to the folder, Unity's template keeps the p
   assert.equal(typed.title, "Game Development Assignment");
   assert.ok(!typed.provisional.includes("title"));
 });
+
+/* Greptile on opengamehq/opengame#9: an existing opengame.json with a blank title is filled from
+   the page or the folder too, and that guess was recorded only for a new file, so the deploy sent
+   it as the creator's choice. A title typed with --title is not a guess here either. */
+test("a blank title that init fills in is provisional, and a typed one is not", async () => {
+  for (const [flags, guessed] of [[{}, true], [{ title: "Starfall" }, false]] as const) {
+    const parent = await mkdtemp(join(tmpdir(), "og-init-fill-"));
+    const root = join(parent, "comet-dodger");
+    await mkdir(root);
+    try {
+      await writeFile(join(root, "index.html"), "<!doctype html><title>Game Development Assignment</title><canvas></canvas>");
+      await writeFile(join(root, "opengame.json"), JSON.stringify({ title: "", description: DESCRIPTION, genre: "platformer", controls: ["keyboard"] }));
+      await initProject(root, { ...flags });
+      const file = await written(root);
+      assert.equal(file.title, guessed ? "Comet dodger" : "Starfall");
+      assert.equal((await provisionalFields(root, file)).includes("title"), guessed, JSON.stringify(flags));
+    } finally { await rm(parent, { recursive: true, force: true }); }
+  }
+});

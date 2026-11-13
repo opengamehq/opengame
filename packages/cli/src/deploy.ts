@@ -547,12 +547,17 @@ async function report(op: Operation, command: string, api: Api, output: Output,
     // over the manifest's, since then the manifest is not what was deployed.
     const deployedAs = op.metadata?.keptFields.includes("kind") ? null : kindPhrase(options.kind?.kind, options.kind?.basedOn);
     const lines = options.review ? emitReview(options.review, output) : [];
+    const stopped = Boolean(review && options.review && ["returned", "blocked"].includes(options.review.state) && options.review.releaseId === op.releaseId);
     output.emit({ type: "result", command, data: { operationId: op.id, state: op.state, done: true, gameId: op.gameId, publicId: op.publicId ?? null,
       releaseId: op.releaseId, previewUrl: preview, url, deploymentUrl: deploymentLink, uploadUrl, gameOrigin: op.gameOrigin ?? null, next: review?.next ?? null, ...(op.progress ? { progress: op.progress } : {}), findings,
       ...(options.timingsMs ? { timingsMs: options.timingsMs } : {}), ...(op.metadata ? { metadata: op.metadata } : {}),
       ...(options.review !== undefined ? { submission: options.review, review } : {}),
-      message: [preview ? `Private preview ready. Play it at ${url}` : `Release ready, but the server sent no preview link. Open ${url} to see why.`, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []), ...originLine(op),
-        ...(review ? [review.message, ...lines] : [])].join("\n") } });
+      /* A release review returned or refused leads with that: the first line read "Private
+         preview ready" over the return two lines down (launch E2E, B-19). The preview link
+         stays, after it. */
+      message: (stopped ? [review!.message, ...lines, preview ? `Its private preview is still at ${url}` : null, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []), ...originLine(op)]
+        : [preview ? `Private preview ready. Play it at ${url}` : `Release ready, but the server sent no preview link. Open ${url} to see why.`, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []), ...originLine(op),
+        ...(review ? [review.message, ...lines] : [])]).filter((line): line is string => Boolean(line)).join("\n") } });
     return;
   }
   const stage = op.progress?.message ?? OPERATION_STATUS[op.state].message;

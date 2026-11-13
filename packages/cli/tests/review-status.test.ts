@@ -57,6 +57,9 @@ test("status reports the review: a returned release's findings in the repair sha
     // A command an agent can run: the returned release is the newest, so a deploy comes first.
     assert.equal(data.next, "opengame deploy");
     assert.match(data.message, /SUB-1113: Returned with fixes\. Read the findings, then deploy an updated release\./);
+    // The return is the headline, not "Private preview ready" above it (launch E2E, B-19).
+    assert.match(data.message.split("\n")[0]!, /Returned with fixes/);
+    assert.doesNotMatch(data.message, /Private preview ready/);
   } finally { await api.close(); await root.remove(); }
 });
 

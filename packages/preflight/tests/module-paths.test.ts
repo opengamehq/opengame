@@ -121,13 +121,16 @@ test("a missing icon, manifest or touch icon is a warning, and a missing stylesh
   const icon = file("images/favicon.png", "png");
   for (const head of ['<link rel="icon" type="image/x-icon" href="images/favicon.png">', "<link rel='shortcut icon' href='favicon.ico'>", '<link rel="preload" as="image" href="hero.png">',
     '<link rel="icon" href="images/Favicon.png">',
-    '<link rel="apple-touch-icon" href="icons/touch.png">', '<link href="site.webmanifest" rel="manifest">', '<link data-rel="stylesheet" rel="icon" href="images/favicon.png">']) {
+    '<link rel="apple-touch-icon" href="icons/touch.png">', '<link href="site.webmanifest" rel="manifest">', '<link data-rel="stylesheet" rel="icon" href="images/favicon.png">',
+    // Its href past sixty characters into the tag (Greptile on opengamehq/opengame#9).
+    '<link rel="icon" type="image/png" sizes="32x32" crossorigin="anonymous" href="images/Favicon.png">']) {
     const result = await preflight([page(head), main, icon]);
     assert.equal(result.ok, true, `${head}: ${JSON.stringify(result.findings.filter(f => f.severity === "blocker"))}`);
     assert.equal(result.findings.some(f => f.code === "missing-import"), false, head);
   }
   for (const head of ['<link rel="stylesheet" href="style.css">', '<link rel="modulepreload" href="chunk.js">', '<link href="style.css">',
-    '<link title="x rel=icon" rel="stylesheet" href="style.css">', '<link rel="preload" as="script" href="chunk.js">']) {
+    '<link title="x rel=icon" rel="stylesheet" href="style.css">', '<link rel="preload" as="script" href="chunk.js">',
+    '<link rel="stylesheet" type="text/css" media="screen and (min-width: 100px)" crossorigin="anonymous" href="style.css">']) {
     const result = await preflight([page(head), main]);
     assert.equal(result.findings.find(f => f.code === "missing-import")?.severity, "blocker", head);
   }

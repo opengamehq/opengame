@@ -1,4 +1,5 @@
 import { ERRORS } from "@opengame/protocol";
+import { LIMITS } from "@opengame/shared";
 import { activeToken } from "./credentials";
 import { Api, ApiError } from "./http";
 import { CliError } from "./output";
@@ -73,7 +74,10 @@ export async function launchNotice(tokenStdin: boolean): Promise<string | null> 
   const api = new Api();
   try {
     const active = await activeToken(api.origin, tokenStdin);
-    const status: Record<string, unknown> = await api.json("/api/v1/status", { token: active?.token, anyVersion: true });
+    /* A short deadline: the notice is optional, and a server that takes the connection and never
+       answers used to hold init and check for the whole request timeout. */
+    const status: Record<string, unknown> = await api.json("/api/v1/status", { token: active?.token, anyVersion: true,
+      signal: AbortSignal.timeout(LIMITS.platform.http.launchNoticeTimeoutMs) });
     return status.launched !== true && status.access !== true ? notLaunchedMessage(status.creatorsOpenAt) : null;
   } catch { return null; }
   finally { await api.close(); }

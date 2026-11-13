@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opengame.io/schema/opengame.json",
+  "title": "Doom but blue",
+  "tagline": "auto",
+  "description": "auto",
+  "genre": "auto",
+  "kind": "mod",
+  "basedOn": "Doom",
+  "controls": "auto"
+}

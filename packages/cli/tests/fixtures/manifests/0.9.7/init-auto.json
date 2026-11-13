@@ -1,0 +1,9 @@
+{
+  "$schema": "https://opengame.io/schema/opengame.json",
+  "title": "auto",
+  "tagline": "auto",
+  "description": "auto",
+  "genre": "auto",
+  "kind": "game",
+  "controls": "auto"
+}

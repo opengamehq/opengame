@@ -69,6 +69,7 @@
     "platform.device.pollIntervalSeconds",
     "platform.engineRuntimes",
     "platform.http.connectAttemptTimeoutMs",
+    "platform.http.launchNoticeTimeoutMs",
     "platform.http.responseBytesMax",
     "platform.http.timeoutMs",
     "platform.incrementalUpload.archiveBytesMax",

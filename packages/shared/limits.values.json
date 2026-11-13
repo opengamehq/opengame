@@ -2343,7 +2343,8 @@
     "http": {
       "timeoutMs": 30000,
       "responseBytesMax": 1048576,
-      "connectAttemptTimeoutMs": 2500
+      "connectAttemptTimeoutMs": 2500,
+      "launchNoticeTimeoutMs": 2000
     },
     "credentials": {
       "fileBytesMax": 65536,

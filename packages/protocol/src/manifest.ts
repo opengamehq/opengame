@@ -430,7 +430,12 @@ export function manifestFileJsonSchema() {
   const schema = manifestJsonSchema();
   const properties = { ...schema.properties } as Record<string, unknown>;
   for (const field of AUTO_MANIFEST_FIELDS) {
-    if (properties[field]) properties[field] = { anyOf: [properties[field], { const: "auto", description: "Auto: review writes it from the game, and you accept or change it on the deploy's page." }] };
+    /* Every spelling the CLI reads as Auto (packages/shared isAutoValue): "auto" in any case,
+       blank, or null. Only the exact "auto" was allowed, so "AUTO" or the "" an older init
+       wrote deployed fine and showed as an error in the editor (Greptile, opengamehq/opengame#12). */
+    if (properties[field]) properties[field] = { anyOf: [properties[field],
+      { type: "string", pattern: "^\\s*(?:[Aa][Uu][Tt][Oo])?\\s*$", description: "Auto: review writes it from the game, and you accept or change it on the deploy's page." },
+      { type: "null" }] };
   }
   return { ...schema, required: (schema.required ?? []).filter(field => !(AUTO_MANIFEST_FIELDS as readonly string[]).includes(field)), properties };
 }

@@ -324,19 +324,33 @@ function help(target?: string) {
         "", "Use --json for structured output."].join("\n") };
   }
   const primary = ["deploy", "submit", "status", "open", "login"];
+  /* One line each (launch judges, J-opus-G12: deploy's entry ran about ninety words). The
+     whole description is the command's own --help, and the JSON help carries every word. */
+  const SUMMARY: Record<string, string> = {
+    deploy: "Build, check and upload a private preview, then review",
+    submit: "Send a release to review, or enter it in a jam",
+    status: "Show this folder's latest deploy and its findings",
+    open: "Open the game's private page in your browser",
+    login: "Sign in through your browser",
+  };
+  const EXIT_SHORT: Record<string, string> = {
+    ok: "Done", check: "A check refused the game", input: "Fix the command or opengame.json", auth: "Sign in, or use another token",
+    rateLimited: "An allowance is used; wait, then run it again", server: "Our side or the network; the game is fine",
+    upgrade: "Run opengame upgrade", notLaunched: "OpenGame is not open to creators yet",
+  };
   const listed = Object.fromEntries(Object.entries(commands).map(([name, spec]) => [name, { ...spec, usage: commandUsage(name), flags: commandFlags(spec.flags).map(flag => ({ ...flag, name: `--${flag.name}` })) }]));
   return { version: CLI_VERSION, commands: listed, globalFlags: GLOBAL.map(name => `--${name}`), exitCodes: EXIT_CODES, env: ENV,
     events: ["progress", "notice", "finding", "result", "error"], findingSchema: z.toJSONSchema(repairFindingSchema),
     agentMode: `When stdout is not a terminal, or CI or ${AGENT_MARKERS.slice(0, -1).join(", ")} or ${AGENT_MARKERS.at(-1)} is set to anything but 0, false or no, output defaults to one formatted JSON result or error. In a terminal, --human ignores those variables and prints text. Use --jsonl to stream events. With either JSON mode there are no command prompts or browser opens, and login prints the approval URL and code instead of waiting.`,
     limits: LIMITS.bundle,
     message: [`OpenGame CLI ${CLI_VERSION}`, "", "Usage: opengame <command> [options]", "", "Commands",
-      ...primary.map(name => `  ${name.padEnd(10)} ${commands[name]!.description}`),
+      ...primary.map(name => `  ${name.padEnd(10)} ${SUMMARY[name]}`),
       "", "More commands: opengame help <command>", `  ${Object.keys(commands).filter(name => !primary.includes(name)).join(", ")}`,
       "", "Get started", "  opengame init .       Write opengame.json for your game", "  opengame check .      Find problems before you upload",
       "  opengame dev .        Play it locally with the platform's headers", "  opengame deploy .     Upload a private preview",
-      "", "Exit codes", ...EXIT_CODES.map(row => `  ${row.code}  ${row.description}`),
-      "", "Environment", ...ENV.map(row => `  ${row.name.padEnd(26)} ${row.description}`),
-      "", "Run opengame <command> --help for options. Use --json for structured output."].join("\n") };
+      "", "Exit codes", ...EXIT_CODES.map(row => `  ${row.code}  ${EXIT_SHORT[row.name] ?? row.name}`),
+      "", "Environment", `  ${ENV.map(row => row.name).join(", ")}`,
+      "", "Run opengame <command> --help for its options and details. Use --json for every exit code and variable in full."].join("\n") };
 }
 
 // undici marks its proxy agent experimental on every run. A person cannot act on

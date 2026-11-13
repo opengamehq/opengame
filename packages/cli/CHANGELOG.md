@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.5
+
+- `opengame init` and `opengame check` work before OpenGame opens to creators, signed in or not,
+  and say the opening day beside their result. Nothing about deploying changes: it still waits
+  for the day.
+- Signed out, a command that needs OpenGame says to sign in first (`opengame login`), then the
+  opening day, rather than the day alone.
+- `opengame status` on a release review sent back, with no preview link, still names the
+  deployment page, which says why there is no preview.
+
 ## 0.9.4
 
 - `opengame check` warns about a missing favicon, web manifest or touch icon, or one named with

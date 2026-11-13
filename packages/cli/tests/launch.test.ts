@@ -13,16 +13,18 @@ const env = (origin: string, extra: Record<string, string | undefined> = {}) =>
   cleanEnv({ OPENGAME_API_URL: origin, OPENGAME_TEST_SKIP_LAUNCH_CHECK: undefined, OPENGAME_CREDENTIAL_STORE: "file", ...extra });
 const last = (stdout: string) => events(stdout).at(-1) as Record<string, unknown>;
 
-test("shut, a local command says OpenGame is not launched and exits 7 without running", async () => {
+test("shut, a command that asks the server says OpenGame is not launched and exits 7 without running", async () => {
   const api = await fakeApi((req, res) => { if (req.url === "/api/v1/status") reply(res, 200, { launched: false, access: null }); });
   const home = await tempDir("og-launch-");
   try {
-    const run = await spawnCli(["init", home.dir, "--json"], { env: env(api.origin, { XDG_CONFIG_HOME: home.dir }) });
+    const run = await spawnCli(["jams", "--json"], { env: env(api.origin, { XDG_CONFIG_HOME: home.dir }) });
     assert.equal(run.code, 7, run.stdout + run.stderr);
     const error = last(run.stdout);
     assert.equal(error.code, "not_launched");
     /* The day the CLI opens, the jam's kickoff, a day after the site (the owner, 8 Nov 2026). */
-    assert.equal(error.message, `OpenGame opens for creators on ${KICKOFF_COPY}.`);
+    // Signed out, the way through is a login, said first (J-opus-G2); the day follows, unchanged.
+    assert.equal(error.message, `Sign in first: run opengame login, then run this again. OpenGame opens for creators on ${KICKOFF_COPY}.`);
+    assert.equal(error.next, "opengame login");
     assert.equal(error.retry, "later");
     assert.deepEqual(api.seen.map(row => `${row.method} ${row.url}`), ["GET /api/v1/status"]);
     assert.equal(api.seen[0]!.headers.authorization, undefined, "a request with no login sent a credential");
@@ -31,22 +33,29 @@ test("shut, a local command says OpenGame is not launched and exits 7 without ru
 
 test("our own people pass: the token is sent, and access true lets the command run", async () => {
   const api = await fakeApi((req, res) => {
-    if (req.url === "/api/v1/status") reply(res, 200, { launched: false, access: req.headers.authorization === `Bearer ${token}` });
+    if (req.url === "/api/v1/status") return reply(res, 200, { launched: false, access: req.headers.authorization === `Bearer ${token}` });
+    if (req.url?.startsWith("/api/v1/jams")) return reply(res, 200, { jams: [] });
   });
   const home = await tempDir("og-launch-");
   try {
-    const run = await spawnCli(["init", home.dir, "--json"], { env: env(api.origin, { XDG_CONFIG_HOME: home.dir, OPENGAME_TOKEN: token }) });
-    assert.equal(run.code, 0, run.stdout + run.stderr);
+    const run = await spawnCli(["jams", "--json"], { env: env(api.origin, { XDG_CONFIG_HOME: home.dir, OPENGAME_TOKEN: token }) });
+    assert.notEqual(run.code, 7, run.stdout + run.stderr);
+    assert.ok(api.seen.some(row => row.url?.startsWith("/api/v1/jams")), "the command did not run past the switch");
     assert.equal(api.seen[0]!.headers.authorization, `Bearer ${token}`);
   } finally { await api.close(); await home.remove(); }
 });
 
 test("open, everybody passes", async () => {
-  const api = await fakeApi((req, res) => { if (req.url === "/api/v1/status") reply(res, 200, { launched: true, access: null }); });
+  const api = await fakeApi((req, res) => {
+    if (req.url === "/api/v1/status") return reply(res, 200, { launched: true, access: null });
+    if (req.url?.startsWith("/api/v1/jams")) return reply(res, 200, { jams: [] });
+  });
   const home = await tempDir("og-launch-");
   try {
-    const run = await spawnCli(["init", home.dir, "--json"], { env: env(api.origin, { XDG_CONFIG_HOME: home.dir }) });
-    assert.equal(run.code, 0, run.stdout + run.stderr);
+    const run = await spawnCli(["jams", "--json"], { env: env(api.origin, { XDG_CONFIG_HOME: home.dir }) });
+    // Past the switch: whatever the command says next (signed out, it asks for a login), it is not "not launched".
+    assert.notEqual(run.code, 7, run.stdout + run.stderr);
+    assert.notEqual(last(run.stdout).code, "not_launched");
   } finally { await api.close(); await home.remove(); }
 });
 
@@ -56,18 +65,20 @@ test("a server that cannot be reached is the network error, never not launched",
   await api.close();
   const home = await tempDir("og-launch-");
   try {
-    const run = await spawnCli(["init", home.dir, "--json"], { env: env(origin, { XDG_CONFIG_HOME: home.dir }) });
+    const run = await spawnCli(["jams", "--json"], { env: env(origin, { XDG_CONFIG_HOME: home.dir }) });
     assert.equal(run.code, 5, run.stdout + run.stderr);
     assert.equal(last(run.stdout).code, "network");
   } finally { await home.remove(); }
 });
 
 test("a server too old to have the status route lets the command run", async () => {
-  const api = await fakeApi();
+  const api = await fakeApi((req, res) => { if (req.url?.startsWith("/api/v1/jams")) return reply(res, 200, { jams: [] }); });
   const home = await tempDir("og-launch-");
   try {
-    const run = await spawnCli(["init", home.dir, "--json"], { env: env(api.origin, { XDG_CONFIG_HOME: home.dir }) });
-    assert.equal(run.code, 0, run.stdout + run.stderr);
+    const run = await spawnCli(["jams", "--json"], { env: env(api.origin, { XDG_CONFIG_HOME: home.dir }) });
+    // Past the switch: whatever the command says next (signed out, it asks for a login), it is not "not launched".
+    assert.notEqual(run.code, 7, run.stdout + run.stderr);
+    assert.notEqual(last(run.stdout).code, "not_launched");
   } finally { await api.close(); await home.remove(); }
 });
 
@@ -143,4 +154,41 @@ test("the not-launched sentence names the server's day, and the bundled one with
   assert.equal(notLaunchedMessage(COMMITTED_JAM_KICKOFF_AT.toISOString()), `OpenGame opens for creators on ${KICKOFF_COPY}.`);
   assert.equal(notLaunchedMessage("2026-11-20T08:00:00Z"), "OpenGame opens for creators on 20 November.");
   for (const missing of [undefined, null, "soon", 7]) assert.equal(notLaunchedMessage(missing), `OpenGame opens for creators on ${KICKOFF_COPY}.`);
+});
+
+/* Launch E2E judges, J-opus-G2 (13 Nov 2026): on a fresh install, `opengame check` before
+   sign-in printed the opening date, exited 7 and said nothing about what to do next, though
+   init and check never reach the creator API. They run now, shut or offline, and say the day
+   as a notice. Deploying still waits (the first test above). */
+test("shut, init and check run on the creator's machine and say the opening day as a notice", async () => {
+  const api = await fakeApi((req, res) => { if (req.url === "/api/v1/status") reply(res, 200, { launched: false, access: null }); });
+  const home = await tempDir("og-launch-");
+  const game = await tempDir("og-launch-game-");
+  try {
+    await (await import("node:fs/promises")).writeFile(`${game.dir}/index.html`, "<!doctype html><title>Night shift</title><canvas></canvas>");
+    for (const args of [["init", game.dir, "--title", "Night shift", "--json"], ["check", game.dir, "--json"]]) {
+      const run = await spawnCli(args, { env: env(api.origin, { XDG_CONFIG_HOME: home.dir }) });
+      assert.equal(run.code, 0, `${args[0]}: ${run.stdout}${run.stderr}`);
+      const result = last(run.stdout) as { notices?: { code: string; message: string }[] };
+      const notice = result.notices?.find(row => row.code === "not_launched");
+      assert.ok(notice, `${args[0]} said nothing about the opening day: ${run.stdout}`);
+      assert.match(notice!.message, new RegExp(`^OpenGame opens for creators on ${KICKOFF_COPY}\\. You can set up and check your game on this machine now; deploying it opens then\\.$`));
+    }
+  } finally { await api.close(); await home.remove(); await game.remove(); }
+});
+
+test("offline, check still runs and says nothing about the switch", async () => {
+  const api = await fakeApi();
+  const origin = api.origin;
+  await api.close();
+  const home = await tempDir("og-launch-");
+  const game = await tempDir("og-launch-game-");
+  try {
+    await (await import("node:fs/promises")).writeFile(`${game.dir}/index.html`, "<!doctype html><title>Night shift</title><canvas></canvas>");
+    const init = await spawnCli(["init", game.dir, "--title", "Night shift", "--json"], { env: env(origin, { XDG_CONFIG_HOME: home.dir }) });
+    assert.equal(init.code, 0, init.stdout + init.stderr);
+    const run = await spawnCli(["check", game.dir, "--json"], { env: env(origin, { XDG_CONFIG_HOME: home.dir }) });
+    assert.equal(run.code, 0, run.stdout + run.stderr);
+    assert.ok(!(last(run.stdout) as { notices?: { code: string }[] }).notices?.some(row => row.code === "not_launched"));
+  } finally { await home.remove(); await game.remove(); }
 });

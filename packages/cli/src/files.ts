@@ -31,6 +31,7 @@ export function folderArgument(root: string, cwd = process.cwd()): string {
 }
 import { readableBytes } from "./bytes";
 import { CliError, type Output } from "./output";
+import { rememberAuto, resolveAuto } from "./auto";
 
 /** The check version every local packaging finding carries: the archive rules preflight
  * applies and the opengame.json the CLI reads are one contract, versioned once in
@@ -60,6 +61,9 @@ export async function loadManifest(root: string, output?: Output,
     if (reader && error instanceof CliError) throw error;
     throw new CliError("manifest_unreadable", "Could not read opengame.json. Check that it is a regular file that contains valid JSON.");
   }
+  // Auto fields read as their stand-ins and are named beside the manifest (auto.ts).
+  const resolved = await resolveAuto(value, root);
+  value = resolved.value;
   const result = manifestSchema.safeParse(value);
   if (!result.success) {
     /* One finding per field, the first: a path like dist\web fails three checks, and
@@ -75,7 +79,7 @@ export async function loadManifest(root: string, output?: Output,
       const message = issue.unknown.length ? `${named} ${issue.unknown.length === 1 ? "is" : "are"} not a field CLI ${CLI_VERSION} knows.` : issue.message;
       const fix = issue.unknown.length
         ? `If a newer CLI wrote ${issue.unknown.length === 1 ? "it" : "them"}, upgrade with opengame upgrade${NPX_LATEST}. If not, remove ${named} from opengame.json.`
-        : issue.field === "genre" ? genreFix(value, root)
+        : issue.field === "genre" ? GENRE_FIX
         : issue.field ? `Correct ${issue.field} in opengame.json.` : issue.message;
       output?.emit({ type: "finding", finding: { release: null, check: "manifest", checkVersion: PACKAGING_CHECK_VERSION, state: "failed",
         certainty: issue.unknown.length ? "heuristic" : "certain", fault: "game", evidence: { observed: issue.field && !issue.unknown.length ? `${issue.field}: ${message}` : message, file: "opengame.json" },
@@ -90,20 +94,13 @@ export async function loadManifest(root: string, output?: Output,
       ? `${issue.unknown.map(key => issue.field ? `${issue.field}.${key}` : key).join(", ")}: not a field CLI ${CLI_VERSION} knows. Upgrade the CLI if a newer one wrote it, or remove it.`
       : `${issue.field || "opengame.json"}: ${issue.message}`).join("\n"), 1);
   }
-  return result.data;
+  return rememberAuto(result.data, resolved.auto);
 }
 
-/* "Correct genre in opengame.json" told nobody what a genre is or how to set one, and the
-   file that failed was usually the draft init had just written (10 Nov 2026). A blank genre
-   is one init fills in when run again; a wrong one is the creator's to change, since init
-   never replaces a value that is there. */
-function genreFix(value: unknown, root: string): string {
-  const genre = value && typeof value === "object" ? (value as { genre?: unknown }).genre : undefined;
-  const example = `Set genre in opengame.json to one of the slugs above, for example "genre": "puzzle-casual".`;
-  return genre === undefined || genre === null || (typeof genre === "string" && !genre.trim())
-    ? `${example} Or run opengame init ${folderArgument(root)} --genre <slug>, which fills in a blank genre and leaves the rest of the file alone.`
-    : example;
-}
+/* "Correct genre in opengame.json" told nobody what a genre is or how to set one (10 Nov
+   2026). A blank genre is Auto since 13 Nov 2026 (auto.ts), so this is only ever a genre that
+   is not one of the slugs. */
+const GENRE_FIX = `Set genre in opengame.json to one of the slugs above, for example "genre": "puzzle-casual", or to "auto" and review chooses it.`;
 
 /** Notepad and other Windows editors save UTF-8 with a byte-order mark, and JSON.parse
  * refuses one: an opengame.json that looked fine in the editor was "not valid JSON". */

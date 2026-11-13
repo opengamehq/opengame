@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.6
+
+- Every field the CLI collects defaults to Auto. `opengame init` writes `"auto"` for the title,
+  tagline, description, genre and controls unless you pass a flag, and Enter at the name prompt
+  takes Auto. Review writes each Auto field from your game, picks the subgenre too, and the
+  deploy's page shows what it wrote for you to accept or change before anything publishes.
+- In `opengame.json`, a field left out, blank or `"auto"` is Auto, so `check`, `dev` and
+  `deploy` read it. `--genre auto` works too, and a wrong genre lists `auto` first.
+- Words you type are yours. `opengame deploy` prints how review will tidy their casing and
+  grammar, and on the deploy's page you pick the tidied copy or your own.
+
 ## 0.9.5
 
 - `opengame init` and `opengame check` work before OpenGame opens to creators, signed in or not,

@@ -158,9 +158,9 @@ export interface ReviewPolicy {
   marketplaceBarTier: number | null;
   confidenceMin: number | null;
   providerWaitSeconds: number;
-  /** How long from the release being ready the publication decision waits for the CPU code
-   * review's verdict (limits.json, platform.review.codeReview.verdictWaitSeconds). Read by
-   * private.platform_publication_decision (20261113170000); absent means no wait. */
+  /** limits.json, platform.review.codeReview.verdictWaitSeconds. Read by the publication decision
+   * from 20261113170000 until 20261113300000, which waits for a stored verdict however long it
+   * takes and reads this no more; still carried so a recorded recommendation names it. */
   codeReviewWaitSeconds?: number;
   launchPolicy?: {
     version: string;

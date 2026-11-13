@@ -15,12 +15,20 @@ test('head and facial hair colours survive the game avatar helper', () => {
   assert.equal(avatar.head.facialHairColor, 'brown');
   assert.equal(readAvatar({ look: 'shortfringe.classic.white.none.male.shortbeard.blue' }).head.facialHairColor, null);
 });
+
+test('hair worn over another shape is named apart from the shape', () => {
+  const head = readAvatar({ look: 'egg.classic.white.none.male.none.blonde.default.bob' }).head;
+  assert.equal(head.shape, 'egg');
+  assert.equal(head.hair, 'bob');
+  assert.equal(head.hairColor, 'blonde');
+  assert.equal(readAvatar({ look: 'bob.classic.white' }).head.hair, null, 'a haircut stored as the shape is still the shape');
+});
 const white = '#F4F3EF';
 
 test('the local signed-in OG reads as a named head and outfit, with its colours following the head', () => {
   const avatar = readAvatar(mock);
   assert.deepEqual(avatar, {
-    head: { recipe: mock.look, shape: 'circle', eyes: 'classic', color: 'white', hex: white, finish: false, accessory: null, identity: 'male', facialHair: null, hairColor: null, facialHairColor: null },
+    head: { recipe: mock.look, shape: 'circle', eyes: 'classic', color: 'white', hex: white, finish: false, accessory: null, identity: 'male', facialHair: null, hairColor: null, facialHairColor: null, hair: null },
     outfit: {
       recipe: mock.character, version: 'c4', body: 'classic', legs: 'regular', shirt: 'hoodie', bottoms: 'jeans',
       accessories: ['cape', 'watch'], shoes: 'retro',
@@ -55,7 +63,7 @@ test('colours come from the catalogues that own them, and an id this build does 
 
 test('a colour renamed in 2026 reads as its current id, as OpenGame draws it', () => {
   assert.deepEqual(readAvatar({ look: 'circle.classic.ink' }).head, {
-    recipe: 'circle.classic.ink', shape: 'circle', eyes: 'classic', color: 'black', hex: '#1E1E1E', finish: false, accessory: null, identity: 'male', facialHair: null, hairColor: null, facialHairColor: null });
+    recipe: 'circle.classic.ink', shape: 'circle', eyes: 'classic', color: 'black', hex: '#1E1E1E', finish: false, accessory: null, identity: 'male', facialHair: null, hairColor: null, facialHairColor: null, hair: null });
   assert.equal(readAvatar({ look: 'circle.classic.paper.none.female' }).head.color, 'white');
   assert.equal(readAvatar({ look: 'circle.classic.paper.none.female' }).head.identity, 'female');
 });

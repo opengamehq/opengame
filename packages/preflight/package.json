@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./platform": "./src/platform.ts",
     "./engines": "./src/engines.ts",
+    "./native-build": "./src/native-build.ts",
     "./text-evidence": "./src/text-evidence.ts",
     "./node-compression": "./src/node-compression.ts"
   },

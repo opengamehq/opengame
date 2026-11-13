@@ -32,7 +32,7 @@ import { contractHelp, devCommand } from "./dev";
 import { vendorCommand } from "./vendor";
 import { ENGINE_IDS, sourceSettingsDiagnostics, THREADED_TARGET } from "./engines";
 import { safeReadFile } from "./safe-fs";
-import { refuseNewDeployAfterClose, requireLaunched } from "./launch";
+import { launchNotice, refuseNewDeployAfterClose, requireLaunched } from "./launch";
 
 /** `only` names the kind of project a flag is for. Help lists those flags under their own
  * heading, after the ones everybody uses, so a Phaser creator reading check --help is not
@@ -215,13 +215,17 @@ const EXIT_CODES = [
   { name: "rateLimited", code: EXIT.rateLimited, description: "An allowance is used. Wait retryAfterSeconds when the error has it, then run the same command." },
   { name: "server", code: EXIT.server, description: "Our side or the network, and the game is fine. Run the error's next command when it has one. With retry after-fix or never, waiting will not help; read the message. Otherwise wait (retryAfterSeconds when given) and run the same command." },
   { name: "upgrade", code: EXIT.upgrade, description: "This CLI is too old. Run opengame upgrade." },
-  { name: "notLaunched", code: EXIT.notLaunched, description: "OpenGame is not open to creators yet, so nothing ran. The message names the day the CLI and uploads open. Nothing about the game, the command or the login is wrong. Retrying will not help before then." },
+  { name: "notLaunched", code: EXIT.notLaunched, description: "OpenGame is not open to creators yet, so nothing ran. Signed out, sign in first (next is opengame login) and run the command again; signed in, the message names the day the CLI and uploads open. init and check run before then and say the day as a notice. Nothing about the game is wrong." },
 ];
 /* The commands that answer before launch (launch.ts says why each one). help and version
    are answered before this is reached. A docs commit on 3 Nov 2026 (a9fa6ab49) took this
    and the check below out with no word in its message, and every local command then ran
    for strangers with no "not launched" sentence; launch.test.ts is what caught it. */
 const BEFORE_LAUNCH = new Set(["login", "logout", "whoami"]);
+/* Commands that work on the creator's own machine and send nothing to OpenGame, so they run
+   before launch and say the opening day beside their result (launchNotice). `deploy` and
+   every command that asks the server keep the refusal above. */
+const LOCAL_BEFORE_LAUNCH = new Set(["init", "check"]);
 const ENV = [
   { name: "OPENGAME_API_URL", description: "The OpenGame origin to talk to. Defaults to https://opengame.io. Set it when you were given a different origin." },
   { name: "OPENGAME_TOKEN", description: "A token from settings, for CI and agents. Never pass a token as a flag." },
@@ -436,7 +440,11 @@ async function main() {
   for (const key of Object.keys(flags)) {
     if (!GLOBAL.includes(key) && !supported.includes(key) && !(command === "submit" && EVIDENCE.test(key))) throw new CliError("unsupported_flag", `The ${command} command does not use --${key}. Run opengame ${command} --help.`, undefined, { next: `opengame ${command} --help` });
   }
-  const launch = BEFORE_LAUNCH.has(command) ? { deploysFrozen: false } : await requireLaunched(Boolean(flags["token-stdin"]));
+  let launch = { deploysFrozen: false };
+  if (LOCAL_BEFORE_LAUNCH.has(command)) {
+    const opens = await launchNotice(Boolean(flags["token-stdin"]));
+    if (opens) output.emit({ type: "notice", code: "not_launched", message: `${opens} You can set up and check your game on this machine now; deploying it opens then.` });
+  } else if (!BEFORE_LAUNCH.has(command)) launch = await requireLaunched(Boolean(flags["token-stdin"]));
   const takesFolder = Boolean(commands[command]!.args?.includes("dir"));
   // token takes create|list|revoke and jams a slug: one argument each, like a folder.
   // skills takes its action first, then the folder.

@@ -555,7 +555,7 @@ async function report(op: Operation, command: string, api: Api, output: Output,
       /* A release review returned or refused leads with that: the first line read "Private
          preview ready" over the return two lines down (launch E2E, B-19). The preview link
          stays, after it. */
-      message: (stopped ? [review!.message, ...lines, preview ? `Its private preview is still at ${url}` : null, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []), ...originLine(op)]
+      message: (stopped ? [review!.message, ...lines, preview ? `Its private preview is still at ${url}` : `Its deployment page says more: ${url}`, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []), ...originLine(op)]
         : [preview ? `Private preview ready. Play it at ${url}` : `Release ready, but the server sent no preview link. Open ${url} to see why.`, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []), ...originLine(op),
         ...(review ? [review.message, ...lines] : [])]).filter((line): line is string => Boolean(line)).join("\n") } });
     return;

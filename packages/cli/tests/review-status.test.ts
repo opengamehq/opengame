@@ -264,3 +264,21 @@ test("a token that may not read the review is told so, rather than shown nothing
     assert.ok(events(run.stdout).some(event => event.code === "review_unreadable"), run.stdout);
   } finally { await api.close(); await root.remove(); }
 });
+
+/* Greptile on opengamehq/opengame#9: a returned release with no preview link lost the only
+   address in the human line, the deployment page, which says why there is no preview. */
+test("a returned release with no preview link still names its deployment page", async () => {
+  const noPreview = { ...ready, previewUrl: null };
+  const game = { id: gameId, publicId: "orbitrun01", title: "Orb Run", visibility: "draft", latestOperation: noPreview, publication: null, submission: returned };
+  const api = await fakeApi((req, res) => {
+    if (req.url === `/api/v1/games/${gameId}`) return reply(res, 200, { game });
+    if (req.url === `/api/v1/operations/${operationId}`) return reply(res, 200, { operation: noPreview });
+  });
+  const root = await linked(api.origin);
+  try {
+    const run = await spawnCli(["status", root.dir, "--jsonl"], { env: cleanEnv({ OPENGAME_API_URL: api.origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" }) });
+    const data = events(run.stdout).at(-1)!.data as { message: string };
+    assert.match(data.message.split("\n")[0]!, /Returned with fixes/);
+    assert.match(data.message, new RegExp(`deployments/${operationId}`));
+  } finally { await api.close(); await root.remove(); }
+});

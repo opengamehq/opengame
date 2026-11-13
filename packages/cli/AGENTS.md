@@ -243,5 +243,5 @@ Play the private preview before you tell the creator the game works.
 | 4 | `rateLimited` | An allowance is used. Wait retryAfterSeconds when the error has it, then run the same command. |
 | 5 | `server` | Our side or the network, and the game is fine. Run the error's next command when it has one. With retry after-fix or never, waiting will not help; read the message. Otherwise wait (retryAfterSeconds when given) and run the same command. |
 | 6 | `upgrade` | This CLI is too old. Run opengame upgrade. |
-| 7 | `notLaunched` | OpenGame is not open to creators yet, so nothing ran. The message names the day the CLI and uploads open. Nothing about the game, the command or the login is wrong. Retrying will not help before then. |
+| 7 | `notLaunched` | OpenGame is not open to creators yet, so nothing ran. Signed out, sign in first (next is opengame login) and run the command again; signed in, the message names the day the CLI and uploads open. init and check run before then and say the day as a notice. Nothing about the game is wrong. |
 <!-- /generated:commands -->

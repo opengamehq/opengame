@@ -192,3 +192,28 @@ test("offline, check still runs and says nothing about the switch", async () => 
     assert.ok(!(last(run.stdout) as { notices?: { code: string }[] }).notices?.some(row => row.code === "not_launched"));
   } finally { await home.remove(); await game.remove(); }
 });
+
+/* The 0.9.5 follow-up: a server that took the connection and never answered held init and check
+   for the whole request timeout, 30 s, for a notice they can do without. The notice has its own
+   short deadline (platform.http.launchNoticeTimeoutMs). Mutation checked: without the signal,
+   this runs past the bound. */
+test("a server that never answers the launch question holds init for about its short deadline, not 30 s", async () => {
+  // fakeApi answers 404 to anything a handler leaves, so this one is a bare server that never answers.
+  const { createServer } = await import("node:http");
+  const server = createServer(() => { /* accepts, and never answers */ });
+  server.listen(0, "127.0.0.1"); await new Promise(resolve => server.once("listening", resolve));
+  const api = { origin: `http://127.0.0.1:${(server.address() as { port: number }).port}`,
+    close: async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); } };
+  const home = await tempDir("og-launch-");
+  const game = await tempDir("og-launch-game-");
+  try {
+    await (await import("node:fs/promises")).writeFile(`${game.dir}/index.html`, "<!doctype html><title>Night shift</title><canvas></canvas>");
+    const { LIMITS } = await import("@opengame/shared");
+    const began = Date.now();
+    const run = await spawnCli(["init", game.dir, "--title", "Night shift", "--json"], { env: env(api.origin, { XDG_CONFIG_HOME: home.dir }) });
+    const took = Date.now() - began;
+    assert.equal(run.code, 0, run.stdout + run.stderr);
+    assert.ok(took < LIMITS.platform.http.launchNoticeTimeoutMs + 6000, `init took ${took} ms`);
+    assert.ok(!(last(run.stdout) as { notices?: { code: string }[] }).notices?.some(row => row.code === "not_launched"));
+  } finally { await api.close().catch(() => {}); await home.remove(); await game.remove(); }
+});

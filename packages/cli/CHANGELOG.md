@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.7
+
+- `opengame --help` gives one line to each command and exit code, and names the environment
+  variables. Each command's own `--help` still has its details, and `--json` has every word.
+- `opengame init` and `opengame check` wait at most two seconds for the launch notice. A server
+  that took the connection and never answered held them for 30 seconds.
+- The editor schema for `opengame.json` accepts every spelling the CLI reads as Auto: `"auto"`
+  in any case, a blank value or `null`.
+
 ## 0.9.6
 
 - Every field the CLI collects defaults to Auto. `opengame init` writes `"auto"` for the title,

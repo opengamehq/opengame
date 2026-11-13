@@ -51,8 +51,12 @@ export function deploySourceUrl(source: DeploySource): string {
  * description in the terminal"). A folder with no words of its own deploys with
  * PLACEHOLDER_DESCRIPTION, and the deploy's page asks for the real one before the game can
  * publish.
+ *
+ * `title` joined on 13 Nov 2026: a name the CLI's init or Drop read from the page's <title> or
+ * the folder, not one anybody typed, so the deploy's page may offer the name review reads from
+ * the game instead (launch E2E, J-astra-E9, "Game Development Assignment").
  */
-export const deployProvisionalSchema = z.array(z.enum(["genre", "controls", "description"])).max(3)
+export const deployProvisionalSchema = z.array(z.enum(["genre", "controls", "description", "title"])).max(4)
   .refine(items => new Set(items).size === items.length, "Name each provisional field once.");
 
 /**

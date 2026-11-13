@@ -376,7 +376,7 @@ test("a redeploy says it goes to review by itself and replaces the older release
     const result = await run(process.execPath, [binary, "deploy", root, "--jsonl"], { env });
     const events = result.stdout.trim().split("\n").map(line => JSON.parse(line));
     const notice = events.find(event => event.code === "review_continues");
-    assert.equal(notice?.message, "SUB-1090 has release 55555555 in review (With a person). This release goes to review by itself and replaces it.");
+    assert.equal(notice?.message, "SUB-1090 has release 55555555 in review. This release goes to review by itself and replaces it.");
     assert.equal(events.at(-1).data.state, "ready");
   } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(root, { recursive: true, force: true }); }
 });

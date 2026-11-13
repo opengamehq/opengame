@@ -1,7 +1,7 @@
 import { LIMITS } from "@opengame/shared";
 import { parseScript } from "./script-source";
 import { parse as parseHtml, type DefaultTreeAdapterTypes } from "parse5";
-import { preflight, type Finding, type PreflightFile, type PreflightOptions } from "./index";
+import { credentialChecks, preflight, type Finding, type PreflightFile, type PreflightOptions } from "./index";
 import { compressedBrowserAsset } from "./names";
 import { collectTextEvidence } from "./text-evidence";
 import { redactFinding } from "./diagnostic-text";
@@ -164,7 +164,8 @@ export async function platformPreflight(files: PreflightFile[], options: Preflig
   // Literal escapes are data until the JavaScript parser decodes them. Check
   // these before upload too, using the same private evidence reader as the
   // server, so a compressed or renamed source file cannot hide a known key.
-  const encodedCredentials = options.inspectDecodedCredentials ? (await collectTextEvidence(cached, base)).credentialPaths : [];
+  // Not on the minimal checks (credentialChecks): the same switch as the plain-text scan.
+  const encodedCredentials = options.inspectDecodedCredentials && credentialChecks() ? (await collectTextEvidence(cached, base)).credentialPaths : [];
   for (const path of encodedCredentials) added.push({ code: "encoded-credential", severity: "blocker", path,
     title: `A key is hidden in an escaped string in ${path}.`,
     detail: "Remove it from the bundle and rotate the key. Escaping does not hide it from players." });

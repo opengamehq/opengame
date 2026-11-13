@@ -66,7 +66,7 @@ export const submissionSchema = z.object({
   certifyUrl: z.url().nullable(),
   /** The private game page, where the status strip shows the same state. */
   gameUrl: z.url(),
-  /** With a person: how many submissions are ahead of this one. */
+  /** In review: how many submissions are ahead of this one. */
   queuePosition: z.number().int().nonnegative().nullable(),
   /** The decision's reason or the findings, once there is one to show. Each finding is a
    * repair finding (fix, verify, retry, fault, certainty), the same shape a deploy's

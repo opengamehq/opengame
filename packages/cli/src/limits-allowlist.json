@@ -37,6 +37,7 @@
     "platform.credentials.stdinWaitMs",
     "platform.deploy.buildTimeoutMs",
     "platform.deploy.failedRetentionSeconds",
+    "platform.deploy.minimalChecks",
     "platform.deploy.minimumUploadBytesPerSecond",
     "platform.deploy.multipart.aboveBytes",
     "platform.deploy.multipart.concurrency",

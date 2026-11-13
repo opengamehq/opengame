@@ -8,22 +8,37 @@ const states = (input: DeploymentProgressInput) => Object.fromEntries(deployment
 const submission = (state: NonNullable<DeploymentProgressInput["submission"]>["state"]) => ({ state, submittedAt: new Date(now).toISOString(), outcome: null, hold: null, live: null });
 
 test("upload, checks and private preview never claim a live game", () => {
-  assert.deepEqual(states(base), { upload: "running", checks: "waiting", review: "waiting", publish: "waiting", live: "waiting" });
+  assert.deepEqual(states(base), { upload: "running", checks: "waiting", review: "waiting", details: "waiting", publish: "waiting", live: "waiting" });
   assert.equal(states({ state: "checking" }).checks, "running");
   assert.equal(states({ state: "ready" }).live, "waiting");
   assert.equal(states({ state: "ready" }).review, "running");
 });
-test("overlapped content review does not complete unfinished safety checks", () => {
-  const input: DeploymentProgressInput = { state: "checking", checks: [{ check: "malware", label: "Malware", state: "running" }, { check: "images", label: "Images", state: "running" }] };
-  assert.equal(states(input).checks, "running"); assert.equal(states(input).review, "running");
+test("the file checks are the archive and the preflight, and a retired row is not a step", () => {
+  const running: DeploymentProgressInput = { state: "checking", checks: [{ check: "archive", label: "Archive check", state: "passed" }, { check: "preflight", label: "Bundle check", state: "running" }] };
+  assert.equal(states(running).checks, "running"); assert.equal(states(running).review, "waiting");
+  // An older release's malware or image row, still running when the scanners were retired,
+  // neither holds the file checks open nor starts the review.
+  const old: DeploymentProgressInput = { state: "checking", checks: [{ check: "archive", label: "Archive check", state: "passed" },
+    { check: "malware", label: "Malware scan", state: "running" }, { check: "images", label: "Images", state: "running" }] };
+  assert.equal(states(old).checks, "done"); assert.equal(states(old).review, "waiting");
+  const words = JSON.stringify(deploymentSteps({ state: "checking", checks: [] }));
+  assert.doesNotMatch(words, /malware|secret|image/i);
 });
-test("details exists only while the creator owes them", () => {
+/* Launch E2E judges, 13 Nov 2026 (J-opus-13): Details was drawn only while owed, so
+   confirming it took the count from "3 of 6" to "3 of 5". It is always a step now. */
+test("details is always a step, so the count never changes under the creator", () => {
+  assert.equal(states({ state: "checking" }).details, "waiting");
   assert.equal(states({ state: "ready", submission: submission("awaiting_details") }).details, "held");
-  assert.equal(states({ state: "ready", submission: submission("publishing") }).details, undefined);
+  assert.equal(states({ state: "ready", submission: submission("publishing") }).details, "done");
+  assert.equal(states({ state: "ready", submission: submission("published") }).details, "done");
+  for (const state of ["playtesting", "awaiting_details", "publishing", "published"] as const)
+    assert.equal(deploymentSteps({ state: "ready", submission: submission(state) }).length, 6, state);
   assert.equal(states({ state: "ready", submission: submission("published") }).live, "done");
 });
 test("a held, refused, expired or removed build has a static recovery state", () => {
   assert.equal(states({ state: "ready", submission: submission("review") }).review, "held");
+  // Publication never waits for a person (12 Nov 2026), so the timeline never says one is needed (launch E2E, B-3).
+  assert.doesNotMatch(deploymentSteps({ state: "ready", submission: submission("review") }).find(s => s.id === "review")!.detail, /person|reviewer/i);
   assert.equal(states({ state: "ready", submission: submission("returned") }).review, "failed");
   assert.equal(states({ state: "expired" }).upload, "failed");
   assert.equal(states({ state: "uploading", lapsed: true }).upload, "failed");
@@ -31,7 +46,8 @@ test("a held, refused, expired or removed build has a static recovery state", ()
 });
 test("sparse measurements show no ETA; estimates use broad minutes and stop at overrun", () => {
   const step = deploymentSteps({ state: "checking", started: { checks: new Date(now - 30_000).toISOString() }, timings: { checks: { lowSeconds: 90, highSeconds: 180, samples: 3 } } }).find(s => s.id === "checks")!;
-  assert.equal(stageEta(step, now), "About 1–3 min");
+  // Words, not an en dash: "About 39–45 min" was read aloud and judged as a symbol (launch E2E, J-opus-E7).
+  assert.equal(stageEta(step, now), "About 1 to 3 min");
   assert.equal(stageEta(step, now + 150_000), "Taking longer than usual");
   assert.equal(stageEta({ ...step, timing: { ...step.timing!, samples: 1 } }, now), null);
   assert.equal(stageEta({ ...step, state: "held" }, now), null);

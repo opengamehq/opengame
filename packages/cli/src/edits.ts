@@ -76,9 +76,9 @@ export async function detailsCommand(root: string, flags: Flags, output: Output)
 
 /**
  * `opengame handle <name>`: rename the account's handle, as Settings does, through the same
- * function on the server. The old handle keeps pointing at this account and is never given
- * to anybody else, and renames are limited per day, so a person is asked first and an agent
- * says --yes. Only the `opengame login` token can do it; a token made in settings cannot.
+ * function on the server. The old handle becomes free for anyone to claim at once (since
+ * 13 Nov 2026), games keep their /g links, the profile address changes, and renames are
+ * limited per day, so a person is asked first and an agent says --yes. Only the `opengame login` token can do it; a token made in settings cannot.
  */
 export async function handleCommand(name: string | undefined, flags: Flags, output: Output) {
   const api = new Api();
@@ -90,10 +90,10 @@ export async function handleCommand(name: string | undefined, flags: Flags, outp
     if (!flags.yes) {
       const person = !output.json && !agentMode() && Boolean(process.stdin.isTTY);
       if (!person) {
-        throw new CliError("confirmation_required", `Renaming changes your public name and every game's address. Add --yes to rename your handle to ${terminalText(name)}.`,
+        throw new CliError("confirmation_required", `Renaming changes your public name and your profile address. Your games keep their /g links. Add --yes to rename your handle to ${terminalText(name)}.`,
           EXIT.input, { next: `opengame handle ${name} --yes` });
       }
-      if (!await confirm(`Rename your handle to ${terminalText(name)}? Your old handle keeps pointing at you and nobody else can take it, and you can rename only a few times a day.`)) {
+      if (!await confirm(`Rename your handle to ${terminalText(name)}? Your old handle becomes free for anyone to claim, your games keep their /g links, and you can rename only a few times a day.`)) {
         throw new CliError("cancelled", "Cancelled. Nothing changed.", EXIT.input);
       }
     }
@@ -104,6 +104,6 @@ export async function handleCommand(name: string | undefined, flags: Flags, outp
     if (!parsed.success) throw new CliError("invalid_response", "The rename was sent, but the answer could not be read. Run opengame whoami to see your handle.", 5, { next: "opengame whoami" });
     const done = parsed.data;
     output.emit({ type: "result", command: "handle", data: { ...done,
-      message: `Your handle is @${terminalText(done.handle)}.${done.previous ? ` @${terminalText(done.previous)} still points to you.` : ""}\n${done.url}` } });
+      message: `Your handle is @${terminalText(done.handle)}.${done.previous ? ` @${terminalText(done.previous)} is free for anyone to claim now. Your games keep their /g links.` : ""}\n${done.url}` } });
   } finally { await api.close(); }
 }

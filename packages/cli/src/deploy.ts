@@ -519,7 +519,16 @@ async function report(op: Operation, command: string, api: Api, output: Output,
   const outcome = operationOutcome(op, findings);
   if (outcome) {
     const lead = findings.find(finding => findingLabel(finding) === "Blocker") ?? findings[0];
-    throw new CliError(outcome.code, outcome.message, outcome.exit,
+    /* The last line names the file and the change, not only that a check refused: an agent or
+       a person reading the error alone got "Each failed check's finding names the file" and
+       nothing else (launch E2E, J-opus-E2, a Unity build refused after a 48 s upload). */
+    // The file too, when the sentence does not already name it.
+    const file = lead?.evidence.file?.replace(/:\d+(:\d+)?$/, "");
+    const named = file && !lead!.evidence.observed.includes(file) ? `${file}: ` : "";
+    const message = outcome.code === "deploy_checks_failed" && lead
+      ? `A check refused this upload. ${named}${lead.evidence.observed}${lead.fix ? ` ${lead.fix}` : ""}${findings.length > 1 ? ` ${findings.length - 1} more ${findings.length === 2 ? "finding is" : "findings are"} listed above.` : ""}`
+      : outcome.message;
+    throw new CliError(outcome.code, message, outcome.exit,
       { ...(lead ? { finding: lead } : {}), ...(outcome.next ? { next: outcome.next } : {}), retry: outcome.retry });
   }
   if (op.metadata?.keptFields.length) output.emit({ type: "notice", code: "website_metadata_kept",
@@ -538,12 +547,17 @@ async function report(op: Operation, command: string, api: Api, output: Output,
     // over the manifest's, since then the manifest is not what was deployed.
     const deployedAs = op.metadata?.keptFields.includes("kind") ? null : kindPhrase(options.kind?.kind, options.kind?.basedOn);
     const lines = options.review ? emitReview(options.review, output) : [];
+    const stopped = Boolean(review && options.review && ["returned", "blocked"].includes(options.review.state) && options.review.releaseId === op.releaseId);
     output.emit({ type: "result", command, data: { operationId: op.id, state: op.state, done: true, gameId: op.gameId, publicId: op.publicId ?? null,
       releaseId: op.releaseId, previewUrl: preview, url, deploymentUrl: deploymentLink, uploadUrl, gameOrigin: op.gameOrigin ?? null, next: review?.next ?? null, ...(op.progress ? { progress: op.progress } : {}), findings,
       ...(options.timingsMs ? { timingsMs: options.timingsMs } : {}), ...(op.metadata ? { metadata: op.metadata } : {}),
       ...(options.review !== undefined ? { submission: options.review, review } : {}),
-      message: [preview ? `Private preview ready. Play it at ${url}` : `Release ready, but the server sent no preview link. Open ${url} to see why.`, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []), ...originLine(op),
-        ...(review ? [review.message, ...lines] : [])].join("\n") } });
+      /* A release review returned or refused leads with that: the first line read "Private
+         preview ready" over the return two lines down (launch E2E, B-19). The preview link
+         stays, after it. */
+      message: (stopped ? [review!.message, ...lines, preview ? `Its private preview is still at ${url}` : null, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []), ...originLine(op)]
+        : [preview ? `Private preview ready. Play it at ${url}` : `Release ready, but the server sent no preview link. Open ${url} to see why.`, ...(deployedAs ? [`Deployed as ${deployedAs}.`] : []), ...originLine(op),
+        ...(review ? [review.message, ...lines] : [])]).filter((line): line is string => Boolean(line)).join("\n") } });
     return;
   }
   const stage = op.progress?.message ?? OPERATION_STATUS[op.state].message;
@@ -1032,9 +1046,12 @@ async function reviewContinues(api: Api, token: string, root: string, op: Operat
        itself and replaces an older release still in review, so this says that rather than
        asking for a submit. One being published is the exception, and it is said too. */
     const publishing = current.state === "publishing";
+    // "in review (In review)" said one thing twice once the review state was named In review.
+    const label = RELEASE_STATUS[submissionStatus(current)].label;
+    const where = label === RELEASE_STATUS.review.label ? "in review" : `in review (${label})`;
     output.emit({ type: "notice", code: "review_continues", message: publishing
       ? `${current.ref} is publishing release ${current.releaseId.slice(0, 8)}. This ${op.releaseId ? "release" : "deploy"} goes to review by itself once that has finished.`
-      : `${current.ref} has release ${current.releaseId.slice(0, 8)} in review (${RELEASE_STATUS[submissionStatus(current)].label}). This ${op.releaseId ? "release goes" : "deploy goes, once it is ready,"} to review by itself and replaces it.` });
+      : `${current.ref} has release ${current.releaseId.slice(0, 8)} ${where}. This ${op.releaseId ? "release goes" : "deploy goes, once it is ready,"} to review by itself and replaces it.` });
   } catch { /* the deploy's own result is what matters here */ }
 }
 

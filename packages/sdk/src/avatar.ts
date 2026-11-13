@@ -89,7 +89,7 @@ const own = (table: Record<string, string | null>, id: string) => Object.hasOwn(
 
 /**
  * Names the parts of `og.player.avatar`. Returns null when there is no look to draw: a
- * guest, a player who has not turned on "Show my OG in games", a private preview, or a
+ * guest, a signed-in player with no look made yet, a private preview, or a
  * malformed recipe. Use your game's default character then.
  */
 export function readAvatar(recipe: Pick<AvatarRecipe, 'look' | 'character'> | null | undefined): Avatar | null {

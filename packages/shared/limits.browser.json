@@ -1545,6 +1545,7 @@
       "verificationLeaseSeconds": 120
     },
     "deploy": {
+      "minimalChecks": true,
       "perAccountPerDay": 5,
       "minimumUploadBytesPerSecond": 150000,
       "multipart": {

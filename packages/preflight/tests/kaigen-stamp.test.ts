@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { preflight, type PreflightFile } from '../src/index';
+import "./credential-checks-on";
 
 const file = (path: string, content: string): PreflightFile => ({ path, size: Buffer.byteLength(content), text: async () => content });
 const module = (path: string, bytes: Uint8Array): PreflightFile =>

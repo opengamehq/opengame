@@ -13,6 +13,7 @@ import { manifest } from "./shell";
 import { vendorDependencies } from "../src/vendor";
 import { startDevServer } from "../src/dev";
 import { runtimeFixture } from "./runtime-fixtures";
+import { LIMITS } from "@opengame/shared";
 
 async function bundle(files: Record<string, Uint8Array | string>) {
   const root = await mkdtemp(join(tmpdir(), "og-compressed-"));
@@ -40,9 +41,24 @@ test("recognized gzip and Brotli engine resources retain original bytes in the c
 
 test("compressed JavaScript still undergoes credential, outbound request and desktop checks", async () => {
   const secret = "AKIA" + "Z".repeat(16);
+  /* The credential half. Since 12 Nov 2026 a deploy looks for no credentials
+     (limits.json platform.deploy.minimalChecks), so a key in compressed JavaScript is not
+     refused, and still never printed. The decoded source is read all the same: the
+     request and desktop rows below fail on what it holds. */
+  assert.equal((LIMITS.platform.deploy as { minimalChecks?: boolean }).minimalChecks, true);
+  for (const source of [`/* ${secret} */`, `const key = "\\x41KIA${"Z".repeat(16)}";`]) {
+    for (const [suffix, encode] of [["gz", gzipSync], ["br", brotliCompressSync]] as const) {
+      const events: unknown[] = [];
+      await bundle({ [`game.js.${suffix}`]: encode(Buffer.from(source)) }).catch((error: unknown) => {
+        const listed = (error as { events?: { finding?: { evidence: { observed: string }; fix: string } }[] }).events ?? [];
+        events.push(...listed);
+        assert.ok(!listed.some(event => event.finding && /key|credential|secret|escaped/i.test(event.finding.evidence.observed + event.finding.fix)),
+          `a credential refusal under the minimal checks: ${String((error as Error).message)}`);
+      });
+      assert.ok(!JSON.stringify(events).includes(secret), "a synthetic secret was printed");
+    }
+  }
   for (const [source, evidence] of [
-    [`/* ${secret} */`, /key|credential|secret/i],
-    [`const key = "\\x41KIA${"Z".repeat(16)}";`, /key|escaped|secret/i],
     // Since 2027-03 an ordinary https host is allowed, so the request checks that still
     // refuse are a blocked service and plain http.
     ['fetch("https://js.stripe.com/track")', /js\.stripe\.com|Stripe/],
@@ -61,15 +77,15 @@ test("compressed JavaScript still undergoes credential, outbound request and des
   }
 });
 
-test("renaming text to an unknown extension does not hide a key from the CLI", async () => {
+/* Until 12 Nov 2026 this refused the deploy: a renamed file could not hide a key. The CLI
+   looks for no credentials on the minimal checks (limits.json platform.deploy.minimalChecks),
+   so the same upload goes through, and the key is still never printed. */
+test("a key in a renamed text file no longer stops the CLI, and is never printed", async () => {
   const secret = "AKIA" + "Z".repeat(16);
-  await assert.rejects(bundle({ "settings.dat": secret }), (error: unknown) => {
-    assert.equal((error as { code: string }).code, "check_failed");
-    const events = (error as { events: { finding?: { check: string; evidence: { observed: string } } }[] }).events;
-    assert.ok(events.some(event => event.finding && /credential|key|secret/i.test(event.finding.evidence.observed)), "the renamed file's credential must cause the refusal");
-    assert.ok(!JSON.stringify(events).includes(secret));
-    return true;
-  });
+  assert.equal((LIMITS.platform.deploy as { minimalChecks?: boolean }).minimalChecks, true);
+  const { lines } = await bundle({ "settings.dat": secret });
+  assert.ok(!lines.some(line => /credential|secret/i.test(line) && /blocker/.test(line)), lines.join("\n"));
+  assert.ok(!lines.join("\n").includes(secret));
 });
 
 test("malformed streams and arbitrary nested compression are refused before upload", async () => {

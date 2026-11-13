@@ -1,5 +1,9 @@
 # opengame-jam changelog
 
+## 1.0.8
+
+Any signed-in account can use the CLI, the creator API, uploads and jam entries before launch, so a `not_launched` answer means the request came with no account: sign in (`opengame login`) and run it again rather than waiting for 18 November.
+
 ## 1.0.7
 
 A build can be 4 GiB zipped, 5 GiB unpacked and 25,000 files, from 1 GiB, 1.5 GiB and 10,000 files. OpenGame opens on 18 November 2026, the jam's kickoff, not 17 November: the site no longer opens a day before the rest.

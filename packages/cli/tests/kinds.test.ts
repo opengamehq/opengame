@@ -155,7 +155,7 @@ test("a manifest and a saved deploy with no kind still read", async () => fixtur
 test("the jam refuses a decomp or a mod from its opengame.json, and takes the rest", () => {
   for (const manifest of [null, {}, { kind: "game" as const }, { kind: "world" as const }]) assert.doesNotThrow(() => refuseJamKind(manifest));
   assert.throws(() => refuseJamKind({ kind: "mod", basedOn: "Doom" }), (error: { code: string; message: string; exitCode: number }) =>
-    error.code === "kind_not_in_jam" && error.exitCode === 2 && /^opengame\.json says this is a mod of Doom\. The jam takes games and worlds\./.test(error.message)
+    error.code === "kind_not_in_jam" && error.exitCode === 2 && /^opengame\.json says this is a mod of Doom\. Mods and decomps cannot be entered in the jam\. They still go on OpenGame, under Just for fun\./.test(error.message)
     && /Nothing was submitted\.$/.test(error.message));
   assert.throws(() => refuseJamKind({ kind: "decomp", basedOn: "Super Mario 64" }), /a decomp of Super Mario 64/);
 });

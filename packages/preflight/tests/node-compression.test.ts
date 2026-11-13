@@ -1,10 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { gzipSync, brotliCompressSync } from "node:zlib";
-import { compressedTextReaders } from "../src/node-compression";
+import { constants as bufferConstants } from "node:buffer";
+import { compressedTextReaders, decodeCeiling } from "../src/node-compression";
 import { platformPreflight } from "../src/platform";
 import { precompressedAsset } from "../src/names";
 import { LIMITS } from "@opengame/shared";
+import "./credential-checks-on";
 
 test("only supported engine payloads have a compression reader", () => {
   // 3D assets joined on 22 Oct 2026: Kaigen ships glTF heads as .glb.gz.
@@ -38,6 +40,9 @@ test("authoritative scanning never reports a compressed script as checked withou
   assert.equal(missing.ok, false);
   assert.equal(missing.credentialScan?.complete, false);
   assert.ok(missing.findings.some(finding => finding.code === "unreadable-file"));
+  /* What to change, for the engine that writes these files: "make the file readable" meant
+     nothing to somebody holding a default Unity export (launch E2E, J-opus-E2). */
+  assert.match(missing.findings.find(finding => finding.code === "unreadable-file")!.detail ?? "", /Compression Format to Gzip or Disabled/);
   const decoded = await platformPreflight([html, { ...file, decodedText: compressedTextReaders()(file.path, file.size, async () => script) }]);
   assert.equal(decoded.checks.desktop, "failed");
   assert.ok(decoded.findings.some(finding => finding.code === "platform-desktop"));
@@ -138,4 +143,18 @@ test("a compressed copy must decode to the same bytes as the file beside it", as
 test("a compressed HTML document is refused rather than served unwrapped", async () => {
   const { nestedArchiveExtension } = await import("../src/names");
   for (const path of ["index.html.br", "index.html.gz", "page.htm.br", "page.htm.gz"]) assert.ok(nestedArchiveExtension(path), path);
+});
+
+/* Launch E2E B-7, 13 Nov 2026: the scan container runs Node 18, whose Buffer holds at most
+   4 GiB, and Node refuses a maxOutputLength past that before decoding a byte. With the 5 GiB
+   bundle cap a 38.6 MB Unity .data.br asked for about 5 GiB and came back unreadable. Red
+   without decodeCeiling's clamp. This runner is Node 22, so the Node 18 ceiling is passed in. */
+test("the decoder never asks for more than the runtime's Buffer can hold", () => {
+  const node18 = 2 ** 32;
+  const asked = Math.min(LIMITS.bundle.uncompressedBytesMax, Math.floor(38_606_587 * LIMITS.bundle.compressionRatioMax));
+  assert.ok(asked > node18, "the budget alone is past Node 18's ceiling, which is the case this guards");
+  assert.equal(decodeCeiling(asked, node18), node18);
+  assert.equal(decodeCeiling(1000, node18), 1000, "a budget under the ceiling is untouched");
+  assert.equal(decodeCeiling(0, node18), 1);
+  assert.ok(decodeCeiling(asked) <= bufferConstants.MAX_LENGTH);
 });

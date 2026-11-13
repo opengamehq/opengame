@@ -1,6 +1,7 @@
 import { LIMITS } from "@opengame/shared/browser";
 import type { CheckProgress } from "./findings";
 import { heldMessage } from "./status";
+import { isRetiredCheck } from "./review";
 import type { Submission } from "./submission";
 
 export type DeployStepId = "upload" | "checks" | "review" | "details" | "publish" | "live";
@@ -49,20 +50,23 @@ export function deploymentSteps(input: DeploymentProgressInput): DeployStep[] {
   });
   const upload = state === "uploading" ? "running" : state === "expired" && !checks.some(check => !["pending", "skipped"].includes(check.state)) ? "failed" : "done";
   put("upload", upload, upload === "done" ? "All files received." : "Your files, sent securely.");
-  put("checks", "waiting", "Secrets, malware, engine and file types.");
-  put("review", "waiting", "Images, text, code and a playtest. Some checks run together.");
+  put("checks", "waiting", "File types, engine and packaging.");
+  put("review", "waiting", "An automatic quality review, with a playtest alongside.");
+  /* Details is always a step, so the count holds still: it was drawn only while owed, and
+     confirming it took "3 of 6" to "3 of 5" (launch E2E judges, J-opus-13). */
   const owesDetails = submission?.state === "awaiting_details" || submission?.state === "needs_certification";
-  if (owesDetails) put("details", "held", "Confirm your game’s details below to continue.");
+  const confirmed = ["approved", "publishing", "published"].includes(submission?.state ?? "");
+  put("details", owesDetails ? "held" : confirmed ? "done" : "waiting", owesDetails ? "Confirm your game’s details below to continue."
+    : confirmed ? "Your details are confirmed." : "Your game’s details and statements, confirmed by you.");
   put("publish", "waiting", "Make this version available to players.");
   put("live", "waiting", "Your game, ready to play and share.");
-  const safety = checks.filter(check => !["images", "text-policy"].includes(check.check));
-  const content = checks.filter(check => ["images", "text-policy"].includes(check.check));
+  // Only the file checks reach this list since 12 Nov 2026; a retired check's row on an
+  // older release is left out rather than shown as a step nobody runs.
+  const safety = checks.filter(check => !isRetiredCheck(check.check));
   const safetyDone = safety.length > 0 && safety.every(check => ["passed", "advisory"].includes(check.state));
   if (state === "queued") put("checks", "waiting", "Your upload arrived. Waiting for a check slot.");
   if (state === "checking") {
-    put("checks", safetyDone ? "done" : "running", safetyDone ? "File checks passed." : "Checking secrets, malware, engine and file types.");
-    if (content.some(check => check.state !== "pending") || ["images", "text"].includes(input.stage ?? ""))
-      put("review", "running", "Reviewing images, text and code. The playtest follows.");
+    put("checks", safetyDone ? "done" : "running", safetyDone ? "File checks passed." : "Checking file types, engine and packaging.");
     if (input.stage === "waiting" || checks.some(check => check.state === "held")) {
       const id = safetyDone ? "review" : "checks";
       const check = checks.find(check => check.state === "held");
@@ -71,7 +75,7 @@ export function deploymentSteps(input: DeploymentProgressInput): DeployStep[] {
   }
   if (state === "ready") {
     put("checks", "done", "File checks passed.");
-    put("review", "running", "Reviewing images, text, code and the playtest.");
+    put("review", "running", "Reviewing your game. Nothing to do.");
     if (input.reviewReadFailed) put("review", "held", "Review status could not be read. Your build is saved. We’ll try again.");
     if (input.unsubmitted) put("review", input.unsubmitted.settled ? "held" : "waiting", input.unsubmitted.sentence);
   }
@@ -79,10 +83,11 @@ export function deploymentSteps(input: DeploymentProgressInput): DeployStep[] {
     if (["awaiting_details", "needs_certification", "approved", "publishing", "published"].includes(submission.state))
       put("review", "done", "Your game passed review.");
     if (["waiting", "review"].includes(submission.state))
-      put("review", "held", submission.state === "review" ? "Your upload is saved. A person needs to review this build. We’ll update this page; you don’t need to send it again."
+      put("review", "held", submission.state === "review" ? "Your upload is saved and review is still deciding. We’ll update this page; you don’t need to send it again."
         : submission.hold ? heldMessage(submission.hold) + (submission.hold.reason === "placement" ? " We’ll retry it; you don’t need to upload again." : "")
         : "The playtest is waiting on us. Your game is saved. We’ll retry it.");
     if (submission.state === "needs_certification") put("review", "waiting", "Review starts after you confirm the required details.");
+    if (["returned", "blocked", "withdrawn", "superseded"].includes(submission.state)) put("details", "waiting", "Nothing to confirm for this build.");
     if (["returned", "blocked", "withdrawn", "superseded"].includes(submission.state))
       put("review", "failed", (submission.outcome?.reason ? `${submission.outcome.reason} Read the findings below for what to change or how to appeal.` : null) ?? (submission.state === "superseded" ? "A newer deployment replaced this one. Open your game’s deployments."
         : submission.state === "withdrawn" ? "This submission was withdrawn. Deploy again when you’re ready." : "This build needs a change before it can go live. Read the findings below, then deploy an updated build."));
@@ -93,12 +98,11 @@ export function deploymentSteps(input: DeploymentProgressInput): DeployStep[] {
     }
   }
   if (["failed", "expired"].includes(state) || input.lapsed) {
+    put("details", "waiting", "Nothing to confirm for this build.");
     const uploadFailed = state === "uploading" || (state === "expired" && !checks.some(check => !["pending", "skipped"].includes(check.state)));
-    const failedReview = safetyDone && content.some(check => ["failed", "stopped", "held"].includes(check.state));
-    put(uploadFailed ? "upload" : failedReview ? "review" : "checks", "failed", input.problem ?? (uploadFailed
+    put(uploadFailed ? "upload" : "checks", "failed", input.problem ?? (uploadFailed
       ? "The upload stopped before it finished. Resume from the CLI, or drop your build again."
       : "A check stopped this deployment. Read the findings below, then deploy again."));
-    if (!uploadFailed && failedReview) put("checks", "done", "File checks passed.");
   }
   if (submission?.state === "playtesting" && (input.reviewAhead ?? 0) > 0) put("review", "waiting", "Your playtest is queued. It starts as soon as a slot is free.");
   if (owesDetails && input.cannotConfirm) {
@@ -128,7 +132,7 @@ export function stageEta(step: DeployStep, now: number): string | null {
   if (elapsed >= highSeconds) return "Taking longer than usual";
   const low = Math.max(1, Math.ceil((lowSeconds - elapsed) / 60));
   const high = Math.max(low, Math.ceil((highSeconds - elapsed) / 60));
-  return high === 1 ? "About a minute" : low === high ? `About ${high} min` : `About ${low}–${high} min`;
+  return high === 1 ? "About a minute" : low === high ? `About ${high} min` : `About ${low} to ${high} min`;
 }
 
 export interface TransferEstimate { bytesPerSecond: number; remaining: string }

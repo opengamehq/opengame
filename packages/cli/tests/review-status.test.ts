@@ -57,6 +57,9 @@ test("status reports the review: a returned release's findings in the repair sha
     // A command an agent can run: the returned release is the newest, so a deploy comes first.
     assert.equal(data.next, "opengame deploy");
     assert.match(data.message, /SUB-1113: Returned with fixes\. Read the findings, then deploy an updated release\./);
+    // The return is the headline, not "Private preview ready" above it (launch E2E, B-19).
+    assert.match(data.message.split("\n")[0]!, /Returned with fixes/);
+    assert.doesNotMatch(data.message, /Private preview ready/);
   } finally { await api.close(); await root.remove(); }
 });
 
@@ -102,7 +105,7 @@ test("status --watch follows a review that is still moving until it settles", as
     assert.ok(reads >= 1, "the submission was read again while it was with a person");
     const stages = all.filter(event => event.type === "progress").map(event => event.stage);
     assert.deepEqual(stages, ["review:review", "review:returned"]);
-    assert.match(String(all.find(event => event.type === "progress")!.message), /With a person\..*2 releases are ahead of yours/);
+    assert.match(String(all.find(event => event.type === "progress")!.message), /In review\..*2 releases are ahead of yours/);
     assert.equal((all.at(-1)!.data as { review: { state: string } }).review.state, "returned");
   } finally { await api.close(); await root.remove(); }
 });
@@ -249,7 +252,7 @@ test("a person whose login code lapsed gets a fresh one and the terminal keeps w
 test("a token that may not read the review is told so, rather than shown nothing", async () => {
   // A current server sends status; leaving submission out is it saying this credential cannot read it.
   const game = { id: gameId, publicId: "orbitrun01", title: "Orb Run", visibility: "draft", latestOperation: ready, publication: null,
-    status: { key: "review", label: "With a person", message: "A person reviews your game before it can be published." } };
+    status: { key: "review", label: "In review", message: "This release is still in review. You do not need to do anything." } };
   const api = await fakeApi((req, res) => {
     if (req.url === `/api/v1/games/${gameId}`) return reply(res, 200, { game });
     if (req.url === `/api/v1/operations/${operationId}`) return reply(res, 200, { operation: ready });

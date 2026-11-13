@@ -106,7 +106,7 @@ OpenCode, so a coding agent can do all of the above for you.
 | `opengame pull [dir] [options]` | Bring website metadata into this folder. |
 | `opengame stats [game\|dir] [options]` | Read analytics for a game you own, or this folder's linked game, for one complete ISO week, Monday to Sunday in UTC. Average playtime is total playtime divided by distinct players in the week. |
 | `opengame whoami [options]` | Show the account and permissions for this token. |
-| `opengame handle <name> [options]` | Rename your handle, as Settings does. Your old handle keeps pointing at you and is never given to anybody else, and renames are limited per day. Only the opengame login token can do this, not a token made in settings. |
+| `opengame handle <name> [options]` | Rename your handle, as Settings does. Your old handle becomes free for anyone to claim, your games keep their /g links, and your profile address changes. Renames are limited per day. Only the opengame login token can do this, not a token made in settings. |
 | `opengame token create\|list\|revoke [options]` | Create, list or revoke tokens in your browser. |
 | `opengame logout [options]` | Revoke this device's token and remove it locally. |
 | `opengame limits [options]` | Show bundle limits and your remaining account allowance. |

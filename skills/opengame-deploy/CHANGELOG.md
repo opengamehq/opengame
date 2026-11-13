@@ -1,5 +1,9 @@
 # opengame-deploy changelog
 
+## 1.1.2
+
+Any signed-in account can use the CLI, the creator API, uploads and jam entries before launch, so a `not_launched` answer means the request came with no account: sign in (`opengame login`) and run it again rather than waiting for 18 November.
+
 ## 1.1.1
 
 A build can be 4 GiB zipped, 5 GiB unpacked and 25,000 files, from 1 GiB, 1.5 GiB and 10,000 files. The manifest and packaging references now say a game may declare 25 leaderboards, as 1.1.0 did, where they still said 10. OpenGame opens on 18 November 2026, the jam's kickoff, not 17 November: the site no longer opens a day before the rest.

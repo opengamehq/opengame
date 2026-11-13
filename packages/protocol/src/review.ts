@@ -9,22 +9,32 @@ import type { ReceiptState } from "./release";
 
 /** The checks a submitted release needs, by the names the playtest stage writes. */
 export const REVIEW_CHECKS = {
-  /** Deploy-time safety. A failure here means the bytes are never served. */
-  safety: ["archive", "malware", "secrets", "images"],
+  /** Deploy-time safety. A failure here means the bytes are never served. Only the archive
+   * check since 12 Nov 2026: it refuses native executables, and the malware scan, the
+   * credential scan and image moderation are retired (RETIRED_CHECKS). */
+  safety: ["archive"],
   /** Deterministic packaging and attributed runtime failures return with a fix. */
   eligibility: ["preflight", "engine", "desktop", "gpu-boot", "gpu-network", "gpu-runtime"],
   /** Evidence a person weighs. Never decisive on its own, and never waved through either.
-   * Until 5 Oct 2026 `image-flags` was in no list here, so the engine never read it and a
-   * calibrated bar would have published a flagged release unseen. Since 5 Nov 2026 it
-   * passes for labelled images (violence, gore and illicit imagery), carrying the labels;
-   * fails as the game's fault for adult sexual content, which `contentReturn` sends back on
-   * its own; and is inconclusive for self-harm, hate and harassment, which `forAPerson`
-   * hands to a person even with review.autonomous on (the review lane's decision 4,
-   * 5 Nov 2026). */
-  flags: ["text-policy", "gpu-desktop", "image-flags"],
+   * Only the resize probe since 12 Nov 2026: `text-policy` and `image-flags` are retired. */
+  flags: ["gpu-desktop"],
   /** The playtests, cheapest first. */
   playtest: ["bot-playtest", "agent-playtest"],
 } as const;
+
+/**
+ * Checks that are no longer run or required, since 12 Nov 2026 (limits.json
+ * platform.deploy.minimalChecks). A release reviewed before then has
+ * receipts for them, some failed or held for a person; they are read past here and in the
+ * database's publication gate, so none of them holds a release up or sends it back. The
+ * malware scan, the credential checks (secrets, and text-source's key-in-text answer),
+ * image moderation and its flags, and the text policy questions.
+ */
+export const RETIRED_CHECKS: readonly string[] = ["malware", "secrets", "images", "image-flags", "text-policy", "text-source"];
+
+export function isRetiredCheck(check: string): boolean {
+  return RETIRED_CHECKS.includes(check);
+}
 
 const REQUIRED_CHECKS: readonly string[] = [...REVIEW_CHECKS.safety, ...REVIEW_CHECKS.eligibility, ...REVIEW_CHECKS.flags, ...REVIEW_CHECKS.playtest];
 
@@ -80,6 +90,10 @@ export interface QualityJudgement {
   providerRequestId?: string | null;
   /** Hash of the evidence supplied directly to this model. */
   evidenceDigest: string;
+  /** How sure the code review is that the game is made for a phone held upright (9:16). */
+  mobilePortrait?: number;
+  /** How sure the code review is that it does not run on a supported web runtime or engine. */
+  unsupportedRuntime?: number;
   source: "code" | "runtime";
   reasons: string[];
 }
@@ -106,6 +120,11 @@ const judgementSchema = z.object({
   promptVersion: z.string().trim().min(1), evidenceDigest: z.string().trim().min(1), source: z.enum(["code", "runtime"]),
   reasons: z.array(z.string()),
   requestedModel: z.string().optional(), modelVersion: z.string().optional(), servingProvider: z.string().nullable().optional(), providerRequestId: z.string().nullable().optional(),
+  /* Since 13 Nov 2026 the code review also says how sure it is that the game is made for a phone
+     held upright (9:16) rather than a browser, and that it does not run on a web engine, a web
+     export, WebAssembly or a supported game engine. The database refuses publication on either at
+     the policy's primary confidence (20261113030000); kept here so a parse does not drop them. */
+  mobilePortrait: z.number().min(0).max(1).optional(), unsupportedRuntime: z.number().min(0).max(1).optional(),
 });
 const receiptStateSchema = z.enum(["passed", "failed", "inconclusive", "not run", "provider unavailable"]);
 const qualitySchema = z.object({
@@ -139,6 +158,10 @@ export interface ReviewPolicy {
   marketplaceBarTier: number | null;
   confidenceMin: number | null;
   providerWaitSeconds: number;
+  /** How long from the release being ready the publication decision waits for the CPU code
+   * review's verdict (limits.json, platform.review.codeReview.verdictWaitSeconds). Read by
+   * private.platform_publication_decision (20261113170000); absent means no wait. */
+  codeReviewWaitSeconds?: number;
   launchPolicy?: {
     version: string;
     runtimeAttestationVerified: boolean;
@@ -473,17 +496,6 @@ function leftForAPerson(receipt: ReviewReceipt | undefined): boolean {
   return receipt?.state === "inconclusive" && evidence?.forAPerson === true;
 }
 
-/** The two lines a content return reads: what moderation found and in which files, then
- * what to do. Null for any image-flags receipt that is not the game's own failure, which
- * the other rules read as they always did. */
-function contentReturn(receipt: ReviewReceipt | undefined): ReviewReason[] | null {
-  if (receipt?.state !== "failed" || receipt.fault !== "game") return null;
-  return [
-    { code: "content_returned", check: "image-flags", message: say(receipt, "Image moderation found content OpenGame does not publish in this upload.") },
-    { code: "content_returned", check: "image-flags", message: receipt.fix?.trim() || "Remove or replace the flagged images, then deploy again." },
-  ];
-}
-
 /**
  * The runtime receipt of a playtest whose last attempt ended `failed` (FPR-5): the web
  * files every check that run left unwritten as a person's (`leftForAPerson` in
@@ -510,7 +522,7 @@ const FAILED_RUN_RETURN = "Our playtest stopped on our side after every retry, b
  * A receipt that did not pass and still need not stop publication: the agent's own
  * playtest and the resize probe's guess, which the database's publication check
  * (private.platform_runtime_group_ready) already lets through unpassed, a static engine
- * name the runtime outweighs, and a text-policy model that could not decide. Everything
+ * name the runtime outweighs. Everything
  * else that did not pass returns.
  *
  * Nothing this lets through is a check the database requires. The reverse does not hold,
@@ -522,8 +534,7 @@ const FAILED_RUN_RETURN = "Our playtest stopped on our side after every retry, b
  */
 function softForPublication(receipt: ReviewReceipt): boolean {
   if (["agent-playtest", "gpu-desktop", "engine"].includes(receipt.check)) return true;
-  if (receipt.check === "gpu-runtime") return winitHeld(receipt);
-  return receipt.check === "text-policy" && receipt.state === "inconclusive";
+  return receipt.check === "gpu-runtime" && winitHeld(receipt);
 }
 
 /**
@@ -566,13 +577,12 @@ export function recommend(input: ReviewInput): Recommendation {
 
 function decide(input: ReviewInput): Recommendation {
   const { playtest, policy } = input;
-  const read = input.receipts.map(r => heldForVerification(r, policy) ?? r);
+  const read = input.receipts.filter(r => !isRetiredCheck(r.check)).map(r => heldForVerification(r, policy) ?? r);
   const receipts = read.map(r => keptOutByBot(r, state(read, "bot-playtest")));
-  const shadowed = new Set(receipts.filter(r => r.shadow && r.check === "text-policy").map(r => r.check));
   const skipped = Boolean(policy.launchPolicy && canSkipExploration(playtest?.quality, policy.launchPolicy.quality.primaryConfidenceMin));
   // The same checks whatever the manifest's multiplayer mode says. A `multiplayer-smoke`
   // receipt left from before the smoke was removed is in no list, so it decides nothing.
-  const required = REQUIRED_CHECKS.filter(c => !shadowed.has(c) && !(skipped && c === "agent-playtest"));
+  const required = REQUIRED_CHECKS.filter(c => !(skipped && c === "agent-playtest"));
   const done = (outcome: ReviewOutcome, reasons: ReviewReason[], summary: string): Recommendation => {
     if (outcome === "publish" && policy.requireAllChecksPassed) {
       const unresolved = REQUIRED_CHECKS.map(check => state(input.receipts, check) ?? { check, state: "not run" as const })
@@ -594,18 +604,6 @@ function decide(input: ReviewInput): Recommendation {
   if (safetyUnknown.length) return done("waiting", safetyUnknown.map(check => ({ code: "safety_hold", check,
     message: "Safety clearance is incomplete. This release stays on hold while the check is retried or reviewed." })),
     "Safety clearance is incomplete. Nothing needs changing until the evidence is reviewed.");
-
-  /* Images that moderation found adult sexual content in (and no minors: that blocked
-     at upload) are a finished answer the moment the deploy is ready, so they are read
-     before anything waits on the playtest.
-     The owner's call of 5 Nov 2026 (`adult`): returned automatically, with an email saying what was
-     found and how to fix it, and no person. The receipt is the database's own
-     (platform_finalize_core) and names the files and the category in its two sentences,
-     which become the email's two lines in that order. A jam entry is returned too: what
-     it has to change is in its own bytes, so a return costs it nothing a wait would save. */
-  const content = contentReturn(state(receipts, "image-flags"));
-  if (content) return done("return", content,
-    "Images in this release show content OpenGame does not publish. The findings name the files and how to fix them.");
 
   if (input.multiplayer === null) return done("waiting", [{ code: "platform_retry", message: "The release manifest could not be read. We will read it again; there is nothing to fix in the game." }],
     "The release manifest needs a retry. Nothing needs changing in the game.");
@@ -734,12 +732,7 @@ function decide(input: ReviewInput): Recommendation {
      could not come back in (reenter_jam_entry answers `closed`), so a failure of ours, or
      a heuristic the engine cannot be sure of, would take a game out of the jam. Those go
      to the console's review lane, where the team answers them during the jam. */
-  /* Images moderation handed to a person (self-harm, hate, harassment) keep their person
-     when our playtest stopped: the creator has nothing to fix for that, so returned here the
-     release would come back as it was and nobody would look at its images. A confirmed game
-     failure still returns first; that publishes nothing and the next upload asks again. */
-  const imagesForAPerson = state(receipts, "image-flags")?.state === "inconclusive";
-  const failedRunReview = () => policy.autonomous && !policy.requireAllChecksPassed && !input.jam && !imagesForAPerson
+  const failedRunReview = () => policy.autonomous && !policy.requireAllChecksPassed && !input.jam
     ? done("return", [{ code: "runtime_failed_run", check: "gpu-runtime", message: FAILED_RUN_RETURN }],
       "Our playtest stopped on our side. Submit the game again to rerun the checks.")
     : done("person", [{ code: "runtime_failed_run", check: "gpu-runtime",
@@ -751,16 +744,6 @@ function decide(input: ReviewInput): Recommendation {
      everything else goes back to the creator with what was seen. */
   const forAPerson = (list: ReviewReceipt[]) => {
     if (!policy.autonomous || policy.requireAllChecksPassed) return done("person", unresolvedReasons(list), "A person reviews the unresolved check evidence.");
-    /* The exception to nobody coming. An image moderation could not leave to a model
-       (self-harm, hate or harassment: the integrator's decision at the review lane's merge,
-       5 Nov 2026) waits for a person whatever else is true, because a WW2 game and hate
-       content look alike to a classifier and not to a person. Returned instead, as every
-       other unresolved check is here, the creator would have nothing to fix and a person
-       nothing to decide. Any inconclusive image-flags counts, not only the marked one:
-       the database writes no other shape since then, and one from an older body was also
-       written for a person to see. */
-    if (imagesForAPerson) return done("person", unresolvedReasons(list),
-      "Image moderation flagged an image, so a person at OpenGame looks at it before the game can be published.");
     const stopping = list.filter(r => !softForPublication(r));
     if (stopping.length && input.jam) return done("person", unresolvedReasons(stopping),
       "A check did not pass. The team reviews this jam entry so it is not taken out of the jam by mistake.");

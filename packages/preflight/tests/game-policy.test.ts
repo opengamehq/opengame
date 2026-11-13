@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { BLOCKED_PACKAGES, BLOCKED_SERVICES, blockedPackageForUrl, blockedPatternHits, blockedServiceForHost, policyRule, reviewSignalHits } from '@opengame/shared/game-policy';
 import { platformPreflight } from '../src/platform';
 import type { PreflightFile } from '../src/index';
+import "./credential-checks-on";
 
 /* The open network, 26 Oct 2026. New uploads are published under 2027-03: a game may call
    an AI model, any API, its own multiplayer server and a script CDN, and may use eval.

@@ -47,9 +47,36 @@ export async function requireLaunched(tokenStdin: boolean): Promise<{ deploysFro
     let status: Record<string, unknown>;
     try { status = await api.json("/api/v1/status", { token: active?.token, anyVersion: true }); }
     catch (error) { if (error instanceof ApiError && error.status === 404) return { deploysFrozen: false }; throw error; }
-    if (status.launched !== true && status.access !== true) throw new CliError("not_launched", notLaunchedMessage(status.creatorsOpenAt));
+    /* Signed out, the way through is a login, since any signed-in account is let in before
+       launch: so it says that first, and names the command (J-opus-G2). Signed in and still
+       shut, the day is the whole answer. */
+    if (status.launched !== true && status.access !== true) {
+      if (!active) throw new CliError("not_launched", `Sign in first: run opengame login, then run this again. ${notLaunchedMessage(status.creatorsOpenAt)}`, undefined, { next: "opengame login" });
+      throw new CliError("not_launched", notLaunchedMessage(status.creatorsOpenAt));
+    }
     return { deploysFrozen: status.deploysFrozen === true };
   } finally { await api.close(); }
+}
+
+/**
+ * For the commands that never reach the creator API, `init` and `check`: the same question,
+ * answered as a sentence to print beside the result, never as a refusal. A creator who has
+ * just installed this can set a folder up and check it on their own machine before
+ * OpenGame opens; what waits for the day is sending it to us, which the server refuses
+ * anyway (launch E2E judges, J-opus-G2, 13 Nov 2026: `check` before sign-in printed the
+ * opening date, exited 7 and said nothing about what to do). Null when OpenGame is open
+ * to this caller, and on any failure to ask, since a local command should not need the
+ * network at all.
+ */
+export async function launchNotice(tokenStdin: boolean): Promise<string | null> {
+  if (process.env.OPENGAME_TEST_SKIP_LAUNCH_CHECK === "1") return null;
+  const api = new Api();
+  try {
+    const active = await activeToken(api.origin, tokenStdin);
+    const status: Record<string, unknown> = await api.json("/api/v1/status", { token: active?.token, anyVersion: true });
+    return status.launched !== true && status.access !== true ? notLaunchedMessage(status.creatorsOpenAt) : null;
+  } catch { return null; }
+  finally { await api.close(); }
 }
 
 const PACIFIC_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "America/Los_Angeles" });

@@ -7,6 +7,7 @@ import type { PreflightFile } from '../src/index';
 import { gzipSync, brotliCompressSync } from 'node:zlib';
 import { compressedTextReaders } from '../src/node-compression';
 import { createHash } from 'node:crypto';
+import "./credential-checks-on";
 
 const file = (path: string, source: string): PreflightFile => ({ path, size: Buffer.byteLength(source), text: async () => source, bytes: async () => new TextEncoder().encode(source) });
 const page = '<html><body><canvas></canvas></body></html>';

@@ -2,15 +2,16 @@
 name: opengame-cli
 description: Drive the OpenGame command line tool from an agent. Covers installing it, signing in with the person, every command, JSON and JSONL output, exit codes, findings and how to retry. Use when the person mentions the opengame command, the OpenGame CLI, installing @opengamehq/cli, opengame login, check, dev, deploy, status, submit, releases, rollback, unpublish, restore, delete, details, achievements, handle, jam or token, or a command exited with an error you need to read.
 metadata:
-  version: "1.8.1"
+  version: "1.8.3"
 ---
 
 # Use the OpenGame CLI
 
-OpenGame opens on 18 November 2026, and the CLI on 18 November. Until 18 November, every command except `version`, `help`, `login`, `logout` and `whoami` prints
-"OpenGame opens for creators on 18 November." for anybody outside the OpenGame team, and exits with the
-`not_launched` code (7) that `opengame help --json` lists. That is the platform's answer,
-not a broken install: tell the person, and do not retry, reinstall or look for a way round it.
+OpenGame opens on 18 November 2026, and any signed-in account can use the CLI
+now. Until 18 November, a command run before `opengame login` prints
+"OpenGame opens for creators on 18 November." and exits with the `not_launched` code (7) that
+`opengame help --json` lists. That is not a broken install: run `opengame login`, then the
+command again, and do not reinstall or look for a way round it.
 
 For the whole deploy procedure, read `opengame-deploy`. This skill is the reference
 for the tool itself.
@@ -132,8 +133,8 @@ any of them, as the Details tab does; a field left out stays, and `--clear-tagli
 the tagline. On a published game players
 see it at once, so change only what the person asked for. To keep `opengame.json` in step,
 run `opengame pull` afterwards. `opengame handle <name> --yes --json` renames the person's
-handle. Ask first: their old handle stays theirs and is never reissued, and renames are
-limited per day. It works only with the `opengame login` token, not a token made in
+handle. Ask first: their old handle becomes free for anyone to claim, their games keep
+their /g links, their profile address changes, and renames are limited per day. It works only with the `opengame login` token, not a token made in
 settings. A refusal's `message` says why, for example the name is taken.
 
 ## Retire an achievement

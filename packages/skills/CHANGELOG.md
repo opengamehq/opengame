@@ -14,6 +14,10 @@
 - `opengame-api` 1.0.5, `opengame-cli` 1.8.1, `opengame-deploy` 1.1.1, `opengame-jam` 1.0.7
   and `opengame-router` 1.0.6: OpenGame opens on 18 November 2026, the jam's kickoff, all
   at once.
+- `opengame-api` 1.0.6, `opengame-cli` 1.8.2, `opengame-deploy` 1.1.2, `opengame-jam` 1.0.8
+  and `opengame-router` 1.0.7: any signed-in account can use the CLI, the creator API,
+  uploads and jam entries before launch. Only a request with no account still hears
+  `not_launched` until 18 November; sign in first.
 
 ## 1.3.0
 

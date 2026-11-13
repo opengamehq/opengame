@@ -48,6 +48,10 @@ import { URL_START, ExpansionLimit, Mapped, compose, concat, cssUnescape, decode
 /* Inputs and outputs                                                          */
 /* -------------------------------------------------------------------------- */
 
+/** What to change when a `.br`, `.gz` or `.unityweb` file could not be decompressed: the export
+ * setting that writes it, and that a build which plays locally is worth one more deploy. */
+const UNREADABLE_COMPRESSED = "It is compressed and could not be decompressed. In Unity, open Player Settings, then Publishing Settings, set Compression Format to Gzip or Disabled (or tick Decompression Fallback), build again and deploy. If this build plays with opengame dev, deploy it once more, since the fault may be ours.";
+
 export interface PreflightFile {
   /** POSIX path relative to the drop root. Never leading `./` or `/`. */
   path: string;
@@ -487,7 +491,7 @@ export async function preflight(
      a second pass to collect each result — for a check that runs while somebody
      watches a spinner. */
   const credentialHits = new Map<string, string[]>();
-  for (const file of files) {
+  for (const file of credentialChecks() ? files : []) {
     for (const { re, what } of CREDENTIAL) {
       if (!re.test(file.path)) continue;
       const found = credentialHits.get(what);
@@ -711,11 +715,16 @@ export async function preflight(
     .sort((a, b) => Number(XML_DOCUMENT.test(compressedBrowserAsset(a.path)?.path ?? a.path)) - Number(XML_DOCUMENT.test(compressedBrowserAsset(b.path)?.path ?? b.path)));
   /* Everything else a credential could be sitting in. Kept as a second list rather
      than folded into the first because the origin and reference checks would produce
-     nothing but noise over a YAML file, and because of the budget below. */
+     nothing but noise over a YAML file, and because of the budget below.
+     A precompressed asset (.wasm.br, .data.gz) is on this list too, and that read is not
+     only for credentials: it is where the stream is decoded, so a malformed or nested one
+     is refused and its copy is compared with the plain file beside it. So with credential
+     checks off (credentialChecks) the compressed assets are still read and only the plain
+     credential-shaped files are left out; findCredentials then finds nothing in them. */
   const credentialOnly = kept.filter(
     (f) =>
       !external.has(f.path) && !SCANNABLE.test(compressedBrowserAsset(f.path)?.path ?? f.path) &&
-      (CREDENTIAL_SCANNABLE.test(f.path) || compressedBrowserAsset(f.path) !== null) &&
+      ((credentialChecks() && CREDENTIAL_SCANNABLE.test(f.path)) || compressedBrowserAsset(f.path) !== null) &&
       (options.authoritative || f.size <= MAX_SCAN_BYTES_PER_FILE),
   );
   let scanned = 0;
@@ -767,8 +776,10 @@ export async function preflight(
      rather than at module scope: a malformed pattern in limits.json should break an
      upload loudly, not throw while Next is collecting page data for an unrelated
      route. */
-  const blockingCredentials = compiledCredentialPatterns("content");
-  const weakCredentials = compiledCredentialPatterns("suspicious");
+  /* None at all on the minimal checks (see credentialChecks): findCredentials then finds
+     nothing, and the credential-only files above were never selected for reading. */
+  const blockingCredentials = credentialChecks() ? compiledCredentialPatterns("content") : [];
+  const weakCredentials = credentialChecks() ? compiledCredentialPatterns("suspicious") : [];
   for (const file of kept) {
     for (const found of findCredentials(file.path, file.path, blockingCredentials, weakCredentials))
       (found.severity === "blocker" ? credentials : possibleSecrets).push({ ...found,
@@ -1011,7 +1022,10 @@ export async function preflight(
     if (text === null || text === undefined) {
       if (options.authoritative) findings.push({ code: "unreadable-file", severity: "blocker",
         title: `Could not read ${file.path}.`, path: file.path,
-        detail: "Make the file readable, finish building, then run the check again." });
+        /* A compressed engine file that would not decompress says what to change in the
+           engine, since "make the file readable" means nothing to somebody holding a
+           default Unity export (launch E2E, J-opus-E2 and J-astra-E2, 13 Nov 2026). */
+        detail: compressedBrowserAsset(file.path) ? UNREADABLE_COMPRESSED : "Make the file readable, finish building, then run the check again." });
       continue;
     }
 
@@ -1131,7 +1145,7 @@ export async function preflight(
            is worth the effort of catching here. */
         if (caseMismatch.length < 8) caseMismatch.push({
           code: "case-mismatch",
-          severity: "blocker",
+          severity: ref.optional ? "warning" : "blocker",
           title: `${file.path} line ${ref.line} asks for ${resolved}, but the file is ${onDisk}.`,
           detail:
             "macOS and Windows do not care about capitalisation. The servers that hand your game to a player do. So this loads on your machine and the file is missing for everybody else. Fix the reference or rename the file so the two match exactly.",
@@ -1374,6 +1388,17 @@ function sourceEntryFinding(loads: { document: string; target: string }[], files
  * and the kind of each, which is the field the row already renders for exactly
  * this.
  */
+/**
+ * Whether this preflight looks for credentials at all. Not since 12 Nov 2026, when the
+ * deploy path was cut to what keeps the platform working (limits.json
+ * platform.deploy.minimalChecks): a key a creator ships is theirs to rotate, and a
+ * refusal for one was the most common way a working game failed to deploy. Read per call
+ * rather than at module scope so a test can flip it.
+ */
+export function credentialChecks(): boolean {
+  return (LIMITS.platform.deploy as { minimalChecks?: boolean }).minimalChecks !== true;
+}
+
 function findCredentials(
   path: string,
   text: string,
@@ -4179,6 +4204,41 @@ interface Reference {
   archive?: boolean;
   /** A compared name or a suffix after `+`: not a request unless a file on disk matches it. */
   appended?: boolean;
+  /** A `<link>` the page does not need to start (an icon, a manifest; `blocksStart`), so even a
+   *  wrong-case match is a warning: what it costs is a tab icon. */
+  optional?: boolean;
+}
+
+/**
+ * Whether a `<script>` or `<link>` the parser meets has to load for the game to start. Every
+ * script does, and a link only when it is a stylesheet, a module preload, or a preload of a
+ * script or a style. An icon, a web app
+ * manifest or an apple-touch-icon is something the browser asks for beside the page, and a
+ * missing one costs a tab icon and nothing else: Bubbo Bubbo (PixiJS, launch E2E, B-8, 13 Nov
+ * 2026) was refused because its index.html linked images/favicon.png and the build had none.
+ * Those are runtime references now, which are a warning. `rel` is read off the whole tag,
+ * and only as an attribute of its own: `data-rel=` is not it (the inert-span reading below
+ * was caught by exactly that once). A link with no readable rel stays static, the safe side.
+ */
+function blocksStart(tag: RegExpExecArray, text: string, at: number): boolean {
+  if (tag[1].toLowerCase() === "script") return true;
+  const start = at - (tag[0].length);
+  const close = text.indexOf(">", at);
+  const whole = text.slice(Math.max(0, start), close === -1 ? text.length : close).replace(/^<link\b/i, "");
+  /* Attribute by attribute, so a `rel=` inside another attribute's quoted value
+     (`title="x rel=icon"`) is that value, not the link's rel. */
+  let rel: string | null = null;
+  for (const attr of whole.matchAll(/([^\s=/>"']+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g)) {
+    if (attr[1].toLowerCase() === "rel") { rel = attr[2] ?? attr[3] ?? attr[4] ?? ""; break; }
+  }
+  if (rel === null) return true;
+  const words = rel.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0 || words.includes("stylesheet") || words.includes("modulepreload")) return true;
+  // A preload blocks as what it preloads: a script or a style does, an image or a font does not.
+  if (!words.includes("preload")) return false;
+  const as = /(?:^|\s)as\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(whole);
+  const kind = (as?.[1] ?? as?.[2] ?? as?.[3] ?? "").toLowerCase();
+  return kind === "" || kind === "script" || kind === "style";
 }
 
 /**
@@ -4213,7 +4273,9 @@ function* extractReferences(path: string, text: string, inert: Span[]): Generato
     for (const m of text.matchAll(/\b(?:src|href|data-src|poster)\s*=\s*["']([^"']+)["']/gi)) {
       const before = text.slice(Math.max(0, (m.index ?? 0) - 60), m.index ?? 0);
       const tag = /<(script|link)\b[^<>]*$/i.exec(before);
-      const ref = reference(m[1], m.index ?? 0, tag ? "static" : "runtime");
+      const blocks = tag ? blocksStart(tag, text, m.index ?? 0) : false;
+      const ref = reference(m[1], m.index ?? 0, blocks ? "static" : "runtime");
+      if (ref && tag && !blocks) ref.optional = true;
       if (ref) yield ref;
     }
     /* An import map is a list of paths and nothing else, so it is the highest

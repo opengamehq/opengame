@@ -687,7 +687,7 @@ test("a decomp or a mod is refused the jam from its own opengame.json, and the s
     const named = await api.execute(cwd, "submit", "--release", releaseId, "--jam", "fixture-jam", ...answers);
     assert.equal(named.code, 2, JSON.stringify(named.events));
     assert.equal(named.events.at(-1).code, "kind_not_in_jam");
-    assert.match(named.events.at(-1).message, /^opengame\.json says this is a mod of Doom\. The jam takes games and worlds\. Decomps and mods can go on OpenGame but cannot enter it\./);
+    assert.match(named.events.at(-1).message, /^opengame\.json says this is a mod of Doom\. Mods and decomps cannot be entered in the jam\. They still go on OpenGame, under Just for fun\./);
     assert.deepEqual(api.requests, []);
     // Entered by the operator's destination: refused once the destination says jam, before its form.
     const chosen = await api.execute(cwd, "submit", "--release", releaseId, ...answers);

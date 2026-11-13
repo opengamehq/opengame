@@ -21,16 +21,18 @@ export const RELEASE_STATUS = {
   // time is given because none is known: it lifts when the test machine is verified.
   held: { label: "On hold", message: "Your game passed the checks. We are keeping it here while we finish verifying our test machine. You do not need to change your game, and it moves on by itself once that is done.", icon: "clock" },
   // Not "is checking": the same sentence sits beside "3 releases are ahead of yours".
-  review: { label: "With a person", message: "A person reviews your game before it can be published.", icon: "person" },
+  // No person in the creator's words (launch E2E judges, J-opus-3, J-astra-5): publication
+  // waits for nobody since 12 Nov 2026, and "With a person" told every creator otherwise.
+  review: { label: "In review", message: "This release is still in review. You do not need to do anything.", icon: "clock" },
   returned: { label: "Returned with fixes", message: "Read the findings, then deploy an updated release.", icon: "warning" },
-  approved: { label: "Approved", message: "A reviewer approved this release. It goes live when it is published.", icon: "check" },
+  approved: { label: "Approved", message: "This release passed review. It goes live when it is published.", icon: "check" },
   // The one flow (20261105180100): review said publish, and the creator has not yet
   // confirmed the details and the statements. Nothing of ours is pending, so it is the
   // creator's next step, said as one.
   awaiting_details: { label: "Ready to publish", message: "Your game passed review. Confirm its details to publish it.", icon: "check" },
   // Between the decision and the game loading at its address: the scanned files are being
   // copied to where players get them. Ours, and a minute or two, so it waits like a check.
-  publishing: { label: "Publishing", message: "Approved. We are copying it to where players get it, which takes a minute or two.", icon: "upload" },
+  publishing: { label: "Publishing", message: "Approved. We are copying it to where players get it.", icon: "upload" },
   refused: { label: "Not accepted", message: "This release was not accepted. The reason is below.", icon: "warning" },
   // Two ways here, and the release does not know which: the creator withdrew it, or the
   // game came off the gallery before it went live and platform_close_publication closed it.

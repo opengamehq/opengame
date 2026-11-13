@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { redactDiagnostic, redactFinding } from "../src/diagnostic-text";
 import { platformPreflight } from "../src/platform";
+import "./credential-checks-on";
 
 const secret = "AKIA" + "Z".repeat(16);
 test("diagnostics remove plain, Unicode-adjacent and NUL-interleaved key spans", () => {

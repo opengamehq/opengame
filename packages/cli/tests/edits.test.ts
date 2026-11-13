@@ -146,7 +146,7 @@ test("handle needs a name, and an agent without --yes sends nothing", async () =
     const done = await last("handle", "stormcaller", "--yes");
     assert.equal(done.code, 0);
     assert.deepEqual(writes(server).map(r => [r.url, r.body]), [["/api/v1/account/handle", { handle: "stormcaller" }]]);
-    assert.match(done.event.data.message, /^Your handle is @stormcaller\. @rainmaker still points to you\./);
+    assert.match(done.event.data.message, /^Your handle is @stormcaller\. @rainmaker is free for anyone to claim now\. Your games keep their \/g links\./);
     for (const [status, body, code, exit] of [
       [409, { error: "handle_unavailable", message: "That handle is already taken. Try another.", retry: "after-fix" }, "handle_unavailable", 2],
       [403, { error: "forbidden", message: "Only opengame login can rename your handle, not a token made in settings. Run opengame login, or rename it on the website." }, "forbidden", 3],

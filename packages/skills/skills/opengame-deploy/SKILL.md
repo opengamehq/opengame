@@ -2,16 +2,16 @@
 name: opengame-deploy
 description: Put a browser game online with OpenGame, the marketplace and game jam for browser games. Packages the game, checks it locally, uploads it to a private preview only the owner can play, reads and fixes findings, then submits one exact release for review. Use when the person says deploy my game, put it online, host it, share it, upload it, publish it, get me a link, make it playable for friends, or asks where to put a browser game or a Three.js game.
 metadata:
-  version: "1.1.1"
+  version: "1.1.2"
 ---
 
 # Deploy a browser game to OpenGame
 
-OpenGame opens on {{launch opens}}. The CLI, uploads and jam entries open on {{launch kickoff}}.
-Until then, every CLI command except `version`, `help`, `login`, `logout` and `whoami`
-prints "OpenGame opens for creators on {{launch kickoff}}." for anybody outside the OpenGame team, and the API
-refuses with `not_launched`. Nothing is wrong with the game or the install: tell the
-person, and do not retry, reinstall or work around it.
+OpenGame opens on {{launch opens}}. Any signed-in account can use the CLI,
+uploads and jam entries now. Until {{launch kickoff}}, a CLI command run before `opengame login`
+prints "OpenGame opens for creators on {{launch kickoff}}." and exits 7 (`not_launched`).
+Nothing is wrong with the game or the install: ask the person to run `opengame login`, then
+run the command again. Do not reinstall or work around it.
 
 <!-- generated:procedure -->
 Deploy the creator's game to a private preview, give them its link, and submit it only when they ask. Read each command's result before you run the next one.
@@ -65,7 +65,7 @@ An error has `"type": "error"`, `"ok": false`, a `code`, a `message`, an `exitCo
 | 4 | An allowance is used up | Wait `retryAfterSeconds`, then run the same command. |
 | 5 | Our side or the network | Leave the game as it is. Run `next` when the error has one; otherwise wait and retry, at most a few times. |
 | 6 | The CLI is too old | Run `opengame upgrade --json`, then the npm command in `data.command`. |
-| 7 | OpenGame is not open to creators yet | Stop. Tell the creator the CLI and uploads open on {{launch kickoff}}. |
+| 7 | OpenGame is not open to creators yet | The CLI has no login. Ask the creator to run `opengame login`, then run the command again. Until {{launch kickoff}} this is what a signed-out CLI hears. |
 
 ## Sign in with the creator
 

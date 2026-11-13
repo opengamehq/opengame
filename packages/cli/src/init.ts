@@ -5,7 +5,7 @@ import { basename, join } from "node:path";
 import { sourceGameFor } from "@opengame/shared/source-games";
 import { DEFAULT_GAME_KIND, GAME_KIND_SLUGS, GENRE_SLUGS, LIMITS, gameKindOrDefault, inferGenre, isGameKind, kindNeedsBasedOn,
   kindPhrase as sharedKindPhrase,
-  parseGameKind, slurTextProblem, type GameKind } from "@opengame/shared";
+  chooseTitle, fitTitle, pageTitle, parseGameKind, slurTextProblem, type GameKind } from "@opengame/shared";
 import { PLACEHOLDER_DESCRIPTION, isBundlePath, manifestSchema, manifestCredentialIssue, type DeployProvisional } from "@opengame/protocol";
 import { CliError } from "./output";
 import type { Output } from "./output";
@@ -65,8 +65,8 @@ async function askTitle(title: string, prompts: InitPrompts): Promise<string> {
     const chosen = answer || title;
     if (chosen.length >= productMin && chosen.length <= max && !slurTextProblem(chosen)) return chosen;
     problem = slurTextProblem(chosen) ?? `Use ${productMin} to ${max} characters.`;
-    // A read title that does not fit is not offered again as the default.
-    if (!answer) title = chosen.slice(0, max).trim() || "My game";
+    // A read title that does not fit is not offered again as the default, nor cut mid-word.
+    if (!answer) title = fitTitle(chosen) || "My game";
   }
 }
 
@@ -225,7 +225,9 @@ export async function detectControls(root: string, html: string, engineId: strin
 const CONTROL_WORDS: Record<Control, string> = { keyboard: "keyboard", mouse: "mouse or touch", gamepad: "controller" };
 function controlsNote(detected: Control[] | null): string {
   return detected
-    ? `Controls: set to ${detected.join(", ")}, from the ${new Intl.ListFormat("en").format(detected.map(control => CONTROL_WORDS[control]))} input in your source. If the game takes other input, change controls in opengame.json.`
+    /* One list, in words: it printed "set to keyboard, mouse, from the keyboard and mouse or
+       touch input in your source", the same inputs twice in two spellings (launch E2E, J-opus-E13). */
+    ? `Controls: ${new Intl.ListFormat("en").format(detected.map(control => CONTROL_WORDS[control]))}, found in your source. If the game takes other input, change controls in opengame.json.`
     : "Controls: set to keyboard, mouse, because init found no input handlers to read. Change controls in opengame.json if the game uses something else.";
 }
 function genreNote(genre: string): string {
@@ -238,7 +240,13 @@ const DESCRIPTION_NOTE = "Description: none yet. Write it on your deploy's page 
 export async function initProject(root: string, flags: Record<string, string | boolean>, options: { interactive?: boolean; prompts?: InitPrompts; output?: Output } = {}) {
   const pkg = await readBuildPackage(root);
   const html = await projectText(await realpath(root), "index.html") ?? "";
-  let title = typeof flags.title === "string" ? flags.title : html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() || (typeof pkg.name === "string" && pkg.name) || basename(root);
+  /* chooseTitle and pageTitle are Drop's too, so one folder gets one name whichever way it is
+     deployed: the flag, else the page's <title> or package.json's name when either names a
+     game rather than a template ("Game Development Assignment", "Unity WebGL Player"), else
+     the folder's name, each cut at a word rather than mid-bracket (launch E2E, J-opus-E5). */
+  // A --title is used exactly as given, blank included, so the schema refuses it before a file is written.
+  let title = typeof flags.title === "string" ? flags.title : chooseTitle({ page: pageTitle(html),
+    named: typeof pkg.name === "string" ? pkg.name.replace(/^@[^/]+\//, "") : null, folder: basename(await realpath(root)) });
   const description = typeof flags.description === "string" ? flags.description : projectDescription(pkg, html);
   let genre = typeof flags.genre === "string" ? flags.genre : inferGenre(genreEvidence(title, description, pkg, html));
   let { kind, basedOn } = kindFlags(flags);
@@ -250,6 +258,7 @@ export async function initProject(root: string, flags: Record<string, string | b
   // The name only, and only when no --title said it (askTitle says why).
   // The genre is guessed from the name the person settles on, not the one offered to them:
   // a folder called "racer" renamed "Block Drop" is not a racing game.
+  const offeredTitle = title;
   if (options.interactive && typeof flags.title !== "string") {
     title = await askTitle(title, prompts);
     if (typeof flags.genre !== "string") genre = inferGenre(genreEvidence(title, description, pkg, html));
@@ -318,7 +327,12 @@ export async function initProject(root: string, flags: Record<string, string | b
     throw error;
   }
   await ensureProjectIgnored(root);
-  await recordGuesses(root, { ...(guessedGenre ? { genre: genre! } : {}), ...(detected ? {} : { controls: manifest.controls }) }, ["genre", "controls"]);
+  /* The title too, when nobody gave it (no --title, no one at the prompt): it came from the
+     page or the folder, so the deploy's page may offer the name review reads from the game
+     instead (launch E2E, J-astra-E9). */
+  // Enter on the offered name keeps the guess, so that is a guess too.
+  const guessedTitle = typeof flags.title !== "string" && title === offeredTitle;
+  await recordGuesses(root, { ...(guessedGenre ? { genre: genre! } : {}), ...(detected ? {} : { controls: manifest.controls }), ...(guessedTitle ? { title } : {}) }, ["genre", "controls", "title"]);
   const next = `opengame check ${folderArgument(root)}${command ? " --build" : ""}`;
   /* The command goes last, on a line of its own after "Next:", as an error's does. Ending a
      sentence with it printed "run opengame check .." with the folder's dot and the full stop
@@ -357,7 +371,7 @@ async function refuseIgnoreSymlink(root: string) {
  * the moment somebody edits it, it is theirs.
  */
 const GUESSES = "init-guesses.json";
-type Guesses = { genre?: string; controls?: string[] };
+type Guesses = { genre?: string; controls?: string[]; title?: string };
 async function readGuesses(root: string): Promise<Guesses> {
   let handle;
   try {
@@ -367,6 +381,7 @@ async function readGuesses(root: string): Promise<Guesses> {
     const value = JSON.parse(await handle.readFile("utf8")) as Guesses;
     return {
       ...(typeof value.genre === "string" ? { genre: value.genre } : {}),
+      ...(typeof value.title === "string" ? { title: value.title } : {}),
       ...(Array.isArray(value.controls) && value.controls.every(item => typeof item === "string") ? { controls: value.controls } : {}),
     };
   } catch { return {}; }
@@ -394,7 +409,7 @@ async function recordGuesses(root: string, guessed: Guesses, settled: string[]) 
 }
 
 /** The fields a deploy should name in `provisional`: those opengame.json still holds as init guessed them. */
-export async function provisionalFields(root: string, manifest: { genre?: unknown; controls?: unknown; description?: unknown }): Promise<DeployProvisional[]> {
+export async function provisionalFields(root: string, manifest: { genre?: unknown; controls?: unknown; description?: unknown; title?: unknown }): Promise<DeployProvisional[]> {
   const guesses = await readGuesses(root);
   const fields: DeployProvisional[] = [];
   /* The placeholder is its own record: nobody writes that exact sentence about their game,
@@ -402,6 +417,7 @@ export async function provisionalFields(root: string, manifest: { genre?: unknow
   if (manifest.description === PLACEHOLDER_DESCRIPTION) fields.push("description");
   if (guesses.genre !== undefined && manifest.genre === guesses.genre) fields.push("genre");
   if (guesses.controls && JSON.stringify(manifest.controls) === JSON.stringify(guesses.controls)) fields.push("controls");
+  if (guesses.title !== undefined && manifest.title === guesses.title) fields.push("title");
   return fields;
 }
 

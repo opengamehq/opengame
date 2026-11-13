@@ -142,7 +142,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "description", type: "string", description: "The new description, the copy on the game's page." },
     { name: "clear-tagline", type: "boolean", description: "Remove the tagline, as emptying its box on the Details tab does." }, stdin, json],
     examples: ["opengame details", "opengame details --title \"Tide runner\" --tagline \"Race the rain to the river.\" --json"] },
-  handle: { args: "<name>", description: "Rename your handle, as Settings does. Your old handle keeps pointing at you and is never given to anybody else, and renames are limited per day. Only the opengame login token can do this, not a token made in settings.", flags: [
+  handle: { args: "<name>", description: "Rename your handle, as Settings does. Your old handle becomes free for anyone to claim, your games keep their /g links, and your profile address changes. Renames are limited per day. Only the opengame login token can do this, not a token made in settings.", flags: [
     { name: "yes", type: "boolean", description: "Rename without the question a person is asked. Required for agents and scripts." }, stdin, json],
     examples: ["opengame handle stormcaller", "opengame handle stormcaller --yes --json"] },
   jam: { args: "<withdraw|reenter>", description: "Withdraw the linked game's jam entry, freeing its place, or put a withdrawn one back while the jam is open, as your jam entries page does. Needs a token with submit; opengame login has it.", flags: [
@@ -478,7 +478,7 @@ async function main() {
     const assetPlan = assetPlanFlag(flags);
     const { archive } = await prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), unityAssets: assetPlan?.plan, unityOnly: assetPlan?.unityOnly, noBuild: Boolean(flags["no-build"]), install: !flags["no-install"], rerun: "opengame deploy --dry-run" });
     output.emit({ type: "result", command, data: { ok: true, ...(archive.unityAssets ? { delivery: planDelivery(archive.unityAssets), assets: archive.unityAssets.assets, inputDigest: archive.unityAssets.inputDigest } : {}), files: archive.fileCount, bytes: archive.byteSize, sha256: archive.sha256, packaging: archive.packaging,
-      message: `Checked and packaged ${archive.fileCount} files. Nothing was uploaded. Server safety checks still run before a preview.` } });
+      message: `Checked and packaged ${archive.fileCount} files. Nothing was uploaded. Server packaging checks still run before a preview.` } });
     await archive.dispose();
     return;
   }
@@ -508,7 +508,7 @@ async function main() {
       // check is the step before dev, and it said nothing about one: next was null and
       // the local preview was a command a newcomer found only by reading every --help.
       next: `opengame dev ${folderArgument(root)}`,
-      message: `No blockers in ${inspection.result.fileCount} files${manifest.build?.command && !flags.build ? " from your last build" : ""}. Server safety checks still run before a preview.\nNext: opengame dev ${folderArgument(root)} to play it locally, then opengame deploy ${folderArgument(root)} for a private preview.` } });
+      message: `No blockers in ${inspection.result.fileCount} files${manifest.build?.command && !flags.build ? " from your last build" : ""}. Server packaging checks still run before a preview.\nNext: opengame dev ${folderArgument(root)} to play it locally, then opengame deploy ${folderArgument(root)} for a private preview.` } });
     return;
   }
   if (command === "deploy" && launch.deploysFrozen && !flags["dry-run"]) {

@@ -65,7 +65,7 @@ test("a game that only listens for taps is written down as mouse, not keyboard a
   await writeFile(join(root, "index.html"), TAP_COUNTER);
   const result = await initProject(root, { title: "CLI test (delete me)", description: DESCRIPTION, genre: "puzzle-casual" });
   assert.deepEqual(result.manifest.controls, ["mouse"]);
-  assert.match(result.message, /Controls: set to mouse, from the mouse or touch input in your source\./);
+  assert.match(result.message, /Controls: mouse or touch, found in your source\./);
 }));
 
 test("controls come from the game's own source files, and a runtime beside a .wasm is not evidence", async () => {
@@ -267,7 +267,10 @@ test("a saved deploy that names provisional fields still reads, and a bad one is
   await mkdir(join(root, ".opengame"));
   await save(["genre", "controls"]);
   assert.deepEqual((await readProject(root, origin)).deploy?.request.provisional, ["genre", "controls"]);
+  // A guessed title is a provisional field since 13 Nov 2026 (J-astra-E9); a field it does not know is not.
   await save(["title"]);
+  assert.deepEqual((await readProject(root, origin)).deploy?.request.provisional, ["title"]);
+  await save(["tagline"]);
   await assert.rejects(readProject(root, origin), { code: "project_state" });
 }));
 
@@ -303,3 +306,31 @@ test("filling names every flag it did not use, and a symlinked opengame.json is 
     assert.equal(await readFile(target, "utf8"), JSON.stringify({ title: "", genre: "" }));
   });
 }));
+
+/* Launch E2E, J-opus-E5 and J-astra-E9, 13 Nov 2026: a Phaser game whose page says <title>Game
+   Development Assignment</title> was deployed under that name, and Unity's template names every
+   page "Unity WebGL Player | <product>". Boilerplate never names a game: the next candidate
+   does, here the folder, made readable. A title nobody typed is a guess, and the deploy says
+   so, so the deploy's page can offer the name review reads from the game. Drop asks the same
+   chooseTitle. */
+test("a boilerplate page title loses to the folder, Unity's template keeps the product, and an untyped title is provisional", async () => {
+  const named = async (folder: string, page: string, flags: Record<string, string> = {}) => {
+    const parent = await mkdtemp(join(tmpdir(), "og-init-title-"));
+    const root = join(parent, folder);
+    await mkdir(root);
+    try {
+      await writeFile(join(root, "index.html"), `<!doctype html><title>${page}</title><canvas></canvas>`);
+      const result = await initProject(root, { description: DESCRIPTION, genre: "platformer", ...flags });
+      return { title: result.manifest.title as string, provisional: await provisionalFields(root, await written(root)) };
+    } finally { await rm(parent, { recursive: true, force: true }); }
+  };
+  const wizard = await named("wizard-of-christchurch", "Game Development Assignment");
+  assert.equal(wizard.title, "Wizard of christchurch");
+  assert.ok(wizard.provisional.includes("title"));
+  assert.equal((await named("build", "Unity WebGL Player | Sliding Puzzle")).title, "Sliding Puzzle");
+  assert.equal((await named("x", "PhaserJS 3 Platform Game (The Wizard of Christchurch)")).title, "PhaserJS 3 Platform Game");
+  // A typed title is the creator's: kept as typed, and never provisional.
+  const typed = await named("x", "index", { title: "Game Development Assignment" });
+  assert.equal(typed.title, "Game Development Assignment");
+  assert.ok(!typed.provisional.includes("title"));
+});

@@ -79,6 +79,14 @@ export function kindNeedsBasedOn(kind: GameKind): boolean {
   return BY_SLUG.get(kind)!.basedOn;
 }
 
+/**
+ * What a creator reads when a mod or a decomp is offered to the jam, wherever it is refused:
+ * the CLI's submit, the jam entry route, the deploy's details step and the entries page.
+ * Since 12 Nov 2026 mods and decomps go on the games page, labelled, under Just for fun, and
+ * are not eligible for the jam. One sentence so the doors cannot disagree.
+ */
+export const JAM_KIND_REFUSAL = "Mods and decomps cannot be entered in the jam. They still go on OpenGame, under Just for fun.";
+
 /** Whether the jam takes a kind. */
 export function kindEntersJam(kind: GameKind): boolean {
   return BY_SLUG.get(kind)!.jam;

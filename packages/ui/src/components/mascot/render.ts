@@ -402,10 +402,13 @@ export function inkColor(
 }
 
 /** Shared with the 3D head: only a haircut's markings are hair. Animal patches keep
- * their own ink even when a stored hair choice accompanies a later shape change. */
+ * their own ink even when a stored hair colour accompanies a later shape change. Hair worn
+ * over a shape (`look.hair`) is the exception: a face has one second ink, chosen by name
+ * and not by where it falls, so the hair's colour paints that shape's patches too. Giving
+ * them inks of their own is a new ink family through the 3D atlas and the SDK spec. */
 export function markingInks(look: MascotLook, pose: MascotPose, dark: boolean, facial = false, color = look.color): MascotInks {
   const shape = pose.fromShape && pose.morph < 0.5 ? pose.fromShape : look.shape;
-  const haircut = (MASCOT_HAIRSTYLES as readonly string[]).includes(shape);
+  const haircut = Boolean(look.hair) || (MASCOT_HAIRSTYLES as readonly string[]).includes(shape);
   const head = haircut ? hairColorInks(look.hairColor) : undefined;
   const fallback = markInks(color, dark, markingTone(look, pose));
   if (!facial) return head ?? fallback;

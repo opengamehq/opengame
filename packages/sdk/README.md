@@ -160,6 +160,7 @@ const stop = watchAvatar(og, (avatar) => {
   avatar.head.finish                               // true for patterned, metallic, neon and glass colors such as plaid or neonpink
   avatar.head.hairColor                            // chosen hair palette id, or null for the haircut's original ink
   avatar.head.facialHairColor                      // independent palette id, or null to match head hair
+  avatar.head.hair                                 // a haircut such as 'bob' worn over shape, or null
   avatar.outfit?.shirt                             // 'hoodie'; null outfit means draw your default body
   avatar.outfit?.accessories                       // ['cape', 'watch']
   avatar.outfit?.colors.shirt                      // { id: 'avatar', hex: '#F4F3EF', followsHead: true }

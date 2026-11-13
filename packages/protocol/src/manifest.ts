@@ -347,6 +347,9 @@ export const manifestSchema = z.strictObject({
 
 export type GameManifest = z.infer<typeof manifestSchema>;
 
+/** The opengame.json fields that take "auto", or may be left out, in the file a creator edits. */
+export const AUTO_MANIFEST_FIELDS = ["title", "tagline", "description", "genre", "controls"] as const;
+
 export function manifestJsonSchema() {
   const schema = z.toJSONSchema(manifestSchema);
   const runtimeSchema = schema.properties?.runtimes;
@@ -414,6 +417,22 @@ export function manifestJsonSchema() {
       "a career column's ratio divides two columns declared before it that are not ratios, and its requires names one of them; a ratio has no where, and only a ratio has scale or requires",
       "a count may leave of out; every other aggregate names it", "room setting keys and choice IDs are unique", "each room default names an available choice", "room metadata fits the shared UTF-8 byte limit", "metadata passes the shared lexical slur check"],
   };
+}
+
+/**
+ * The JSON Schema of opengame.json as a creator edits it, published at
+ * opengame.io/schema/opengame.json for editors. It is `manifestJsonSchema` with Auto: each of
+ * AUTO_MANIFEST_FIELDS also takes "auto" and may be left out (the owner, 13 Nov 2026). The CLI
+ * reads those as placeholders named provisional (packages/cli/src/auto.ts), so the deploy
+ * request and the API keep the strict `manifestJsonSchema`.
+ */
+export function manifestFileJsonSchema() {
+  const schema = manifestJsonSchema();
+  const properties = { ...schema.properties } as Record<string, unknown>;
+  for (const field of AUTO_MANIFEST_FIELDS) {
+    if (properties[field]) properties[field] = { anyOf: [properties[field], { const: "auto", description: "Auto: review writes it from the game, and you accept or change it on the deploy's page." }] };
+  }
+  return { ...schema, required: (schema.required ?? []).filter(field => !(AUTO_MANIFEST_FIELDS as readonly string[]).includes(field)), properties };
 }
 
 export function parseManifest(input: unknown): GameManifest {

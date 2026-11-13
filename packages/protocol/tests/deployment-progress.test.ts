@@ -36,9 +36,16 @@ test("details is always a step, so the count never changes under the creator", (
   assert.equal(states({ state: "ready", submission: submission("published") }).live, "done");
 });
 test("a held, refused, expired or removed build has a static recovery state", () => {
-  assert.equal(states({ state: "ready", submission: submission("review") }).review, "held");
-  // Publication never waits for a person (12 Nov 2026), so the timeline never says one is needed (launch E2E, B-3).
-  assert.doesNotMatch(deploymentSteps({ state: "ready", submission: submission("review") }).find(s => s.id === "review")!.detail, /person|reviewer/i);
+  // Publication never waits for a person (12 Nov 2026), so the timeline never says one is needed
+  // (launch E2E, B-3). Since 20261113300000 it waits for the automatic review's verdict, and an
+  // undecided build says it is being checked, never "in review" (13 Nov 2026).
+  for (const state of ["waiting", "review"] as const) {
+    assert.equal(states({ state: "ready", submission: submission(state) }).review, "running", state);
+    const detail = deploymentSteps({ state: "ready", submission: submission(state) }).find(s => s.id === "review")!.detail;
+    assert.match(detail, /^Checking your game\. This usually takes under a minute\./, state);
+    assert.doesNotMatch(detail, /person|reviewer|in review|playtest/i, state);
+  }
+  assert.match(deploymentSteps({ state: "ready" }).find(s => s.id === "review")!.detail, /^Checking your game/);
   assert.equal(states({ state: "ready", submission: submission("returned") }).review, "failed");
   assert.equal(states({ state: "expired" }).upload, "failed");
   assert.equal(states({ state: "uploading", lapsed: true }).upload, "failed");
@@ -51,6 +58,14 @@ test("sparse measurements show no ETA; estimates use broad minutes and stop at o
   assert.equal(stageEta(step, now + 150_000), "Taking longer than usual");
   assert.equal(stageEta({ ...step, timing: { ...step.timing!, samples: 1 } }, now), null);
   assert.equal(stageEta({ ...step, state: "held" }, now), null);
+});
+test("a stage measured in seconds is described in seconds, not rounded up to a minute", () => {
+  // Publishing takes 3 to 9 s; it read "Usually a minute", and "30 to 64 min" while hung runs were in the window (J-sol-G4).
+  const publish = (lowSeconds: number, highSeconds: number) => deploymentSteps({ state: "checking", timings: { publish: { lowSeconds, highSeconds, samples: 22 } } }).find(s => s.id === "publish")!;
+  assert.equal(publish(5, 9).state, "waiting");
+  assert.equal(stageEta(publish(5, 9), now), "A few seconds");
+  assert.equal(stageEta(publish(20, 45), now), "Under a minute");
+  assert.equal(stageEta(publish(50, 70), now), "About 1 to 2 min");
 });
 test("measurements scale with bytes and files, with bounded setup and no invented durations", () => {
   const samples = [100, 120, 180].map(seconds => ({ stage: "checks" as const, seconds, byteSize: 1024 ** 3, fileCount: 5000 }));

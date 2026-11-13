@@ -4,9 +4,9 @@ import { lstat, mkdir, open, readdir, rm, unlink } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
-import { LIMITS, compiledCredentialPatterns } from "@opengame/shared";
+import { LIMITS, compiledCredentialPatterns, tidiedOrNull, tidyDescription, tidyTitle } from "@opengame/shared";
 import { ERRORS, DEAD_UPLOAD_CODES, LISTING, OPERATION_STATUS, RELEASE_STATUS, SUBMISSION_OPEN, findingLabel, submissionStatus, operationNext, operationOutcome, creatorGamePath, deploymentPath, withoutCover,
-  incrementalArchiveBytes, type CreatorGame, type GameManifest, type OperationSummary, type RepairFinding, type Submission } from "@opengame/protocol";
+  incrementalArchiveBytes, type CreatorGame, type GameManifest, type OperationSummary, type RepairFinding, type Submission, PLACEHOLDER_DESCRIPTION } from "@opengame/protocol";
 import { terminalDeploymentChecklist } from "./deployment-progress";
 import { operation, terminal, remember, readSavedOperation } from "./operation";
 import { readGame, refuseRemoved } from "./games";
@@ -481,14 +481,32 @@ async function sweepPackaging(directory: string) {
 
 /**
  * What the deploy's page is for besides watching, said under its address when the folder
- * left something for it: since 11 Nov 2026 init asks only the name, so the description and
- * the genre are written there, by the person or their agent (`opengame details`), along
- * with the jam entry. Nothing is said when the folder already says both.
+ * left something for it: since 13 Nov 2026 every field init is not told is Auto (auto.ts),
+ * which review writes from the game, so the page is where the creator checks what it wrote.
+ * Controls are confirmed there anyway and ask nothing of a person, so they go unsaid. Nothing
+ * is said when the folder states every field.
  */
 export function detailsLine(provisional: readonly string[] | undefined): string {
-  const owed = [provisional?.includes("description") ? "write its description" : null, provisional?.includes("genre") ? "choose its genre" : null]
-    .filter((item): item is string => item !== null);
-  return owed.length ? `\nOn that page, ${owed.join(" and ")}, and enter the jam once review passes. Your agent can set the description with opengame details --description.` : "";
+  const words: Record<string, string> = { title: "name", description: "description", genre: "genre" };
+  const owed = ["title", "description", "genre"].filter(field => provisional?.includes(field)).map(field => words[field]!);
+  return owed.length ? `\nReview writes its ${new Intl.ListFormat("en").format(owed)} from the game. On that page, check what it wrote once review passes, and enter the jam if you like. Your agent can set any of them with opengame details.` : "";
+}
+
+/**
+ * The words the creator typed, as review will offer them back tidied: title case for the
+ * title, casing and marks for the rest (tidyTitle and tidyDescription, packages/shared). Said
+ * before review runs so nobody is surprised by it; review's own tidy, which also fixes the
+ * grammar, is what the deploy's page offers, beside the original, which the creator can keep.
+ * Null when the words are already tidy or are Auto.
+ */
+export function tidyLine(manifest: { title: string; tagline?: string; description: string }, auto: readonly string[]): string | null {
+  const changed = ([["title", manifest.title, tidyTitle], ["tagline", manifest.tagline ?? "", (text: string) => tidyDescription(text, { finalMark: false })], ["description", manifest.description, tidyDescription]] as const)
+    .filter(([field, text]) => text.trim() && !auto.includes(field) && text !== PLACEHOLDER_DESCRIPTION)
+    .map(([field, text, tidy]) => [field, text, tidiedOrNull(text, tidy(text))] as const)
+    .filter((row): row is readonly [typeof row[0], string, string] => row[2] !== null);
+  if (!changed.length) return null;
+  return [`Review tidies the casing and grammar of what you wrote, and the deploy's page offers it beside yours, so you keep whichever you choose:`,
+    ...changed.map(([field, text, tidied]) => `  ${field}: "${text}" reads "${tidied}"`)].join("\n");
 }
 
 /** The deploy's own page, which exists as soon as the operation does. */
@@ -899,7 +917,9 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
            now: a 1 GiB upload takes minutes, and somebody watching it should not need the
            terminal to find out how it went. Said once per deploy. */
         if (announced !== op.id) { announced = op.id; const url = deploymentUrl(api, op.id);
-          output.emit({ type: "notice", code: "deployment_page", url, message: `Follow this deploy at ${url}${detailsLine(pending.request.provisional)}` }); }
+          output.emit({ type: "notice", code: "deployment_page", url, message: `Follow this deploy at ${url}${detailsLine(pending.request.provisional)}` });
+          const tidy = tidyLine(pending.request.manifest, pending.request.provisional ?? []);
+          if (tidy) output.emit({ type: "notice", code: "words_tidied", message: tidy }); }
         sayJam(op);
         if (op.state === "uploading" && fileUpload) {
           response = await timed("upload", () => uploadMissingFiles(api, token, op.id, archiveBytes!, uploadFiles!, response.files, output,

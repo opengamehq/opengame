@@ -1,19 +1,20 @@
 import { constants } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { writeFile, readFile, open, lstat, realpath, readdir, mkdir, unlink } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { writeFile, readFile, open, lstat, realpath, unlink } from "node:fs/promises";
+import { join } from "node:path";
 import { sourceGameFor } from "@opengame/shared/source-games";
-import { DEFAULT_GAME_KIND, GAME_KIND_SLUGS, GENRE_SLUGS, LIMITS, gameKindOrDefault, inferGenre, isGameKind, kindNeedsBasedOn,
+import { AUTO, DEFAULT_GAME_KIND, GAME_KIND_SLUGS, GENRE_SLUGS, LIMITS, gameKindOrDefault, isAutoValue, isGameKind, kindNeedsBasedOn,
   kindPhrase as sharedKindPhrase,
-  chooseTitle, fitTitle, pageTitle, parseGameKind, slurTextProblem, type GameKind } from "@opengame/shared";
-import { PLACEHOLDER_DESCRIPTION, isBundlePath, manifestSchema, manifestCredentialIssue, type DeployProvisional } from "@opengame/protocol";
+  parseGameKind, slurTextProblem, type GameKind } from "@opengame/shared";
+import { PLACEHOLDER_DESCRIPTION, manifestSchema, manifestCredentialIssue, type DeployProvisional } from "@opengame/protocol";
 import { CliError } from "./output";
 import type { Output } from "./output";
 import { detectBuildOutput, lockfileInstall, readBuildPackage } from "./build-output";
-import { engineSetup, ENGINE_PRESETS, GENERIC_EXPORT, namedEngine, projectText } from "./engines";
+import { engineSetup, ENGINE_PRESETS, GENERIC_EXPORT, namedEngine } from "./engines";
 import { ask, choose } from "./prompt";
+import { AUTO_FIELDS, AUTO_HELP, autoFields, provisionalAuto, resolveAuto } from "./auto";
+export { FALLBACK_GENRE } from "./auto";
 import { folderArgument, replaceFile, withoutBom } from "./files";
-import { safeReadFiles } from "./safe-fs";
 
 export async function ensureProjectIgnored(root: string) {
   const path = join(root, ".gitignore");
@@ -46,43 +47,25 @@ export interface InitPrompts { choose: typeof choose; ask: typeof ask }
 const TERMINAL: InitPrompts = { choose, ask };
 
 /**
- * The one thing init asks a person: the game's name, offered as what init read, and kept
- * with Enter.
+ * The one thing init asks a person: the game's name, with Enter for Auto.
  *
  * Until 11 Nov 2026 init walked a person through what they were making, the game it was
- * based on, a description of forty to five hundred characters and a genre menu, in the
- * terminal, before anything had been deployed. The owner's call that day: "we need to make sure
- * we collect the minimum info during cli, really just name of game maybe, then they get a
- * private link to fill out stuff in ui (or they can have their agents fill it out)". So the
- * rest goes to the deploy's own page (/settings/deployments/<id>), which `opengame deploy`
- * prints, and every field still has a flag for an agent that knows it.
+ * based on, a description and a genre menu, in the terminal. The owner's call that day: "we
+ * need to make sure we collect the minimum info during cli, really just name of game maybe".
+ * And on 13 Nov 2026: "leaving blank = model generates ... first option and default should be
+ * auto". So Enter writes Auto, review names the game from what it reads in it, and the deploy's
+ * page shows that name to accept or change. A name typed here is the creator's, which review
+ * only tidies (casing and spacing) and offers back beside the original.
  */
-async function askTitle(title: string, prompts: InitPrompts): Promise<string> {
+async function askTitle(prompts: InitPrompts): Promise<string> {
   const { productMin, max } = LIMITS.text.gameTitle;
   let problem = "";
   for (;;) {
-    const answer = (await prompts.ask(`${problem ? `${problem} ` : ""}Game name (Enter keeps "${title}"):`)).trim();
-    const chosen = answer || title;
-    if (chosen.length >= productMin && chosen.length <= max && !slurTextProblem(chosen)) return chosen;
-    problem = slurTextProblem(chosen) ?? `Use ${productMin} to ${max} characters.`;
-    // A read title that does not fit is not offered again as the default, nor cut mid-word.
-    if (!answer) title = fitTitle(chosen) || "My game";
+    const answer = (await prompts.ask(`${problem ? `${problem} ` : ""}Game name (Enter for Auto, review names it from your game):`)).trim();
+    if (isAutoValue(answer)) return AUTO;
+    if (answer.length >= productMin && answer.length <= max && !slurTextProblem(answer)) return answer;
+    problem = slurTextProblem(answer) ?? `Use ${productMin} to ${max} characters, or press Enter for Auto.`;
   }
-}
-
-/**
- * The description init writes when it was not told one: the project's own words where they
- * fit the limit (package.json's description, then the page's meta description), and
- * otherwise PLACEHOLDER_DESCRIPTION, which a deploy names provisional and the deploy's page
- * asks to replace before the game can publish.
- */
-function projectDescription(pkg: { description?: unknown }, html: string): string {
-  const { productMin, max } = LIMITS.text.gameDescription;
-  for (const candidate of [typeof pkg.description === "string" ? pkg.description : "", metaContent(html, "description")]) {
-    const text = candidate.replace(/\s+/g, " ").trim();
-    if (text.length >= productMin && text.length <= max && !slurTextProblem(text)) return text;
-  }
-  return PLACEHOLDER_DESCRIPTION;
 }
 
 /**
@@ -125,146 +108,34 @@ function kindFlags(flags: Record<string, string | boolean>): { kind: GameKind | 
   throw new CliError("based_on_invalid", `Use up to ${LIMITS.text.gameBasedOn.max} characters for --based-on.`);
 }
 
-/**
- * The genre init writes when the game's own words do not point at one and nobody is at a
- * terminal to ask: an agent, a pipe, or deploy making a missing manifest.
- *
- * Until 10 Nov 2026 init wrote `"genre": ""` here, though its help said it guessed, and the
- * next command, `opengame check`, refused the file. Rerunning init could not help either,
- * because init never touched an existing opengame.json. A coding agent following the team's
- * CLI test steps met both, with a tap counter called "CLI test (delete me)". So a project
- * with no genre in its words gets this one and init says so, by name, with the line to
- * change. Puzzle & casual, because it is the bucket for arcade, idle and hypercasual games,
- * which is what a small project with nothing to say about itself most often is. A deploy
- * names it provisional (`provisionalFields` below), as the Drop and GitHub uploads name
- * theirs, so the details form after review offers what review detected rather than this.
- */
-export const FALLBACK_GENRE = "puzzle-casual";
-
-/** What the project already says about itself, for `inferGenre`: the title and description
- * init is writing, and the description and keywords in package.json and index.html. */
-function metaContent(html: string, name: string): string {
-  return html.match(new RegExp(`<meta[^>]+name=["']${name}["'][^>]*content=["']([^"']*)["']`, "i"))?.[1]
-    ?? html.match(new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*name=["']${name}["']`, "i"))?.[1] ?? "";
-}
-function genreEvidence(title: string, description: string, pkg: { description?: unknown; keywords?: unknown }, html: string) {
-  const meta = (name: string) => metaContent(html, name);
-  // The placeholder says nothing about the game, so its words are no evidence of a genre.
-  if (description === PLACEHOLDER_DESCRIPTION) description = "";
-  const keywords = Array.isArray(pkg.keywords) ? pkg.keywords.filter((word): word is string => typeof word === "string") : [];
-  return [title, description, typeof pkg.description === "string" ? pkg.description : "", ...keywords, meta("description"), meta("keywords")].join(" ");
+/* What init says about the fields it left on Auto, in one line, after the file's own line. */
+function autoNote(fields: readonly string[]): string | null {
+  if (!fields.length) return null;
+  return `Auto: ${new Intl.ListFormat("en").format(fields)}. ${AUTO_HELP}`;
 }
 
-type Control = "keyboard" | "mouse" | "gamepad";
-/* What each control looks like in a web game's own source: DOM listeners, inline handlers,
-   and the input calls of the libraries init recognises (Phaser's input.keyboard and
-   activePointer, Kaplay's onKeyPress and onClick, LittleJS's keyIsDown and mouseIsDown).
-   Taps are "mouse": the manifest's controls are keyboard, mouse and gamepad, and a pointer
-   or touch handler is what a mouse click reaches, so a game that only listens for taps is
-   played with a mouse on a desktop. */
-const CONTROL_PATTERNS: [Control, RegExp][] = [
-  ["keyboard", /["'`]key(?:down|up|press)["'`]|\bonkey(?:down|up|press)\b|KeyboardEvent|\.keyboard\b|createCursorKeys|\b(?:onKey(?:Press|Down|Release)|isKey(?:Down|Pressed|Released)|key(?:IsDown|WasPressed|WasReleased))\s*\(/i],
-  ["mouse", /\b(?:on)?(?:mouse|pointer)(?:down|up|move|enter|leave|over|out)\b|\b(?:on)?touch(?:start|end|move|cancel)\b|["'`](?:click|dblclick|wheel|contextmenu)["'`]|\bonclick\b|\b(?:Pointer|Mouse|Touch)Event\b|activePointer|\b(?:onClick|onMouse\w*|isMouse\w*|mouse(?:IsDown|WasPressed|WasReleased|Pos))\s*\(/i],
-  ["gamepad", /getGamepads|["'`]gamepad(?:dis)?connected["'`]|\.gamepad\b|\bgamepad(?:IsDown|WasPressed|WasReleased|Stick)\s*\(/],
-];
-/** Engines whose source is the JavaScript or TypeScript the game was written in. Anything
- * else (Unity, Godot, an Emscripten build) ships a runtime that listens for every input
- * whether the game uses it or not, so its words are not evidence. */
-const WEB_SOURCE_ENGINES = new Set(["custom", "javascript", "typescript", "threejs", "phaser", "pixijs", "babylonjs", "playcanvas", "excalibur", "kaplay", "melonjs", "littlejs", "react"]);
-const SOURCE_FILE = /\.(?:html?|[cm]?[jt]sx?)$/i;
-const SOURCE_DIRS = new Set(["src", "js", "scripts", "game"]);
-/* Somebody else's code inside the project: a minified library or a vendored folder listens
-   for whatever its library supports, and a gamepad shim would put "controller" on a game
-   nobody can play with one. */
-const VENDORED_DIR = /^(?:vendor|vendors|third[_-]?party|libs?|external|deps)$/i;
-const VENDORED_FILE = /[.-]min\.[cm]?js$/i;
-/* An engine's runtime sits beside its .wasm or data pack, and it listens for everything. */
-const ENGINE_ARTIFACT = /\.(?:wasm|pck|data|unityweb)$/i;
-
-/** Up to a few hundred of the project's own source files, read in one helper job: the root,
- * and src/, js/ and the like below it. Never node_modules, a dot folder, a symlink, or a
- * folder holding an engine's runtime. Nothing here is required, so any failure reads as
- * no evidence. */
-async function sourceTexts(root: string, html: string): Promise<string[]> {
-  const files: { path: string; byteSize: number }[] = [];
-  let total = 0;
-  const FILE_MAX = 512 * 1024, TOTAL_MAX = 4 * 1024 * 1024, COUNT_MAX = 300;
-  async function walk(folder: string, depth: number) {
-    let entries;
-    try { entries = await readdir(join(root, folder), { withFileTypes: true }); } catch { return; }
-    if (entries.some(entry => entry.isFile() && ENGINE_ARTIFACT.test(entry.name))) return;
-    for (const entry of entries) {
-      if (files.length >= COUNT_MAX || entry.name.startsWith(".") || entry.name === "node_modules") continue;
-      const path = folder ? `${folder}/${entry.name}` : entry.name;
-      if (entry.isDirectory() && depth < 4 && !VENDORED_DIR.test(entry.name) && (depth > 0 || SOURCE_DIRS.has(entry.name))) await walk(path, depth + 1);
-      // The helper refuses a whole batch for one path it cannot carry, so such a file is left out here.
-      else if (entry.isFile() && SOURCE_FILE.test(entry.name) && !VENDORED_FILE.test(entry.name) && path !== "index.html" && isBundlePath(path)) {
-        const size = (await lstat(join(root, path)).catch(() => null))?.size ?? FILE_MAX + 1;
-        if (size <= FILE_MAX && total + size <= TOTAL_MAX) { files.push({ path, byteSize: size }); total += size; }
-      }
-    }
-  }
-  await walk("", 0);
-  if (!files.length) return [html];
-  try { return [html, ...[...(await safeReadFiles(root, files)).values()].map(bytes => withoutBom(bytes.toString("utf8")))]; }
-  catch { return [html]; }
+/** --genre, refused before anything is written unless it is a slug or Auto. */
+function genreFlag(flags: Record<string, string | boolean>): string | undefined {
+  if (typeof flags.genre !== "string") return undefined;
+  const genre = flags.genre.trim();
+  if (isAutoValue(genre)) return AUTO;
+  if (!GENRE_SLUGS.includes(genre as typeof GENRE_SLUGS[number])) throw new CliError("genre_invalid", `Choose --genre from ${AUTO}, ${GENRE_SLUGS.join(", ")}.`);
+  return genre;
 }
 
-/**
- * The controls a web game's source listens for, or null when it shows none, in which case
- * init writes keyboard and mouse as it always did. Before 10 Nov 2026 init wrote keyboard and
- * mouse for every game, so a canvas that only counts taps told players it needed a keyboard.
- */
-export async function detectControls(root: string, html: string, engineId: string): Promise<Control[] | null> {
-  if (!WEB_SOURCE_ENGINES.has(engineId)) return null;
-  const text = (await sourceTexts(root, html)).join("\n");
-  const found = CONTROL_PATTERNS.filter(([, pattern]) => pattern.test(text)).map(([control]) => control);
-  return found.length ? found : null;
-}
-
-const CONTROL_WORDS: Record<Control, string> = { keyboard: "keyboard", mouse: "mouse or touch", gamepad: "controller" };
-function controlsNote(detected: Control[] | null): string {
-  return detected
-    /* One list, in words: it printed "set to keyboard, mouse, from the keyboard and mouse or
-       touch input in your source", the same inputs twice in two spellings (launch E2E, J-opus-E13). */
-    ? `Controls: ${new Intl.ListFormat("en").format(detected.map(control => CONTROL_WORDS[control]))}, found in your source. If the game takes other input, change controls in opengame.json.`
-    : "Controls: set to keyboard, mouse, because init found no input handlers to read. Change controls in opengame.json if the game uses something else.";
-}
-function genreNote(genre: string): string {
-  return `Genre: init could not tell the genre from the title and description, so it set ${genre} for now. Choose the real one on your deploy's page after opengame deploy, or change genre in opengame.json to one of ${GENRE_SLUGS.join(", ")}.`;
-}
-/* Said instead of a question: the page the deploy prints is where the words are written, by
-   the person or by their agent (`opengame details --description`). */
-const DESCRIPTION_NOTE = "Description: none yet. Write it on your deploy's page after opengame deploy, where you also choose the genre and enter the jam. An agent can set it with opengame details --description, or with --description here.";
+/** A --title or --description as given, or Auto when it was left out, blank or "auto". */
+const stated = (value: string | boolean | undefined) => typeof value === "string" && !isAutoValue(value) ? value : AUTO;
 
 export async function initProject(root: string, flags: Record<string, string | boolean>, options: { interactive?: boolean; prompts?: InitPrompts; output?: Output } = {}) {
   const pkg = await readBuildPackage(root);
-  const html = await projectText(await realpath(root), "index.html") ?? "";
-  /* chooseTitle and pageTitle are Drop's too, so one folder gets one name whichever way it is
-     deployed: the flag, else the page's <title> or package.json's name when either names a
-     game rather than a template ("Game Development Assignment", "Unity WebGL Player"), else
-     the folder's name, each cut at a word rather than mid-bracket (launch E2E, J-opus-E5). */
-  // A --title is used exactly as given, blank included, so the schema refuses it before a file is written.
-  let title = typeof flags.title === "string" ? flags.title : chooseTitle({ page: pageTitle(html),
-    named: typeof pkg.name === "string" ? pkg.name.replace(/^@[^/]+\//, "") : null, folder: basename(await realpath(root)) });
-  const description = typeof flags.description === "string" ? flags.description : projectDescription(pkg, html);
-  let genre = typeof flags.genre === "string" ? flags.genre : inferGenre(genreEvidence(title, description, pkg, html));
+  const genre = genreFlag(flags) ?? AUTO;
   let { kind, basedOn } = kindFlags(flags);
   const prompts = options.prompts ?? TERMINAL;
-  if (genre && !GENRE_SLUGS.includes(genre as typeof GENRE_SLUGS[number])) throw new CliError("genre_invalid", `Choose --genre from ${GENRE_SLUGS.join(", ")}.`);
   // Read before anything is asked, so a person with a finished opengame.json is asked nothing.
   const existing = await existingManifest(root);
-  if (existing) return fillManifest(root, existing.manifest, existing.text, { title, description, genre, flags, html, pkg, interactive: options.interactive, prompts, output: options.output });
+  if (existing) return fillManifest(root, existing.manifest, existing.text, { genre, flags, interactive: options.interactive, prompts });
   // The name only, and only when no --title said it (askTitle says why).
-  // The genre is guessed from the name the person settles on, not the one offered to them:
-  // a folder called "racer" renamed "Block Drop" is not a racing game.
-  const offeredTitle = title;
-  if (options.interactive && typeof flags.title !== "string") {
-    title = await askTitle(title, prompts);
-    if (typeof flags.genre !== "string") genre = inferGenre(genreEvidence(title, description, pkg, html));
-  }
-  let guessedGenre = false;
-  if (genre === null) { genre = FALLBACK_GENRE; guessedGenre = true; }
+  const title = options.interactive && typeof flags.title !== "string" ? await askTitle(prompts) : stated(flags.title);
   // Absent is a game, and init writes it anyway, so every new opengame.json says what it is.
   kind ??= DEFAULT_GAME_KIND;
   // Nobody here to ask (an agent, a pipe, deploy making a missing manifest): the flag is the only way to say it.
@@ -302,16 +173,18 @@ export async function initProject(root: string, flags: Record<string, string | b
   if (engine.instructions === GENERIC_EXPORT) engine.instructions = command
     ? `init set the build to ${command} and the export folder to ${output}/. If your build writes somewhere else, change build.output in opengame.json.${untested}`
     : `init set the export folder to ${output === "." ? "this folder" : `${output}/`}, which needs index.html at its root. If the export is somewhere else, change build.output in opengame.json.${untested}`;
-  const detected = await detectControls(sourceRoot, html, engine.id);
+  /* Every field init is not told is Auto (auto.ts): review writes it from the game, and the
+     deploy's page shows what it wrote to accept or change. */
   const manifest = {
-    $schema: "https://opengame.io/schema/opengame.json", title, description, genre: genre ?? "", kind, ...(basedOn ? { basedOn } : {}),
+    $schema: "https://opengame.io/schema/opengame.json", title, tagline: AUTO, description: stated(flags.description), genre, kind, ...(basedOn ? { basedOn } : {}),
     ...(command || output !== "." || typeof flags.output === "string" ? { build: { ...(command ? { command } : {}), output } } : {}),
-    controls: detected ?? ["keyboard", "mouse"],
+    controls: AUTO,
     ...(engine.requires ? { requires: engine.requires } : {}),
   };
   const credentialIssue = manifestCredentialIssue(manifest);
   if (credentialIssue) throw new CliError("manifest_invalid", credentialIssue, 2);
-  const parsed = manifestSchema.safeParse(manifest);
+  const { value: resolved, auto } = await resolveAuto(manifest, root);
+  const parsed = manifestSchema.safeParse(resolved);
   const issues = parsed.success ? [] : parsed.error.issues;
   // Inferred metadata can be an unfinished draft. Explicit values should be
   // corrected in the command, before a file exists and init can no longer run.
@@ -327,12 +200,6 @@ export async function initProject(root: string, flags: Record<string, string | b
     throw error;
   }
   await ensureProjectIgnored(root);
-  /* The title too, when nobody gave it (no --title, no one at the prompt): it came from the
-     page or the folder, so the deploy's page may offer the name review reads from the game
-     instead (launch E2E, J-astra-E9). */
-  // Enter on the offered name keeps the guess, so that is a guess too.
-  const guessedTitle = typeof flags.title !== "string" && title === offeredTitle;
-  await recordGuesses(root, { ...(guessedGenre ? { genre: genre! } : {}), ...(detected ? {} : { controls: manifest.controls }), ...(guessedTitle ? { title } : {}) }, ["genre", "controls", "title"]);
   const next = `opengame check ${folderArgument(root)}${command ? " --build" : ""}`;
   /* The command goes last, on a line of its own after "Next:", as an error's does. Ending a
      sentence with it printed "run opengame check .." with the folder's dot and the full stop
@@ -340,9 +207,7 @@ export async function initProject(root: string, flags: Record<string, string | b
   return { manifest, needs, engine, next, message: [needs.length
     ? `Created a draft opengame.json${made(kind, basedOn)}. Add ${new Intl.ListFormat("en").format(needs)} to it.\n${issues.map(issue => `${issue.path.join(".")}: ${issue.message}`).join("\n")}`
     : `Created opengame.json${made(kind, basedOn)}.`,
-  ...(description === PLACEHOLDER_DESCRIPTION ? [DESCRIPTION_NOTE] : []),
-  ...(guessedGenre ? [genreNote(genre!)] : []),
-  controlsNote(detected),
+  ...[autoNote(auto)].filter((line): line is string => line !== null),
   `${engine.name}: ${engine.instructions}`,
   `Guide: ${engine.docs}`,
   `Next: ${next}`].join("\n") };
@@ -369,6 +234,10 @@ async function refuseIgnoreSymlink(root: string) {
  * showed the fallback as the creator's own choice ahead of review's guess. A deploy names a
  * field provisional only while opengame.json still holds exactly the value init chose, so
  * the moment somebody edits it, it is theirs.
+ *
+ * Since 13 Nov 2026 init writes "auto" instead of a guess (auto.ts), which says the same thing
+ * in the file itself, so nothing writes this record now. It is still read, for a folder an
+ * older CLI set up, whose guesses would otherwise deploy as the creator's choice.
  */
 const GUESSES = "init-guesses.json";
 type Guesses = { genre?: string; controls?: string[]; title?: string };
@@ -387,37 +256,22 @@ async function readGuesses(root: string): Promise<Guesses> {
   } catch { return {}; }
   finally { await handle?.close(); }
 }
-/** `settled` are the fields this run wrote; a guess about one of them is replaced or dropped. */
-async function recordGuesses(root: string, guessed: Guesses, settled: string[]) {
-  const before = await readGuesses(root);
-  if (!settled.some(field => field in before) && !Object.keys(guessed).length) return;
-  const record: Guesses = { ...before };
-  for (const field of settled) delete record[field as keyof Guesses];
-  Object.assign(record, guessed);
-  const folder = join(root, ".opengame");
-  try {
-    await mkdir(folder, { recursive: true, mode: 0o700 });
-    const stat = await lstat(folder);
-    if (stat.isSymbolicLink() || !stat.isDirectory()) return;
-    const path = join(folder, GUESSES), temporary = `${path}.${randomUUID()}`;
-    try {
-      const handle = await open(temporary, "wx", 0o600);
-      try { await handle.writeFile(JSON.stringify(record) + "\n"); } finally { await handle.close(); }
-      await replaceFile(temporary, path);
-    } finally { await unlink(temporary).catch(() => {}); }
-  } catch { /* A missing record only means the next deploy states what the file says. */ }
-}
-
 /** The fields a deploy should name in `provisional`: those opengame.json still holds as init guessed them. */
 export async function provisionalFields(root: string, manifest: { genre?: unknown; controls?: unknown; description?: unknown; title?: unknown }): Promise<DeployProvisional[]> {
   const guesses = await readGuesses(root);
-  const fields: DeployProvisional[] = [];
+  /* Every field opengame.json leaves on Auto, which is what init writes since 13 Nov 2026: named
+     beside a manifest loadManifest read, or still "auto" in one read as a plain file. */
+  const raw = manifest as Record<string, unknown>;
+  const fields: DeployProvisional[] = provisionalAuto([...new Set([...autoFields(manifest),
+    ...AUTO_FIELDS.filter(field => field !== "tagline" && field in raw && isAutoValue(raw[field]))])]);
   /* The placeholder is its own record: nobody writes that exact sentence about their game,
      so a file still holding it has no description yet, however it got there. */
-  if (manifest.description === PLACEHOLDER_DESCRIPTION) fields.push("description");
-  if (guesses.genre !== undefined && manifest.genre === guesses.genre) fields.push("genre");
-  if (guesses.controls && JSON.stringify(manifest.controls) === JSON.stringify(guesses.controls)) fields.push("controls");
-  if (guesses.title !== undefined && manifest.title === guesses.title) fields.push("title");
+  const add = (field: DeployProvisional) => { if (!fields.includes(field)) fields.push(field); };
+  if (manifest.description === PLACEHOLDER_DESCRIPTION) add("description");
+  // An older CLI's record of what it guessed (init-guesses.json), for a folder it set up.
+  if (guesses.genre !== undefined && manifest.genre === guesses.genre) add("genre");
+  if (guesses.controls && JSON.stringify(manifest.controls) === JSON.stringify(guesses.controls)) add("controls");
+  if (guesses.title !== undefined && manifest.title === guesses.title) add("title");
   return fields;
 }
 
@@ -465,7 +319,8 @@ const blank = (value: unknown) => value === undefined || value === null || (type
  * written itself, with `"genre": ""`, could only be finished by hand: running init again,
  * which is what an agent told "init guesses the genre" tries next, said the file existed and
  * stopped. Now it fills title, description, genre and controls where they are missing or
- * empty, from the same flags and guesses a new file gets, and says which. A value already
+ * empty, with the flag given or Auto (which a blank field already means, so writing it says so
+ * in the file), and says which. A value already
  * there is the creator's, even when a flag names another, because init cannot tell a
  * deliberate edit from a stale one; a flag it did not use is named so nobody thinks it took.
  * kind is never filled: absent means "whatever this already is" to deploy (manifest.ts), and
@@ -473,41 +328,21 @@ const blank = (value: unknown) => value === undefined || value === null || (type
  * fill is refused as it always was.
  */
 async function fillManifest(root: string, existing: Record<string, unknown>, original: string, context: {
-  title: string; description: string; genre: string | null; flags: Record<string, string | boolean>; html: string;
-  pkg: { description?: unknown; keywords?: unknown }; interactive?: boolean; prompts: InitPrompts; output?: Output;
+  genre: string; flags: Record<string, string | boolean>; interactive?: boolean; prompts: InitPrompts;
 }) {
   const { flags } = context;
   const filled: Record<string, unknown> = {};
-  let { genre } = context;
   // The name is the one question, as for a new file (askTitle), and only for a blank one.
-  if (blank(existing.title)) filled.title = context.interactive && typeof flags.title !== "string" ? await askTitle(context.title, context.prompts) : context.title;
-  /* A blank title filled from the page or the folder is a guess, as for a new file, Enter on the
-     offered name included (Greptile on opengamehq/opengame#9). */
-  const guessedTitle = "title" in filled && typeof flags.title !== "string" && filled.title === context.title;
-  const description = blank(existing.description) ? context.description : String(existing.description);
-  if (blank(existing.description)) filled.description = description;
-  // The guess reads the file's own words, which is what the game says about itself now.
-  if (blank(existing.genre) && typeof flags.genre !== "string") {
-    genre = inferGenre(genreEvidence(String(filled.title ?? existing.title), description, context.pkg, context.html));
-  }
-  let guessedGenre = false;
-  if (blank(existing.genre)) {
-    if (genre === null) { genre = FALLBACK_GENRE; guessedGenre = true; }
-    filled.genre = genre;
-  }
-  let detected: Control[] | null = null;
-  if (blank(existing.controls)) {
-    context.output?.emit({ type: "progress", stage: "init:project", message: "Looking at your project" });
-    const sourceRoot = await realpath(root);
-    const engineId = await engineSetup(sourceRoot, await readBuildPackage(root), typeof flags.engine === "string" ? flags.engine : undefined).then(engine => engine.id, () => "unknown");
-    detected = await detectControls(sourceRoot, context.html, engineId);
-    filled.controls = detected ?? ["keyboard", "mouse"];
-  }
+  if (blank(existing.title)) filled.title = context.interactive && typeof flags.title !== "string" ? await askTitle(context.prompts) : stated(flags.title);
+  if (blank(existing.description)) filled.description = stated(flags.description);
+  if (blank(existing.genre)) filled.genre = context.genre;
+  if (blank(existing.controls)) filled.controls = AUTO;
   if (!Object.keys(filled).length) throw await manifestExists(root);
   const manifest = { ...existing, ...filled };
   const credentialIssue = manifestCredentialIssue(manifest);
   if (credentialIssue) throw new CliError("manifest_invalid", credentialIssue, 2);
-  const parsed = manifestSchema.safeParse(manifest);
+  const { value: resolved } = await resolveAuto(manifest, root);
+  const parsed = manifestSchema.safeParse(resolved);
   const issues = parsed.success ? [] : parsed.error.issues;
   // A flag's value that the schema refuses is the command's to correct, before anything is written.
   const rejected = issues.filter(issue => String(issue.path[0]) in filled && typeof flags[String(issue.path[0])] === "string");
@@ -529,13 +364,10 @@ async function fillManifest(root: string, existing: Record<string, unknown>, ori
     await replaceFile(temporary, path);
   } finally { await unlink(temporary).catch(() => {}); }
   await ensureProjectIgnored(root);
-  await recordGuesses(root, { ...(guessedGenre ? { genre: genre! } : {}), ...("controls" in filled && !detected ? { controls: filled.controls as string[] } : {}),
-    ...(guessedTitle ? { title: filled.title as string } : {}) },
-    Object.keys(filled).filter(field => field === "genre" || field === "controls" || field === "title"));
   const names = Object.keys(filled);
   /* Every flag init could have used and did not: a value the file already sets, and the
      flags that only shape a new file (what it is, and where its build goes). */
-  const kept = ["title", "description", "genre", "kind", "based-on", "output", ...("controls" in filled ? [] : ["engine"])]
+  const kept = ["title", "description", "genre", "kind", "based-on", "output", "engine"]
     .filter(field => typeof flags[field] === "string" && !(field in filled)).map(field => `--${field}`);
   const needs = [...new Set(issues.map(issue => issue.path.join(".")))];
   const next = `opengame check ${folderArgument(root)}`;
@@ -543,9 +375,7 @@ async function fillManifest(root: string, existing: Record<string, unknown>, ori
     `Filled ${new Intl.ListFormat("en").format(names)} in the existing opengame.json and left everything else as it was.`,
     ...(kept.length ? [`init did not use ${new Intl.ListFormat("en").format(kept)}, because it only fills what the file leaves blank. Edit opengame.json to change anything it already sets.`] : []),
     ...(needs.length ? [`Still to correct in opengame.json:\n${issues.map(issue => `${issue.path.join(".") || "opengame.json"}: ${issue.message}`).join("\n")}`] : []),
-    ...(filled.description === PLACEHOLDER_DESCRIPTION ? [DESCRIPTION_NOTE] : []),
-    ...(guessedGenre ? [genreNote(genre!)] : []),
-    ...("controls" in filled ? [controlsNote(detected)] : []),
+    ...[autoNote(names.filter(field => isAutoValue(filled[field])))].filter((line): line is string => line !== null),
     `Next: ${next}`].join("\n") };
 }
 

@@ -4,6 +4,7 @@ import { defoldCustomKeyFindings } from "./defold-archive";
 import { nameFindings, compressedBrowserAsset, canonicalName, precompressedAsset } from "./names";
 import { modulePathAnalysis } from "./module-paths";
 import { redactFinding } from "./diagnostic-text";
+import { nativeBuild, nativeBuildWords } from "./native-build";
 import { defoldArchivePrefix, defoldEngineWasm, detectEngine, detectedIds, engineFileKind, godotLoadPath, godotLocated, licenceStamps, wasmModule, withRawRuntimeEvidence, type WasmModule, engineDefault, ENGINE_DEFAULT_ORIGINS, ENGINE_DEFAULT_REFS, ENGINE_NAMES, type EngineDefault, type EngineId, type EngineReport, type Site } from "./engines";
 import { inspectRawRuntime, RawRuntimeError, type RawRuntimeEvidence, type RawInflater } from "./raw-runtime";
 import {
@@ -1281,6 +1282,17 @@ function diagnoseMissingEntry(files: { path: string; size: number }[]): Finding 
       severity: "blocker",
       title: `This looks like source rather than a build. There is no ${BUNDLE.entryPoint} anywhere in it.`,
       detail: buildAdvice(files),
+    };
+  }
+
+  /* After the source check: a project that carries a tool .exe is still a project to build. */
+  const native = nativeBuild(files);
+  if (native) {
+    return {
+      code: "native-build",
+      severity: "blocker",
+      ...nativeBuildWords(native, BUNDLE.entryPoint),
+      path: native.path,
     };
   }
 

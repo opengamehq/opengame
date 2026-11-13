@@ -52,8 +52,13 @@ export {
   parseMascot,
   personMascot,
   randomMascot,
+  lookHair,
+  lookShape,
   withAccessory,
   withFacialHair,
+  withHair,
+  withShape,
+  type MascotHairId,
   type MascotLook,
   type MascotIdentityId,
 } from "./mascot/look";

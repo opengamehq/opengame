@@ -20,7 +20,8 @@ import { jamEntryCommand } from "./jam-entry";
 import { achievementsCommand } from "./achievements";
 import { AGENT_MARKERS, Output, CliError, agentMode, hang, preferHuman } from "./output";
 import { applyNetworkDefaults } from "./network";
-import { initProject, ensureDeployManifest, FALLBACK_GENRE } from "./init";
+import { initProject, ensureDeployManifest } from "./init";
+import { AUTO_HELP } from "./auto";
 import { inspectArchive } from "./archive";
 import { folderArgument, loadManifest, outputFolder, projectFor } from "./files";
 import { CLI_VERSION } from "./version";
@@ -59,11 +60,11 @@ const basedOnFlag = (when: string): Flag => ({ name: "based-on", type: "string",
 /** One table drives parsing, `help` and `help --json`, so the schema an agent
  * reads is the parser it is talking to. */
 const commands: Record<string, { args?: string; description: string; flags: Flag[]; examples?: string[] }> = {
-  init: { args: "[dir]", description: "Create opengame.json for an existing game. A person at a terminal is asked the game's name and nothing else; the description, genre, jam entry and the rest are filled in on the deploy's page, by you or your agent. When opengame.json is already there, fill in the fields it leaves blank and keep the rest.", flags: [
-    { name: "title", type: "string", description: "Game title. Without it, read from index.html's title, then package.json, then the folder name, and a person at a terminal can confirm or change it." }, { name: "description", type: "string", description: `One or two sentences about the game, ${LIMITS.text.gameDescription.productMin} to ${LIMITS.text.gameDescription.max} characters. Without it, package.json's or the page's own description when it fits, and otherwise a placeholder you replace on the deploy's page before the game can publish.` },
+  init: { args: "[dir]", description: `Create opengame.json for an existing game. Every field defaults to Auto: ${AUTO_HELP} A person at a terminal is asked the game's name and nothing else, and Enter takes Auto. When opengame.json is already there, fill in the fields it leaves blank and keep the rest.`, flags: [
+    { name: "title", type: "string", description: "Game title, or auto (the default). On Auto, review names the game from what it reads in it. A title you give is yours; review offers a tidied copy (title case, spacing) on the deploy's page, and you keep whichever you choose." }, { name: "description", type: "string", description: `One or two sentences about the game, ${LIMITS.text.gameDescription.productMin} to ${LIMITS.text.gameDescription.max} characters, or auto (the default), and review writes it from the game. Words you give are offered back with their casing and grammar tidied, and you can keep yours.` },
     { name: "output", type: "string", description: "Static build folder. Required when several outputs contain index.html." },
     { name: "engine", type: "string", values: [...ENGINE_IDS], description: "Engine export recipe. Otherwise detect source markers and built-export signatures; unknown projects use custom." },
-    { name: "genre", type: "string", description: `A genre slug. Without it, guessed from the title, the description and package.json's keywords. When they name none, init sets ${FALLBACK_GENRE} for now and says so, and you choose the real one on the deploy's page. A wrong one lists the slugs.` },
+    { name: "genre", type: "string", description: `auto (the default) or a genre slug. On Auto, review picks the genre and its subgenre from the game, and the deploy's page shows them to accept or change. A wrong slug lists them.` },
     kindFlag("What you are making. Without it, a game. init does not ask."), basedOnFlag(""), json],
     examples: ['opengame init . --title "My game"', 'opengame init . --kind mod --based-on "Doom"'] },
   dev: { args: "[dir]", description: "Serve a local export with game-runtime headers. Under a contract that adds the SDK, pages also get the host runtime and SDK, as they do when hosted. If the contract supports opting out, sdk.inject: false leaves out the SDK.", flags: [
@@ -81,9 +82,9 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     noInstall("--build"), json],
     examples: ["opengame check .", "opengame check . --build --json"] },
   deploy: { args: "[dir]", description: "Build, check and upload a release, then return with the address of its deployment page, where the checks run and the private preview plays once they pass. Add --wait to stay until they finish. Once the preview is ready, the achievements opengame.json declares are saved by deploy --wait or by the next opengame status in this folder. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted.", flags: [externalAssets, unityAssets, acceptStatement,
-    { name: "title", type: "string", description: "Title when deploy creates a missing manifest." },
-    { name: "description", type: "string", description: "Description when deploy creates a missing manifest." },
-    { name: "genre", type: "string", description: "Genre when deploy creates a missing manifest." },
+    { name: "title", type: "string", description: "Title when deploy creates a missing manifest. Auto when left out." },
+    { name: "description", type: "string", description: "Description when deploy creates a missing manifest. Auto when left out." },
+    { name: "genre", type: "string", description: "Genre when deploy creates a missing manifest. Auto when left out." },
     kindFlag("Kind when deploy creates a missing manifest. Without it, a game."), basedOnFlag(" when deploy creates a missing manifest"),
     { name: "output", type: "string", description: "Static build folder when deploy creates a missing manifest." },
     { name: "vendor", type: "boolean", description: "Download dependencies from approved sources at the exact versions your code names into the packaging copy, with hashes and licenses." },

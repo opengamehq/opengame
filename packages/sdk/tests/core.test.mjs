@@ -505,7 +505,7 @@ test('malformed optional looks and extra avatar fields cannot grant avatar acces
   const h = harness(); h.og.init();
   const player = { id: 'per-game', handle: 'mira', ogNumber: 7, signedIn: true };
   const invalid = [undefined, null, false, [], {}, '', 'circle.classic', 'circle.classic.white.bad/accessory',
-    'circle.classic.white.none.other', 'circle.classic.white.none.female.extra.more.more.extra', 'circle.classic.white.crown.goatee',
+    'circle.classic.white.none.other', 'circle.classic.white.none.female.extra.more.more.extra.more', 'circle.classic.white.crown.goatee',
     'circle.classic.white\n', 'circle.classic.white.' + 'a'.repeat(1024), 'https://evil.test/avatar'];
   for (const look of invalid) {
     h.send({ type: 'session', token: 'test-only', player: { ...player, avatar: { seed: 3, palette: 'paper', look } }, capabilities: ['avatar'] });

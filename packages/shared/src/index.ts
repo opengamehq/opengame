@@ -7,6 +7,7 @@ export * from "./game-kinds";
 export * from "./source-games";
 export * from "./genre-games";
 export * from "./text-policy";
+export * from "./game-words";
 export * from "./submission-maintenance";
 export { parseInventory, validInventoryChunks, validInventoryPointer } from "./serving-inventory";
 export type { InventoryChunk, InventoryFile, ServingInventory, ServingInventoryPointer } from "./serving-inventory";

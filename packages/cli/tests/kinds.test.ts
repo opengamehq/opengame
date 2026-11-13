@@ -44,7 +44,7 @@ test("every new opengame.json says its kind, and it is a game unless somebody sa
   assert.equal("basedOn" in result.manifest, false);
   const file = await written(root);
   // Beside genre, where a person reading the file looks for what the game is.
-  assert.deepEqual(Object.keys(file).slice(0, 6), ["$schema", "title", "description", "genre", "kind", "controls"]);
+  assert.deepEqual(Object.keys(file).slice(0, 7), ["$schema", "title", "tagline", "description", "genre", "kind", "controls"]);
   assert.match(result.message, /^Created opengame\.json\.\n/);
   assert.equal((await loadManifest(root)).kind, "game");
 }));
@@ -106,7 +106,7 @@ test("a person is not asked what they are making: Enter on the name makes a game
   const script = scripted([""]);
   const result = await initProject(root, { description: metadata.description, genre: metadata.genre }, { interactive: true, prompts: script.prompts });
   assert.deepEqual(script.asked.map(entry => entry.kind), ["ask"]);
-  assert.match(script.asked[0]!.question, /^Game name \(Enter keeps /);
+  assert.match(script.asked[0]!.question, /^Game name \(Enter for Auto/);
   assert.equal(result.manifest.kind, "game");
   assert.equal(script.left.length, 0);
 }));

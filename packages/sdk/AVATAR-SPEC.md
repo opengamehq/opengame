@@ -129,11 +129,11 @@ Figure height, from the feet to the top of the default head, for each body and l
 
 ## The head
 
-The look recipe is `shape.eyes.color`, then an optional accessory, `female` for the second face set, facial hair, a hair color and a facial hair color. `readAvatar` returns these as fields of `head`.
+The look recipe is `shape.eyes.color`, then an optional accessory, `female` for the second face set, facial hair, a hair color, a facial hair color and a hairstyle worn over the shape. `readAvatar` returns these as fields of `head`.
 
 ### Shape
 
-The shape is the head's outline, and each one is pictured in the first table. Width and height are in H. Hairstyles are the outlines a photo of a person can become, and `circle` is a shaved head; a hairstyle's hair is a marking inside its outline. "Markings" names the marking tone of a shape that has markings, which sets their color as described under "Edges and markings".
+The shape is the head's outline, and each one is pictured in the first table. Width and height are in H. Hairstyles are the outlines a photo of a person can become, and `circle` is a shaved head; a hairstyle's hair is a marking inside its outline. A player who picks a hairstyle for any other shape has `head.hair` set to that hairstyle and `head.shape` left as their shape: draw the shape, join the hairstyle's hair (its outline where its own marking is) onto it, and paint the hairstyle's marking over both. On the plain circle the hairstyle is the shape itself and `head.hair` is null. "Markings" names the marking tone of a shape that has markings, which sets their color as described under "Edges and markings".
 
 The second table places each outline and its eyes. Each outline stands on the default head's spot: "Middle, right" and "Bottom, up" are its offsets in H from the default head's middle line and lowest point. "Eyes up" places the middle of the eye pair, as a share of the outline's height up from its bottom, and "Eyes, right" is the distance right of the neck in H. "Eye scale" multiplies the eye sizes below.
 

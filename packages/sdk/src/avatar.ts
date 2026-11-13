@@ -38,7 +38,7 @@ export type AvatarColor = Readonly<{ id: string; hex: string | null; followsHead
  * color and the eyes even if you draw little else.
  */
 export type AvatarHead = Readonly<{
-  /** The look recipe as received, `shape.eyes.color` with up to five optional parts after it. */
+  /** The look recipe as received, `shape.eyes.color` with up to six optional parts after it. */
   recipe: string;
   /** The head's outline, such as `circle`, `panda` or a haircut like `shortfringe`. */
   shape: string;
@@ -56,10 +56,12 @@ export type AvatarHead = Readonly<{
   identity: 'male' | 'female';
   /** A beard or moustache id, or null. */
   facialHair: string | null;
-  /** A hair palette id for a haircut shape, or null to keep the haircut's own color. */
+  /** A hair palette id for a haircut shape or for `hair`, or null to keep the haircut's own color. */
   hairColor: string | null;
   /** A hair palette id for the facial hair, or null to match `hairColor`. */
   facialHairColor: string | null;
+  /** A haircut such as `bob` worn over `shape`, or null: draw `shape`, then that haircut's hair over it. OpenGame saves it only beside a shape that is not a haircut, and the plain circle with a haircut is saved as that haircut's shape instead. */
+  hair: string | null;
 }>;
 /** The body and clothes, from `character`. */
 export type AvatarOutfit = Readonly<{
@@ -98,7 +100,7 @@ export function readAvatar(recipe: Pick<AvatarRecipe, 'look' | 'character'> | nu
   const { heads, finishes, cloth, renames } = __AVATAR_CONFIG__;
   const color = own(renames, look.color) ?? look.color;
   const hex = own(heads, color);
-  const head: AvatarHead = Object.freeze({ recipe: recipe!.look!, shape: look.shape, eyes: look.eyes, color, hex, finish: finishes.includes(color), accessory: look.accessory, identity: look.identity, facialHair: look.facialHair, hairColor: look.hairColor, facialHairColor: look.facialHairColor });
+  const head: AvatarHead = Object.freeze({ recipe: recipe!.look!, shape: look.shape, eyes: look.eyes, color, hex, finish: finishes.includes(color), accessory: look.accessory, identity: look.identity, facialHair: look.facialHair, hairColor: look.hairColor, facialHairColor: look.facialHairColor, hair: look.hair });
   const parts = readCharacterParts(recipe!.character);
   const paint = (id: string): AvatarColor => {
     const followsHead = id === 'avatar' || id === 'match';

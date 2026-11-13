@@ -2932,8 +2932,21 @@ export const FACE: Record<MascotShapeId, { x: number; y: number; s: number; w?: 
 /** The head alone, honouring a morph: the outline before any facial hair fills it out. */
 function headDistance(look: MascotLook, pose: MascotPose, x: number, y: number) {
   const to = sdShape(look.shape, x, y, pose.wobble);
-  if (!pose.fromShape || pose.morph >= 1) return to;
-  return lerp(sdShape(pose.fromShape, x, y, pose.wobble), to, pose.morph);
+  const shape = !pose.fromShape || pose.morph >= 1 ? to : lerp(sdShape(pose.fromShape, x, y, pose.wobble), to, pose.morph);
+  return look.hair ? smin(shape, hairMass(look.hair, x, y, pose.wobble), 0.03) : shape;
+}
+
+/**
+ * Hair worn over another shape (`look.hair`, 13 Nov 2026): the part of the hairstyle's own
+ * head that is hair, so its crown, buns and lengths stand out past the shape they sit on,
+ * while its face and skull are left to that shape. The hair's markings then paint over the
+ * joined outline, which is what turns the top of an egg into a bob. A hairstyle is cut for
+ * the face where the circle's face sits, and every shape's face is near there, so the hair
+ * is not moved to meet it.
+ */
+function hairMass(hair: MascotShapeId, x: number, y: number, t: number) {
+  const mark = MARKINGS[hair];
+  return mark ? Math.max(sdShape(hair, x, y, t), mark.sd(x, y, t)) : Infinity;
 }
 
 export function bodyDistance(look: MascotLook, pose: MascotPose, x: number, y: number) {
@@ -3206,6 +3219,11 @@ export function faceHairDistance(look: MascotLook, pose: MascotPose, x: number, 
 }
 
 function shapeMarkingDistance(look: MascotLook, pose: MascotPose, x: number, y: number) {
+  const hair = look.hair ? MARKINGS[look.hair]?.sd(x, y, pose.wobble) ?? Infinity : Infinity;
+  return Math.min(hair, ownMarkingDistance(look, pose, x, y));
+}
+
+function ownMarkingDistance(look: MascotLook, pose: MascotPose, x: number, y: number) {
   const to = MARKINGS[look.shape];
   const dTo = to ? to.sd(x, y, pose.wobble) : Infinity;
   if (!pose.fromShape || pose.morph >= 1) return dTo;
@@ -3219,6 +3237,9 @@ function shapeMarkingDistance(look: MascotLook, pose: MascotPose, x: number, y: 
 
 /** The tone mode of the markings being drawn, the target shape's once a morph is past half. */
 export function markingTone(look: MascotLook, pose: MascotPose): MascotMarkTone {
+  /* Hair over a shape is the second ink there, so the shape's own patches share its tone. */
+  const hair = look.hair && MARKINGS[look.hair]?.tone;
+  if (hair) return hair;
   const shape = pose.fromShape && pose.morph < 0.5 ? pose.fromShape : look.shape;
   /* Facial hair is hair: on a head with no markings of its own it is dark, as the hair
      on the judges' heads is, whatever the skin. On a head with hair it takes that hair's. */

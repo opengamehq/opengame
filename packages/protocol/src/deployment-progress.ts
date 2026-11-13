@@ -35,6 +35,14 @@ export interface DeployStep {
   id: DeployStepId; label: string; state: DeployStepState; detail: string;
   since?: string; timing?: StageTiming; elapsedSeconds?: number;
 }
+/* What the review step says while it decides (20261113300000). A game is not published until the
+   automatic code review has a verdict, and the pipeline keeps asking until it does, so this is
+   the honest state: it is being checked, by us, automatically, and usually quickly. Never "in
+   review" or anything that reads as a person deciding (13 Nov 2026). The two states it
+   replaced said "review is still deciding" and "The playtest is waiting on us", the second of
+   them wrong since the playtest stopped deciding anything on 12 Nov 2026. */
+const CHECKING = "Checking your game. This usually takes under a minute. We’ll update this page; you don’t need to send it again.";
+
 const LABELS: Record<DeployStepId, string> = { upload: "Upload", checks: "Checks", review: "Review", details: "Details", publish: "Publish", live: "Live" };
 
 /** The terminal and the deployment page follow these same facts. A private preview is
@@ -75,7 +83,7 @@ export function deploymentSteps(input: DeploymentProgressInput): DeployStep[] {
   }
   if (state === "ready") {
     put("checks", "done", "File checks passed.");
-    put("review", "running", "Reviewing your game. Nothing to do.");
+    put("review", "running", CHECKING);
     if (input.reviewReadFailed) put("review", "held", "Review status could not be read. Your build is saved. We’ll try again.");
     if (input.unsubmitted) put("review", input.unsubmitted.settled ? "held" : "waiting", input.unsubmitted.sentence);
   }
@@ -83,9 +91,9 @@ export function deploymentSteps(input: DeploymentProgressInput): DeployStep[] {
     if (["awaiting_details", "needs_certification", "approved", "publishing", "published"].includes(submission.state))
       put("review", "done", "Your game passed review.");
     if (["waiting", "review"].includes(submission.state))
-      put("review", "held", submission.state === "review" ? "Your upload is saved and review is still deciding. We’ll update this page; you don’t need to send it again."
-        : submission.hold ? heldMessage(submission.hold) + (submission.hold.reason === "placement" ? " We’ll retry it; you don’t need to upload again." : "")
-        : "The playtest is waiting on us. Your game is saved. We’ll retry it.");
+      put("review", submission.hold ? "held" : "running", submission.hold
+        ? heldMessage(submission.hold) + (submission.hold.reason === "placement" ? " We’ll retry it; you don’t need to upload again." : "")
+        : CHECKING);
     if (submission.state === "needs_certification") put("review", "waiting", "Review starts after you confirm the required details.");
     if (["returned", "blocked", "withdrawn", "superseded"].includes(submission.state)) put("details", "waiting", "Nothing to confirm for this build.");
     if (["returned", "blocked", "withdrawn", "superseded"].includes(submission.state))
@@ -121,7 +129,14 @@ export function deploymentSteps(input: DeploymentProgressInput): DeployStep[] {
 }
 
 /** Estimates stay broad. The upper measured range is a stop point, not a promise that
- * a queued job, a retry or a human review will finish on a countdown. */
+ * a queued job, a retry or a human review will finish on a countdown.
+ *
+ * A stage measured in seconds says so. Every answer used to round up to whole minutes, so
+ * a publish that takes 3 to 9 s (13 Nov 2026, the last 22 publications) read "Usually a
+ * minute", and while this morning's hung publications were still in the window it read
+ * "Usually 30 to 64 min" over a step that finishes in ten seconds (J-sol-G4). Those runs
+ * have left the window since; the words now follow measured seconds when that is what the
+ * window holds. A burst of slow runs will still show as slow, which is what it measures. */
 export function stageEta(step: DeployStep, now: number): string | null {
   if (!["running", "waiting"].includes(step.state) || !step.timing) return null;
   const { lowSeconds, highSeconds, samples } = step.timing;
@@ -130,6 +145,9 @@ export function stageEta(step: DeployStep, now: number): string | null {
   const elapsed = step.state === "running" && step.since ? Math.max(0, (now - Date.parse(step.since)) / 1000) : 0;
   if (!Number.isFinite(elapsed)) return null;
   if (elapsed >= highSeconds) return "Taking longer than usual";
+  const left = highSeconds - elapsed;
+  if (left <= 15) return "A few seconds";
+  if (left < 60) return "Under a minute";
   const low = Math.max(1, Math.ceil((lowSeconds - elapsed) / 60));
   const high = Math.max(low, Math.ceil((highSeconds - elapsed) / 60));
   return high === 1 ? "About a minute" : low === high ? `About ${high} min` : `About ${low} to ${high} min`;

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://opengame.io/schema/opengame.json",
+  "title": "Night shift",
+  "tagline": "auto",
+  "description": "Survive until dawn with a light and a dwindling battery.",
+  "genre": "shooter-survival",
+  "kind": "game",
+  "controls": "auto"
+}

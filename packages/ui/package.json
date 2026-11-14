@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
   "exports": {
     "./components/mascot/*": "./src/components/mascot/*.ts",
     "./mascot-art": "./src/components/mascot-art.ts",

@@ -24,7 +24,9 @@ export const RELEASE_STATUS = {
   // No person in the creator's words (launch E2E judges, J-opus-3, J-astra-5): publication
   // waits for nobody since 12 Nov 2026, and "With a person" told every creator otherwise.
   review: { label: "In review", message: "This release is still in review. You do not need to do anything.", icon: "clock" },
-  returned: { label: "Returned with fixes", message: "Read the findings, then deploy an updated release.", icon: "warning" },
+  // "Returned with fixes" until 14 Nov 2026 (judges' pass, J-opus-H7): it read as a parcel
+  // coming back. The chip says what the build needs.
+  returned: { label: "Needs changes", message: "Read the findings, then deploy an updated release.", icon: "warning" },
   approved: { label: "Approved", message: "This release passed review. It goes live when it is published.", icon: "check" },
   // The one flow (20261105180100): review said publish, and the creator has not yet
   // confirmed the details and the statements. Nothing of ours is pending, so it is the
@@ -57,7 +59,7 @@ export const RELEASE_STATUS = {
 export type ReleaseStatus = keyof typeof RELEASE_STATUS;
 
 /**
- * What "Returned with fixes" asks of the creator, for the release it is about.
+ * What "Needs changes" asks of the creator, for the release it is about.
  *
  * The constant above is the usual case. Two others read wrong under it: a return a person
  * made with a note and no automated findings ("Read the findings" over a page that had

@@ -39,7 +39,7 @@ async function linked(origin: string) {
 
 test("status reports the review: a returned release's findings in the repair shape, and the next command", async () => {
   const game: CreatorGame = { id: gameId, publicId: "orbitrun01", title: "Orb Run", visibility: "draft", latestOperation: ready as CreatorGame["latestOperation"],
-    publication: null, status: { key: "returned", label: "Returned with fixes", message: "Read the findings, then deploy an updated release." }, submission: returned };
+    publication: null, status: { key: "returned", label: "Needs changes", message: "Read the findings, then deploy an updated release." }, submission: returned };
   const api = await fakeApi((req, res) => {
     if (req.url === `/api/v1/games/${gameId}`) return reply(res, 200, { game });
     if (req.url === `/api/v1/operations/${operationId}`) return reply(res, 200, { operation: ready });
@@ -56,9 +56,9 @@ test("status reports the review: a returned release's findings in the repair sha
     assert.deepEqual([data.review.state, data.review.done], ["returned", true]);
     // A command an agent can run: the returned release is the newest, so a deploy comes first.
     assert.equal(data.next, "opengame deploy");
-    assert.match(data.message, /SUB-1113: Returned with fixes\. Read the findings, then deploy an updated release\./);
+    assert.match(data.message, /SUB-1113: Needs changes\. Read the findings, then deploy an updated release\./);
     // The return is the headline, not "Private preview ready" above it (launch E2E, B-19).
-    assert.match(data.message.split("\n")[0]!, /Returned with fixes/);
+    assert.match(data.message.split("\n")[0]!, /Needs changes/);
     assert.doesNotMatch(data.message, /Private preview ready/);
   } finally { await api.close(); await root.remove(); }
 });
@@ -164,7 +164,7 @@ test("a removed game is refused by status, link, open and pull, and listed as un
     status: { key: "taken_down", label: "Unavailable", message: "Nobody can play this game now, including you." } };
   const api = await fakeApi((req, res) => {
     if (req.url === "/api/v1/games") return reply(res, 200, { games: [game, { ...game, id: "22222222-2222-4222-8222-222222222222", publicId: "orbitrun01", title: "Orb Run",
-      visibility: "draft", status: { key: "returned", label: "Returned with fixes", message: "Read the findings." }, latestOperation: { ...ready, gameId: "22222222-2222-4222-8222-222222222222" } }], nextCursor: null });
+      visibility: "draft", status: { key: "returned", label: "Needs changes", message: "Read the findings." }, latestOperation: { ...ready, gameId: "22222222-2222-4222-8222-222222222222" } }], nextCursor: null });
     if (req.url?.startsWith("/api/v1/games/")) return reply(res, 200, { game });
     if (req.url === `/api/v1/operations/${operationId}`) return reply(res, 200, { operation: ready });
   });
@@ -178,7 +178,7 @@ test("a removed game is refused by status, link, open and pull, and listed as un
     const list = String((events((await spawnCli(["games", "--jsonl"], { env })).stdout).at(-1)!.data as { message: string }).message);
     assert.match(list, /takendown1  Taken down  \(Unavailable\)/);
     // The list uses the words Your games uses for a reviewed game, not the deploy's Ready.
-    assert.match(list, /orbitrun01  Orb Run  \(Returned with fixes\)/);
+    assert.match(list, /orbitrun01  Orb Run  \(Needs changes\)/);
   } finally { await api.close(); await root.remove(); }
 });
 
@@ -278,7 +278,7 @@ test("a returned release with no preview link still names its deployment page", 
   try {
     const run = await spawnCli(["status", root.dir, "--jsonl"], { env: cleanEnv({ OPENGAME_API_URL: api.origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" }) });
     const data = events(run.stdout).at(-1)!.data as { message: string };
-    assert.match(data.message.split("\n")[0]!, /Returned with fixes/);
+    assert.match(data.message.split("\n")[0]!, /Needs changes/);
     assert.match(data.message, new RegExp(`deployments/${operationId}`));
   } finally { await api.close(); await root.remove(); }
 });

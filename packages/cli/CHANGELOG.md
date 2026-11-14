@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.8
+
+- `opengame check` and `opengame deploy` leave git's own files out of the upload:
+  `.gitignore`, `.gitattributes`, `.gitmodules` and `.gitkeep`, in any folder. The `.gitignore`
+  that `opengame init` writes, so `.opengame/` is never committed, shipped with every game that
+  has no build step. The upload notice names what it left out.
+
 ## 0.9.7
 
 - `opengame --help` gives one line to each command and exit code, and names the environment

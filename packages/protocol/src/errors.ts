@@ -213,6 +213,11 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   csv_exists: input, csv_unwritable: input,
   invalid_jam: input, jam_answers_required: input, jam_choice_required: input,
   submission_destination_mismatch: say(input, "The server selects the submission destination. Run opengame jams to read the current destination, then submit with its answers.", 409),
+  /* While a jam runs, a game goes on OpenGame only as an entry to it, for everybody but admins
+     and the accounts listed for the marketplace (20261113580000): a confirmation or a
+     publication with no jam is refused. The fix is entering the jam, or waiting for its close,
+     after which anybody may publish to the gallery. */
+  marketplace_closed: say(input, "While the jam runs, a new game or an update goes on OpenGame only as an entry to it. Enter it in the jam, or publish it to the gallery once the jam closes. Nothing was published.", 409),
   submission_destination_unavailable: say({ exit: 5, retry: "later" }, "OpenGame cannot take submissions right now. Your private preview is unchanged; try submitting again later.", 503),
   release_not_found: { ...say(input, "This release was not found in your account. Check the release id that opengame deploy or opengame status printed.", 404),
     page: "That release is not one of this game’s.", console: "That release is not one of this game’s." },
@@ -363,6 +368,10 @@ export const ERRORS: Readonly<Record<string, Row>> = {
      jam-entry.ts), through /jam/entries' own functions. `kind_not_in_jam` and
      `at_entry_limit` are the submit path's rows and say the same thing here. */
   jam_entry_not_found: { exit: 2, retry: "never", status: 404 },
+  /* While the jam runs, a live entry keeps its place for a creator the gallery is closed to
+     (20261113580000): withdrawing it would leave a game live outside the jam. Unpublishing it
+     first is the fix, after which the withdrawal goes through. */
+  withdraw_live: say({ exit: 2, retry: "after-fix" }, "Nothing changed. This game is live as your jam entry, and while the jam runs a live game counts as one of your entries. Unpublish it first, on Your games or with opengame unpublish, and then withdraw the entry to free its place.", 409),
   withdraw_closed: say({ exit: 2, retry: "never" }, "Nothing changed. That jam has stopped taking entries, so its entries stay as they are. Write to team@opengame.io if you need this one out.", 409),
   reenter_closed: say({ exit: 2, retry: "later" }, "Nothing changed. That jam is not taking entries right now, so the entry stays withdrawn. Run this again once it opens; after it closes, write to team@opengame.io.", 409),
   jam_entry_taken: say({ exit: 2, retry: "never" }, "A later entry of this game is already standing in the jam, so this one stays withdrawn.", 409),

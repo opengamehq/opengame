@@ -395,7 +395,7 @@ test("a returned submission's findings arrive as finding events with their fix, 
     assert.equal(result.code, 0);
     const finding = result.events.find((event: { type: string }) => event.type === "finding").finding;
     assert.deepEqual([finding.check, finding.certainty, finding.fault], ["agent-playtest", "heuristic", "game"]);
-    assert.match(result.events.at(-1).data.message, /SUB-1042: Returned with fixes\. Read the findings/);
+    assert.match(result.events.at(-1).data.message, /SUB-1042: Needs changes\. Read the findings/);
     assert.match(result.events.at(-1).data.message, /Add a fail state\./, "the reviewer's note is still printed");
   } finally { api.close(); await rm(cwd, { recursive: true, force: true }); }
 });

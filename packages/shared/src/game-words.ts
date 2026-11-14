@@ -53,6 +53,19 @@ function spaced(value: string): string {
 }
 
 /**
+ * The one mark a tidy puts a space after: a comma between two words of two letters or more,
+ * as in "catch stars,dodge the comets" (final production pass, D2, 14 Nov 2026). Only in
+ * prose, never in a word holding a slash, an equals sign, an @ or a colon, so a link's query
+ * ("?tags=a,b"), an address and "Re:Zero" keep what was typed, and never beside a digit, so
+ * "1,000" and "x2,y3" do too. Every other mark stays as `spaced` leaves it, for the reasons
+ * given there.
+ */
+function commaSpaced(value: string): string {
+  return value.split(" ").map(word => /[/=@:]/.test(word) ? word
+    : word.replace(/(\p{L}{2}),(?=\p{L}{2})/gu, "$1, ")).join(" ");
+}
+
+/**
  * A title in title case with tidy spacing: "my COOL game!!" reads "My Cool Game!".
  *
  * Capitals are left alone unless the title is plainly typed in a hurry, which is when some
@@ -81,11 +94,12 @@ export function tidyTitle(value: string): string {
  * A description or tagline with tidy spacing and casing: each sentence opens with a capital
  * (not after "i.e."), a lone "i" is "I", repeated marks are one, and a description ends with a
  * mark (`finalMark`; a tagline is often a phrase and keeps its own ending). Capitals are never
- * lowered, since NASA and LÖVE look like shouting. Grammar beyond this (its or it's, a
- * misspelled word) is the model's, never guessed here.
+ * lowered, since NASA and LÖVE look like shouting. A comma run into the next word gets its
+ * space (`commaSpaced`). Grammar beyond this (its or it's, a misspelled word) is the model's,
+ * never guessed here.
  */
 export function tidyDescription(value: string, options: { finalMark?: boolean } = {}): string {
-  let text = spaced(value);
+  let text = commaSpaced(spaced(value));
   if (!text) return text;
   text = text.replace(/(^|[\s(])i(?=['’](?:m|ll|ve|d)\b|\s|$|[,;:!?]|\.(?:\s|$))/g, "$1I");
   text = text.replace(/(^|[.!?]\s+)(\p{Ll})/gu, (whole: string, before: string, letter: string, at: number) =>
@@ -94,9 +108,10 @@ export function tidyDescription(value: string, options: { finalMark?: boolean } 
   return text;
 }
 
-/** The letters and digits of a text, lower case, which is all a tidy may not change. */
+/** The letters and digits of a text, lower case and with shorthand read as the word it
+ *  stands for (`SHORTHAND`), which is all a tidy may not change. */
 function skeleton(value: string): string {
-  return value.normalize("NFKD").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  return wordsOf(value).join("");
 }
 
 /** Edit distance within a band, or `limit + 1` once it is past it. O(n * limit). */
@@ -119,7 +134,23 @@ function distance(a: string, b: string, limit: number): number {
 
 // The words a grammar fix may add: "game where u jump" is "a game where you jump".
 const GLUE = new Set(["a", "an", "the", "and", "or", "of", "to", "in", "on", "at", "is", "it", "its", "you", "your", "are", "be", "with", "for"]);
-const wordsOf = (value: string) => value.normalize("NFKD").toLowerCase().split(/[^\p{L}\p{N}'’]+/u).map(word => word.replace(/['’]/g, "")).filter(Boolean);
+/* Chat shorthand and the word it stands for, read as one word on both sides of the check, so
+   "ur" may come back "you're" and "b4" "before" (final production pass, D2, 14 Nov 2026: the
+   model's tidy wrote these out, and the check refused the whole tidy as a new word, so the
+   page fell back to one that fixes casing alone). "your" and "youre" are one word here,
+   because "ur" is either and a tidy that picks the right one is fixing grammar. Apostrophes
+   are already dropped (`wordsOf`), so "its" and "dont" need nothing. No single letter is here:
+   "u", "r" and "w" are also keys ("press W to jump"), and reading them as words would let a
+   tidy turn a control into "press with to jump". "u" to "you" and "w/" to "with" still pass,
+   as joining words (GLUE). */
+const SHORTHAND: Readonly<Record<string, string>> = {
+  ur: "your", youre: "your", pls: "please", plz: "please", thx: "thanks", ty: "thanks",
+  b4: "before", bc: "because", cuz: "because", coz: "because", ppl: "people", tho: "though",
+  thru: "through", lvl: "level", lvls: "levels", msg: "message",
+};
+const canonical = (word: string) => SHORTHAND[word] ?? word;
+const wordsOf = (value: string) => value.normalize("NFKD").toLowerCase().split(/[^\p{L}\p{N}'’]+/u)
+  .map(word => canonical(word.replace(/['’]/g, ""))).filter(Boolean);
 
 /**
  * Whether `tidied` says what `original` said. Two checks, both needed:

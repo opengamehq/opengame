@@ -128,7 +128,12 @@ export interface PreflightResult {
 /* -------------------------------------------------------------------------- */
 
 /** Filesystem litter. Dropped without comment; nobody put these there on purpose. */
-const JUNK = /(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini|__MACOSX\/)/i;
+/* Git's own files are litter in a bundle too: `opengame init` writes a .gitignore beside
+   opengame.json, and a game with no build step deploys that folder, so CLI 0.9.7 and older
+   shipped it to the public origin (final production pass, D13, 14 Nov 2026). The CLI and Drop
+   leave them out since 0.9.8; this drops them from any upload that did not. Named, not every
+   dotfile, because .well-known/ is a path a web export may serve on purpose. */
+const JUNK = /(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini|__MACOSX\/|\.git(?:ignore|attributes|modules|keep)$)/i;
 
 /** Dropped with a note, because the creator may not know they were being shipped. */
 const SOURCE_MAP = /\.(?:js|mjs|cjs|css|wasm)\.map$/i;

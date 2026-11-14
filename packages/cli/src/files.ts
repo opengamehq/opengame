@@ -335,10 +335,20 @@ export async function outputFolder(root: string, manifest: GameManifest): Promis
  */
 export const AGENT_FOLDERS = [".claude", ".agents", ".codex", ".cursor", ".opencode"] as const;
 
+/**
+ * Git's own files, which describe the repository and are nothing a game loads. `opengame init`
+ * writes a .gitignore beside opengame.json so .opengame/ (this machine's link to the game) is
+ * never committed, and for a game with no build step that folder is the bundle: until 0.9.8
+ * every such deploy shipped the .gitignore as a game file to the public origin (final
+ * production pass, D13, 14 Nov 2026). Named rather than "every dotfile", because a web export
+ * may serve a dot-named path on purpose, .well-known/ above all.
+ */
+export const GIT_FILES = [".gitignore", ".gitattributes", ".gitmodules", ".gitkeep"] as const;
+
 export function isExcludedPath(bundlePath: string): boolean {
   // The preflight and the archive stage drop desktop.ini and .Spotlight-V100 as junk too,
   // so listing them here is what puts them in the "Excluded from upload" notice.
-  return bundlePath.split("/").some(name => ["node_modules", ".git", ".opengame", ".DS_Store", "Thumbs.db", "desktop.ini", ".Spotlight-V100", "__MACOSX", ...AGENT_FOLDERS].includes(name)
+  return bundlePath.split("/").some(name => ["node_modules", ".git", ".opengame", ".DS_Store", "Thumbs.db", "desktop.ini", ".Spotlight-V100", "__MACOSX", ...AGENT_FOLDERS, ...GIT_FILES].includes(name)
     || name.startsWith("._") || /^\.env/i.test(name) || /\.(?:js|mjs|cjs|css|wasm)\.map$/i.test(name));
 }
 

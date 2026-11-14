@@ -323,6 +323,7 @@ export function receiptFindings(receipts: readonly FindingReceipt[], options: { 
           ? (/before publication|at review/i.test(detail.fix) ? `${detail.fix.replace(/\s*$/, "")} Nothing has to change now.`.replace(/(Nothing has to change now\.)\s*\1$/, "$1") : `${detail.fix} A person will confirm this before publication, so nothing has to change now.`)
           : "A person will confirm this before publication, so nothing has to change now."
         : detail.fix ?? blocks ?? text.fix;
+      const said = ownInstruction(observed, fix);
       const request = clean(row.request, LIMIT.path);
       const frame = clean(row.frame, LIMIT.path);
       const wait = seconds(row.retryAfterSeconds) ?? seconds(row.retryAfter) ?? seconds(evidence.retryAfterSeconds) ?? seconds(evidence.retryAfter);
@@ -330,8 +331,8 @@ export function receiptFindings(receipts: readonly FindingReceipt[], options: { 
       findings.push({
         release: receipt.releaseId, check: receipt.check, checkVersion: receipt.checkVersion,
         state: receipt.state, certainty, fault,
-        evidence: { observed, ...(detail.file ? { file: detail.file } : {}), ...(request ? { request } : {}), ...(frame ? { frame } : {}) },
-        fix,
+        evidence: { observed: said.observed, ...(detail.file ? { file: detail.file } : {}), ...(request ? { request } : {}), ...(frame ? { frame } : {}) },
+        fix: said.fix,
         verify: fault === "platform" && ended ? "opengame deploy"
           : fault === "platform" || retry === "never" ? "opengame status --watch"
           : reviewed ? "opengame deploy, then opengame submit with the new release"
@@ -345,6 +346,27 @@ export function receiptFindings(receipts: readonly FindingReceipt[], options: { 
   return findings.sort((a, b) => Number(a.state !== "failed") - Number(b.state !== "failed") || order[a.fault] - order[b.fault])
     .slice(0, LIMIT.total);
 }
+/**
+ * A finding whose observation already ends with what to do, and whose fix is only the
+ * database's catch-all, says the instruction once, as its fix.
+ *
+ * Launch round 4 (13 Nov 2026), a Windows build with a page beside it: "...it does not serve
+ * programs or installers. Remove them from the build, then deploy again. Fix what the finding
+ * describes, then deploy again." The pipeline writes the program refusal as one sentence with
+ * its own instruction, and `platform_receipt_evidence` adds the generic fix to any finding
+ * without a detail of its own. Exported for the suite.
+ */
+export const GENERIC_FIX = /^(fix what the finding describes|read the evidence, change what it names), then deploy again\.?$/i;
+export function ownInstruction(observed: string, fix: string): { observed: string; fix: string } {
+  if (!GENERIC_FIX.test(fix.trim())) return { observed, fix };
+  /* Sentences end at a stop followed by a space and a capital, so "Game.exe" and "e.g. the
+     launcher" stay inside theirs. */
+  const sentences = observed.trim().split(/(?<=[.!?])\s+(?=[A-Z])/);
+  const last = sentences.at(-1) ?? "";
+  if (sentences.length < 2 || !/\bthen deploy again\.$/.test(last)) return { observed, fix };
+  return { observed: sentences.slice(0, -1).join(" "), fix: last };
+}
+
 /** A review finding: the repair finding an agent acts on, plus the reviewer-facing
  * sentence older clients printed (`message`), which stays so they keep working. */
 export type ReviewFinding = RepairFinding & { message: string };
@@ -395,7 +417,14 @@ export function reviewFindings(releaseId: string, reasons: readonly { code: stri
   const made = new Set(rows.filter(row => !receipts.includes(row)).map(row => row.check));
   return receiptFindings(rows, { stage: "review" }).map(finding => ({ ...finding,
     ...(finding.fault === "platform" && finding.fix === OUR_RETURN_FIX ? { verify: "opengame submit" } : {}),
-    message: made.has(finding.check) ? finding.evidence.observed : said.get(finding.check) ?? finding.evidence.observed }));
+    message: unrepeated(made.has(finding.check) ? finding.evidence.observed : said.get(finding.check) ?? finding.evidence.observed, finding.fix) }));
+}
+
+/** A reviewer-facing sentence without the fix on its end, when `ownInstruction` moved it
+ *  there: an older client prints `message` and then `fix`, and would say it twice. */
+function unrepeated(message: string, fix: string): string {
+  const text = message.trim();
+  return text !== fix && text.endsWith(fix) ? text.slice(0, -fix.length).trim() || text : text;
 }
 
 /** Evidence written in shadow mode: recorded for a person, never a reason to wait or refuse. */
@@ -489,7 +518,9 @@ export function operationStage(operation: { state: string; hasCandidate: boolean
  */
 export const CHECK_PROGRESS_STATES = ["pending", "running", "passed", "failed", "held", "stopped", "advisory", "skipped"] as const;
 export type CheckProgressState = typeof CHECK_PROGRESS_STATES[number];
-export interface CheckProgress { check: string; label: string; state: CheckProgressState }
+export interface CheckProgress { check: string; label: string; state: CheckProgressState;
+  /** What the check found, when that is a plain fact: the engine check's "Babylon.js 5.3.0". */
+  fact?: string }
 export function checkProgress(wanted: readonly { check: string }[], receipts: readonly FindingReceipt[], stage: OperationStage["code"]): CheckProgress[] {
   const ended = stage === "ready" || stage === "failed" || stage === "expired";
   const running = (check: string) => stage === "scanning" ? SCAN_CHECKS.includes(check)
@@ -504,7 +535,8 @@ export function checkProgress(wanted: readonly { check: string }[], receipts: re
       : receipt.state === "failed" ? "failed"
       : receipt.state === "inconclusive" ? INCONCLUSIVE_BLOCKS.includes(check) ? "failed" : "advisory"
       : ended ? "stopped" : "held";
-    return { check, label: named, state };
+    const fact = check === "engine" && receipt ? detectedEngine(receipt.evidence) : undefined;
+    return { check, label: named, state, ...(fact ? { fact } : {}) };
   });
 }
 

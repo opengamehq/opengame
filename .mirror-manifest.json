@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "964ed531d3710988fe286a7c1b5d65a924ee36cb"
+    "commit": "b404412c225198520cb249b25312b88870f26106"
   },
-  "digest": "34e16ee42e35eb271951a371515a49b060a8f1cbf0c5eb19875371131c67f8ea",
+  "digest": "39f5ffd3391cd6a5f44a849f7c19bda49a36f198b7768438613eea4d56c3b9a5",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -183,8 +183,8 @@
     },
     {
       "path": "api-reference/openapi.json",
-      "bytes": 1414224,
-      "sha256": "4bc3f7e6388fae22c61ccd84c52d32cd43f4579c7f4184ff5a50e1b856d75422",
+      "bytes": 1414507,
+      "sha256": "2dbdbd6daf836122533c6641b3a350362524b6676e749cf58ef50b68a910e419",
       "executable": false
     },
     {
@@ -208,7 +208,7 @@
     {
       "path": "package-lock.json",
       "bytes": 27908,
-      "sha256": "1814f8a61a7105a8c780f63ede9aad7c5b22a43ffb1b6e0902dc2553e8fd9b0f",
+      "sha256": "19f4171d41c87691904f2478aae97f099fb6f4d8f254114f847bc2c13aa68578",
       "executable": false
     },
     {
@@ -225,8 +225,8 @@
     },
     {
       "path": "packages/cli/CHANGELOG.md",
-      "bytes": 13965,
-      "sha256": "f6bb2434fc92ef924e710df47e3e07b953bf06d2cec9db01b317a4a3d24b5198",
+      "bytes": 14313,
+      "sha256": "5ecea0e091d326a094c32e67270175a778b97275f630283917ecdc83b151f0b6",
       "executable": false
     },
     {
@@ -244,7 +244,7 @@
     {
       "path": "packages/cli/package.json",
       "bytes": 1776,
-      "sha256": "a4cdf04e09a006437db9e8a8b94bd5369b5925b981567a1903a764da4487de6b",
+      "sha256": "b5779026587c752502ee2511a2cd942051c7c00b2196d84ff2345ed956d67a8a",
       "executable": false
     },
     {
@@ -393,8 +393,8 @@
     },
     {
       "path": "packages/cli/src/files.ts",
-      "bytes": 25787,
-      "sha256": "039d595251c123d78588475e838cac206f55386ae353426a39c6d133c8d731ef",
+      "bytes": 26437,
+      "sha256": "a9c4227dcdb5f6ae40addc4024c5e2455970d2e5f16b5db9470b338fd638db04",
       "executable": false
     },
     {
@@ -1148,6 +1148,30 @@
       "executable": false
     },
     {
+      "path": "packages/cli/tests/fixtures/manifests/0.9.8/init-auto.json",
+      "bytes": 184,
+      "sha256": "4e64d4a59255b45d7ca1e01b8f2dfc0dcc1907e82e39b88c1fb982b131618e61",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.9.8/init-mod.json",
+      "bytes": 213,
+      "sha256": "d0e725184c827255dc32daf0a998e5241eda078f78e2e49b8bf3857c9c48a1c6",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.9.8/init-plain.json",
+      "bytes": 255,
+      "sha256": "7d295b318c2bcd274479e3daa9369233a18ecad329c260d2ab337f4caae95a39",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.9.8/init-vite.json",
+      "bytes": 267,
+      "sha256": "eb3455408e6f15a6f1dbbfc1dca9f6c4ddc74980a164e086022131af9a83f08e",
+      "executable": false
+    },
+    {
       "path": "packages/cli/tests/fixtures/pack-memory.ts",
       "bytes": 1007,
       "sha256": "c6a5dfb4feeccfcf5771c48ec9bb6dbf671b2310fe8f968a704cffb2e5823002",
@@ -1293,8 +1317,8 @@
     },
     {
       "path": "packages/cli/tests/review-status.test.ts",
-      "bytes": 20045,
-      "sha256": "e422609258c1140217c27749c1455b1dae171485e02ba42a219eca981cdee58e",
+      "bytes": 20009,
+      "sha256": "af664f8c7168f7df72eb8f48b65f390b11543a5d9e4484532692a17ff655b0f9",
       "executable": false
     },
     {
@@ -1359,8 +1383,8 @@
     },
     {
       "path": "packages/cli/tests/submit.test.ts",
-      "bytes": 48336,
-      "sha256": "09b3edd2afa6eb27dac9b4a421c8c1a6b83de5ed122fe6e922a17accf5415d13",
+      "bytes": 48330,
+      "sha256": "7b11279612cff052e7aa24bcac9b62ceaecd96867bd5af3ee5d677a7634fd16b",
       "executable": false
     },
     {
@@ -1467,8 +1491,8 @@
     },
     {
       "path": "packages/preflight/src/index.ts",
-      "bytes": 236967,
-      "sha256": "f9daad4d0e84ae28e30336482caa0fc406aa4c43db80939ca88ae580702df64c",
+      "bytes": 237460,
+      "sha256": "d0826327a215e7903d31bee71833f87e123001d1cd4d20f0681e32d9b974d5be",
       "executable": false
     },
     {
@@ -1682,6 +1706,12 @@
       "executable": false
     },
     {
+      "path": "packages/preflight/tests/git-files.test.ts",
+      "bytes": 1210,
+      "sha256": "19183625c4eba79b00ac435758ed93e279402bceb3aff7e1f49b1d5a4254bc28",
+      "executable": false
+    },
+    {
       "path": "packages/preflight/tests/godot-export.test.ts",
       "bytes": 11600,
       "sha256": "0179adcecf0ebd003808a49ccc722ede28cd1d928b01a5bb6984f8b7517aa703",
@@ -1815,8 +1845,8 @@
     },
     {
       "path": "packages/protocol/src/errors.ts",
-      "bytes": 54935,
-      "sha256": "a861dc46c005a873b2dfcce6ec8b924ef92a27b470e1a55ab65790dc14fea3d0",
+      "bytes": 56038,
+      "sha256": "bfeb9a839f3ccdb3884af84de80eb42e94d881df9ca92450eba6387ef9a25be1",
       "executable": false
     },
     {
@@ -1827,8 +1857,8 @@
     },
     {
       "path": "packages/protocol/src/findings.ts",
-      "bytes": 42558,
-      "sha256": "68a3834e4e7c94dc951e547f6871ce3039ccdc1c01fcdf5c96171db539a680d5",
+      "bytes": 44548,
+      "sha256": "3fb576701b32ab188df4bc37517cac90ecda2dd687ef5d59076be4c152bbcfd9",
       "executable": false
     },
     {
@@ -1857,8 +1887,8 @@
     },
     {
       "path": "packages/protocol/src/manifest.ts",
-      "bytes": 33159,
-      "sha256": "a7f158a796c5e2239f513ef36cae707c68e4af5b2dcb6009d51e3ca46a91d24c",
+      "bytes": 33474,
+      "sha256": "2dbb63f70698ed17e294c4770b77fa42f3bf95f46efef04fee3158e017e3bc88",
       "executable": false
     },
     {
@@ -1881,8 +1911,8 @@
     },
     {
       "path": "packages/protocol/src/status.ts",
-      "bytes": 10713,
-      "sha256": "9dd33f5664cb4780348d8b19e86568a7ea145ede24d927d56a9edc0e8196452d",
+      "bytes": 10847,
+      "sha256": "507a53ec912e339988252fcd3279ef32f0b42b441e21b569a5a2e30a4215a6e9",
       "executable": false
     },
     {
@@ -2373,8 +2403,8 @@
     },
     {
       "path": "packages/shared/package.json",
-      "bytes": 1757,
-      "sha256": "c605a3faffca4bb068b1b5610c85c23d680ca567ca88646f513c034f3d5d7fc1",
+      "bytes": 1781,
+      "sha256": "cd7f676c02cc32e4aa85d7163d6ca7d76ec4b264f1b2ff9a0dcec040c6ca0c34",
       "executable": false
     },
     {
@@ -2541,8 +2571,8 @@
     },
     {
       "path": "packages/shared/src/game-words.ts",
-      "bytes": 8194,
-      "sha256": "307c3d4fc460c9b37a583610015174d19d6b14f90f395d6b547f63d0166d2e70",
+      "bytes": 10119,
+      "sha256": "0369f2efb468b72b847a46149a16c272db7198f1f7724750ff657ac5c52a6f6a",
       "executable": false
     },
     {
@@ -3315,8 +3345,8 @@
     },
     {
       "path": "packages/ui/package.json",
-      "bytes": 356,
-      "sha256": "31d1a21cf37be355783a00715533cfd3f2b7be7e9633f93dd6d8fb714c43ce54",
+      "bytes": 392,
+      "sha256": "c1d61287afacd564f79a02214222a0534cc53462d4d2800864c3746dcaf7bcaf",
       "executable": false
     },
     {

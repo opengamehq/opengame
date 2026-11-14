@@ -203,6 +203,7 @@
               "delete_refused",
               "jam_entry_not_found",
               "withdraw_closed",
+              "withdraw_live",
               "reenter_closed",
               "jam_entry_taken",
               "jam_entry_held",
@@ -224,6 +225,7 @@
               "experiment_conflict",
               "experiments_unavailable",
               "submission_destination_mismatch",
+              "marketplace_closed",
               "submission_destination_unavailable",
               "submission_quota_exhausted",
               "analytics_cli_outdated",
@@ -19882,7 +19884,7 @@
             }
           },
           "409": {
-            "description": "`withdraw_closed`: the jam has stopped taking entries, so its entries stay as they are. Nothing changed. `reenter_closed`, `at_entry_limit`, `jam_entry_taken` and `kind_not_in_jam` are re-entry's, and are not sent here.",
+            "description": "`withdraw_closed`: the jam has stopped taking entries, so its entries stay as they are. `withdraw_live`: the game is live as this entry, and while the jam runs a live game keeps its place for an account that may not publish outside the jam, so unpublish it first and then withdraw. Nothing changed. `reenter_closed`, `at_entry_limit`, `jam_entry_taken` and `kind_not_in_jam` are re-entry's, and are not sent here.",
             "content": {
               "application/json": {
                 "schema": {
@@ -20047,7 +20049,7 @@
             }
           },
           "409": {
-            "description": "`reenter_closed`: the jam is not taking entries right now. `at_entry_limit`: all of this account's entries are standing. `jam_entry_taken`: a later entry of this game is standing. `kind_not_in_jam`: the game is now a decomp or a mod. Nothing changed. `withdraw_closed` is withdrawal's, and is not sent here.",
+            "description": "`reenter_closed`: the jam is not taking entries right now. `at_entry_limit`: all of this account's entries are standing. `jam_entry_taken`: a later entry of this game is standing. `kind_not_in_jam`: the game is now a decomp or a mod. Nothing changed. `withdraw_closed` and `withdraw_live` are withdrawal's, and are not sent here.",
             "content": {
               "application/json": {
                 "schema": {

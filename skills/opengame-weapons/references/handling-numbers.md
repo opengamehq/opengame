@@ -70,3 +70,45 @@ at rate 7 and out at 14. Aimed kick is 30 to 40% of hip kick.
 - Wonder weapons: the same fidelity, 20 to 25k triangles, at or below the heaviest
   loadout gun.
 - AO baked into the packed material, cavity 0.2 to 0.4; normals at least 1024 px.
+
+# Handling numbers from OS
+
+OS is a first-person, snipers-only free-for-all with bots. Its owner's bar was the
+quickscoping of the reference games; these numbers met it in the owner's hands.
+
+- Aim: lens and hands share 220 ms in and 70 ms out, zoom on the press frame. The
+  quickscope bar was about 0.27 s where the reference data said 0.40 s, and no perk
+  speeds aiming up.
+- A swap is usable in the middle of a bolt cycle. Cancels run on elapsed time "so 20 fps
+  and 144 fps decide a press the same way".
+- Aim assist on pads only, fitted to the reference game's measured envelope rather than
+  a research table (strafe slip 3.9 to 0.1 degrees).
+- A per-frame camera trace took recoil overshoot from 16% to 3%.
+- Rounds pass anything thinner than 0.6 m at -25% damage per wall, at most 2 walls (1 for
+  bots) and two bodies; rock and terrain stop them. Bullets and bodies use separate
+  collision categories, and what can be seen through can be shot through.
+- Hit markers fire only on scored damage, from one damage event that the HUD never
+  recomputes.
+- Owner-locked: 7 to 10 rounds a magazine and infinite reserve; pickup by pressing, not
+  holding.
+- Sniper-only rules: a quickscope is a kill within 0.35 s of full zoom; a no-scope means
+  no aiming in the last second; the multikill window is sized to the bolt cycle; scope
+  glint shows only after 250 ms scoped, within 20 degrees of the victim's view and beyond
+  25 m, a counter to camping.
+
+# Handling numbers from LC
+
+LC is a body-camera survival shooter with 73 weapons, a camera on the player's chest and
+weight-driven recoil.
+
+- Recoil from the weapon's mass: kick = 0.5 x impulse / kg^0.72 x brace x (1 - steady).
+  View impulse per round: back 0.9 + 0.9 kick, pitch 5 + 9 kick, random roll 3 + 8 drift,
+  scaled 1 / (0.6 + 0.35 kg), and x(1 - 0.45) on the sights.
+- Brass: the slide goes back in 13 ms and home in 54, the case leaves 7 ms after the
+  round and lands about 2 m right, with a sound per bounce. Brass is dull metal: three
+  bright cases read as "three fat white cylinders glowing in a dark hall".
+- Movement: walk 3.1 m/s, sprint 6.3 (7.0 with a perk), winded 4.3, crouch 1.55;
+  acceleration 15 and deceleration 18 m/s^2; sights slow movement to 0.58x.
+- Weapon data checked row by row against a published source: 26 rows corrected.
+- Grenades and launchers were removed at the owner's word, with a test that fires every
+  gun and fails on any blast.

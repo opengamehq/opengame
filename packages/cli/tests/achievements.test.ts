@@ -196,7 +196,7 @@ test("a refused save is said without failing the deploy, and opengame status sav
     const deployed = lines((await run(process.execPath, [binary, "deploy", root, "--jsonl", "--wait"], { env: api.env })).stdout);
     assert.equal(deployed.at(-1).type, "result");
     const notice = deployed.find(event => event.code === "achievements_not_saved");
-    assert.match(notice.message, /first_win was not saved: this token cannot change achievements, and needs the Deploy scope/);
+    assert.match(notice.message, /first_win was not saved: this token cannot change achievements, and needs the deploy scope/);
     assert.match(notice.message, /Run opengame status to try again\./);
     assert.ok(!notice.message.includes(token));
     assert.equal(api.puts.length, 0);

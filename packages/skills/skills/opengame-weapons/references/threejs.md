@@ -161,6 +161,77 @@ read each hand vertex with `SkinnedMesh.getVertexPosition(i, v)` and transform i
 world space, then measure how far it sits inside the gun's mesh (a signed distance from
 a BVH such as `three-mesh-bvh`). Flag every phase deeper than 8 mm.
 
+LC's finger solver passes at 1.5 mm and counts every vertex; every second vertex missed a
+thumb 1.7 mm into a hammer. Measure on the game's own skinned mesh, not the solver's
+copy of the rig. The method is in [reloads-and-hands.md](reloads-and-hands.md).
+
+## Lens floor test
+
+Run it headless on the real view code, every frame of a stepped run through every state
+and every change between two. Floors and shares are LC's.
+
+```js
+const v = new THREE.Vector3(), eye = new THREE.Vector3()
+function lensFrame(parts, camera, gridW = 120, gridH = 58) {
+  camera.getWorldPosition(eye)
+  const near = new Uint8Array(gridW * gridH)   // cells covered by something under its floor
+  let closest = Infinity
+  for (const { mesh, floor } of parts) {        // floor: weapon 0.12, glove and sleeve 0.09
+    const pos = mesh.geometry.attributes.position
+    for (let i = 0; i < pos.count; i++) {
+      if (mesh.isSkinnedMesh) mesh.getVertexPosition(i, v); else v.fromBufferAttribute(pos, i)
+      v.applyMatrix4(mesh.matrixWorld)
+      const d = v.distanceTo(eye)
+      closest = Math.min(closest, d - floor)
+      v.project(camera)                          // to normalised device coordinates
+      if (d >= floor || Math.abs(v.x) > 1 || Math.abs(v.y) > 1 || Math.abs(v.z) > 1) continue  // off screen or behind the lens
+      const gx = Math.floor((v.x + 1) / 2 * gridW), gy = Math.floor((1 - v.y) / 2 * gridH)
+      near[Math.min(gy, gridH - 1) * gridW + Math.min(gx, gridW - 1)] = 1
+    }
+  }
+  const cover = near.reduce((a, b) => a + b, 0) / near.length
+  return { closest, cover }   // LC fails cover over 1/6 for more than three frames
+}
+```
+
+While aimed, skip the sight's own parts: the weapon's eye relief (6 to 15 cm for LC's
+apertures) places them, and the floors govern everything else.
+
+Vertices undersample large triangles, so subdivide the grid test or rasterise a mask
+(the coverage mask above) when a part has few vertices. Run it with the camera aspect set
+to the widest window the players use: a hold tuned at 16:9 lost its hands off the bottom
+of a wider window.
+
+## Camera-attached objects in the same frame
+
+Update the camera first, then pose the view model and everything attached to the camera
+from its new matrix, then render. A scope canopy or a held device posed before the
+camera moved draws a frame late and slides under fast mouse look (OS: 31 cm and 150 to
+480 mm, both to 0).
+
+```js
+updateLook(input)                   // camera rotation from this frame's input
+camera.updateMatrixWorld()
+poseViewModel(camera.matrixWorld)   // gun, hands, scope canopy, held screens
+renderFrame()
+```
+
+With temporal anti-aliasing or motion blur on WebGPU (three.js `TRAANode` reading a
+velocity output, in recent releases; check the names in yours), give the view model a
+velocity from the view camera's own current and previous matrices. Writing zero at hip
+let the resolve smear world pixels at the gun's silhouette into a dotted halo (OS); zero
+is right only inside an aimed see-through optic. Keep the view model out of motion blur.
+
+## Empty magazines as a draw range
+
+Order a magazine's index buffer with the rounds last, one block per round, and draw fewer
+rounds as it empties. One carried part then leaves empty and arrives full, with no swap.
+
+```js
+const body = mag.userData.bodyIndexCount, perRound = mag.userData.indicesPerRound
+mag.geometry.setDrawRange(0, body + roundsLeft * perRound)
+```
+
 ## Other engines
 
 - Unity (URP): a base camera for the world and an overlay camera in its camera stack for

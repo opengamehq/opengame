@@ -74,6 +74,14 @@ export const INSTALL_CLOSED = Object.freeze({
    is why that command names a GitHub path. It is the same scope, so the same switch holds it. */
 const SKILLS_SOURCE = "opengamehq/opengame";
 
+/* The same skills as one zip, for somebody who would rather copy the folders in by hand or
+   keep a copy. opengame.io serves it, because the docs host serves no static file of ours,
+   and the site makes it on every build with packages/skills' own build, the one the public
+   repository's skills come from, so the two cannot disagree. Not behind the switch: it
+   names no package and asks nobody to install anything from a registry. */
+export const SKILLS_DOWNLOAD_PATH = "/downloads/opengame-skills.zip";
+export const SKILLS_DOWNLOAD_URL = `https://opengame.io${SKILLS_DOWNLOAD_PATH}`;
+
 /* `npm i <name>` with no tag keeps whatever spec package.json already has for that name,
    and every starter's package.json links the SDK to its folder inside the repository
    (`file:../../packages/sdk`). Run in a copied starter, the untagged command reported

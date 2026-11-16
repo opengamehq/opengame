@@ -1,4 +1,6 @@
-# What AW's physics checks missed, and why
+# What our physics checks missed, and why
+
+## World at War
 
 World at War (AW) built a headless gate for its maps after a player reported doors that
 led into rock, z-fighting, floating geometry and walking through stairs. On the day that
@@ -50,3 +52,28 @@ drive its movement function at the game's worst frame time and at 60 Hz.
 | Headroom | 1.80 m | The body's height |
 | Ladder landing | 0.20 m | A landing you step onto, not one you fall to |
 | Settle time at an edge | 1.5 s | A body walking off a terrace slides for over a second |
+
+## OG Snipers and Last Contact
+
+OG Snipers (OS) and Last Contact (LC) met the same shape from the other side: checks
+that read green while players met invisible walls and spawned inside rocks. The common
+cause is in OS's own summary: the check reused the fix's inputs, or the check's path
+differed from the player's.
+
+| Check | It said | What was true |
+| --- | --- | --- |
+| OS spawn validator | Spawns valid | 35 of 54 spawns on one map inside drawn boulders: a capsule wholly inside a one-sided mesh touches nothing |
+| OS spawn validator, again | Spawns valid | It ran before streamed rocks arrived, and a runtime adjuster moved spawns after it |
+| OS spawn walk | Three spawns can escape | A 14 m walk test passed three spawns inside a 42 m² room; escape is now judged by reachable area |
+| OS doorway heuristic | 0 blocked doors | The owner could not get through them; the served build was also stale |
+| OS short sweeps | Spawn clear | Two spawns that passed were displaced over a metre in play |
+| OS collision on one town | No alarm | The mesh crossed a 150k-triangle collision line and had no walls for 4 days |
+| OS engine port | 0 compile errors | 256,072 refused distance queries in one smoke, so every wall read "clear" |
+| OS integrity audit | 0/0/0 | Reached by adding filters; refused until every planted hole was flagged |
+| OS route walk | Railing passes | The walk stopped 0.42 m short of the railing and called it arrived |
+| LC walk tests | Wire is fine | Eight spawn points sat inside the wire belt's 2.1 m collider and stranded 20 of 75 points |
+| LC z-fight mend | Fixed | Jambs every quarter metre of an arched doorway made a slat wall bodies walked through, on main for 8 hours, "found by a count, not by an eye" |
+
+What replaced them was the same in both games: walk the real controller from every spawn
+and at every placed thing, sweep rays from every reachable cell in both directions, plant
+one defect per path the check covers, and let each count only go down.

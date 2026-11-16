@@ -19,7 +19,7 @@ type Flags = Record<string, string | boolean>;
  */
 export async function jamEntryCommand(action: string | undefined, root: string, flags: Flags, output: Output) {
   if (action !== "withdraw" && action !== "reenter") {
-    throw new CliError("jam_action_required", "Say what to do with the linked game's jam entry: opengame jam withdraw, or opengame jam reenter.", EXIT.input, { next: "opengame jam withdraw" });
+    throw new CliError("jam_action_required", "Say what to do with the linked game's jam entry: opengame jam withdraw, or opengame jam reenter.", EXIT.input, { next: "opengame jam --help" });
   }
   const api = new Api();
   try {

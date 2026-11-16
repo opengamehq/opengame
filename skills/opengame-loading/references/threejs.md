@@ -18,12 +18,22 @@ const ktx2 = new KTX2Loader()
   .detectSupport(renderer);       // for WebGPURenderer, after `await renderer.init()`
 ```
 
-- ETC1S is small and soft; UASTC is larger and sharp. AW measured ETC1S good enough for
-  its normals at a sixth of UASTC's bytes (see `opengame-performance`). Measure per class.
+- ETC1S is small and soft; UASTC is larger and sharp. Choose by the map's role, then
+  measure: LC ships colour seen at a distance as ETC1S and normal and data maps as
+  UASTC (world textures on the card went from 800.7 MB to 172 MB), while AW measured
+  ETC1S good enough for its normals at a sixth of UASTC's bytes (see
+  `opengame-performance`).
+- Store mips smallest first. The file's prefix is then a smaller valid texture: fetch it
+  first, draw it, and sharpen in place when the rest arrives. LC's 88 first-set files are
+  22.6 MB whole and 8.0 MB without their top level, and a test proved the dropped-mip
+  prefix transcodes to exactly the same bytes through the real transcoder.
+- In LC's WebGPU build, compressed array textures flagged `isArrayTexture` drew black.
+  Look at one on screen before converting a whole set.
 - Phones need lower top mips as well as a different transcode target. Ship a mip-trimmed
   file per device class and pick it from the manifest, so a phone does not download mips
   it will throw away (see `opengame-mobile`).
-- Encode with `gltf-transform` (`--texture-compress ktx2`) or KTX-Software's `toktx`.
+- Encode with `gltf-transform` (`--texture-compress ktx2`) or KTX-Software's `toktx`. An
+  in-browser WASM encoder works with no binary install, at about 100 s per 2048 map (LC).
 
 ## Geometry: meshopt or Draco
 
@@ -59,7 +69,11 @@ to 100%. Use one manager per tier (boot, first use, rest) so each tier has its o
   `total` is 0 when the header is missing. Recent `FileLoader` versions read an
   `X-File-Size` header first when the server sends one. Manifest sizes avoid all of it.
 - Add fixed weights for work that is not a download: `renderer.compileAsync(scene,
-  camera)` for shaders, PMREM environment maps, building instanced scenes.
+  camera)` for shaders, PMREM environment maps, building instanced scenes. On a return
+  visit, weight each stage by its seconds last time (`helpers/loading-count.mjs`).
+- With `WebGPURenderer`, `compileAsync` covers only the pass that draws to the canvas.
+  Passes into render targets (shadows, post, a scope) need their own warm draw, or they
+  compile in play (see `opengame-performance`).
 - `manager.setURLModifier` maps logical names to hashed URLs from the manifest.
 - `manager.onError` fires per failed URL. Retry from there (or from your own fetch
   wrapper) instead of letting the tier wait forever.
@@ -108,9 +122,20 @@ tab memory with the cache on and off.
 
 ## Upload and memory
 
-- `ImageBitmapLoader` decodes images off the main thread. After the GPU upload, close
-  the bitmap so its CPU copy is freed (see `opengame-mobile` for when that is safe).
+- `ImageBitmapLoader` decodes images off the main thread, as does `fetch` plus
+  `createImageBitmap(blob)` handed to a `Texture`. `TextureLoader` goes through an
+  `<img>` element; LC measured that path at 2.5 s of decode on the main thread. After the
+  GPU upload, close the bitmap so its CPU copy is freed (see `opengame-mobile` for when
+  that is safe).
+- three.js builds a geometry's GPU buffers on the frame that first draws it. A warm-up that
+  draws every hidden mesh at once builds them all in one frame (LC: 346 hidden meshes,
+  72-134 MB of buffers in one second before the menu). Warm in slices, nearest first.
+- To show the menu only when the GPU has caught up, await
+  `renderer.backend.device.queue.onSubmittedWorkDone()` after the warm frames (check the
+  property path against your three.js version), with a timeout so a busy GPU cannot hold
+  the menu for ever.
 - Call `dispose()` on geometries, materials and textures you unload, and watch
   `renderer.info.memory` fall.
-- `renderer.compileAsync` before the menu lifts keeps shader links out of play (see
+- `renderer.compileAsync` before the menu lifts keeps the canvas pass's shader links out
+  of play; draw once through every render-target pass as well (see
   `opengame-performance`).

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.9
+
+- Carries the skills from `@opengamehq/skills` 1.5.0: what OG Snipers, Last Contact and OG Hero
+  taught, a rhythm skill, a maps skill, six skills for planning, making and reviewing a launch
+  trailer and a gameplay montage, and `opengame-all-in-one`, which holds every skill as one.
+- `opengame skills add --all` installs every skill once and leaves `opengame-all-in-one` out,
+  since it repeats them; `--skill opengame-all-in-one` installs it. `opengame skills list` says so.
+- Carries `@opengamehq/sdk` 0.5.0 under `opengame dev`, so `og.invite` works locally: the link is
+  the local page with `?join=`, opened as the other test player. The AGENTS.md it writes has a
+  Multiplayer section, and the skills it bundles teach invite links through `og.invite`.
+
 ## 0.9.8
 
 - `opengame check` and `opengame deploy` leave git's own files out of the upload:

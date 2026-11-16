@@ -2,7 +2,7 @@
 name: opengame-cli
 description: Drive the OpenGame command line tool from an agent. Covers installing it, signing in with the person, every command, JSON and JSONL output, exit codes, findings and how to retry. Use when the person mentions the opengame command, the OpenGame CLI, installing @opengamehq/cli, opengame login, check, dev, deploy, status, submit, releases, rollback, unpublish, restore, delete, details, achievements, handle, jam or token, or a command exited with an error you need to read.
 metadata:
-  version: "1.8.3"
+  version: "1.8.4"
 ---
 
 # Use the OpenGame CLI
@@ -68,7 +68,7 @@ token in a command argument, a file in the project, a log or a reply.
 | `opengame status [dir]` | Show the latest deploy for this folder, with its findings. |
 | `opengame deployments [dir]` | List the linked game's deploys, newest first. |
 | `opengame open [dir]` | Open the linked game's private page. |
-| `opengame submit [dir]` | Send one release to review, and enter it in a jam with flags. A deploy goes to review by itself; a person enters the jam on the deploy's page. |
+| `opengame submit [dir]` | Send a release to review that is not there yet. A ready deploy goes to review by itself, and the person confirms the details and enters the jam on the deploy's page; for a release already in review, jam flags are not used (`jam_answers_unused`). |
 | `opengame jams [slug]` | List open jams, or show one jam's tracks and flags. |
 | `opengame jam <withdraw\|reenter>` | Withdraw the linked game's jam entry, or put a withdrawn one back. |
 | `opengame releases [dir]` | List the linked game's releases: which is live, which were live before, and which can be made live again. |
@@ -99,7 +99,7 @@ release with `rollback: true` on the ones that can be made live again. Confirm w
 person which one they want, then run `opengame rollback <release> --yes --json` with the
 eight characters the list prints or the whole id. It changes what every player gets from
 their next load, so never run it without the person's go-ahead, and never to undo a
-refusal: a release that was never live goes through `opengame submit`. It needs a token
+refusal: a release that was never live goes through review, which its deploy starts by itself. It needs a token
 with `read` or `deploy`, and `submit`, which `opengame login` gives. A refusal's `message`
 says why, for example the game is not live, or a release is being published right now. If
 it answers `host_failed`, run the same command again: the second run writes only the
@@ -121,7 +121,7 @@ first half happened; run the same command again.
 undone, so run it only when the person has asked for that game to be deleted, and pass the
 title they confirmed rather than reading it off the game yourself. Unpublishing is the
 reversible way to take a game down; offer it first. Delete works only with the `opengame
-login` token. `delete_refused` says why, for example a legal hold or a reviewer holding it.
+login` token. `delete_refused` says why, for example a legal hold.
 
 ## Change a game's words, or the person's handle
 

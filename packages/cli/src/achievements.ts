@@ -40,7 +40,7 @@ export async function syncAchievements(api: Api, token: string, root: string, op
   else if (failure) {
     const { id, error } = failure;
     const scope = error instanceof ApiError && error.reason === "insufficient_scope";
-    lines.push(scope ? `${id} was not saved: this token cannot change achievements, and needs the Deploy scope for this game.`
+    lines.push(scope ? `${id} was not saved: this token cannot change achievements, and needs the deploy scope for this game.`
       : error instanceof ApiError && error.status === 400 ? `The server refused ${id}: ${error.message}`
       : `${id} and any after it were not sent: ${error instanceof Error ? error.message : "the server did not answer"}`);
     lines.push("Run opengame status to try again.");

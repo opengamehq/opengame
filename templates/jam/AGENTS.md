@@ -63,6 +63,9 @@ The jam's rules page is the authority; `opengame jams` links to it. For the firs
   here). Unknown keys are dropped.
 - The `survived_s` board (seconds, to a tenth) is declared in `opengame.json`. A new board needs an entry there.
 - Update `title`, `description` and `genre` in `opengame.json` to describe your game.
+- For multiplayer, share `og.invite.link(code)`, the game's opengame.io page with
+  `?join=CODE`, and join a player whose `og.invite.code` is set straight to that lobby.
+  PeerJS setup and game servers: https://docs.opengame.io/guides/multiplayer
 
 ## Expected findings
 

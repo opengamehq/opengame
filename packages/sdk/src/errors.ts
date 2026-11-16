@@ -9,7 +9,7 @@
  * A hint names what to do, not what went wrong inside the SDK. Codes passed through from
  * the page or the broker are listed too, because a game sees them as they are.
  */
-import { scoreMetaRule } from './score-meta.js';
+import { eventsPerMinute, scoreMetaRule } from './score-meta.js';
 
 /** Error code, delivery type, retry advice and recovery text. */
 export type ErrorEntry = Readonly<{ code: string; where: 'result' | 'both'; retryable: boolean; hint: string }>;
@@ -18,8 +18,8 @@ export const errorCatalogue: readonly ErrorEntry[] = Object.freeze([
   // Core, events and leaderboards. Returned, never thrown.
   { code: 'unavailable', where: 'both', retryable: false, hint: 'The page did not offer this capability. Check og.capabilities first; the local mock simulates account, leaderboard and analytics features.' },
   { code: 'invalid_event', where: 'result', retryable: false, hint: 'Event names are lowercase letters, digits and underscores, starting with a letter, at most 48 characters, and 1 KB with properties.' },
-  { code: 'rate_limited', where: 'both', retryable: true, hint: 'Too many calls in the window. Events allow 60 a minute. Wait, then try again.' },
-  { code: 'invalid_board', where: 'result', retryable: false, hint: 'Use a board key declared in opengame.json: lowercase letters, digits, hyphens and underscores.' },
+  { code: 'rate_limited', where: 'both', retryable: true, hint: `Too many calls in the window. Events allow ${eventsPerMinute} a minute. Wait, then try again.` },
+  { code: 'invalid_board', where: 'result', retryable: false, hint: 'Use a board key declared in opengame.json: lowercase letters, digits and underscores, starting with a letter.' },
   { code: 'board_unavailable', where: 'result', retryable: false, hint: 'This board is not declared in opengame.json, or the published game has no such board.' },
   { code: 'invalid_score', where: 'result', retryable: false, hint: 'Scores are finite numbers.' },
   { code: 'invalid_meta', where: 'result', retryable: false, hint: `Score metadata takes only ${scoreMetaRule}. Keep strings short.` },

@@ -38,6 +38,9 @@ The CLI's `AGENTS.md` has the full runbook.
 - No payments or tips, no crypto, no ads, ad pixels or session recording, and no account,
   sign-in or email address before a player can play.
 - Call `og.ready()` once the first playable frame is drawn, not before.
+- For multiplayer, share `og.invite.link(code)`, the game's opengame.io page with
+  `?join=CODE`, and join a player whose `og.invite.code` is set straight to that lobby.
+  PeerJS setup and game servers: https://docs.opengame.io/guides/multiplayer
 - Scores are claims. The `sparks` board and its bounds are in `opengame.json`; a new
   board needs an entry there first.
 - `opengame.json` has the title, description and genre. Update them when the game

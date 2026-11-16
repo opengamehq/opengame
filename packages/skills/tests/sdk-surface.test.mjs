@@ -12,7 +12,7 @@
  * installed; packages/sdk/src is the surface a game gets. Two checks:
  *
  * - every name the skills use exists and is not `@internal`: `og.x.y` (one level into
- *   og.player, og.audio, og.fullscreen, og.achievements, og.env and og.player.avatar),
+ *   og.player, og.audio, og.fullscreen, og.invite, og.achievements, og.env and og.player.avatar),
  *   `room.x`, a `room.on('event')`, `multiplayer.x` and the option keys passed to it,
  *   `board.x`, `peer.x`, `bridge.x`, `OpenGame.x`, a named import from
  *   `@opengamehq/sdk/...`, and, in the skills that teach the SDK, a bare helper name and
@@ -124,7 +124,7 @@ export function sdkSurface() {
   const index = sdkSource("index.ts");
   const client = classBody(index, "Client");
   const og = members(client);
-  const nested = Object.fromEntries(["player", "audio", "fullscreen"].map((name) => [name, literalMembers(client, name)]));
+  const nested = Object.fromEntries(["player", "audio", "fullscreen", "invite"].map((name) => [name, literalMembers(client, name)]));
   nested.achievements = new Set(members(classBody(sdkSource("achievements.ts"), "Achievements")).keys());
   const boardInterface = /export interface Leaderboard \{([\s\S]*?)\n\}/.exec(sdkSource("leaderboards.ts"))?.[1] ?? "";
   const leaderboard = new Set([...boardInterface.matchAll(/^  (\w+)\(/gm)].map((m) => m[1]));
@@ -331,6 +331,7 @@ test("the extraction finds the surface it is meant to, so a blind parse cannot p
   }
   assert.equal(surface.og.get("connect")?.internal, true, "og.connect is @internal and must read as internal");
   assert.ok(surface.nested.player.has("onChange") && surface.nested.player.has("requestSignIn"));
+  assert.deepEqual([...surface.nested.invite].sort(), ["code", "link"]);
   assert.ok(surface.nested.achievements.has("unlock"));
   assert.deepEqual([...surface.leaderboard].sort(), ["around", "me", "submit", "submitRun", "top"]);
   assert.equal(surface.room.size, 0, "the SDK has no room");

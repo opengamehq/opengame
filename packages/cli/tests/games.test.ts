@@ -256,6 +256,20 @@ for (const command of ["deployments", "open"] as const) {
           return true;
         });
       }
+      /* Sweep, 16 Nov 2026: a command that acts on a game is told there is no game here yet, and
+         to read why in status. It exited with the deploy's own code and exit, 1 ("the game needs a
+         change") for unpublish, and the deploy's next. The commands above that read a deploy keep
+         its news. */
+      for (const action of ["unpublish", "releases"] as const) {
+        await withProject(root, origin, async (saved, save) => { saved.deploy!.terminal = false; await save(); });
+        await assert.rejects(run(process.execPath, [binary, action, root, "--json", ...(action === "unpublish" ? ["--yes"] : [])], { env }), (error: unknown) => {
+          const e = error as { code: number; stdout: string };
+          const body = JSON.parse(e.stdout);
+          assert.deepEqual([e.code, body.code, body.next], [2, "not_linked", "opengame status"], action);
+          assert.match(body.message, /no game here yet/, action);
+          return true;
+        });
+      }
 
     } finally {
       server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve()));

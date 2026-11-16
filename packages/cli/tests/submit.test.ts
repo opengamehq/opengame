@@ -356,6 +356,41 @@ test("a person who names no jam answer is sent to the deploy's page, and nothing
   }
 });
 
+/* Sweep, 16 Nov 2026, and Greptile on #1669: a jam entry returned for a fault of ours is sent again
+   by submit. The person is not sent to the page, where nothing reruns the checks; the entry's
+   theme and sponsor tracks are kept, and what the submission did not record (the models, the
+   sponsor's evidence) is asked for by flag, so no sponsor track is quietly dropped. */
+test("a jam entry returned for a fault of ours keeps its tracks when it is sent again, and asks for the rest", async () => {
+  const { chooseDestination } = await import("../src/submit");
+  const { Api } = await import("../src/http");
+  const { Output } = await import("../src/output");
+  const api = await harness({ jams: [jam] });
+  const previous = process.env.OPENGAME_API_URL; process.env.OPENGAME_API_URL = api.origin;
+  const client = new Api();
+  const root = await mkdtemp(join(tmpdir(), "og-submit-rerun-"));
+  const rerun = { ...view("returned"), jam: { slug: "fixture-jam", name: "Fixture jam", entryId: submissionId,
+    tracks: [{ key: "rpg", kind: "theme" as const, name: "RPG" }, { key: "fal", kind: "sponsor" as const, name: "Best use of fal.ai" }] } } as never;
+  try {
+    const output = new Output(true, () => {});
+    // A person who named nothing is held to the form, with the kept tracks in it.
+    await assert.rejects(chooseDestination(client, token, root, {}, false, true, output, rerun), (error: { code: string; message: string }) => {
+      assert.equal(error.code, "jam_answers_required");
+      assert.match(error.message, /came back from review for a failure of ours/);
+      assert.match(error.message, /--models/);
+      assert.match(error.message, /--sponsor: Best use of fal\.ai/, "the kept sponsor track is named, not dropped");
+      assert.doesNotMatch(error.message, /--track/, "the theme track is kept");
+      return true;
+    });
+    const answered = await chooseDestination(client, token, root, { models: "claude,flux", "evidence-fal": "All prop textures" }, false, true, output, rerun);
+    assert.ok(typeof answered === "object" && answered !== null);
+    assert.deepEqual([answered.track, answered.sponsors], ["rpg", ["fal"]]);
+    assert.equal(api.posts.length, 0, "choosing sends nothing");
+  } finally {
+    await client.close(); api.close(); await rm(root, { recursive: true, force: true });
+    if (previous === undefined) delete process.env.OPENGAME_API_URL; else process.env.OPENGAME_API_URL = previous;
+  }
+});
+
 test("a person submitting while the newest deploy is not ready is told which deploy is in the way", async () => {
   const { chooseRelease } = await import("../src/submit");
   const { Api } = await import("../src/http");

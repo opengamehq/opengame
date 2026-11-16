@@ -152,7 +152,7 @@
   "kaigen": {
     "name": "Kaigen",
     "evidenceStatus": "source-verified",
-    "reason": "Structural: a real Kaigen 0.6.2.001-beta export (OG Clash R196) is recognised by its wasm glue and confirmed by the module's own import section and hz_flags section. The licence stamp in any .wasm asks for the publication statement without identifying the engine. Hosting validation is still required.",
+    "reason": "Structural: a real Kaigen 0.6.2.001-beta export (OG Clash R196) is recognised by its wasm glue and confirmed by the module's own import section and hz_flags section. The licence stamp in any .wasm marks a Kaigen build without identifying the engine. Hosting validation is still required.",
     "licenceStamp": "HZLICSTAMP1|",
     "signatures": [
       {

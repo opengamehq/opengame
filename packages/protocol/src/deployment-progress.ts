@@ -65,7 +65,7 @@ export function deploymentSteps(input: DeploymentProgressInput): DeployStep[] {
   const owesDetails = submission?.state === "awaiting_details" || submission?.state === "needs_certification";
   const confirmed = ["approved", "publishing", "published"].includes(submission?.state ?? "");
   put("details", owesDetails ? "held" : confirmed ? "done" : "waiting", owesDetails ? "Confirm your game’s details below to continue."
-    : confirmed ? "Your details are confirmed." : "Your game’s details and statements, confirmed by you.");
+    : confirmed ? "Your details are confirmed." : "Your game’s details, confirmed by you.");
   put("publish", "waiting", "Make this version available to players.");
   put("live", "waiting", "Your game, ready to play and share.");
   // Only the file checks reach this list since 12 Nov 2026; a retired check's row on an
@@ -144,13 +144,25 @@ export function stageEta(step: DeployStep, now: number): string | null {
   if (step.state === "running" && !step.since) return null;
   const elapsed = step.state === "running" && step.since ? Math.max(0, (now - Date.parse(step.since)) / 1000) : 0;
   if (!Number.isFinite(elapsed)) return null;
-  if (elapsed >= highSeconds) return "Taking longer than usual";
+  if (elapsed >= highSeconds) return `Taking longer than usual: ${elapsedWords(elapsed)} so far`;
   const left = highSeconds - elapsed;
   if (left <= 15) return "A few seconds";
   if (left < 60) return "Under a minute";
   const low = Math.max(1, Math.ceil((lowSeconds - elapsed) / 60));
   const high = Math.max(low, Math.ceil((highSeconds - elapsed) / 60));
   return high === 1 ? "About a minute" : low === high ? `About ${high} min` : `About ${low} to ${high} min`;
+}
+
+/** How long a stage has been running, for an overrun: whole seconds under a minute ("48 s"), then minutes and seconds
+ * ("2 min 14 s"), then hours and minutes ("1 h 5 min"). An overrun used to say only "Taking longer than usual", so a
+ * publish that had run for a minute and one that had run for an hour read the same (16 Nov 2026: the running time is
+ * shown in seconds, not only that it is late). The timeline redraws each second, so it counts. */
+export function elapsedWords(seconds: number): string {
+  const whole = Math.max(0, Math.floor(seconds));
+  if (whole < 60) return `${whole} s`;
+  if (whole < 3600) { const m = Math.floor(whole / 60), s = whole % 60; return s ? `${m} min ${s} s` : `${m} min`; }
+  const h = Math.floor(whole / 3600), m = Math.floor((whole % 3600) / 60);
+  return m ? `${h} h ${m} min` : `${h} h`;
 }
 
 export interface TransferEstimate { bytesPerSecond: number; remaining: string }

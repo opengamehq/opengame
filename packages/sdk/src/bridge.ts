@@ -8,7 +8,7 @@ declare const __BRIDGE_CONFIG__: { argsBytesMax: number };
 export type BridgeEvent = 'player' | 'pause' | 'mute' | 'fullscreen';
 /** Operations accepted by `request`. Achievement calls use the same published-game
  * session as `og.achievements`; native adapters receive their results as JSON. */
-export type BridgeOperation = 'init' | 'track' | 'openLink' | 'fullscreen' | 'signIn'
+export type BridgeOperation = 'init' | 'track' | 'openLink' | 'fullscreen' | 'signIn' | 'invite.code' | 'invite.link'
   | 'board.submit' | 'board.top' | 'board.me' | 'board.around'
   | 'achievements.unlock' | 'achievements.list';
 export type BridgeHandler = (kind: 'result' | 'event', id: number, name: string, json: string, bytes?: Uint8Array) => void;
@@ -38,7 +38,7 @@ function bounded(json: string): string {
   if (typeof json !== 'string' || json.length > __BRIDGE_CONFIG__.argsBytesMax || new TextEncoder().encode(json).byteLength > __BRIDGE_CONFIG__.argsBytesMax) throw new Error();
   return json;
 }
-const operations = new Set<BridgeOperation>(['init', 'track', 'openLink', 'fullscreen', 'signIn',
+const operations = new Set<BridgeOperation>(['init', 'track', 'openLink', 'fullscreen', 'signIn', 'invite.code', 'invite.link',
   'board.submit', 'board.top', 'board.me', 'board.around', 'achievements.unlock', 'achievements.list']);
 function argumentsObject(json: string): Record<string, unknown> {
   const value: unknown = JSON.parse(bounded(json));
@@ -78,6 +78,9 @@ export function createBridge(client: OpenGameClient): OpenGameBridge {
       case 'openLink': return client.openLink(string(args.url));
       case 'fullscreen': return client.fullscreen.request();
       case 'signIn': return client.player.requestSignIn();
+      // Null, not an error, when there is no code or no link: the engine shows the code alone.
+      case 'invite.code': return success(client.invite.code);
+      case 'invite.link': return success(client.invite.link(string(args.code)));
       /* A native export written before runs sends `{ key, score, meta? }` and gets the call it
          always got. `stats` and `tags` make it a run; the core checks what they hold. */
       case 'board.submit': return args.stats === undefined && args.tags === undefined

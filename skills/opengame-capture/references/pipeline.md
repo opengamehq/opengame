@@ -1,7 +1,8 @@
 # Capture pipeline, audit and process
 
 Numbers from OC's launch film (a 62 s 4K60 trailer) and its gameplay montage, filmed on an
-M4 Max with 16 cores.
+M4 Max with 16 cores, and from the test captures of OS, LC and OH, taken on shared Linux
+machines with one GPU.
 
 ## Audit before planning shots
 
@@ -50,6 +51,32 @@ what is missing. OC's film team found most of these one at a time, mid-productio
   passed a cut whose first 402 frames were frozen, because two directors shared one
   minute-stamped work folder.
 
+## Test captures and judge packets
+
+- Capture from a snapshot of the committed head plus your own files, never the shared
+  working tree. LC's slot tool read the tree when the slot was granted, not when the job
+  was queued, so an edit made during the wait killed jobs or filmed someone else's
+  half-written file.
+- Write a manifest per packet: build hash, renderer string, quality, weather, camera per
+  frame, the state line, and whether each clip is stepped or real time. OH's judges scored
+  a missing clip, a mid-animation title and a stale capture as game faults, and OH's
+  rule became a manifest with no file older than the build.
+- Generate the capture list from the rubric. OS's council scored more than 20 "gaps" that
+  were built items no camera showed.
+- Space stills when the game settles UI after input: OS waited at least 1.2 s between
+  screenshots and A/B'd inside one boot, because "Numbers across boots move about 20 %".
+- Software rasterisers prove function only. Refuse one for anything judged on looks or
+  timing, and print the adapter on every run (LC and OH both did).
+
+## Filming the interface with the scene
+
+Stepped capture films the canvas. When a cut, a menu or a HUD change must be judged
+against the scene at speed, LC ran a headed browser on the job's own virtual display and
+grabbed it with `ffmpeg -f x11grab -framerate 60`, with a 6-pixel white corner mark that
+changed every frame as the frame clock. It ran 34 fps at a load of 13 and 4-13 fps at
+35-54, so read it for order and offsets, never for frame time. It showed the DOM changing
+67-167 ms before the WebGPU picture.
+
 ## Contention
 
 Capture is the heaviest job on the machine, and it slows down when anything else runs.
@@ -66,6 +93,11 @@ Capture is the heaviest job on the machine, and it slows down when anything else
   10% other work only after more than 40 h of contention.
 - Private build trees as full disk clones cost about 26 GB for 3 flags. Keep a disk floor
   (OC's was 4 GB).
+- Job slots do not govern the GPU. OH held two of six slots while another project's
+  headless browsers kept the card 14-100% busy, so every OH frame-time number is
+  contaminated. Record GPU load beside every frame number.
+- On LC, at most three browsers fit in one slot (five lost the WebGPU device), and real-time
+  films on the loaded machine drew 8-25 fps, which is why motion is filmed stepped.
 
 ## Process with the game team
 

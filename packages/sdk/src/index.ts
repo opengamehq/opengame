@@ -4,16 +4,18 @@ import { runtimeHealth, type RuntimePolicy } from './runtime-health.js';
 export type { Achievement, AchievementUnlock, AchievementResult } from './achievements.js';
 import { installed, install } from './installation.js';
 import { externalGameLink } from "@opengame/shared/game-links";
+import { joinLink, normaliseJoinCode } from "@opengame/shared/join-code";
 import { readAvatarLook } from "@opengame/shared/avatar-look";
 import { readCharacterRecipe } from "@opengame/shared/character-look-wire";
 import { sanitizeGameEventProps, type GameEventPolicy } from "@opengame/shared/game-events";
-import { Leaderboards, type Leaderboard, type LeaderboardConfig } from "./leaderboards.js";
-export type { Leaderboard, LeaderboardPage, PlayerStat, PlayerStatEntry, PlayerStats, ScoreEntry, ScoreMeta, ScoreReceipt } from "./leaderboards.js";
+import { Leaderboards, type Leaderboard, type LeaderboardConfig, type PlayerStats } from "./leaderboards.js";
+export type { Leaderboard, LeaderboardColumn, LeaderboardFormat, LeaderboardPage, LeaderboardQuery, LeaderboardRun, LeaderboardShape, LeaderboardVariant,
+  PlayerStat, PlayerStatEntry, PlayerStats, ScoreEntry, ScoreMeta, ScoreReceipt } from "./leaderboards.js";
 /** `dev.player` chooses the local mock's identity, so a game can be checked as a
  * guest, a signed-in player, or an account that has not claimed a handle yet.
  * `?og-dev-player=guest|signed-in|no-handle` on the page URL does the same. The
- * signed-in player shares an avatar with a look and a character, as a hosted player
- * who has turned on profile sharing does. */
+ * signed-in player has an avatar with a look and a character, as a hosted player who
+ * has made an OG does. */
 export type DevPlayer = 'guest' | 'signed-in' | 'no-handle';
 /** Options for the first `init` call. `manifest` supplies local board settings;
  * `dev.player` selects the local identity. Later calls reuse initialization. */
@@ -38,9 +40,10 @@ export type Environment = Readonly<{ embedded: boolean; connected: boolean; prev
 /** `look` is the head and `character` the body and clothes, each a recipe string in
  * OpenGame's stored format. `character` is present only when `look` is. */
 export type AvatarRecipe = Readonly<{ seed: number; palette: string; look?: string; character?: string }>;
-/** The game's player identity. `id` is scoped to this game. Profile sharing controls
- * `handle`, `ogNumber` and `avatar`, independently of `signedIn`. Null fields are valid
- * for guests, withheld profiles and unavailable sessions. Previews withhold profiles. */
+/** The game's player identity. `id` is scoped to this game. Every signed-in player sends
+ * `handle`, `ogNumber` and `avatar`; each is null for a guest, an account with no handle
+ * or OG yet, and an unavailable session. Previews withhold
+ * profiles. */
 export type Player = Readonly<{ id: string | null; handle: string | null; ogNumber: number | null; signedIn: boolean; avatar?: AvatarRecipe | null }>;
 export type Result<T = void> = { ok: true; value: T } | { ok: false; error: string; reason?: string };
 type Listener<T> = (value: T) => void;
@@ -201,7 +204,7 @@ class Client {
     onChange: (listener: Listener<Player>) => subscribe(this.playerListeners, listener, this.playerValue),
     /** The player's entry on each board the game declares, in one request: a career board's
      * running totals (XP, lifetime totals) as well as their best runs. Fails like a board read. */
-    stats: () => this.boards.stats(),
+    stats: (): Promise<Result<PlayerStats>> => this.boards.stats(),
     /* No credential() here, deliberately. There was one, documented as something to
        verify on the game's own server, and a published game cannot reach a server of
        its own: connect-src on opengame.gg names this platform's API and broker only,
@@ -227,6 +230,17 @@ class Client {
     onChange: (listener: Listener<boolean>) => subscribe(this.fullscreenListeners, listener, this.full),
   }; })();
   onPause(listener: Listener<boolean>) { return subscribe(this.pauseListeners, listener, this.paused); }
+  /** Invite links for a game with online play. `code` is the code in the `?join=` of
+   * the invite this player opened, or null. `link(code)` is this game's page on OpenGame
+   * with `?join=code`; opening it starts this game with that code. Null before `init`
+   * finishes, outside OpenGame, and for a code the page would change (4 to 12 capitals
+   * and digits, or 22 of A-Z a-z 0-9 _ -, pass as written). */
+  readonly invite = (() => { const client = this; return {
+    get code() { return client.joinCode; },
+    link: (code: string): string | null => joinLink(client.localMode ? client.localInvitePage() : client.invitePage, code),
+  }; })();
+  private invitePage: string | null = null;
+  private joinCode: string | null = null;
 
   /** Call directly from a click or key handler. The parent displays the destination;
    * the player then chooses Open site or Keep playing in the parent's own dialog. */
@@ -376,11 +390,22 @@ class Client {
       try { url = new URL(this.win.location.href); } catch { /* opaque documents keep the defaults */ }
       const requested = url?.searchParams.get('og-dev-player');
       if (requested && Object.hasOwn(devPlayers, requested)) this.devPlayer = requested as DevPlayer;
+      // Locally the invite is this page, so two tabs can try a lobby with no deploy. It names
+      // the other id's dev player, or both tabs would be the same player.
+      this.joinCode = normaliseJoinCode(url?.searchParams.get('join'));
+      this.invitePage = url?.href ?? null;
       this.setLocalPlayer(this.devPlayer);
       greet(this.win, this.devPlayer);
     }
     clearTimeout(this.handshakeTimer); clearInterval(this.initRetry); this.initRetry = undefined;
     this.settle?.(this.environment); this.settle = null;
+  }
+  /** Read when the link is made, not at init, because signing in switches this tab's player. */
+  private localInvitePage(): string | null {
+    if (!this.invitePage) return null;
+    const url = new URL(this.invitePage);
+    url.searchParams.set('og-dev-player', this.devPlayer === 'guest' ? 'signed-in' : 'guest');
+    return url.href;
   }
   private setLocalPlayer(kind: DevPlayer) {
     const next = devPlayers[kind];
@@ -483,6 +508,12 @@ class Client {
       this.held = data.held === true;
       if (!this.held) this.finishPlayWaiters({ ok: true, value: undefined });
       this.parentOrigin = event.origin;
+      // Only a game page on the parent's origin is an invite page. Studio's editor names its
+      // session page here, which a friend cannot open and which reads no ?join=.
+      let page: URL | null = null;
+      try { page = new URL(data.page); } catch { /* no page: older sites */ }
+      this.invitePage = page?.origin === event.origin && /^\/g\/[^/]+$/.test(page.pathname) ? page.href : null;
+      this.joinCode = normaliseJoinCode(data.join);
       if (!available.includes('leaderboards')) this.boards.cancel('leaderboards_unavailable');
       this.environment = Object.freeze({ ...this.environment, connected: true, preview, capabilities: Object.freeze(available) });
       if (JSON.stringify(player) !== JSON.stringify(this.playerValue)) { this.playerValue = player; notify(this.playerListeners, player); }
@@ -620,4 +651,8 @@ const existing = installed<{ OpenGameClient: typeof Client; og: Client }>('core'
 const core = existing && Object.hasOwn(existing, 'og') && Object.hasOwn(existing, 'OpenGameClient')
   && typeof existing.OpenGameClient === 'function' && existing.og instanceof existing.OpenGameClient
   ? existing : install('core', { OpenGameClient: Client, og: new Client() }, true);
+/* A core injected before og.invite existed is still this major, so a bundled copy reuses it.
+   The guide's `if (og.invite.code)` would then throw at boot; an empty invite says no code
+   and no link instead, which is what that page can offer. */
+if (!('invite' in core.og)) try { Object.defineProperty(core.og, 'invite', { value: Object.freeze({ code: null, link: () => null }) }); } catch { /* frozen: nothing to add to */ }
 export const { OpenGameClient, og } = core;

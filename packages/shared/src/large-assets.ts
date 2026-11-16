@@ -35,11 +35,9 @@ export interface LargeAssetPlanPolicy {
   /** The account-level lane a person must turn on in the admin console before any byte
    * of this kind is admitted. Engine detection is routing, not admission: nothing inside
    * a bundle proves which engine made it, so the kinds that widen limits are admitted by
-   * this grant. `statement` and `licenceStamp` are checks beside it; the stamp is a
-   * string a forger can copy and is not a control. */
+   * this grant. `licenceStamp` is a check beside it; the stamp is a string a forger can
+   * copy and is not a control. */
   grant?: string;
-  /** The statement key the creator accepts when the upload begins (large-asset-statement.ts). */
-  statement?: string;
   /** The engine whose licence stamp a boot .wasm must carry before the scan is ready.
    * A consistency check on an honest export, never an admission control: forgeable. */
   licenceStamp?: string;
@@ -75,17 +73,22 @@ export function largeAssetLimits(kind: unknown): LargeAssetLimits | null {
  * releases), otherwise one game's worth, `storedBytesMax` (Kaigen's 4 GiB). Per kind, not the
  * largest across kinds, because every platform member holds Kaigen without a grant
  * (20261027160000), and a shared cap would hand them the large-game lane's allowance for
- * Kaigen files. Kinds without a grant are absent and earn nothing, except the engine-agnostic
- * large-game lane, which is open to active accounts by policy. Every caller that begins a deploy or reads usage sends this as
+ * Kaigen files. Kinds without a grant are absent and earn nothing, except the open lanes
+ * (`OPEN_LANES`), large-game and Kaigen, which are open to active accounts by policy. Every caller that begins a deploy or reads usage sends this as
  * `laneHeldBytesPerAccountMax`. A request without it gets no lane credit at all, the rule
  * before 20261027170500, so a caller that forgets it is held to the plain allowance; the
  * database refuses caps that are present and malformed, and caps that leave out a kind the
  * account holds files of. A kind whose limits lack both numbers
  * gets NaN, which reaches the database as null and is refused rather than read as no limit. */
+/* The lanes open to active accounts with no grant that still earn their own held-byte credit:
+   the engine-agnostic large-game lane (20261112061400) and, since Kaigen went to open beta on
+   16 Nov 2026, the Kaigen lane (20261116140000). The database names the same two where it
+   works the credit out (platform_begin_large_asset_deploy, platform_lane_held_bytes). */
+const OPEN_LANES: ReadonlySet<string> = new Set(["large-game-v1", "kaigen-assets-v1"]);
 export function laneHeldBytes(planTable: Record<string, Pick<LargeAssetPlanPolicy, "limits" | "grant">>,
   platform: Record<string, unknown>): Record<string, number> {
   return Object.fromEntries(Object.entries(planTable)
-    .filter(([kind, plan]) => !kind.startsWith("_") && (plan.grant || kind === "large-game-v1"))
+    .filter(([kind, plan]) => !kind.startsWith("_") && (plan.grant || OPEN_LANES.has(kind)))
     .map(([kind, plan]) => {
       const policy = platform[plan.limits] as { storedBytesMax?: unknown; heldBytesPerAccountMax?: unknown } | undefined;
       return [kind, Number(policy?.heldBytesPerAccountMax ?? policy?.storedBytesMax)];

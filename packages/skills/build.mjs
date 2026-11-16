@@ -46,6 +46,12 @@ const REGISTRY = join(here, "skills.json");
 export const LOCK = join(here, "skills.lock.json");
 const CHANGELOG = "CHANGELOG.md";
 const EM_DASH = "\u2014";
+/**
+ * platform: OpenGame itself (CLI, API, SDK, deploys, jams). craft: making the game good,
+ * each rule carrying the five tags. video: filming it, as trailers and montages. bundle:
+ * the one skill that carries all the others, for a person who wants a single install.
+ */
+export const FAMILIES = Object.freeze(["platform", "craft", "video", "bundle"]);
 
 async function listFiles(root, dir = root) {
   const out = [];
@@ -77,11 +83,14 @@ export async function collectSkills({ sourceDir = SOURCE_DIR, registryPath = REG
   for (const name of registered.keys()) if (!folders.includes(name)) problems.push(`${name}: listed in skills.json but has no folder`);
 
   const skills = [];
-  for (const name of folders) {
+  // The bundle skill carries every other skill, so it is read after all of them.
+  const order = [...folders.filter((name) => registered.get(name)?.family !== "bundle"), ...folders.filter((name) => registered.get(name)?.family === "bundle")];
+  for (const name of order) {
     const entry = registered.get(name);
     if (!entry) continue;
     if (entry.default !== undefined && typeof entry.default !== "boolean") problems.push(`${name}: default must be a boolean`);
-    if (!["platform", "craft"].includes(entry.family)) problems.push(`${name}: family must be platform or craft`);
+    if (!FAMILIES.includes(entry.family)) problems.push(`${name}: family must be one of ${FAMILIES.join(", ")}`);
+    if (entry.family === "bundle" && entry.default) problems.push(`${name}: the bundle skill repeats the starting set, so it cannot be in it`);
     const root = join(sourceDir, name);
     const files = {};
     for (const file of await listFiles(root)) {
@@ -104,6 +113,12 @@ export async function collectSkills({ sourceDir = SOURCE_DIR, registryPath = REG
         try { files[file] = render(source, context, `${name}/${file}`); }
         catch (error) { problems.push(error.message); files[file] = source; }
       } else files[file] = source;
+    }
+    if (entry.family === "bundle") {
+      for (const [path, text] of Object.entries(carried(skills))) {
+        if (Object.hasOwn(files, path)) problems.push(`${name}/${path}: the bundle writes this file itself, and a carried skill writes it too`);
+        else files[path] = text;
+      }
     }
     problems.push(...validateSkill({ name, family: entry.family, files }));
     const front = parseFrontmatter(files["SKILL.md"] ?? "");
@@ -137,6 +152,29 @@ export async function collectBothStates(options = {}) {
 
 const sha256 = (text) => createHash("sha256").update(text).digest("hex");
 
+/**
+ * Every other skill's rendered files, placed under `references/<name>/` for the bundle
+ * skill, so a person who installs one skill gets all of them. Each SKILL.md is carried
+ * as `README.md` with its frontmatter turned into a line of prose: a second file named
+ * SKILL.md inside a skill is read by some installers as a skill of its own, and the
+ * same names twice is two skills an agent cannot tell apart. Links inside a carried
+ * skill keep working, because a markdown link resolves from the file that holds it and
+ * the validator resolves a code span from the carried skill's own folder.
+ */
+export function carried(skills) {
+  const files = {};
+  for (const skill of skills) {
+    if (skill.family === "bundle") continue;
+    for (const [path, text] of Object.entries(skill.files)) {
+      if (path !== "SKILL.md") { files[`references/${skill.name}/${path}`] = text; continue; }
+      const front = parseFrontmatter(text);
+      const intro = `> Carried from \`${skill.name}\` ${skill.version}. Read it when: ${skill.description}\n\n`;
+      files[`references/${skill.name}/README.md`] = intro + (front?.body ?? text);
+    }
+  }
+  return files;
+}
+
 /** The manifest the CLI installs from. `digest` covers every file's path and bytes. */
 export function manifestFor(skills, version) {
   return {
@@ -167,7 +205,8 @@ export function lockProblems(manifest, lock, { published = false } = {}) {
     if (entry.version === skill.version && recordedDigest === undefined) {
       problems.push(`${skill.name}: skills.lock.json records no digest for the ${published ? "published" : "unpublished"} install switch; run npm run lock -w @opengamehq/skills`);
     } else if (entry.version === skill.version && recordedDigest !== skill.digest) {
-      problems.push(`${skill.name}: its content changed and its version is still ${skill.version}; bump metadata.version, add a CHANGELOG entry, then run npm run lock -w @opengamehq/skills`);
+      const why = skill.family === "bundle" ? " (it carries every other skill, so a change to any of them is a change to it)" : "";
+      problems.push(`${skill.name}: its content changed and its version is still ${skill.version}${why}; bump metadata.version, add a CHANGELOG entry, then run npm run lock -w @opengamehq/skills`);
     } else if (entry.version !== skill.version) {
       problems.push(`${skill.name}: SKILL.md says ${skill.version} and skills.lock.json records ${entry.version}; run npm run lock -w @opengamehq/skills`);
     }
@@ -247,8 +286,9 @@ async function writeSkills(dir, skills, { changelogs = false } = {}) {
 
 /**
  * The Claude Code plugin marketplace for the public repository, which `npx skills add`
- * reads as well. Two plugins, because somebody who wants the platform skills should not
- * have to carry twenty craft skills' descriptions into every session to get them.
+ * reads as well. A plugin per family, because somebody who wants the platform skills should
+ * not have to carry twenty craft skills' descriptions into every session to get them, and
+ * the bundle on its own, for somebody who wants everything as one skill.
  */
 export function marketplaceFor(skills, skillsDir = "skills") {
   const plugin = (name, description, family) => ({
@@ -262,6 +302,8 @@ export function marketplaceFor(skills, skillsDir = "skills") {
     plugins: [
       plugin("opengame", "Put a browser game on OpenGame: the CLI, the API, the SDK, deploys and jams.", "platform"),
       plugin("opengame-craft", "Make a browser game good: look, lighting, feel, audio, performance, testing and the rest.", "craft"),
+      plugin("opengame-video", "Film a browser game: plan, make and review a launch trailer or a gameplay montage.", "video"),
+      plugin("opengame-all-in-one", "Every OpenGame skill in one, for a single install.", "bundle"),
     ],
   };
 }
@@ -323,8 +365,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
         if (problems.length) throw new Error(`Skill validation failed:\n  ${problems.join("\n  ")}`);
       }
       const { skills } = check ? await buildSkills() : await buildPackage();
-      const craft = skills.filter((s) => s.family === "craft").length;
-      console.log(`${check ? "Validated" : "Built"} ${skills.length} skills (${skills.length - craft} platform, ${craft} craft).`);
+      const count = (family) => skills.filter((s) => s.family === family).length;
+      console.log(`${check ? "Validated" : "Built"} ${skills.length} skills (${FAMILIES.map((f) => `${count(f)} ${f}`).join(", ")}).`);
     }
   } catch (error) {
     console.error(error.message);

@@ -1,5 +1,9 @@
 # opengame-router changelog
 
+## 1.0.8
+
+Routes maps to `opengame-maps`, multiplayer to `opengame-multiplayer`, rhythm games to `opengame-rhythm`, trailers and montages to the six video skills, and names `opengame-all-in-one`, which carries every skill as one install.
+
 ## 1.0.7
 
 Any signed-in account can use the CLI, the creator API, uploads and jam entries before launch, so a `not_launched` answer means the request came with no account: sign in (`opengame login`) and run it again rather than waiting for 18 November.

@@ -14,6 +14,7 @@ also published at opengame.io/agent.md.
 | File count | {{n bundle.fileCountMax}} | Refused |
 | Compression ratio | {{ratio bundle.compressionRatioMax}} | Refused, as a zip bomb guard |
 | Paths | Case matches the file on disk; no `../`, no symlinks, no absolute paths | Refused |
+| Native programs | Any file ending in {{list platform.deploy.executablesRefused.extensions}}, or one that starts like a Windows, Linux or macOS program | Refused |
 | Excluded | `node_modules/`, `.git/`, `.env*`, source maps, OS junk | Stripped, with a `files_excluded` notice |
 | `opengame.json`, `.opengame/`, `opengame-assets/` | Project files, not game files | Stripped silently |
 
@@ -26,8 +27,8 @@ A decompilation, mod or recompilation with gigabytes of game data can send its l
 files outside the archive on the `large-game-v1` plan: at most
 {{gib platform.largeGameAssets.storedBytesMax}} in {{n platform.largeGameAssets.fileCountMax}}
 files, and {{gib platform.largeGameAssets.fileBytesMax}} for one file. The archive keeps the
-limits above. The account needs large-asset access, which the OpenGame team enables; without
-it the deploy exits 3 with `large_asset_lane_not_granted`, so ask the person to request it.
+limits above. The plan is open to every active account, and `opengame deploy` chooses it by
+itself for a build past the ordinary limits, the same as `--external-assets auto`.
 
 Write `{"delivery": "large-game-v1", "assets": "auto"}` to a file and pass it as
 `--external-assets <file>` to both `opengame check` and `opengame deploy`. With `"auto"` the
@@ -38,11 +39,10 @@ CSS, XML, SVG, wasm, web manifests, SWF and PDF stay in the archive, and so does
 
 ## Credentials
 
-A credential inside any file is refused, comments included, because a game is served
-from a public CDN. The patterns searched for: {{labels credentialPatterns.content}}.
-Something shaped like {{labels credentialPatterns.suspicious}} is a warning, not a
-refusal. If a match is a real key, rotate it; removing it from the next build does not
-take it back.
+OpenGame no longer scans a build for keys. Every file in it can be read by every player,
+comments included, so a key in the bundle is a key anybody has. Keep keys on the creator's
+server. If a key has already shipped in a build, rotate it; removing it from the next
+build does not take it back.
 
 Identity, leaderboards and achievements come from the page through the SDK (see
 `opengame-sdk`), so those need no key. To call an API that does need one, such as an AI
@@ -70,8 +70,8 @@ Before the game calls out:
 
 ## What a game may not do
 
-Refused whatever host the game uses. `opengame check`, the upload scan and the review
-sandbox look for the common services and code shapes, and automatic review plays every game.
+Refused whatever host the game uses. `opengame check` and the review sandbox look for
+the common services and code shapes, and automatic review plays every game.
 
 - **Payments.** {{raw gamePolicy.categories.payments.rule}}
 - **Crypto.** {{raw gamePolicy.categories.crypto.rule}}
@@ -82,14 +82,21 @@ sandbox look for the common services and code shapes, and automatic review plays
 - **Tracking.** {{raw gamePolicy.categories.tracking.rule}}
 
 A game also may not put another site in an iframe, post a form, or open a popup. Links
-out go through `og.openLink`. OpenGame does not open links to the payment, crypto and sign-in services on its list, judged by the address the game passes, not by where it redirects. Do not hide a service from the checks by renaming or encoding it; the reviewer
+out go through `og.openLink`. OpenGame does not open links to the payment, crypto and sign-in services on its list, judged by the address the game passes, not by where it redirects. Do not hide a service from the checks by renaming or encoding it; review
 plays the game against the rule, not against the list.
 
 ## What the checks measure
 
-| Check | What it asks | Who decides | Blocks |
-| --- | --- | --- | --- |
+| Check | What it asks | Blocks |
+| --- | --- | --- |
 {{checktable checks}}
+
+No person reviews a game. Once these pass, review plays it and decides by itself: the
+game goes on to be published, or back to the creator with the reason. It goes back when the
+build fails packaging, when its review cost more than any game should need (make it smaller
+or simpler), or when a confident verdict reads it as not a real game, as made for a phone
+held upright, or as not running on a supported web runtime. The creator then
+confirms the details and certifies the rights on the deploy's page.
 
 Thresholds that warn rather than refuse: an initial download over
 {{mib performance.initialTransferBytesWarn}} before the first playable frame, time to

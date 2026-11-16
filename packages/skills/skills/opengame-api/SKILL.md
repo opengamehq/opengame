@@ -2,7 +2,7 @@
 name: opengame-api
 description: Call the OpenGame creator API directly over HTTPS. Covers the base URL, creator tokens and scopes, the OpenAPI document, the error shape and retry fields, deploying without the CLI, and checking whether OpenGame is open. Use when the person wants to deploy from their own tool or CI without the CLI, asks about the OpenGame REST API, api/v1, openapi.json or a creator token, or an API call returned an error code you need to read.
 metadata:
-  version: "1.0.6"
+  version: "1.0.7"
 ---
 
 # Call the OpenGame creator API
@@ -47,16 +47,42 @@ authentication it needs. Read it rather than guessing a field.
 
 ## Deploy without the CLI
 
+Start with `GET /api/v1/bootstrap`. It returns the limits, the account's usage and
+`capabilities`, which say what this account may use now: `archiveParts` (an archive in
+parts), `incrementalUpload` (file by file), `fileParts`, `filePacks` and `externalAssets`.
+Use a way of uploading only when its capability is `true`.
+
+An archive deploy:
+
 1. `POST /api/v1/deploys` with the archive's size, file count, SHA-{{literal 256}} hash and manifest, and
-   an `Idempotency-Key`. Save the operation ID and the key before uploading.
-2. `PUT` the archive bytes to the returned `upload` URL with the headers it names, and
-   no creator token.
+   an `Idempotency-Key`. Save the operation ID and the key before uploading. Add
+   `"multipart": true` to send an archive over {{mib platform.deploy.multipart.aboveBytes}}
+   in parts: the answer then carries `multipart` (the part size, the part count and the
+   parts already stored) in place of `upload`. Without it, an archive over
+   {{mib platform.deploy.multipart.singlePutBytesMax}} is refused with 413 `bundle_limit`.
+2. One `PUT` of the archive bytes to the returned `upload` URL, with the headers it names
+   and no creator token. In parts: `POST /api/v1/operations/{id}/upload/parts` with
+   `{"parts": [1, 2, ...]}` (up to {{n platform.deploy.multipart.partsPerRequestMax}} a
+   request) signs a URL for each, then `PUT` each part to its URL, up to
+   {{n platform.deploy.multipart.concurrency}} at once.
 3. `PUT /api/v1/operations/{id}/upload` to confirm. A `POST` to the same path gives a
-   fresh upload URL if the upload was interrupted.
+   fresh upload URL, or for parts the ones storage already holds, if the upload was
+   interrupted.
 4. Poll `GET /api/v1/operations/{id}` until it is `ready`, `failed` or `expired`.
 
+A file-by-file deploy sends only the files OpenGame does not already hold, so a small
+change to a big game uploads little. `POST /api/v1/deploys/files` starts it from a list of
+files with their hashes, the `/api/v1/operations/{id}/files/...` routes sign, verify and
+pack the missing ones, and `POST /api/v1/operations/{id}/files/complete` assembles the
+build and queues the checks. The request bodies are in `openapi.json`.
+
 Reuse one `Idempotency-Key` for every retry of the same deploy; a new key starts a new
-operation. Submitting a release to review is separate: `POST /api/v1/submissions`.
+operation. A ready deploy goes to review by itself, and the creator confirms its details
+on the deploy's page.
+
+An account may begin {{n platform.deploy.perAccountPerDay}} deploys in any rolling 24
+hours (429 `deploy_day_limited`), and has an hourly allowance too (429
+`deploy_rate_limited`). A refused deploy uploads nothing; wait and try again.
 
 ## Errors
 

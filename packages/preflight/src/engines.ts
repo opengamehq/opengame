@@ -89,7 +89,7 @@ export interface EngineReport {
   /** Further engines in the same bundle. GDevelop ships PixiJS; a game can carry two. */
   also: DetectedEngine[];
   /** Engines whose licence stamp a module carries. Never an identity and never in
-   * detectedIds: it only asks for that engine's publication statement. */
+   * detectedIds: it only marks the build for that engine's licence-stamp check. */
   licences?: string[];
 }
 
@@ -252,7 +252,7 @@ const satisfies = (rule: WasmRule, module: WasmFacts & { strings: string[] }) =>
 
 /** Everything detection needs from one `.wasm`, read once. `licences` names each engine
  * whose licence stamp the bytes carry (the registry's `licenceStamp`): it grants nothing,
- * it only asks for that engine's publication statement, so a build that hides its loader
+ * it only marks the build for that engine's licence-stamp check, so a build that hides its loader
  * from every signature still has to make the statement. */
 export function wasmModule(path: string, bytes: Uint8Array): WasmModule {
   const walked = wasmFacts(path, bytes);

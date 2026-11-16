@@ -15,7 +15,7 @@ import { watchAvatar } from '@opengamehq/sdk/avatar'
 
 await og.init()
 watchAvatar(og, avatar => {
-  if (!avatar) return useDefaultCharacter()   // guest, sharing off, preview, signed out
+  if (!avatar) return useDefaultCharacter()   // guest, no OG made, preview, signed out
   prepareYourOg(avatar)                       // avatar.head, avatar.outfit (null: default body)
 })
 ```

@@ -1,0 +1,21 @@
+# opengame-all-in-one changelog
+
+## 1.0.4
+
+Carries opengame-performance 1.1.1 and opengame-scene-audit 1.1.1.
+
+## 1.0.3
+
+Carries opengame-deploy 1.1.6.
+
+## 1.0.2
+
+Carries opengame-multiplayer 1.1.0, opengame-sdk 1.0.13 and opengame-deploy 1.1.5: invite links that open the game on OpenGame, and PeerJS and game servers set up for it.
+
+## 1.0.1
+
+Carries opengame-api 1.0.7, opengame-characters 1.2.1, opengame-cli 1.8.4, opengame-deploy 1.1.4, opengame-jam 1.0.9 and opengame-sdk 1.0.12.
+
+## 1.0.0
+
+The first release: every OpenGame skill carried whole under `references/`, with the route through them from a first playable to a trailer and a montage.

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opengame.io/schema/opengame.json",
+  "title": "Paper lantern city",
+  "tagline": "auto",
+  "description": "auto",
+  "genre": "auto",
+  "kind": "game",
+  "build": {
+    "command": "pnpm run build",
+    "output": "."
+  },
+  "controls": "auto"
+}

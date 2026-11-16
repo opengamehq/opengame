@@ -76,7 +76,7 @@ function unquote(raw) {
  * markdown link with a relative target, or a code span naming `references/...` or
  * `helpers/...`. External links and anchors are not files and are skipped.
  */
-export function localLinks(text, from = "SKILL.md") {
+export function localLinks(text, from = "SKILL.md", root = "") {
   const base = posix.dirname(from);
   const links = new Set();
   for (const match of text.matchAll(/\]\(([^)\s#]+)(?:#[^)]*)?\)/g)) {
@@ -84,7 +84,9 @@ export function localLinks(text, from = "SKILL.md") {
     if (/^[a-z]+:/i.test(target) || target.startsWith("/")) continue;
     links.add(posix.normalize(posix.join(base, target)));
   }
-  for (const match of text.matchAll(/`((?:references|helpers)\/[A-Za-z0-9._/-]+)`/g)) links.add(match[1]);
+  // A code span names a path from the skill's own folder, wherever in it the span is
+  // written. `root` is that folder for a skill carried inside the bundle skill.
+  for (const match of text.matchAll(/`((?:references|helpers)\/[A-Za-z0-9._/-]+)`/g)) links.add(posix.normalize(posix.join(root, match[1])));
   return links;
 }
 
@@ -103,6 +105,11 @@ export function readRules(body) {
     if (tag && current) current.tags.push({ name: tag[1], text: tag[2], line: i + 1 });
   }
   return rules;
+}
+
+/** The folder a carried skill sits in inside the bundle skill, or "" for the bundle's own files. */
+export function bundledRoot(file) {
+  return /^(references\/opengame-[a-z0-9-]+)\//.exec(file)?.[1] ?? "";
 }
 
 /**
@@ -164,7 +171,7 @@ export function validateSkill({ name, family, files }) {
   const queue = ["SKILL.md"];
   while (queue.length) {
     const file = queue.shift();
-    for (const link of localLinks(files[file], file)) {
+    for (const link of localLinks(files[file], file, family === "bundle" ? bundledRoot(file) : "")) {
       if (!Object.hasOwn(files, link)) { at(file, 0, `links ${link}, which is not shipped`); continue; }
       if (!reachable.has(link)) { reachable.add(link); if (link.endsWith(".md")) queue.push(link); }
     }

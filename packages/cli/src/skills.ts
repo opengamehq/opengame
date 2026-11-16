@@ -38,7 +38,7 @@ const NAME = /^opengame-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const FILE = /^(?:SKILL\.md|(?:references|helpers)\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*)$/;
 
 type BundledFile = { path: string; sha256: string };
-type BundledSkill = { name: string; family: "platform" | "craft"; default: boolean; description: string; files: BundledFile[]; digest: string };
+type BundledSkill = { name: string; family: "platform" | "craft" | "video" | "bundle"; default: boolean; description: string; files: BundledFile[]; digest: string };
 type Bundle = { root: string; skills: BundledSkill[] };
 type Marker = { name: string; digest: string; files: BundledFile[]; rule?: BundledFile };
 type InstallState = "installed" | "updated" | "unchanged" | "replaced" | "kept";
@@ -289,7 +289,9 @@ export async function installSkills(options: InstallOptions) {
   const names = options.skill?.split(",").map(name => name.trim()).filter(Boolean);
   const unknown = names?.filter(name => !bundle.skills.some(skill => skill.name === name));
   if (names && (!names.length || unknown?.length)) throw new CliError("invalid_skill", "Use --skill with names from opengame skills list, separated by commas.", undefined, { next: "opengame skills list" });
-  const selected = bundle.skills.filter(skill => options.all || (names ? names.includes(skill.name) : skill.default));
+  // --all is every skill once. The bundle skill carries all the others, so it would put each
+  // of them in the agent's folder twice; it is installed only when it is named.
+  const selected = bundle.skills.filter(skill => names ? names.includes(skill.name) : options.all ? skill.family !== "bundle" : skill.default);
   if (!selected.length) throw broken("no starting skills");
   const { agents, reason } = await chooseAgents(options.agent, project, options.env);
   const steps: Plan[] = [];
@@ -336,8 +338,14 @@ export async function skillsCommand(action: string | undefined, folder: string |
     for (const key of ["agent", "dir", "replace", "keep-edited", "skill", "all"]) if (key in flags) throw new CliError("unsupported_flag", `The skills list command does not use --${key}. Run opengame help skills.`, undefined, { next: "opengame help skills" });
     const bundle = await readBundle();
     const skills = bundle.skills.map(({ name, family, default: byDefault, description }) => ({ name, family, default: byDefault, description }));
+    const width = Math.max(...skills.map((skill) => skill.name.length)) + 2;
+    // The bundle skill carries every other one, so it is the one name to give somebody
+    // who wants everything as a single skill.
+    const bundled = skills.find((skill) => skill.family === "bundle");
     output.emit({ type: "result", command: "skills list", data: { skills,
-      message: skills.map((skill) => `${skill.name.padEnd(26)} ${skill.family}${skill.default ? " (starting set)" : ""}`).join("\n") + "\n\nRun opengame skills add for the starting set, --skill <name> for a specialist, or --all for the catalog." } });
+      message: skills.map((skill) => `${skill.name.padEnd(width)} ${skill.family}${skill.default ? " (starting set)" : ""}`).join("\n") +
+        "\n\nRun opengame skills add for the starting set, --skill <name> for a specialist, or --all for every skill." +
+        (bundled ? ` --skill ${bundled.name} installs every skill as one skill instead; --all leaves it out, because it repeats the others.` : "") } });
     return;
   }
   // `opengame skills add .` reads like every other command; --dir stays for scripts that use it.

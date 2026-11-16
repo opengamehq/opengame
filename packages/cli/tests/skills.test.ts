@@ -21,7 +21,9 @@ const bundle = fileURLToPath(new URL("../dist/skills/", import.meta.url));
 const catalogue: { skills: { name: string; family: string; default?: boolean }[] } = JSON.parse(
   await readFile(new URL("../../skills/skills.json", import.meta.url), "utf8"));
 const expectedNames = catalogue.skills.map(skill => skill.name).sort();
-const skillCount = expectedNames.length;
+/* --all installs every skill once: the bundle skill repeats them all, so it is left out. */
+const allNames = catalogue.skills.filter(skill => skill.family !== "bundle").map(skill => skill.name).sort();
+const skillCount = allNames.length;
 const clean = () => cleanEnv();
 function run(args: string[], env = clean()) {
   const result = spawnSync(process.execPath, [binary, ...args, "--jsonl"], { encoding: "utf8", env });
@@ -51,10 +53,10 @@ test("skills add installs every skill byte for byte, then a second run changes n
   const first = run(["skills", "add", "--all", "--agent", "claude", "--dir", dir]);
   assert.equal(first.status, 0, JSON.stringify(first.last));
   assert.deepEqual(first.last.data.counts, { installed: skillCount, updated: 0, unchanged: 0, replaced: 0, kept: 0 });
-  assert.deepEqual((await readdir(join(dir, ".claude/skills"))).sort(), expectedNames);
+  assert.deepEqual((await readdir(join(dir, ".claude/skills"))).sort(), allNames);
   const built = await readBundle(bundle);
   assert.deepEqual(built.skills.map(skill => skill.name).sort(), expectedNames);
-  for (const skill of built.skills) {
+  for (const skill of built.skills.filter(skill => skill.family !== "bundle")) {
     const target = join(dir, ".claude/skills", skill.name);
     async function files(folder: string, prefix = ""): Promise<string[]> {
       const out: string[] = [];
@@ -199,6 +201,19 @@ test("Cursor gets rules whose links still resolve; Codex and OpenCode get skill 
   assert.equal(run(["skills", "add", "--all", "--agent", "cursor", "--dir", dir]).status, 2, "an edited rule file is protected too");
 });
 
+test("--all installs every skill once, and the all-in-one only when it is named", async (t) => {
+  const dir = await project(t);
+  assert.equal(run(["skills", "add", "--all", "--agent", "claude", "--dir", dir]).status, 0);
+  assert.ok(!(await readdir(join(dir, ".claude/skills"))).includes("opengame-all-in-one"));
+  const one = await project(t);
+  const named = run(["skills", "add", "--skill", "opengame-all-in-one", "--agent", "claude", "--dir", one]);
+  assert.equal(named.status, 0, JSON.stringify(named.last));
+  assert.deepEqual((await readdir(join(one, ".claude/skills"))).sort(), ["opengame-all-in-one"]);
+  for (const skill of allNames) {
+    await stat(join(one, ".claude/skills/opengame-all-in-one/references", skill, "README.md"));
+  }
+});
+
 test("two agents sharing one folder through a link install it once", async (t) => {
   const dir = await project(t);
   await mkdir(join(dir, ".agents/skills"), { recursive: true });
@@ -207,7 +222,7 @@ test("two agents sharing one folder through a link install it once", async (t) =
   const result = run(["skills", "add", "--all", "--agent", "claude,codex", "--dir", dir]);
   assert.equal(result.status, 0, JSON.stringify(result.last));
   assert.equal(result.last.data.skills.length, skillCount * 2);
-  assert.deepEqual((await readdir(join(dir, ".agents/skills"))).sort(), expectedNames);
+  assert.deepEqual((await readdir(join(dir, ".agents/skills"))).sort(), allNames);
 });
 
 test("without --agent, the running agent, then the project's folders, then Claude Code decide", async (t) => {
@@ -345,7 +360,7 @@ test("staging happens outside the skills folder, and leftovers from a crashed ru
   assert.equal(result.status, 0, JSON.stringify(result.last));
   const names = await readdir(skills);
   assert.deepEqual(names.filter((name) => name.includes(".opengame-")), []);
-  assert.deepEqual([...names].sort(), expectedNames);
+  assert.deepEqual([...names].sort(), allNames);
   await assert.rejects(stat(join(dir, ".claude/.opengame-staging/opengame-jam-new-99999999")));
 });
 

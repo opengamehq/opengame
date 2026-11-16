@@ -1,7 +1,7 @@
 # Post that reacts, and the lens finish
 
 All values here are reference configurations from our games. Start from them, then tune
-by eye against the look bible, at play distance, while moving.
+by eye against the look page, at play distance, while moving.
 
 ## Lens finish
 
@@ -26,7 +26,8 @@ AW is the restrained end, DK the hotter one. Pick one for the game and keep it.
 - **Missing health:** up to vignette +0.3, aberration +0.16, and saturation down 35%.
 - **Damage:** tint the frame edge by (1.25, 0.22, 0.18), decaying at 3.2 per second.
 - **Exposure flash:** each shot adds 0.07 of exposure (a heavy shot 0.16), decaying at 7
-  per second.
+  per second. This is for a fixed exposure. A game whose exposure adapts adds no kick for a
+  shot: the flash is a light, and the meter's dip after it is capped (`opengame-lighting`).
 
 These are DK and AW's numbers. Every one of them must stay inside the flash limits in
 `opengame-accessibility`: a full-screen change is bounded per frame however it is driven.
@@ -63,4 +64,10 @@ At play distance, on the real route:
 6. The grade adds contrast without hiding threats, UI or team colours.
 7. Only emissive and specular sources bloom.
 8. A capture with the grade off is compared, and the clearer one kept.
-9. The lowest quality tier still reads.
+9. The lowest quality tier still reads, and keeps every plant and prop that hides a
+   player.
+10. Every weather preset and every camera the game uses (spawn cinematics, the pre-match
+    screen, menus) passes the same list, not only clear weather in play.
+11. Nothing crawls on a slow pan filmed on a stepped clock; stills do not count for
+    this one.
+12. Hero materials hold at 1:1 from standing distance before any dressing is judged.

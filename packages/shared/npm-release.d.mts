@@ -12,3 +12,5 @@ export declare function installMarkdown(name: InstallStep, release: Release): st
 export declare function writeInstallBlocks(text: string, release: Release): string;
 export declare const installBlocks: (text: string) => string[];
 export declare function closedWordingProblems(text: string, release: Release): string[];
+export declare const SKILLS_DOWNLOAD_PATH: string;
+export declare const SKILLS_DOWNLOAD_URL: string;

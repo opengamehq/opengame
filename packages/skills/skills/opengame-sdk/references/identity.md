@@ -2,9 +2,8 @@
 
 | Situation | `id` | `handle`, `ogNumber` | `avatar` | `signedIn` |
 | --- | --- | --- | --- | --- |
-| Signed in, sharing their OG in games (the default for new accounts), with a handle | Stable for this player in this game, on every device | Their public handle and number | Their head, and their outfit if they have one | `true` |
-| Signed in, sharing off (turned off, or an older account that never turned it on) | Stable as above | `null` | `null` | `true` |
-| Signed in, no handle claimed yet | Stable as above | `null` | As sharing allows | `true` |
+| Signed in, with a handle | Stable for this player in this game, on every device | Their public handle and number | Their head, and their outfit if they have one | `true` |
+| Signed in, no handle claimed yet | Stable as above | `null` | Their OG, if they have made one | `true` |
 | Guest | `null` while accounts are in private testing; otherwise stable in this browser for this game | `null` | `null` | `false` |
 | Private preview | `null`. Identity is not offered; scores stay separate from public ones | `null` | `null` | `false` |
 | Outside OpenGame, by default | `dev-guest` | `null` | `null` | `false` |
@@ -52,11 +51,11 @@ known, under the loading screen, fixed it.
 
 - The per-game `id` cannot be joined across games: the same person has a different id
   in every game. That is the point of it; do not try to work around it.
-- `handle` and `ogNumber` are public profile values, the same across games, and only
-  for a player who shares them, which new accounts do by default. A game may show
-  them, link them and recognise a returning handle; say so in the game's own copy if
-  it matters to players. A player can turn sharing off at any time, so fall back to a
-  guest name when they are `null`. They are never a storage key, because they can be
+- `handle` and `ogNumber` are public profile values, the same across games, sent for
+  every signed-in player who has claimed a handle; there is no setting to withhold
+  them. A game may show them, link them and recognise a returning handle; say so in
+  the game's own copy if it matters to players. Fall back to a guest name when they
+  are `null`. They are never a storage key, because they can be
   null for a signed-in player and can change.
 - The SDK never gives the game an email, the account's real id, a friends list or a
   browser fingerprint, and a game should never ask for them.
@@ -96,7 +95,7 @@ save your score"). The game keeps running; `onChange` fires when they return sig
 ## The player's OG
 
 `og.player.avatar` is `{ seed, palette, look?, character? }`. `look` (the head) arrives
-only when the player is signed in, has turned on "Show my OG in games" and has made one;
+only when the player is signed in and has made one;
 `character` (the body and outfit) arrives only beside a `look`. A guest, and every
 player in a private preview, gets null, and then `og.capabilities` has no `avatar`.
 With no `look`, draw the game's default.
@@ -108,5 +107,5 @@ const stop = watchAvatar(og, avatar => avatar ? useYourOg(avatar) : useDefaultCh
 
 `watchAvatar` calls at once and then only when the recipe changes, so a model is not
 rebuilt on every session refresh. `readAvatar` names the parts of one recipe. Do not
-store the recipe or send it anywhere; a player who turns sharing off expects their OG
-to leave the game. Building and showing it is in `opengame-characters`.
+store the recipe or send it anywhere; a player who changes or deletes their OG expects
+the game to follow. Building and showing it is in `opengame-characters`.

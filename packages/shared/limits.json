@@ -141,14 +141,14 @@
       "kind": "manual",
       "blocking": true,
       "label": "Originality and IP",
-      "hint": "Declared by the creator, and removed on a valid DMCA notice"
+      "hint": "Removed on a valid DMCA notice"
     },
     {
       "key": "fresh",
       "kind": "manual",
       "blocking": true,
       "label": "Built after kickoff",
-      "hint": "Attested by the creator"
+      "hint": "The honor system, player reports and the winner checks"
     }
   ],
   "allowedGameOrigins": {
@@ -1790,9 +1790,7 @@
           "kaigen"
         ],
         "limits": "kaigenAssets",
-        "grant": "kaigen",
         "licenceStamp": "kaigen",
-        "statement": "kaigen_publication",
         "assetPaths": [
           {
             "prefix": "",
@@ -2006,11 +2004,47 @@
     },
     "deploy": {
       "minimalChecks": true,
+      "executablesRefused": {
+        "extensions": [
+          "exe",
+          "dll",
+          "scr",
+          "msi",
+          "msix",
+          "appx",
+          "sys",
+          "cpl",
+          "bat",
+          "cmd",
+          "ps1",
+          "vbs",
+          "vbe",
+          "wsf",
+          "jse",
+          "hta",
+          "msp",
+          "jar",
+          "apk",
+          "aab",
+          "xapk",
+          "ipa",
+          "dmg",
+          "pkg",
+          "mpkg",
+          "deb",
+          "rpm",
+          "appimage",
+          "dylib",
+          "lnk",
+          "reg"
+        ]
+      },
       "perAccountPerDay": 5,
       "minimumUploadBytesPerSecond": 150000,
       "multipart": {
         "partBytes": 16777216,
         "aboveBytes": 67108864,
+        "singlePutBytesMax": 524288000,
         "concurrency": 16,
         "partsPerRequestMax": 64
       },
@@ -2235,9 +2269,9 @@
     "sdk": {
       "handshakeTimeoutMs": 4000,
       "handshakeRetryMs": 500,
-      "coreGzipBytesMax": 16360,
+      "coreGzipBytesMax": 16710,
       "bridgeGzipBytesMax": 71680,
-      "adapterGzipBytesMax": 17590,
+      "adapterGzipBytesMax": 17950,
       "avatarGzipBytesMax": 3072,
       "radioGzipBytesMax": 8192,
       "radio": {

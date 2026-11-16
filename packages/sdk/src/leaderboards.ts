@@ -18,19 +18,19 @@ export type ScoreReceipt = Readonly<{ score: number; state: 'ok' | 'clamped' | '
 /** How a value reads: `duration_ms` and `duration_s` as a time, `percent` as 0 to 100. */
 export type LeaderboardFormat = 'number' | 'integer' | 'duration_ms' | 'duration_s' | 'percent' | 'distance_m';
 /** A stat beside the score. `order` is the direction that ranks first when the board is
- * sorted by it, and only a `sortable` column can be. On a career board each column also says
+ * sorted by it, and only a `sortable` column can be. On a career board each column also names
  * how it aggregates the source board's runs: `agg` with `of` (`score` or a source column, or
- * null for a count of every run) and `where`, or a `ratio` of two earlier columns `of:
- * [numerator, denominator]` times `scale`, shown once `requires` is met. */
+ * null for a count of all runs) and `where`, or a `ratio` of two earlier columns,
+ * `of: [numerator, denominator]` times `scale`, shown once `requires` is met. */
 export type LeaderboardColumn = Readonly<{ key: string; label: string; format: LeaderboardFormat; order: 'asc' | 'desc'; sortable: boolean;
-  /** The fixed decimals every value in the column is drawn with, when the board declares them. */
+  /** The fixed decimals for the column's values, when the board declares them. */
   decimals?: number;
   agg?: 'count' | 'sum' | 'max' | 'min' | 'avg' | 'ratio'; of?: string | readonly string[] | null;
   where?: Readonly<{ of: string; op: 'eq' | 'lt' | 'lte' | 'gt' | 'gte'; value: number }> | null; scale?: number;
   requires?: Readonly<{ column: string; atLeast: number }> | null }>;
 export type LeaderboardVariant = Readonly<{ key: string; label: string; values: readonly Readonly<{ key: string; label: string }>[] }>;
 /** What the board declares, for drawing it. `keep` is `best` when a player appears once,
- * by their best run, `runs` when every kept run is a row, and `career` when each row adds up
+ * by their best run, `runs` when each kept run is a row, and `career` when each row adds up
  * a player's accepted runs on the board named `from`, the score by `scoreAgg`. A career board
  * is read like any other and never submitted to. */
 export type LeaderboardShape = Readonly<{ label: string | null; scoreLabel: string | null; format: LeaderboardFormat; keep: 'best' | 'runs' | 'career';
@@ -38,7 +38,7 @@ export type LeaderboardShape = Readonly<{ label: string | null; scoreLabel: stri
   columns: readonly LeaderboardColumn[]; variants: readonly LeaderboardVariant[] }>;
 /** `total` is how many rows the board holds under this filter, or null from an older API.
  * `sort` is `score` or the column the page is ranked by, and `filter` the tags it is
- * narrowed to (empty is every run). `shape` is null from an older API. */
+ * narrowed to (empty is all runs). `shape` is null from an older API. */
 export type LeaderboardPage = Readonly<{ entries: readonly ScoreEntry[]; order: 'asc' | 'desc'; preview: boolean; source: 'game_reported';
   total: number | null; offset: number; sort: string; filter: Readonly<Record<string, string>>; shape: LeaderboardShape | null }>;
 /** The player's entry on one board, as `og.player.stats()` reads it: their best accepted
@@ -49,11 +49,11 @@ export type PlayerStatEntry = Readonly<{ score: number; stats: Readonly<Record<s
 export type PlayerStat = Readonly<{ board: string; label: string | null; keep: 'best' | 'runs' | 'career'; entry: PlayerStatEntry | null }>;
 /** The boards the game declares, in key order. Like any score, each number is the game's claim. */
 export type PlayerStats = Readonly<{ boards: readonly PlayerStat[]; preview: boolean; source: 'game_reported' }>;
-/** A finished run: the score, and optionally a number for each of the board's columns and
- * a value for each of its variants. */
+/** A finished run: the score, and optionally a number for each board column and a value
+ * for each board variant. */
 export type LeaderboardRun = { value: number; stats?: Record<string, number>; tags?: Record<string, string>; meta?: ScoreMeta };
 /** `sort` is `score` (the default) or a sortable column's key; `filter` names a value for
- * any of the board's variants, such as `{ mode: 'solo' }`. */
+ * any board variant, such as `{ mode: 'solo' }`. */
 export type LeaderboardQuery = { sort?: string; filter?: Record<string, string> };
 /** A board declared in `opengame.json`. Hosted requests use the current game session;
  * the local mock stores scores in this browser. Preview scores stay in that preview. */
@@ -178,7 +178,7 @@ export class Leaderboards {
     }
     return { ok: true, value: Object.freeze({ boards: Object.freeze(lines), preview: state.preview, source: 'game_reported' as const }) };
   }
-  private validKey(key: string) { return typeof key === 'string' && key.length <= __SDK_CONFIG__.leaderboards.keyCharsMax && /^[a-z0-9][a-z0-9_-]*$/.test(key); }
+  private validKey(key: string) { return typeof key === 'string' && key.length <= __SDK_CONFIG__.leaderboards.keyCharsMax && /^[a-z][a-z0-9_]*$/.test(key); }
   private async state(key: string): Promise<Result<LeaderboardContext & { generation: number }>> {
     if (!this.validKey(key)) return fail('invalid_board', 'Use a board key declared in opengame.json.');
     await this.initialize();

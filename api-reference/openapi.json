@@ -35,7 +35,7 @@
     },
     {
       "name": "Submissions",
-      "description": "Send one exact release to review, and enter it in a jam."
+      "description": "Send one exact release to review again, and read where a submission stands."
     },
     {
       "name": "Jams",
@@ -2857,11 +2857,13 @@
           },
           "replayed": {
             "default": false,
-            "type": "boolean"
+            "type": "boolean",
+            "description": "`true` when this answers a retry of an earlier request under the same `Idempotency-Key`."
           },
           "existing": {
             "default": false,
-            "type": "boolean"
+            "type": "boolean",
+            "description": "`true` when the release already had a review open and this is that submission, usually the one its deploy started by itself once it was ready. Nothing new was submitted, and jam answers or metadata sent with this request were not used. Confirm the details, and enter a jam, in a browser on the page `certifyUrl` names."
           },
           "hold": {
             "default": null,
@@ -4468,7 +4470,8 @@
               "code",
               "message"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Why this build will not enter the jam. Only the answers that begin and confirm an upload carry it, and only before the deploy is ready, when the jam is where new games go and its answer is already known: a mod or decomp, the account's entry limit, or a deploy begun before the kickoff. A mod or decomp, or a game from an admin or an account OpenGame lists as a publisher, still goes to review and can be published outside the jam. While the jam runs, any other account's original game goes live only as a jam entry, so this build is not sent to review, and its deploy page says why. Absent when the build can enter the jam, when no jam is the destination, and from older servers."
           },
           "buildId": {
             "type": "string",
@@ -10430,7 +10433,8 @@
                   "code",
                   "message"
                 ],
-                "additionalProperties": false
+                "additionalProperties": false,
+                "description": "Why this build will not enter the jam. Only the answers that begin and confirm an upload carry it, and only before the deploy is ready, when the jam is where new games go and its answer is already known: a mod or decomp, the account's entry limit, or a deploy begun before the kickoff. A mod or decomp, or a game from an admin or an account OpenGame lists as a publisher, still goes to review and can be published outside the jam. While the jam runs, any other account's original game goes live only as a jam entry, so this build is not sent to review, and its deploy page says why. Absent when the build can enter the jam, when no jam is the destination, and from older servers."
               },
               "buildId": {
                 "type": "string",
@@ -11869,7 +11873,7 @@
                         "boolean",
                         "null"
                       ],
-                      "description": "`true` when this account may use the creator API now, which before `creatorsOpenAt` is the OpenGame team. `null` when the request has no credential, or one that is unknown, revoked or expired."
+                      "description": "`true` when this account may use the creator API now, which is any signed-in account, before `creatorsOpenAt` as after it. `null` when the request has no credential, or one that is unknown, revoked or expired."
                     },
                     "opensAt": {
                       "type": "string",
@@ -12190,9 +12194,9 @@
                         "incrementalUpload": {
                           "type": "boolean",
                           "examples": [
-                            false
+                            true
                           ],
-                          "description": "Currently false, so the CLI uses ZIP uploads for ordinary builds. Explicit large-asset plans use the separate asset endpoints. Clients should use ordinary per-file uploads only when this capability is true."
+                          "description": "`true` while this server takes per-file uploads. The CLI then sends an ordinary build file by file through `POST /api/v1/deploys/files`, in packs and parts where the server offers them, and keeps a ZIP through `POST /api/v1/deploys` for a build whose stored archive would be past `platform.incrementalUpload.archiveBytesMax` or whose paths the file route cannot take. `false` when per-file processing is off here, and then the file routes answer 503. Explicit large-asset plans use the separate asset endpoints. Use the file routes only when this is `true`."
                         },
                         "archiveParts": {
                           "type": "boolean",
@@ -12200,6 +12204,18 @@
                             true
                           ],
                           "description": "This server takes a ZIP in parts: send `multipart: true` to `POST /api/v1/deploys`. Absent on servers that do not."
+                        },
+                        "externalAssets": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "examples": [
+                            [
+                              "large-game-v1"
+                            ]
+                          ],
+                          "description": "The large-asset plans this account may use right now, such as `large-game-v1`, which is open to every active account; `kaigen-assets-v1` appears only with its grant. The CLI chooses `large-game-v1` by itself for a build past the ordinary limits when it is listed. Empty when per-file uploads are off."
                         },
                         "filePacks": {
                           "type": "boolean",
@@ -12316,15 +12332,18 @@
                       "max": 2,
                       "remaining": 1,
                       "jamSlug": "global-ai-game-jam-2026",
-                      "jamName": "Global AI Game Jam 2026"
+                      "jamName": "Game Jam #1"
                     }
                   },
                   "package": null,
                   "capabilities": {
-                    "incrementalUpload": false,
+                    "incrementalUpload": true,
                     "archiveParts": true,
                     "fileParts": true,
-                    "filePacks": true
+                    "filePacks": true,
+                    "externalAssets": [
+                      "large-game-v1"
+                    ]
                   }
                 }
               }
@@ -12602,7 +12621,7 @@
                       "max": 2,
                       "remaining": 1,
                       "jamSlug": "global-ai-game-jam-2026",
-                      "jamName": "Global AI Game Jam 2026"
+                      "jamName": "Game Jam #1"
                     }
                   }
                 }
@@ -12838,7 +12857,7 @@
           }
         ],
         "summary": "Start a deploy",
-        "description": "Declares an archive by size, file count and SHA-256, creates the operation, and returns a presigned create-only upload. With `multipart: true` and an archive over 67108864 bytes, it returns `multipart` instead: send each part to a URL from `POST /api/v1/operations/{id}/upload/parts`, then confirm. Without it, an archive over 524288000 bytes is refused as `bundle_limit`. Requires the `deploy` scope. Omit `gameId` to create a game. Limited to 30 deploys an hour per account and 30 per token. Retrying with the same `Idempotency-Key` returns the same operation, so a timeout never makes a second game. A browser session must send `Origin` set to the OpenGame origin.",
+        "description": "Declares an archive by size, file count and SHA-256, creates the operation, and returns a presigned create-only upload. With `multipart: true` and an archive over 67108864 bytes, it returns `multipart` instead: send each part to a URL from `POST /api/v1/operations/{id}/upload/parts`, then confirm. Without it, an archive over 524288000 bytes is refused as `bundle_limit`. Requires the `deploy` scope. Omit `gameId` to create a game. Limited to 30 deploys an hour per account and 30 per token, and to 5 per account in any 24 hours. Retrying with the same `Idempotency-Key` returns the same operation, so a timeout never makes a second game. A browser session must send `Origin` set to the OpenGame origin.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -13190,7 +13209,7 @@
           }
         ],
         "summary": "Start a deploy with a file manifest",
-        "description": "Requires the deploy scope and per-file processing on this server. Bootstrap currently reports `capabilities.incrementalUpload: false`, so the CLI keeps ordinary builds on ZIP uploads. Some servers do not offer it. When unavailable, returns 503 `temporarily_unavailable` with `retry` set to `never` before reading the body; use `POST /api/v1/deploys` with a ZIP. A browser request from another site gets 403 first. Reuse the same Idempotency-Key on every retry. Returns the first page of missing content hashes and create-only storage PUT URLs. Cached content is scoped to this account.",
+        "description": "Requires the deploy scope and per-file processing on this server, which bootstrap reports as `capabilities.incrementalUpload`. While that is `true`, the CLI sends an ordinary build this way, unless its stored archive would be past `platform.incrementalUpload.archiveBytesMax`. Some servers do not offer it. When unavailable, returns 503 `temporarily_unavailable` with `retry` set to `never` before reading the body; use `POST /api/v1/deploys` with a ZIP. A browser request from another site gets 403 first. Reuse the same Idempotency-Key on every retry. Returns the first page of missing content hashes and create-only storage PUT URLs. Cached content is scoped to this account.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -15471,7 +15490,7 @@
             }
           },
           "400": {
-            "description": "`invalid_request`: no body, a body that is not valid JSON or not valid gzip, or a boot manifest or asset plan that does not validate for a known plan kind. `invalid_idempotency_key`: send an `Idempotency-Key`. `large_asset_statement_required`: the publication statement is missing or outdated, so run `opengame check` with the same plan and send the version it prints.",
+            "description": "`invalid_request`: no body, a body that is not valid JSON or not valid gzip, or a boot manifest or asset plan that does not validate for a known plan kind. `invalid_idempotency_key`: send an `Idempotency-Key`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15500,7 +15519,7 @@
             }
           },
           "403": {
-            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
+            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind needs large-asset access this account does not have, and `retry` is `never`; no plan kind asks for it since the Kaigen lane opened on 16 November 2026. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15647,8 +15666,16 @@
           "Deploys"
         ],
         "operationId": "beginExternalAssetDeploy",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
         "summary": "Start a deploy with large external assets, for any plan kind",
-        "description": "The same request and response as /api/v1/deploys/unity-assets, with delivery naming the plan kind: unity-assets-v1, kaigen-assets-v1 or large-game-v1. kaigen-assets-v1 and large-game-v1 are admitted only for an account an OpenGame reviewer has given large-asset access to, refused before any upload URL is signed. kaigen-assets-v1 also needs statement: {key, version} for the publication statement opengame check prints. large-game-v1 supports large exports, including decompilations, mods and recompilations. It accepts any detected engine except Kaigen, or an unrecognized engine, and requires no publication statement. Assets can leave the boot archive except file types a browser runs or renders as a document (HTML, JavaScript, CSS, XML, SVG, wasm, web manifests, SWF and PDF, and their compressed forms). It holds up to 32768 assets, 1 GiB a file and 12 GiB in all; the boot archive keeps the ordinary limits. `opengame deploy --external-assets auto`, or a plan file containing `{\"delivery\":\"large-game-v1\",\"assets\":\"auto\"}` chooses the files itself. A plan that large is a JSON body past `platform.incrementalUpload.bodyBytesMax`, so this route also takes `Content-Encoding: gzip`, held to that many bytes as sent and to `platform.incrementalUpload.assetPlanBodyBytesMax` (8388608) once decoded. Engine detection after the scan selects the plan's rules; account access is checked separately.",
+        "description": "The same request and response as /api/v1/deploys/unity-assets, with delivery naming the plan kind: unity-assets-v1, kaigen-assets-v1 or large-game-v1. large-game-v1 is open to any active account. kaigen-assets-v1 is open to any active account too, and asks no statement. large-game-v1 supports large exports, including decompilations, mods and recompilations. It accepts any detected engine except Kaigen, or an unrecognized engine, and requires no publication statement. Assets can leave the boot archive except file types a browser runs or renders as a document (HTML, JavaScript, CSS, XML, SVG, wasm, web manifests, SWF and PDF, and their compressed forms). It holds up to 32768 assets, 1 GiB a file and 12 GiB in all; the boot archive keeps the ordinary limits. `opengame deploy --external-assets auto`, or a plan file containing `{\"delivery\":\"large-game-v1\",\"assets\":\"auto\"}` chooses the files itself. A plan that large is a JSON body past `platform.incrementalUpload.bodyBytesMax`, so this route also takes `Content-Encoding: gzip`, held to that many bytes as sent and to `platform.incrementalUpload.assetPlanBodyBytesMax` (8388608) once decoded. Engine detection after the scan selects the plan's rules; account access is checked separately.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -15791,7 +15818,7 @@
             }
           },
           "400": {
-            "description": "`invalid_request`: no body, a body that is not valid JSON or not valid gzip, or a boot manifest or asset plan that does not validate for a known plan kind. `invalid_idempotency_key`: send an `Idempotency-Key`. `large_asset_statement_required`: the publication statement is missing or outdated, so run `opengame check` with the same plan and send the version it prints.",
+            "description": "`invalid_request`: no body, a body that is not valid JSON or not valid gzip, or a boot manifest or asset plan that does not validate for a known plan kind. `invalid_idempotency_key`: send an `Idempotency-Key`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15820,7 +15847,7 @@
             }
           },
           "403": {
-            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind (`kaigen-assets-v1`) needs large-asset access, which a reviewer turns on per account and this account does not have, and `retry` is `never`. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
+            "description": "Nothing was started. `forbidden`: the token cannot deploy this game or make a new one, or a browser request came from another site. `large_asset_lane_not_granted`: the plan kind needs large-asset access this account does not have, and `retry` is `never`; no plan kind asks for it since the Kaigen lane opened on 16 November 2026. `insufficient_scope`: the credential cannot deploy here. `uploads_closed`: OpenGame is not taking new uploads from this account yet, so nothing was started, and `retry` is `later`. The message names the day uploads open when there is one. `entries_closed`: entries have closed, so no new deploy or remix starts, fixes included, and `retry` is `never`. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -18148,7 +18175,7 @@
                       "certifiedAt": "2026-10-21T14:41:05Z",
                       "jam": {
                         "slug": "global-ai-game-jam-2026",
-                        "name": "Global AI Game Jam 2026",
+                        "name": "Game Jam #1",
                         "entryId": "7a2f5c8e-1d4b-4f93-b6e0-2c8a5d1f9e37",
                         "tracks": [
                           {
@@ -33609,7 +33636,7 @@
           }
         ],
         "summary": "Send a release to review",
-        "description": "Needs the `submit` scope on the release's game and an `Idempotency-Key`. A retry with the same key and body returns the stored submission with 200. The server chooses the destination, a jam or the marketplace, and you cannot override it; `GET /api/v1/jams` says which. When statements still need certifying, the submission's state is `needs_certification` and `certifyUrl` is the browser page to do it. A browser session must send `Origin` set to the OpenGame origin.",
+        "description": "A deploy sends its release to review by itself once it is ready, so this is for sending a release again after review returned it, or for the QA destination. Needs the `submit` scope on the release's game and an `Idempotency-Key`. A retry with the same key and body returns the stored submission with 200. The server chooses the destination, a jam or the marketplace, and you cannot override it; `GET /api/v1/jams` says which. When statements still need certifying, the submission's state is `needs_certification` and `certifyUrl` is the browser page to do it. A browser session must send `Origin` set to the OpenGame origin.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -33823,7 +33850,7 @@
         },
         "responses": {
           "200": {
-            "description": "A retry, or a submission that already stood for this request.",
+            "description": "Nothing new was submitted. Either this is a retry under the same key (`submission.replayed`), or the release already has a review open (`submission.existing`), usually the one its deploy started by itself once it was ready. With `existing`, the jam answers and metadata in this request were not used: the details, and any jam entry, are confirmed in a browser on the page `certifyUrl` names.",
             "content": {
               "application/json": {
                 "schema": {
@@ -33857,7 +33884,7 @@
                     "certifiedAt": "2026-10-21T14:41:05Z",
                     "jam": {
                       "slug": "global-ai-game-jam-2026",
-                      "name": "Global AI Game Jam 2026",
+                      "name": "Game Jam #1",
                       "entryId": "7a2f5c8e-1d4b-4f93-b6e0-2c8a5d1f9e37",
                       "tracks": [
                         {
@@ -33921,7 +33948,7 @@
                     "certifiedAt": null,
                     "jam": {
                       "slug": "global-ai-game-jam-2026",
-                      "name": "Global AI Game Jam 2026",
+                      "name": "Game Jam #1",
                       "entryId": "7a2f5c8e-1d4b-4f93-b6e0-2c8a5d1f9e37",
                       "tracks": [
                         {
@@ -34176,7 +34203,7 @@
                     "certifiedAt": "2026-10-21T14:41:05Z",
                     "jam": {
                       "slug": "global-ai-game-jam-2026",
-                      "name": "Global AI Game Jam 2026",
+                      "name": "Game Jam #1",
                       "entryId": "7a2f5c8e-1d4b-4f93-b6e0-2c8a5d1f9e37",
                       "tracks": [
                         {
@@ -34395,7 +34422,7 @@
                   "jams": [
                     {
                       "slug": "global-ai-game-jam-2026",
-                      "name": "Global AI Game Jam 2026",
+                      "name": "Game Jam #1",
                       "state": "open",
                       "acceptingEntries": true,
                       "startsAt": "2026-11-18T08:00:00.000Z",
@@ -34418,7 +34445,7 @@
                   "submissionDestination": {
                     "kind": "jam",
                     "slug": "global-ai-game-jam-2026",
-                    "name": "Global AI Game Jam 2026"
+                    "name": "Game Jam #1"
                   }
                 }
               }
@@ -34585,7 +34612,7 @@
                     "formVersion": 1,
                     "jam": {
                       "slug": "global-ai-game-jam-2026",
-                      "name": "Global AI Game Jam 2026",
+                      "name": "Game Jam #1",
                       "state": "open",
                       "acceptingEntries": true,
                       "startsAt": "2026-11-18T08:00:00.000Z",

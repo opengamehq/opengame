@@ -22,16 +22,17 @@ last line, and the last line is always a `result` or an `error`.
 | 4 | Rate limited | Wait `retryAfterSeconds` if the error has it, otherwise a few minutes, then run the same command once. Do not loop |
 | 5 | Our side failed, or a local file could not be read or written | The game is fine. Retry later; never change the game for this |
 | 6 | This CLI is too old for the server | Run `next`, which is `opengame upgrade`. Signed out, run `opengame login` first; it works on this version |
+| 7 | `not_launched`: OpenGame is not open to this caller yet | The CLI has no login. Ask the person to run `opengame login`, then run the same command again. Do not reinstall or retry in a loop |
 
 ## A worked repair
 
 A game whose `index.html` loads `./Game.js` while the file on disk is `game.js`. It runs
 on the creator's Mac, because the Mac's file system ignores case, and is a missing file for every
-player. `opengame check . --json` printed, from a real run:
+player. `opengame check . --json` prints:
 
 ```json
 {"type":"finding","finding":{"release":null,"check":"case-mismatch","checkVersion":"packaging@1","state":"failed","certainty":"certain","fault":"game","evidence":{"observed":"index.html line 1 asks for Game.js, but the file is game.js.","file":"index.html:1"},"fix":"macOS and Windows do not care about capitalisation. The servers that hand your game to a player do. So this loads on your machine and the file is missing for everybody else. Fix the reference or rename the file so the two match exactly.","verify":"opengame check, then opengame deploy","retry":"after-fix"}}
-{"type":"finding","finding":{"release":null,"check":"platform-engine","checkVersion":"packaging@1","evidence":{"observed":"Could not confirm Three.js in this build."},"state":"inconclusive","certainty":"heuristic","fault":"unknown","fix":"The build can proceed. A reviewer will confirm the engine before publication. Nothing has to change now; you can deploy as it is.","verify":"opengame deploy","retry":"never"}}
+{"type":"finding","finding":{"release":null,"check":"platform-engine","checkVersion":"packaging@1","evidence":{"observed":"Browser compatibility needs a playtest."},"state":"inconclusive","certainty":"heuristic","fault":"unknown","fix":"Built with Three.js r170, from window.__THREE__ registration. Static browser exports from any engine, or none, go to review, where a playtest checks that this one runs. Every game must pass the same runtime and safety checks before publication. Nothing has to change now; you can deploy as it is.","verify":"opengame deploy","retry":"never"}}
 {"type":"error","code":"check_failed","message":"This build has blockers. Fix them, then run opengame check again.","exitCode":1,"retry":"after-fix"}
 ```
 
@@ -42,13 +43,13 @@ Reading it:
    (or rename the file), then run what `verify` says.
 2. The second finding is `inconclusive`, `heuristic` and `fault: "unknown"`, with
    `retry: "never"`. It does not block anything. Do not add a fake Three.js import to make
-   it go away; a person confirms the engine.
+   it go away; the playtest in review checks that the game runs.
 3. After the fix, `opengame check . --json` ends in a `result` and exits 0.
 
 ## Findings that are ours
 
-A finding with `fault: "platform"`, or an error with exit code 5, means a scanner, the
-test machine, a moderation provider or storage failed. The CLI says so in plain words.
+A finding with `fault: "platform"`, or an error with exit code 5, means the test machine,
+review or storage failed. The CLI says so in plain words.
 Leave the game alone, wait `retryAfterSeconds` when the finding or error has it (a few
 minutes when it does not), and run the same command again. Rewriting a working game to satisfy a broken check is the failure this rule
 exists to prevent.

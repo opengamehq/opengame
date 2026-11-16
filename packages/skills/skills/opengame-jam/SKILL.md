@@ -1,23 +1,27 @@
 ---
 name: opengame-jam
-description: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, and submits one exact release as an entry with the person's own answers, leaving the certification to the person. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
+description: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, deploys one exact release, and hands the person the deploy's page, where they enter it with their own answers and certify. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
 metadata:
-  version: "1.0.8"
+  version: "1.0.9"
 ---
 
 # Enter an OpenGame jam
 
 OpenGame opens on {{launch opens}}. The jam kicks off on {{launch kickoff}}, and entries close on
-{{launch close}}; after the close every deploy path answers `entries_closed`.
+{{launch close}}. After the close, a game entered in the jam keeps the version that was live
+then, and a new build cannot replace it, in the jam or in the gallery.
 
 Any signed-in account can enter the launch jam now, before {{launch kickoff}} as well as
 after it. A CLI with no login hears "OpenGame opens for creators on {{launch kickoff}}." until
 then: run `opengame login` first.
 
-A jam is an extra destination for a game already on OpenGame. Games go to the
-marketplace; a jam entry is one exact release submitted with the jam's answers,
-reviewed, then judged by people. Deploy the game first: read `opengame-deploy` if the
-game has no `releaseId` yet.
+While the jam runs, until it closes on {{launch close}}, a new original game goes on
+OpenGame only as a jam entry, up to {{raw jam.entriesPerCreator}} per account, unless the
+account is an OpenGame admin or an approved publisher. A mod or a decomp is never an entry:
+it goes on OpenGame under Just for fun at any time. After the close anyone can publish to
+the gallery, outside the jam. A jam entry is one exact release, reviewed automatically, then
+judged by people. Deploy the game first: read `opengame-deploy` if the game has no
+`releaseId` yet.
 
 No jam is built into the CLI. Tracks, fields, rules and the certification text come
 from the server, so the next jam needs no new CLI. Read them fresh each time; do
@@ -53,9 +57,9 @@ the authority):
 - **The person owns the art, audio, models, fonts and code**, or holds a licence to
   ship them.
 - **A game or a world, not a decomp or a mod.** Read `kind` in `opengame.json`. A decomp
-  or a mod is made from someone else's game, so it cannot meet the rules above.
-  `opengame submit` stops it, and the server returns `kind_not_in_jam`. It can still go
-  on OpenGame, but not into the jam. If the kind is wrong, fix it in `opengame.json` and
+  or a mod is made from someone else's game, so it cannot meet the rules above, and the
+  server refuses it as an entry (`kind_not_in_jam`). It still goes on OpenGame, under Just
+  for fun, at any time. If the kind is wrong, fix it in `opengame.json` and
   deploy again; do not change it only to get past this rule.
 - **Individual creators, 18 or over, no teams**, up to
   {{raw jam.entriesPerCreator}} entries each.
@@ -65,20 +69,30 @@ decide. Do not hide a dependency, rewrite history or relabel a library to pass a
 
 ## Pick a track with the person
 
-- **Genre track:** one per entry, required. The CLI suggests one from the game's
-  `genre` in `opengame.json`; the person confirms or changes it.
-- **Sponsor tracks:** earned, not picked. The CLI offers a sponsor track only when the
-  person used a model from that sponsor. Each takes an optional evidence note of up to
-  {{n text.jamTrackEvidence.max}} characters about what the model did ("all 38 prop
-  textures and the menu film"). A reviewer checks it, so write only what is true and
-  what a reviewer can find in the game.
-- **Models used** (`--models`) is the one other field. `opengame jams <slug> --json`
-  lists the whole form. Ask the person which models they used; do not guess from the
-  code.
+The person answers these on the deploy's page. Help them prepare the answers; do not
+answer for them.
 
-## Deploy and submit
+- **Genre track:** one per entry, required. The page starts on the track that matches the
+  game's genre; the person keeps it or chooses another.
+- **Models used:** ask the person which models they used; do not guess from the code.
+- **Sponsor tracks:** earned, not picked. A sponsor's track opens only once a model from
+  that sponsor is listed under models used, and asks for the email of the account the
+  person used there.
 
-Follow `opengame-deploy` for the shared installation, sign-in, deploy and submission procedure. The server selects the destination for the current jam; fetch its fields with `opengame jams <slug> --json`. Use the exact release the creator played.
+`opengame jams <slug> --json` lists the whole form.
+
+## Deploy, then the person enters it
+
+Follow `opengame-deploy` for installation, sign-in and the deploy. Use the exact release
+the creator played. Once the deploy is ready, review starts by itself; nobody runs a
+command for it. When `opengame status --json` shows `data.review.state` as
+`awaiting_details`, give the person `data.review.url`, the deploy's page. Signed in there in
+their browser, they press Confirm details, choose the track, the models and any sponsor
+tracks, and certify.
+
+Do not run `opengame submit` to enter the jam or to publish. The CLI cannot confirm a
+release its deploy already sent to review. It answers with that submission and a
+`jam_answers_unused` notice, and the answers go nowhere.
 
 ## What only the person can do
 
@@ -93,11 +107,12 @@ the assets, which track they want, and what their sponsor evidence claims.
 ## After submitting
 
 `opengame status . --watch --json` follows review until it finishes or the watch
-ends. The result's `review` has the state, `done`, and `next`, the command to run. A
-returned entry's findings come as `finding` events, the same as a deploy's. Fix them,
-deploy a new release, and submit that release. Review is automated first, then a
-person; people judge the jam. Judges see the release that was submitted, so later
-edits count only once a new release is submitted.
+ends. The result's `review` has the state, `done`, and `next`, the command to run. No
+person reviews a game. Review either lets it through or returns it with the reason, and
+people judge the jam. A returned entry's findings come as `finding` events, the same as a
+deploy's. Fix them and deploy again; the new release goes to review by itself. While the jam
+takes entries, a redeploy of a game whose entry is live is entered again with the same
+answers, so it keeps its place.
 
 The jam's judging criteria are published on its rules page. Fun and craft carry the
 most weight; the craft skills (`opengame-quality-bar` first) are how to raise them.

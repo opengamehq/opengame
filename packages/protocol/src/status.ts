@@ -12,7 +12,7 @@ export const RELEASE_STATUS = {
   interrupted: { label: "Stopped", message: "This deploy stopped. Run opengame deploy again later; if it stops the same way, the fault is ours.", icon: "warning" },
   expired: { label: "Expired", message: "This upload expired before it finished. Run opengame deploy to start again.", icon: "clock" },
   draft: { label: "Draft", message: "Only you can see this game.", icon: "lock" },
-  needs_certification: { label: "Certification needed", message: "Confirm your rights to submit this release.", icon: "check" },
+  needs_certification: { label: "Certification needed", message: "Open this submission’s page in your browser to send it to review.", icon: "check" },
   playtesting: { label: "Playtesting", message: "Playtesting your game on our test machine.", icon: "play" },
   waiting: { label: "Waiting on a check", message: "A checking service is unavailable. We will retry; you do not need to change your game.", icon: "clock" },
   // The launch policy's hold (reviewHold in review.ts): the checks are done and nothing is

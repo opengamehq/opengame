@@ -10,7 +10,7 @@ import { ERRORS, DEAD_UPLOAD_CODES, LISTING, OPERATION_STATUS, RELEASE_STATUS, S
 import { terminalDeploymentChecklist } from "./deployment-progress";
 import { operation, terminal, remember, readSavedOperation } from "./operation";
 import { readGame, refuseRemoved } from "./games";
-import { emitReview, followReview, readSubmission, reviewLine } from "./submit";
+import { emitReview, followReview, readSubmission, reviewLine, sendAgain } from "./submit";
 import { authCommand } from "./auth";
 import { readBootstrap } from "./bootstrap";
 import { Api, ApiError, UploadInterrupted } from "./http";
@@ -28,7 +28,7 @@ import { syncAchievements } from "./achievements";
 import { filesFromArchive, uploadMissingFiles } from "./incremental";
 import { uploadArchiveParts, type ArchiveSource } from "./archive-parts";
 import { pythonAvailable, safeReadFile } from "./safe-fs";
-import { acceptedStatement, assertUnitySourceRoot, createUnityArchive, LARGE_ASSET_DELIVERY, planDelivery, readSmallUnityAssets, readUnityAsset, readUnityAssetPart, readUnityAssetPlan, unityFileUnion, unityInputDigest } from "./unity-assets";
+import { assertUnitySourceRoot, createUnityArchive, LARGE_ASSET_DELIVERY, planDelivery, readSmallUnityAssets, readUnityAsset, readUnityAssetPart, readUnityAssetPlan, unityFileUnion, unityInputDigest } from "./unity-assets";
 import { TRANSPORT_HEADERS } from "./transport";
 
 /** The asset plan a command was given. --external-assets takes any plan kind named in
@@ -889,9 +889,9 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
         const assetUpload = pending.transport !== undefined && pending.transport !== "files";
         const delivery = planDelivery(pending.unityAssets);
         if (assetUpload) await assertUnitySourceRoot(root, pending.unityAssets!.sourceRoot);
-        // Before any byte leaves: a kind that asks for a statement is refused here with
-        // the words, and the server refuses it again without them.
-        const statement = assetUpload ? acceptedStatement(delivery, flags["accept-statement"]) : undefined;
+        /* No statement is sent since 16 Nov 2026: a Kaigen plan asked for its publication
+           statement here and the server refused one without it. --accept-statement is still
+           read by the parser so a command written for an older CLI runs, and is ignored. */
         const fileUpload = pending.transport === "files" || assetUpload;
         const archiveBytes = fileUpload ? await wholeArchive(freshArchive ?? await timed("restore", () => cachedArchive(root, pending))) : undefined;
         const fileManifest = archiveBytes ? filesFromArchive(archiveBytes) : undefined;
@@ -900,7 +900,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
         const assetRoute = delivery === LARGE_ASSET_DELIVERY ? "/api/v1/deploys/unity-assets" : "/api/v1/deploys/external-assets";
         let response = await timed("create", () => api.json(assetUpload ? assetRoute : fileUpload ? "/api/v1/deploys/files" : "/api/v1/deploys", {
           token, body: { ...pending.request, ...(fileManifest ? { files: fileManifest } : {}),
-            ...(assetUpload ? { delivery, assets: pending.unityAssets!.assets, ...(statement ? { statement } : {}) } : {}) }, idempotencyKey: pending.key,
+            ...(assetUpload ? { delivery, assets: pending.unityAssets!.assets } : {}) }, idempotencyKey: pending.key,
           /* A large-game plan lists every file's path, digest and size, about 150 bytes a
              row, so World at War's 26,200 files are a 3.9 MB request: past bodyBytesMax and
              past the 4.5 MB Vercel takes. Only this route reads gzip, and a body that fits
@@ -1107,7 +1107,14 @@ function reviewSummary(review: Submission, newest: string | null) {
   const next = review.state === "needs_certification" || review.state === "awaiting_details" ? "opengame status --watch"
     : held ? "opengame status"
     : open ? "opengame status --watch"
-    : review.state === "returned" ? (newest && newest !== review.releaseId ? "opengame status --watch" : "opengame deploy")
+    /* A jam entry returned for a fault of ours (the checks ran past their deadline, or the
+       playtest stopped on our side) needs no new build: submitting the same release with the
+       jam's answers runs the checks again. It said "opengame deploy", so an agent following
+       `next` uploaded the same bytes again (sweep, 16 Nov 2026). A return of an automatic
+       review that entered no jam keeps deploy: while a jam is the destination the server takes
+       a submission only with that jam's answers, and a new deploy goes to review by itself. */
+    : review.state === "returned" ? (newest && newest !== review.releaseId ? "opengame status --watch"
+      : sendAgain(review) && review.jam ? `opengame submit --release ${review.releaseId}` : "opengame deploy")
     : null;
   // `hold` is how an agent tells the launch policy's hold from an outage: both are
   // `waiting`, and only the outage is worth retrying anything over.

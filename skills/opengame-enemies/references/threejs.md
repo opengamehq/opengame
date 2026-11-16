@@ -124,6 +124,65 @@ const { upToDate } = tileCache.update(navMesh)
 a capture, draw links as arcs (`Line2`) coloured by area id, so a missing link on a
 player build is visible.
 
+## A gait inside its rate band
+
+Pick the clip whose stride fits the ground actually covered, and refuse to stretch it.
+LC's band was 0.9 to 1.15x the capture rate; below a shamble's band the figure stands.
+
+```js
+// gaits: [{ action, stride, captureSpeed }] sorted slow to fast; dt > 0
+const speed = groundCovered / dt                 // after collision, not the requested speed
+const held = smoothSpeed(speed, dt)              // hold a change about a third of a second
+let pick = null
+for (const g of gaits) {
+  const rate = held / g.captureSpeed
+  if (rate >= 0.9 && rate <= 1.15) { pick = g; break }
+}
+if (!pick && held < gaits[0].captureSpeed * 0.67) standAndReach()     // too slow for any gait
+else {
+  pick ??= nearestGait(held)                     // between bands: the nearest, clamped
+  setGait(pick, Math.min(1.15, Math.max(0.9, held / pick.captureSpeed)))  // fade in a quarter second
+}
+```
+
+Log figure-seconds whose rate would have left the band; a wall-treading fix that let
+clips slow to 0.1x produced "slow mo" runners.
+
+## Pose sentinels in the build
+
+Console errors in the shipped build catch the broken poses the owner otherwise finds.
+LC fires on a figure in its rest pose, on both arms held level at the sides for 0.2 s,
+and on a killed figure that has not started to fall within 0.25 s.
+
+```js
+function checkPose(fig, now) {
+  if (fig.isRestPose()) console.error('rest pose', fig.id, fig.clipName)
+  const armsOut = Math.abs(fig.armElevation('left')) < 0.15 && Math.abs(fig.armElevation('right')) < 0.15
+  fig.armsOutSince = armsOut ? (fig.armsOutSince ?? now) : null
+  if (fig.armsOutSince !== null && now - fig.armsOutSince > 0.2) console.error('arms out', fig.id)
+  if (fig.diedAt && now - fig.diedAt > 0.25 && fig.hipDrop() < 0.05) console.error('no fall', fig.id)
+}
+```
+
+`armElevation` and `hipDrop` are the game's own measures from the rig (radians from
+horizontal, metres below the standing hip); fill them in for your skeleton.
+
+## Crowds without a SkinnedMesh per figure
+
+LC drew 32 zombies in 0.50 ms with 162 draws and 1.43 M triangles (9 standing: 0.21 ms):
+
+- one float texture of every slot's bone matrices (46 KB for 22 bones a figure), uploaded
+  only when it changes, read in the vertex shader;
+- one instanced draw per kind per detail level, at most 27 draws for the horde;
+- full meshes only for the nearest 5 within 8 m; the far field one figure per family,
+  with no shadow;
+- figures more than 78 degrees off the view culled (186 draws to 111 to 129);
+- one node material per family, with per-figure values read through
+  `reference('material.userData.x')` rather than a material each.
+
+Pose every near figure every frame: skipping poses for detail levels had left 144 to 297
+of 720 frames unposed, which the owner saw as walking "very jaggedly".
+
 ## Other engines
 
 - Godot: `NavigationRegion3D`, `NavigationAgent3D` and `NavigationLink3D` for jumps;

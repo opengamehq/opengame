@@ -80,13 +80,14 @@ export async function submitCommand(root: string, flags: Flags, output: Output) 
     // is chosen, and again in the confirmation, so a person answers knowing where it goes.
     if (qa) output.emit({ type: "notice", code: "qa_destination", message: "Sending to review for the QA destination. It enters no jam, and a reviewer decides whether it is published unlisted." });
     const release = await chooseRelease(api, token, root, flags, inProject, person, output);
-    const destination = qa ? null : await chooseDestination(api, token, root, flags, inProject, person, output);
+    const rerun = qa ? null : await rerunOf(api, token, root, inProject, release);
+    const destination = qa ? null : await chooseDestination(api, token, root, flags, inProject, person, output, rerun);
     if (destination === "page") {
       // Nothing is sent: the deploy already went to review, and the entry is made on its page.
       const url = await releasePage(api, token, root, inProject, release);
       if (!flags["no-browser"]) openBrowser(url, true, api.origin);
       output.emit({ type: "result", command: "submit", data: { submitted: false, url,
-        message: `Your deploy is already in review. Enter the jam on its page, where you choose the track, the models you used and any sponsor track:\n${url}\nAn agent can enter it from here instead with --track, --models and --sponsor.` } });
+        message: `Your deploy is already in review. Enter the jam on its page, where you choose the track, the models you used and any sponsor track:\n${url}` } });
       return;
     }
     const jam = destination;
@@ -233,7 +234,7 @@ function explain(error: unknown): unknown {
 
 export async function chooseRelease(api: Api, token: string, root: string, flags: Flags, inProject: boolean, person: boolean, output: Output): Promise<string> {
   if (typeof flags.release === "string") {
-    if (!uuid.test(flags.release)) throw new CliError("invalid_release", "Use the release id from opengame deploy --json with --release.");
+    if (!uuid.test(flags.release)) throw new CliError("invalid_release", "Use the releaseId from opengame status --json, once the deploy is ready, with --release.");
     return flags.release.toLowerCase();
   }
   if (!person) throw new CliError("release_required", "Name the release to submit with --release <id>. Once a deploy is ready, opengame status --json and opengame deployments --json print it as releaseId.");
@@ -258,8 +259,25 @@ export async function chooseRelease(api: Api, token: string, root: string, flags
   return releaseId;
 }
 
-export async function chooseDestination(api: Api, token: string, root: string, flags: Flags, inProject: boolean, person: boolean, output: Output):
-  Promise<JamAnswers | null | "page"> {
+/**
+ * The release's own jam entry when review returned it for a failure of ours, so running
+ * submit means sending it again (`sendAgain`). A person who named no jam answers is
+ * otherwise sent to the deploy's page, where nothing reruns the checks: `opengame status`
+ * pointed at this command, and the command then sent nothing (sweep, 16 Nov 2026). Read for
+ * an agent too, so the track it entered under is kept and only the rest is asked for.
+ */
+async function rerunOf(api: Api, token: string, root: string, inProject: boolean, release: string): Promise<Submission | null> {
+  if (!inProject) return null;
+  const state = await readProject(root, api.origin);
+  if (!state?.gameId) return null;
+  const current = (await readGame(api, token, state.gameId).catch(() => null))?.submission;
+  // A jam entry only: the jam's track is what is kept, and status names this command for no other.
+  return current && current.releaseId === release && current.state === "returned" && current.jam && sendAgain(current) ? current : null;
+}
+
+export async function chooseDestination(api: Api, token: string, root: string, flags: Flags, inProject: boolean, person: boolean, output: Output,
+  /** A return of ours being sent again: its theme track is kept, and the page is not offered. */
+  rerun: Submission | null = null): Promise<JamAnswers | null | "page"> {
   const raw = await api.json("/api/v1/jams", { token });
   const selected = submissionDestinationSchema.safeParse(raw.submissionDestination);
   if (!selected.success) throw new CliError("invalid_response", "The server did not provide a submission destination. Contact the OpenGame team, then retry.", 5);
@@ -290,9 +308,19 @@ export async function chooseDestination(api: Api, token: string, root: string, f
      chosen, so a person who named none of them is sent there. An agent still answers with
      flags, and a missing one still exits 2 naming the flag. */
   const asked = Boolean(answers.track) || answers.models!.length > 0 || answers.sponsors!.length > 0 || Object.keys(answers.evidence!).length > 0;
-  if (person && !asked) return "page";
+  if (person && !asked && !rerun) return "page";
+  /* The submission records its tracks, not the models or the sponsor evidence, so those are
+     asked again. The sponsor tracks are kept too, so the form asks for their evidence rather
+     than an entry quietly losing them (Greptile on #1669). */
+  const kept = rerun?.jam?.slug === slug ? rerun.jam.tracks : [];
+  const theme = kept.find(track => track.kind === "theme")?.key;
+  if (!answers.track && theme) answers.track = theme;
+  if (!answers.sponsors!.length) answers.sponsors = kept.filter(track => track.kind === "sponsor").map(track => track.key);
   const checked = validateJamAnswers(form, answers);
-  if (!checked.ok) throw new CliError("jam_answers_required", checked.problems.map(p => `${p.flag}: ${p.message}`).join("\n"), EXIT.input);
+  if (!checked.ok) {
+    const lead = rerun ? "This release came back from review for a failure of ours, so it is sent again, and the jam needs its answers again:\n" : "";
+    throw new CliError("jam_answers_required", lead + checked.problems.map(p => `${p.flag}: ${p.message}`).join("\n"), EXIT.input);
+  }
   output.emit({ type: "notice", code: "jam", message: summary(form, checked.answers) });
   return checked.answers;
 }

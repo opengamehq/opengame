@@ -1,6 +1,6 @@
 {
   "name": "@opengamehq/skills",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "description": "Agent skills for making browser games and putting them on OpenGame.",
   "keywords": [
@@ -42,7 +42,7 @@
     "check": "node build.mjs --check",
     "lock": "node build.mjs --lock",
     "public": "node build.mjs --public",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test tests/*.test.mjs skills/*/helpers/*.test.mjs",
     "prepack": "npm run build",
     "prepublishOnly": "node -e \"console.error('Publish through scripts/release.mjs, which stages and audits the package: the publish workflow for a release, or --first-publish once per package.');process.exit(1)\""
   },

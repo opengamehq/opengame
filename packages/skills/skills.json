@@ -110,6 +110,46 @@
     {
       "name": "opengame-production",
       "family": "craft"
+    },
+    {
+      "name": "opengame-rhythm",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-maps",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-multiplayer",
+      "family": "craft"
+    },
+    {
+      "name": "opengame-trailer-plan",
+      "family": "video"
+    },
+    {
+      "name": "opengame-trailer-make",
+      "family": "video"
+    },
+    {
+      "name": "opengame-trailer-review-and-improve",
+      "family": "video"
+    },
+    {
+      "name": "opengame-montage-plan",
+      "family": "video"
+    },
+    {
+      "name": "opengame-montage-make",
+      "family": "video"
+    },
+    {
+      "name": "opengame-montage-review-and-improve",
+      "family": "video"
+    },
+    {
+      "name": "opengame-all-in-one",
+      "family": "bundle"
     }
   ]
 }

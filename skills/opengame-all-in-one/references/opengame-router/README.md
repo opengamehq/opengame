@@ -1,0 +1,54 @@
+> Carried from `opengame-router` 1.0.8. Read it when: Build, test and submit a browser game on OpenGame. Routes game work to the deploy guide, whole-game review and relevant craft skills. Use when someone asks to make a game, improve a game, check it, deploy it or enter an OpenGame jam.
+
+
+# Work on an OpenGame game
+
+OpenGame opens on 18 November 2026. Any signed-in account can use the CLI,
+uploads and jam entries now. Until 18 November, a CLI or API request with no account
+hears "OpenGame opens for creators on 18 November." Sign in with `opengame login` first.
+That is not a fault in the game.
+
+Read [the working process](references/process.md) before changing the game. Keep the
+user's scope and budget. Read only the specialists that apply to the next change.
+
+The starting set is this router, `opengame-deploy` and `opengame-quality-bar`.
+Run `opengame skills list --json` to see the installed CLI's catalog. Use
+`opengame help --json` for its skill selection options before installing a specialist.
+
+| Work | Skill |
+| --- | --- |
+| Check, deploy, private preview, submit | `opengame-deploy` |
+| A CLI command, its output or its exit code | `opengame-cli` |
+| Calling the API from your own tool or CI | `opengame-api` |
+| Review the whole game | `opengame-quality-bar` |
+| Controls, feedback, camera motion | `opengame-game-feel` |
+| Lighting or color | `opengame-lighting`, `opengame-look` |
+| Collision and movement | `opengame-world-physics` |
+| Maps and levels: spawns, sightlines, guidance, a map that plays wrong | `opengame-maps` |
+| Geometry, props or stairs | `opengame-scene-audit` |
+| Frame time or memory | `opengame-performance` |
+| Models, textures or audio assets | `opengame-assets`, `opengame-audio` |
+| Characters, animation, or the player's own OG | `opengame-characters` |
+| Menus or HUD | `opengame-front-end` |
+| Keyboard, focus or accessibility | `opengame-accessibility` |
+| Rules, goals or progression | `opengame-depth` |
+| Integrating with OpenGame: the SDK, the player and every name field, boards, achievements, events, fullscreen and keys in the frame | `opengame-sdk` |
+| Tests and evidence | `opengame-verification` |
+| First-person guns, sights and viewmodels | `opengame-weapons` |
+| Enemy AI, navigation, hordes, bosses, deaths | `opengame-enemies` |
+| Rhythm and music games: charts, timing, calibration | `opengame-rhythm` |
+| Multiplayer: lobbies, rooms, bots standing in for players | `opengame-multiplayer` |
+| Boot time, streaming, caching, progress bar | `opengame-loading` |
+| Touch, phone memory, Safari on a real phone | `opengame-mobile` |
+| Crashes, pool budgets, error reporting | `opengame-stability` |
+| Screenshots, captures, filming the game | `opengame-capture` |
+| A launch trailer: plan it, make it, review each cut | `opengame-trailer-plan`, `opengame-trailer-make`, `opengame-trailer-review-and-improve` |
+| A gameplay montage cut to a song | `opengame-montage-plan`, `opengame-montage-make`, `opengame-montage-review-and-improve` |
+| A long build with agents and owner feedback rounds | `opengame-production` |
+| Jam fields and eligibility | `opengame-jam` |
+
+`opengame-all-in-one` carries every skill in this table as one install, with the order
+to use them in, for a big build that will touch most of them.
+
+Run the whole-game review before handing over a finished game. Mark checks that do
+not apply with a reason. Missing tools or evidence mean unverified.

@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { lstat, readdir, realpath } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { LARGE_ASSET_DELIVERIES, LARGE_ASSET_DELIVERY, compareAssetPaths, isLargeAssetPath, largeAssetInputText, largeAssetLimits, largeAssetPlan, validateLargeAssetFiles, type LargeAssetFile } from "@opengame/shared/large-assets";
-import { largeAssetStatement } from "@opengame/shared/large-asset-statement";
 import { canonicalName } from "@opengame/shared/unicode-casefold";
 import { incrementalArchiveBytes, isBundlePath, type GameManifest, type IncrementalFile } from "@opengame/protocol";
 import { LIMITS } from "@opengame/shared";
@@ -154,12 +153,10 @@ export async function autoSplitAssets(sourceRoot: string, delivery: string): Pro
   return external.map(row => row.path).sort(compareAssetPaths);
 }
 
-/** The statement a plan kind asks for, refused unless --accept-statement names its
- * current version. The words are printed in the refusal, so a person reads them before
- * they can type the version; the server records the acceptance with the frozen plan. */
-/** What check and a dry run say about a plan. The statement is printed here, with its version, because the Kaigen
- * guide tells creators to read it from check; until 27 Oct only the real deploy showed it, by refusing. The first
- * notice keeps its unity_ code because tools already match on it. */
+/** What check and a dry run say about a plan. The first notice keeps its unity_ code because
+ * tools already match on it. A Kaigen plan printed its publication statement here too, with the
+ * version --accept-statement took, until 16 Nov 2026, when Kaigen went to open beta and every
+ * attestation went with it. */
 /** "1 file", "2 files": a count and its noun, in the en-GB digits every other line here uses. */
 function files(count: number, noun: string): string {
   return `${count.toLocaleString("en-GB")} ${noun}${count === 1 ? "" : "s"}`;
@@ -168,33 +165,15 @@ function files(count: number, noun: string): string {
 /**
  * The line check ends a plan with. It used to say again what the notices above it had just
  * said, the hashing in other words and a Kaigen statement in full a second time, so a
- * person read each twice. It says only what the notices do not: the two halves of the
- * upload, and, for a plan with a statement, which flag accepts it.
+ * person read each twice. It says only what the notices do not: the two halves of the upload.
  */
-export function assetPlanSummary(bootFiles: number, assets: number, statement?: { version: string }): string {
-  return `Ready to deploy: ${files(bootFiles, "file")} in the boot archive and ${files(assets, "asset")} sent separately.` +
-    (statement ? ` Deploying needs the statement above accepted with --accept-statement ${statement.version}.` : "");
+export function assetPlanSummary(bootFiles: number, assets: number): string {
+  return `Ready to deploy: ${files(bootFiles, "file")} in the boot archive and ${files(assets, "asset")} sent separately.`;
 }
 
-export function assetPlanNotices(delivery: string, count: number) {
-  const notices: { type: "notice"; code: string; message: string; version?: string }[] = [{ type: "notice", code: "unity_assets_local_only",
+export function assetPlanNotices(_delivery: string, count: number) {
+  return [{ type: "notice" as const, code: "unity_assets_local_only",
     message: `Checked the boot archive and hashed ${files(count, "selected asset")}. Engine checks, decoded sizes and safety checks run on the server. Uploads resume by whole file, not by chunk.` }];
-  const statement = largeAssetStatement(delivery);
-  if (statement) notices.push({ type: "notice", code: "large_asset_statement", version: statement.version,
-    message: `${statement.statement} ${statement.note} To accept it, deploy with --accept-statement ${statement.version}.` });
-  return notices;
-}
-
-export function acceptedStatement(delivery: string, accepted: unknown) {
-  const statement = largeAssetStatement(delivery);
-  if (!statement) {
-    if (accepted !== undefined) throw new CliError("invalid_flag", "This asset plan asks for no statement, so --accept-statement does not apply. Remove --accept-statement, then deploy again.", 2);
-    return undefined;
-  }
-  if (accepted !== statement.version) {
-    throw new CliError("large_asset_statement_required", `${statement.statement} ${statement.note} To accept it, deploy again with --accept-statement ${statement.version}.`, 2);
-  }
-  return { key: statement.key, version: statement.version };
 }
 
 /** The union has the same path/count rules as an ordinary game. Only the

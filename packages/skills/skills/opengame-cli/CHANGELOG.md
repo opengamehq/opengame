@@ -1,5 +1,9 @@
 # opengame-cli changelog
 
+## 1.8.4
+
+`opengame submit` is for a release that is not in review yet. A ready deploy goes to review by itself, and the person confirms the details and enters the jam on the deploy's page; jam flags given for a release already in review are not used (`jam_answers_unused`).
+
 ## 1.8.3
 
 `opengame handle` frees the old handle for anyone to claim at once. The person's games keep their /g links and their profile address changes, so say that when asking before a rename.

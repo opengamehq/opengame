@@ -1,9 +1,11 @@
-# The sixteen cheap tells
+# The nineteen cheap tells
 
 Each is something a stranger notices in seconds, drawn from what our own games had to
-fix (DK, MC, AW, SR, OC) and what the Studio's reviewer finds in first versions (ST). For
-each: what it looks like, how to see it, and which skill fixes it. Tells 13 to 16 came
-from OC, a large 3D game played on desktops and phones.
+fix (DK, MC, AW, SR, OC, OS, LC) and what the Studio's reviewer finds in first versions
+(ST). For each: what it looks like, how to see it, and which skill fixes it. Tells 13 to
+16 came from OC, a large 3D game played on desktops and phones. Tells 17 to 19 came from
+OS and LC: OS's owner raised flicker and collision on five or more separate days each, and
+LC's owner raised arms and holds about 19 times.
 
 | # | Tell | What it looks like | How to see it | Fix with |
 | --- | --- | --- | --- | --- |
@@ -13,7 +15,7 @@ from OC, a large 3D game played on desktops and phones.
 | 4 | Missing post | No tone curve or grade, bloom on lit walls, a milky horizon, a frame flatter than the concept | Capture with the grade off and on; look at the horizon | `opengame-look` |
 | 5 | An empty world | A ground plane with props on a grid, nothing overhead, no wear, props floating or intersecting | Run the scene audit; pan slowly at a grazing angle | `opengame-depth`, `opengame-scene-audit` |
 | 6 | Placeholder UI | Browser-default fonts, debug text, unstyled boxes, emoji or Unicode glyphs as icons, a title that is a button on black | Load the menu cold; inspect computed fonts | `opengame-front-end` |
-| 7 | Silence or thin sound | No music or ambience, one sample for every action, clipping when sounds overlap | Play with headphones through a busy minute | `opengame-audio` |
+| 7 | Silence, thin or harsh sound | No music or ambience, one sample for every action, clipping when sounds overlap, a sound that is harsh, late or louder than the shot it should sit under | Play with headphones through a busy minute; a person listens, since no agent can | `opengame-audio` |
 | 8 | No hit feedback | A hit with no marker, flash, sound or reaction; a kill with no beat of its own | Hit something and watch the next half second frame by frame | `opengame-game-feel` |
 | 9 | A dead camera | Rigid follow, no easing, no response to sprint or impact, shake that never decays, a camera inside walls | Sprint, land, take a hit, back into a wall | `opengame-game-feel` |
 | 10 | Stiff animation | Sliding feet, clips that pop with no crossfade, no hit reaction or death, a T-pose anywhere | Watch feet at slow, normal and sprint speed; kill something | `opengame-characters` |
@@ -23,6 +25,9 @@ from OC, a large 3D game played on desktops and phones.
 | 14 | A black or white held item | The gun or hands in first person read as a black shape or a blown-out white one, in dark corners or after a shot | Capture the held item in the darkest and brightest spots of the map and on the frame after firing | `opengame-weapons`, `opengame-lighting` |
 | 15 | Stuck enemies | Enemies or allies pressed against a wall, pacing on a ledge, frozen in the air, or a round that never ends because one is stranded | Stand at every spot the player can reach and count how many enemies arrive | `opengame-enemies` |
 | 16 | Crash or reload during load | The tab reloads, the browser says a problem repeatedly occurred, or the game drops back to the menu near the end of the bar | Cold loads on a real phone in Safari and on a throttled desktop, several in a row | `opengame-stability`, `opengame-loading`, `opengame-mobile` |
+| 17 | Flicker in motion | A surface that shimmers, crawls, stripes or swaps while the camera turns, strafes or zooms, though every still looks clean | Film a fixed still, turn, strafe and scoped-pan path on the game clock and step through it frame by frame | `opengame-scene-audit`, `opengame-look` |
+| 18 | The picture and the collision disagree | An invisible wall or bullet stop, a solid you walk through, a doorway you cannot pass, a spawn inside a rock or facing a wall | Walk the real controller through every opening and from every spawn; shoot every surface that looks solid | `opengame-world-physics`, `opengame-maps` |
+| 19 | A body no person has | First-person arms floating or cut off, a hold no hand makes, wrists bent past a natural range, a body that squashes or slides, seen at speed in the player's own picture | Film the held item at rest, aiming, reloading and turning, and watch it at speed and at quarter speed from the player's camera | `opengame-characters`, `opengame-weapons` |
 
 ## The order to fix them in
 
@@ -32,5 +37,7 @@ When time is short, in this order, because each step makes the next one worth do
    and its flagship moment work and feel right.
 2. Every generated asset is in the game where it belongs, and no stand-in shows while
    it loads.
-3. The title, menus, pause and results are real screens in the game's own language.
-4. A playtest from the real menu, reviewed by somebody who did not build it.
+3. The world holds together in motion: no flicker, no invisible walls, no starts inside
+   geometry.
+4. The title, menus, pause and results are real screens in the game's own language.
+5. A playtest from the real menu, reviewed by somebody who did not build it.

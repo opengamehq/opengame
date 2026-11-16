@@ -28,7 +28,7 @@ const write = (text: string) => { releaseTerminal(); return process.stdout.write
 export interface PromptOption { value: string; label: string; hint?: string | null }
 
 function interrupted(): never {
-  throw new CliError("cancelled", "Cancelled. Nothing was submitted.", 2);
+  throw new CliError("cancelled", "Cancelled. Nothing changed.", 2);
 }
 
 /** The rows a menu may use: the terminal's height less the question, the help line and
@@ -104,7 +104,7 @@ async function menu(question: string, options: PromptOption[], { many = false, i
   try {
     const chosen = await new Promise<string[]>((resolve, reject) => {
       const onKey = (_: string, key: { name?: string; ctrl?: boolean }) => {
-        if (key.ctrl && key.name === "c") { input.off("keypress", onKey); reject(new CliError("cancelled", "Cancelled. Nothing was submitted.", 2)); return; }
+        if (key.ctrl && key.name === "c") { input.off("keypress", onKey); reject(new CliError("cancelled", "Cancelled. Nothing changed.", 2)); return; }
         if (key.name === "up" || key.name === "k") { cursor = (cursor - 1 + options.length) % options.length; redraw(); }
         else if (key.name === "down" || key.name === "j") { cursor = (cursor + 1) % options.length; redraw(); }
         else if (many && key.name === "space") {

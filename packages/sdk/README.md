@@ -50,14 +50,16 @@ Each call returns `{ ok: true, value }` or `{ ok: false, error, reason? }` inste
 throwing, so a game checks `ok` and goes on.
 
 ```js
-{ ok: true, value: { score: 42, state: 'ok', best: true, preview: false } }
+{ ok: true, value: { score: 42, state: 'ok', best: true, preview: false, ignored: [] } }
 { ok: false, error: 'rate_limited', reason: 'Try again after the rate-limit window.' }
 ```
 
-Opened outside OpenGame, the SDK runs a local mock: scores in `localStorage` and a
-pretend player, so the same calls work while you build. `opengame dev` from
-[`@opengamehq/cli`](https://www.npmjs.com/package/@opengamehq/cli) serves the game with
-the headers it gets on OpenGame.
+Under `opengame dev` from
+[`@opengamehq/cli`](https://www.npmjs.com/package/@opengamehq/cli), the SDK runs a local
+mock: scores in `localStorage` and a pretend player, so the same calls work while you
+build, and the game gets the headers it gets on OpenGame. Opened anywhere else outside
+OpenGame, such as a Vite dev server, it resolves with no player and no services, and the
+same build still plays.
 
 ## Core
 
@@ -89,14 +91,13 @@ script loads. See "The player during your loading screen".
 
 - `id` is stable for this player in this game, on every device once signed in, and
   different in every other game. It cannot be joined across games.
-- `handle` and `ogNumber` are shared only while the player has profile sharing in games
-  on. It is on by default for new accounts, so most new players share them. Guests and
-  players who have turned sharing off receive null. An account without a handle also
-  receives a null handle.
+- `handle` and `ogNumber` come with every signed-in player who has claimed a handle;
+  there is no setting to withhold them. Guests, and accounts without a handle, receive
+  null.
 - `avatar` is null unless the page offers the `avatar` capability for a signed-in
-  player with profile sharing on. A valid recipe contains `{ seed, palette }`
+  player. A valid recipe contains `{ seed, palette }`
   and may include `look`, the head of their OpenGame character, and `character`, its
-  body and clothes. `character` only comes with a `look`, under the same setting.
+  body and clothes. `character` only comes with a `look`.
   Older recipes remain valid. Use a default appearance when one is absent, including
   in private previews.
 - Both recipes are strings in OpenGame's stored format. The SDK checks their syntax
@@ -154,7 +155,7 @@ load it from a `<script type="module">`, passing `OpenGame.og` as the client.
 import { readAvatar, watchAvatar } from '@opengamehq/sdk/avatar'
 
 const stop = watchAvatar(og, (avatar) => {
-  if (!avatar) return useDefaultCharacter()        // guest, sharing off, preview, signed out
+  if (!avatar) return useDefaultCharacter()        // guest, no OG made, preview, signed out
   avatar.head.shape                                // 'circle'
   avatar.head.hex                                  // '#F4F3EF', or null for a color this build does not know
   avatar.head.finish                               // true for patterned, metallic, neon and glass colors such as plaid or neonpink
@@ -181,8 +182,8 @@ on a dark one. `identity` picks a face set; do not read it as gender, pronouns o
 
 A native engine gets the raw recipes from the bridge's `player()`. Call `readAvatar` in
 the page and pass its JSON to the engine, or parse the two strings with the field table
-in the docs. Read it again each session and do not store it: a player who turns
-sharing off expects their OG to leave your game.
+in the docs. Read it again each session and do not store it: a player who changes or
+deletes their OG expects your game to follow.
 
 `AVATAR-SPEC.md` in this package describes every part of an OG, with its shape,
 proportions in head heights and palette, so you can draw one in any engine and art style.
@@ -267,6 +268,23 @@ with an error when the page changes account, withdraws the capability or the cli
 disposed. The capability is available only in a parent that renders this confirmation;
 standalone local mode does not simulate browser navigation.
 
+## Invite links
+
+OpenGame runs no game server. A game that runs its own lobbies, through PeerJS or a server
+of its own, shares the game's OpenGame page with the lobby code in `?join=`:
+
+```js
+await og.init();
+if (og.invite.code) joinLobby(og.invite.code); // opened from an invite
+else showInvite(og.invite.link(code) ?? code);  // hosting: https://opengame.io/g/<id>?join=CODE
+```
+
+`og.invite.code` is the code from the address the player opened, or `null`.
+`og.invite.link(code)` returns `null` before `init` settles, outside OpenGame, and for a
+code the page would change: a code is 4 to 12 capitals and digits, or 22 characters of
+`A-Z a-z 0-9 _ -`. Under `opengame dev` it links to the local page. The guide, with PeerJS
+and server settings, is at https://docs.opengame.io/guides/multiplayer.
+
 ## OG Radio
 
 `@opengamehq/sdk/radio` lets players pick OG Radio stations and songs from your game's
@@ -315,8 +333,7 @@ claim: anybody with a console can forge one, and the game page does not rank by 
 Metadata takes only `label`, `mode`, `level` and `character` as strings, and `duration_ms`, `accuracy` and `combo` as numbers. Keep strings short.
 <!-- /generated:score-meta -->
 
-An entry's `name` is the player's handle while they share their profile in games, and
-otherwise `Guest` and the first four characters of their `og.player.id`; a few old entries
+An entry's `name` is the player's handle once they have one, and otherwise `Guest` and the first four characters of their `og.player.id`; a few old entries
 are null. `isMe` marks yours; label guests however suits the game. Private previews have
 their own boards.
 
@@ -498,8 +515,8 @@ Core, events and leaderboards return `{ ok: false, error, reason? }` instead of 
 | --- | --- | --- | --- |
 | `unavailable` | both | no | The page did not offer this capability. Check og.capabilities first; the local mock simulates account, leaderboard and analytics features. |
 | `invalid_event` | returned | no | Event names are lowercase letters, digits and underscores, starting with a letter, at most 48 characters, and 1 KB with properties. |
-| `rate_limited` | both | yes | Too many calls in the window. Events allow 60 a minute. Wait, then try again. |
-| `invalid_board` | returned | no | Use a board key declared in opengame.json: lowercase letters, digits, hyphens and underscores. |
+| `rate_limited` | both | yes | Too many calls in the window. Events allow 600 a minute. Wait, then try again. |
+| `invalid_board` | returned | no | Use a board key declared in opengame.json: lowercase letters, digits and underscores, starting with a letter. |
 | `board_unavailable` | returned | no | This board is not declared in opengame.json, or the published game has no such board. |
 | `invalid_score` | returned | no | Scores are finite numbers. |
 | `invalid_meta` | returned | no | Score metadata takes only label, mode, level and character as strings, and duration_ms, accuracy and combo as numbers. Keep strings short. |

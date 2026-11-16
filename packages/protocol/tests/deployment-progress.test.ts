@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { deploymentSteps, stageEta, stageTimingsFromSamples, transferEstimate, uploadPercent, type DeploymentProgressInput, type UploadReceipt } from "../src/deployment-progress";
+import { deploymentSteps, elapsedWords, stageEta, stageTimingsFromSamples, transferEstimate, uploadPercent, type DeploymentProgressInput, type UploadReceipt } from "../src/deployment-progress";
 
 const now = Date.parse("2026-11-12T06:00:00Z");
 const base: DeploymentProgressInput = { state: "uploading" };
@@ -55,7 +55,9 @@ test("sparse measurements show no ETA; estimates use broad minutes and stop at o
   const step = deploymentSteps({ state: "checking", started: { checks: new Date(now - 30_000).toISOString() }, timings: { checks: { lowSeconds: 90, highSeconds: 180, samples: 3 } } }).find(s => s.id === "checks")!;
   // Words, not an en dash: "About 39–45 min" was read aloud and judged as a symbol (launch E2E, J-opus-E7).
   assert.equal(stageEta(step, now), "About 1 to 3 min");
-  assert.equal(stageEta(step, now + 150_000), "Taking longer than usual");
+  // An overrun says how long the stage has been running (it started 30 s before `now`).
+  assert.equal(stageEta(step, now + 150_000), "Taking longer than usual: 3 min so far");
+  assert.equal(stageEta(step, now + 154_000), "Taking longer than usual: 3 min 4 s so far");
   assert.equal(stageEta({ ...step, timing: { ...step.timing!, samples: 1 } }, now), null);
   assert.equal(stageEta({ ...step, state: "held" }, now), null);
 });
@@ -101,4 +103,13 @@ test("held review names the actual hold and a failed review keeps its recovery i
   const failed = deploymentSteps({ state: "ready", submission: { ...submission("returned"), outcome: { decision: "return", reason: "The start button does not respond.", findings: [], appealable: false } } });
   assert.match(failed.find(s => s.id === "review")!.detail, /start button/);
   assert.match(failed.find(s => s.id === "review")!.detail, /what to change or how to appeal/);
+});
+test("an overrun counts the time a stage has been running", () => {
+  assert.equal(elapsedWords(0), "0 s");
+  assert.equal(elapsedWords(48.9), "48 s");
+  assert.equal(elapsedWords(60), "1 min");
+  assert.equal(elapsedWords(134), "2 min 14 s");
+  assert.equal(elapsedWords(3600), "1 h");
+  assert.equal(elapsedWords(3905), "1 h 5 min");
+  assert.equal(elapsedWords(-5), "0 s");
 });

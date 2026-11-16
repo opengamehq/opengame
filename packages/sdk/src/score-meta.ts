@@ -18,3 +18,7 @@ export type ScoreMeta = {
 
 /** The same policy in words, for the `invalid_meta` hint. */
 export const scoreMetaRule = "label, mode, level and character as strings, and duration_ms, accuracy and combo as numbers";
+
+/** The event allowance (platform.sdk.eventsPerSessionPerMinute), for the `rate_limited` hint,
+ * which said 60 for weeks while the limit was 600. */
+export const eventsPerMinute = 600;

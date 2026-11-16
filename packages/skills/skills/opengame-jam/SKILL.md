@@ -1,8 +1,8 @@
 ---
 name: opengame-jam
-description: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, deploys one exact release, and hands the person the deploy's page, where they enter it with their own answers and certify. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
+description: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, deploys one exact release, and enters it with the person's own answers, with opengame publish or on the deploy's page. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
 metadata:
-  version: "1.0.9"
+  version: "1.1.0"
 ---
 
 # Enter an OpenGame jam
@@ -69,8 +69,8 @@ decide. Do not hide a dependency, rewrite history or relabel a library to pass a
 
 ## Pick a track with the person
 
-The person answers these on the deploy's page. Help them prepare the answers; do not
-answer for them.
+The person gives these answers, on the deploy's page or to you for `opengame publish`.
+Help them prepare the answers; do not answer for them.
 
 - **Genre track:** one per entry, required. The page starts on the track that matches the
   game's genre; the person keeps it or chooses another.
@@ -81,27 +81,34 @@ answer for them.
 
 `opengame jams <slug> --json` lists the whole form.
 
-## Deploy, then the person enters it
+## Deploy, then enter it
 
 Follow `opengame-deploy` for installation, sign-in and the deploy. Use the exact release
 the creator played. Once the deploy is ready, review starts by itself; nobody runs a
 command for it. When `opengame status --json` shows `data.review.state` as
-`awaiting_details`, give the person `data.review.url`, the deploy's page. Signed in there in
-their browser, they press Confirm details, choose the track, the models and any sponsor
-tracks, and certify.
+`awaiting_details`, review has passed, and the entry is made one of two ways:
 
-Do not run `opengame submit` to enter the jam or to publish. The CLI cannot confirm a
-release its deploy already sent to review. It answers with that submission and a
+- **The person asked you to enter it.** Run `opengame publish` with their answers:
+
+  ```bash
+  opengame publish --track <track> --models <model>,<model> \
+    --sponsor <sponsor> --sponsor-email <sponsor>=<their email> --json
+  ```
+
+  It enters the jam, publishes, waits until the game is live, and prints the address to
+  share in `data.url`. `opengame deploy --publish` with the same flags does the deploy,
+  the wait for review and the entry in one command.
+- **Otherwise,** give the person `data.review.url`, the deploy's page. Signed in there,
+  they press Confirm details, choose the track, the models and any sponsor tracks, and
+  publish.
+
+Do not run `opengame submit` to enter the jam or to publish. It does not confirm a release
+its deploy already sent to review: it answers with that submission and a
 `jam_answers_unused` notice, and the answers go nowhere.
 
 ## What only the person can do
 
-**Certification is the person's legal statement**, made in their browser under a
-versioned set of terms. When the result asks for it, give the person the link and tell
-them what it is for. Do not open it for them, click through it, or tell them it is
-done. A later revision of the same entry under the same terms skips it.
-
-The person also decides whether they are eligible (age, one account), whether they own
+Nobody certifies or attests to anything to enter. The person decides whether they are eligible (age, one account), whether they own
 the assets, which track they want, and what their sponsor evidence claims.
 
 ## After submitting

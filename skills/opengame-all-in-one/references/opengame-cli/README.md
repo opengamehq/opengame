@@ -1,4 +1,4 @@
-> Carried from `opengame-cli` 1.8.4. Read it when: Drive the OpenGame command line tool from an agent. Covers installing it, signing in with the person, every command, JSON and JSONL output, exit codes, findings and how to retry. Use when the person mentions the opengame command, the OpenGame CLI, installing @opengamehq/cli, opengame login, check, dev, deploy, status, submit, releases, rollback, unpublish, restore, delete, details, achievements, handle, jam or token, or a command exited with an error you need to read.
+> Carried from `opengame-cli` 1.9.0. Read it when: Drive the OpenGame command line tool from an agent. Covers installing it, signing in with the person, every command, JSON and JSONL output, exit codes, findings and how to retry. Use when the person mentions the opengame command, the OpenGame CLI, installing @opengamehq/cli, opengame login, check, dev, deploy, status, submit, releases, rollback, unpublish, restore, delete, details, achievements, handle, jam or token, or a command exited with an error you need to read.
 
 
 # Use the OpenGame CLI
@@ -62,11 +62,12 @@ token in a command argument, a file in the project, a log or a reply.
 | `opengame check [dir]` | Find local build and asset problems before uploading. |
 | `opengame dev [dir]` | Serve a local export with the game runtime's headers. |
 | `opengame login` | Sign in through the browser. |
-| `opengame deploy [dir]` | Build, check and upload a release to a private preview. |
+| `opengame deploy [dir]` | Build, check and upload a release to a private preview. `--publish` also waits for review and publishes it when it passes. |
 | `opengame status [dir]` | Show the latest deploy for this folder, with its findings. |
 | `opengame deployments [dir]` | List the linked game's deploys, newest first. |
 | `opengame open [dir]` | Open the linked game's private page. |
-| `opengame submit [dir]` | Send a release to review that is not there yet. A ready deploy goes to review by itself, and the person confirms the details and enters the jam on the deploy's page; for a release already in review, jam flags are not used (`jam_answers_unused`). |
+| `opengame submit [dir]` | Send a release to review that is not there yet. A ready deploy goes to review by itself; for a release already in review, jam flags are not used (`jam_answers_unused`), so pass them to `opengame publish`. |
+| `opengame publish [dir]` | Publish the release that passed review, as Confirm and publish does on the deploy's page: the details review wrote, or the ones given as flags, and the jam's track and models (`--track`, `--models`). Follows it until it is live and prints the address. `--wait` waits for review first. An update of a live game publishes by itself. |
 | `opengame jams [slug]` | List open jams, or show one jam's tracks and flags. |
 | `opengame jam <withdraw\|reenter>` | Withdraw the linked game's jam entry, or put a withdrawn one back. |
 | `opengame releases [dir]` | List the linked game's releases: which is live, which were live before, and which can be made live again. |

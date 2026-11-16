@@ -1,5 +1,9 @@
 # opengame-cli changelog
 
+## 1.9.0
+
+`opengame publish` publishes a release that passed review from the terminal, with the jam's answers as flags, and `opengame deploy --publish` waits for review and publishes in one command. An update of a live game publishes by itself (16 Nov 2026).
+
 ## 1.8.4
 
 `opengame submit` is for a release that is not in review yet. A ready deploy goes to review by itself, and the person confirms the details and enters the jam on the deploy's page; jam flags given for a release already in review are not used (`jam_answers_unused`).

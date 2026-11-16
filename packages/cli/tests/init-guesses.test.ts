@@ -37,7 +37,7 @@ test("init with no flags writes Auto for every field it collects, and check read
   const file = await written(root);
   for (const field of ["title", "tagline", "description", "genre", "controls"]) assert.equal(file[field], "auto", field);
   assert.deepEqual(result.needs, []);
-  assert.match(result.message, /^Created opengame\.json\.\nAuto: title, tagline, description, genre,? and controls\. Leave a field out, blank or "auto" and review writes it from your game; you accept or change it on the deploy's page\./);
+  assert.match(result.message, /^Created opengame\.json\.\nAuto: title, tagline, description, genre,? and controls\. Leave a field out, blank or "auto" and review writes it from your game; you accept or change it on the deploy's page, or with opengame publish\./);
   // What `opengame check` reads first: the file init wrote has to pass it, and say what was Auto.
   const manifest = await loadManifest(root);
   assert.equal(manifest.title, "CLI test (delete me)", "an Auto title deploys as the page's own name until review offers its own");

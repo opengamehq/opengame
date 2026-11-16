@@ -11,6 +11,7 @@ import { assetPlanSummary, planDelivery } from "./unity-assets";
 import { largeAssetLimits } from "@opengame/shared/large-assets";
 import { upgradeCommand } from "./upgrade";
 import { submitCommand } from "./submit";
+import { publishCommand } from "./publish";
 import { jamsCommand } from "./jams";
 import { releasesCommand } from "./releases";
 import { deleteCommand, takeDownCommand } from "./take-down";
@@ -53,6 +54,15 @@ const noInstall = (who: string): Flag => ({ name: "no-install", type: "boolean",
    and a fifth kind reaches both without an edit here. `values` is help only; initProject
    is what refuses a wrong one, through kindFlags. */
 const kindFlag = (description: string): Flag => ({ name: "kind", type: "string", values: [...GAME_KIND_SLUGS], default: DEFAULT_GAME_KIND, description });
+/* What `opengame publish` answers, and `deploy --publish` with it: the deploy page's Confirm and
+   publish form as flags. Each left out is what that form would have sent untouched. */
+const publishFlags = (when: string): Flag[] => [
+  { name: "no-jam", type: "boolean", description: `${when}Publish to the gallery, not the jam. Refused while a new game or an update goes on OpenGame only as a jam entry.` },
+  { name: "track", type: "string", description: `${when}The jam track, when the release enters the jam. opengame jams <slug> lists them.` },
+  { name: "models", type: "string", description: `${when}Comma-separated models the game was made with, from the jam's form.` },
+  { name: "sponsor", type: "string", description: `${when}Comma-separated sponsor tracks to enter.` },
+  { name: "sponsor-email", type: "string", description: `${when}The email of the account you used at each sponsor, as sponsor=email, separated by commas.` },
+];
 const basedOnFlag = (when: string): Flag => ({ name: "based-on", type: "string",
   description: `The game a decomp or a mod is made from, as in --based-on "Doom"${when}. Required for a decomp or a mod, and not allowed for a game or a world.` });
 
@@ -95,8 +105,24 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "wait", type: "boolean", description: `Stay until the checks finish, up to ${LIMITS.platform.operations.watchTimeoutMs / 1000} seconds, and exit with their outcome. For CI that needs the result as an exit code.` },
     { name: "no-wait", type: "boolean", description: "Return once the upload is in. This is the default; the flag remains so older scripts keep working." },
     { name: "timeout", type: "string", description: `With --wait, stop watching after this many seconds (at most ${LIMITS.platform.operations.watchTimeoutMs / 1000}), exiting 5 with the checks still running. Setting it implies --wait.` },
+    { name: "publish", type: "boolean", description: "Wait for the checks and review, then publish the release the moment review passes, first publish included, and print the address to share. Implies --wait. The details are the ones opengame publish would send without flags; the jam's track and models come from the flags below." },
+    ...publishFlags("With --publish: "),
     stdin, json],
-    examples: ["opengame deploy .", "opengame deploy . --dry-run", "opengame deploy . --no-build", "opengame deploy . --wait --json"] },
+    examples: ["opengame deploy .", "opengame deploy . --dry-run", "opengame deploy . --no-build", "opengame deploy . --wait --json", "opengame deploy . --publish --json"] },
+  publish: { args: "[dir]", description: "Publish the linked game's release that passed review, as Confirm and publish does on its deploy's page, then follow it until it is live and print the address to share. Each detail left out is what that page would have sent: the game's words and genre, and review's choice for anything the deploy left to Auto. An update of a game that is already live publishes with no command once it passes review, so this is for a first publish, or a release that waits for a detail only you can give, such as the jam's track. Needs a token with submit; opengame login has it.", flags: [
+    { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of this folder's linked game." },
+    { name: "release", type: "string", description: "The release to publish, as releaseId from opengame status --json. Refused when it is not the game's newest review." },
+    { name: "wait", type: "boolean", description: `When review is still running, wait for it (up to ${LIMITS.platform.review.decisionDeadlineSeconds * 2 / 60} minutes) and publish the moment it passes.` },
+    { name: "title", type: "string", description: "The title, when the deploy guessed it and review offers a better one. To change a game's title, use opengame details." },
+    { name: "tagline", type: "string", description: "The tagline, when the game has none yet." },
+    { name: "description", type: "string", description: `The description, ${LIMITS.text.gameDescription.productMin} to ${LIMITS.text.gameDescription.max} characters, when the game still has the placeholder. Without it, review's when it wrote one.` },
+    { name: "keep-words", type: "boolean", description: "Keep your title, tagline and description as you wrote them, not the tidied copy review offers on a first publish." },
+    { name: "genre", type: "string", description: "A genre slug, or auto for review's choice. Without it, the genre the game was deployed with, or auto when the deploy left it to Auto." },
+    { name: "subgenre", type: "string", description: "A subgenre slug under that genre, or none." },
+    { name: "controller", type: "string", values: ["yes", "no"], description: "Whether the game supports a gamepad." },
+    ...publishFlags(""), stdin, json],
+    examples: ["opengame publish", "opengame publish --wait --json", "opengame publish --description \"Race the rain to the river.\" --genre racing --json",
+      "opengame publish --track rpg --models claude,fal --sponsor fal --sponsor-email fal=you@example.com --json"] },
   status: { args: "[dir]", description: "Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id> and take it out of opengame.json too, since a deploy that still declares it turns it back on. Unlocks are never deleted.", flags: [
     { name: "watch", type: "boolean", description: "Follow the deploy until it is ready, refused, or the watch window closes." },
     { name: "timeout", type: "string", description: `Stop watching after this many seconds (at most ${LIMITS.platform.operations.watchTimeoutMs / 1000}), exiting 5 with the checks still running.` }, stdin, json],
@@ -472,7 +498,7 @@ async function main() {
   const buildNote = command === "deploy" ? (flags["no-build"] ? undefined : "deploy runs its build command there first; pass --no-build to upload the folder as it is.")
     : ["check", "dev", "vendor"].includes(command) && flags.build ? "--build runs its build command there first." : undefined;
   // rollback's argument is the release, so its folder is the one it runs in.
-  const root = ["check", "dev", "deploy", "vendor", "status", "open", "pull", "submit", "deployments", "releases", "rollback", "unpublish", "restore", "details", "jam", "delete", "achievements"].includes(command)
+  const root = ["check", "dev", "deploy", "vendor", "status", "open", "pull", "submit", "deployments", "releases", "rollback", "unpublish", "restore", "details", "jam", "delete", "achievements", "publish"].includes(command)
     ? await projectFor(resolve(command === "rollback" || command === "jam" || command === "achievements" ? "." : positional[0] ?? "."), output, buildNote) : resolve(positional[0] ?? ".");
   if (command === "token") { tokensCommand(positional[0], flags, output); return; }
   if (command === "skills") { await skillsCommand(positional[0], positional[1], flags, output); return; }
@@ -483,6 +509,7 @@ async function main() {
   if (command === "games" || command === "link" || command === "open" || command === "deployments") { await gamesCommand(command, root, flags, output); return; }
   if (command === "pull") { await pullCommand(root, flags, output); return; }
   if (command === "submit") { await submitCommand(root, flags, output); return; }
+  if (command === "publish") { await publishCommand(root, flags, output); return; }
   if (command === "jams") { await jamsCommand(positional[0], flags, output); return; }
   if (command === "achievements") { await achievementsCommand(positional[0], positional[1], root, flags, output); return; }
   if (command === "delete") { await deleteCommand(root, flags, output); return; }

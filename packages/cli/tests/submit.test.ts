@@ -567,7 +567,7 @@ test("jam answers answered with the release's automatic submission are said to b
     assert.equal(result.code, 0, JSON.stringify(result.events));
     const notice = result.events.find(e => e.code === "jam_answers_unused");
     assert.ok(notice, JSON.stringify(result.events));
-    assert.match(notice.message, /already in review, sent there by its deploy, so these jam answers were not used\. Enter the jam on its deploy page once review finishes: http:\/\/127\.0\.0\.1:\d+\/certify\/SUB-1042$/);
+    assert.match(notice.message, /already in review, sent there by its deploy, so these jam answers were not used\. Once review passes, enter the jam with opengame publish and the same jam flags, or on its deploy page: http:\/\/127\.0\.0\.1:\d+\/certify\/SUB-1042$/);
   } finally { api.close(); await rm(cwd, { recursive: true, force: true }); }
 });
 

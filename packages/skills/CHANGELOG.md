@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.0
+
+- `opengame-cli` 1.9.0, `opengame-deploy` 1.1.7, `opengame-jam` 1.1.0 and `opengame-api`
+  1.0.8 publish a release that passed review with `opengame publish`, `opengame deploy
+  --publish` or `POST /api/v1/submissions/{id}/publish` when the creator asks, and say that an
+  update of a live game publishes by itself. `opengame-all-in-one` 1.0.5 carries them.
+
 ## 1.5.0
 
 - What OG Snipers (OS), Last Contact (LC) and OG Hero (OH) taught us, read from their

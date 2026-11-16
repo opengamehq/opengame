@@ -1,5 +1,9 @@
 # opengame-api changelog
 
+## 1.0.8
+
+A release that passed review is published with `POST /api/v1/submissions/{id}/publish`, as well as on the deploy's page, and an update of a live game publishes by itself (16 Nov 2026).
+
 ## 1.0.7
 
 Deploying without the CLI starts from `GET /api/v1/bootstrap` and its capabilities. An archive over 500 MiB goes in parts (`"multipart": true` and `/api/v1/operations/{id}/upload/parts`) or is refused with 413 `bundle_limit`, and a file-by-file deploy (`/api/v1/deploys/files`) sends only the files OpenGame does not already hold. Names the daily deploy allowance, 5 in any rolling 24 hours (`deploy_day_limited`), beside the hourly one. A ready deploy goes to review by itself.

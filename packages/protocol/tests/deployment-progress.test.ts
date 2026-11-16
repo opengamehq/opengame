@@ -56,8 +56,8 @@ test("sparse measurements show no ETA; estimates use broad minutes and stop at o
   // Words, not an en dash: "About 39–45 min" was read aloud and judged as a symbol (launch E2E, J-opus-E7).
   assert.equal(stageEta(step, now), "About 1 to 3 min");
   // An overrun says how long the stage has been running (it started 30 s before `now`).
-  assert.equal(stageEta(step, now + 150_000), "Taking longer than usual: 3 min so far");
-  assert.equal(stageEta(step, now + 154_000), "Taking longer than usual: 3 min 4 s so far");
+  assert.equal(stageEta(step, now + 150_000), "3 min so far");
+  assert.equal(stageEta(step, now + 154_000), "3 min 4 s so far");
   assert.equal(stageEta({ ...step, timing: { ...step.timing!, samples: 1 } }, now), null);
   assert.equal(stageEta({ ...step, state: "held" }, now), null);
 });

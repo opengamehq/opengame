@@ -2,7 +2,7 @@
 name: opengame-deploy
 description: Put a browser game online with OpenGame, the marketplace and game jam for browser games. Packages the game, checks it locally, uploads it to a private preview only the owner can play, reads and fixes findings, then hands the creator the page where they confirm the details after review. Use when the person says deploy my game, put it online, host it, share it, upload it, publish it, get me a link, make it playable for friends, or asks where to put a browser game or a Three.js game.
 metadata:
-  version: "1.1.6"
+  version: "1.1.7"
 ---
 
 # Deploy a browser game to OpenGame
@@ -14,7 +14,7 @@ Nothing is wrong with the game or the install: ask the person to run `opengame l
 run the command again. Do not reinstall or work around it.
 
 <!-- generated:procedure -->
-Deploy the creator's game to a private preview and give them its link. Review starts automatically, and the creator publishes the game on the deploy's page. Read each command's result before you run the next one.
+Deploy the creator's game to a private preview and give them its link. Review starts automatically. When it passes, publish the game with `opengame publish` if the creator asked you to, or give them the deploy's page to publish it themselves. Read each command's result before you run the next one.
 
 ## Install
 
@@ -172,11 +172,16 @@ An account can begin {{n platform.deploy.perAccountPerDay}} deploys in a rolling
 
 Review starts automatically once a deploy is ready, so you submit no release. Review is automatic: it plays the game, then passes it or returns it with findings.
 
-When review passes, the release waits for the creator. `opengame status --json` shows `data.review.state: "awaiting_details"` and the deploy's page in `data.review.url`. Give the creator that link. Signed in, in their own browser, they confirm the title, description and genre, enter the jam with its track and the models they used, and publish. You cannot do this for them. Before they do, you can set the words with `opengame details --title "..." --description "..." --json`.
+When review passes, a game's first release waits to be published. `opengame status --json` shows `data.review.state: "awaiting_details"`, `data.review.next: "opengame publish"` and the deploy's page in `data.review.url`.
 
-An update to a game that is already live is the exception. When the token that deployed it holds `submit`, as the `opengame login` token does, and nothing is owed (its details are written and the jam is not asking), it goes live as soon as it passes review, with no step on the page. When the creator asked only for a preview of an update to a live game, deploy with a token made in their settings with `deploy` alone, set as `OPENGAME_TOKEN`, so the release waits for them.
+- **The creator asked you to publish it.** Run `opengame publish --json`. It confirms the title, description and genre review wrote, publishes, waits until the game is live and prints the address to share in `data.url`. Change what review wrote with `--description`, `--genre` and the other flags in `opengame publish --help`. While a new game goes on OpenGame only as a jam entry, pass the jam's track and the models used with `--track` and `--models`; `opengame jams <slug> --json` lists them.
+- **They did not ask.** Give them `data.review.url`. Signed in, they check the details, enter the jam and publish on that page.
 
-`opengame submit` cannot take the confirmation step either. The release is already in review, so the server keeps that submission and prints a `jam_answers_unused` notice: the jam answers you passed were not used.
+To publish in one step, `opengame deploy --publish --json` stays until review passes, then publishes, and takes the same jam flags.
+
+An update to a game that is already live publishes by itself once it passes review. It keeps the live game's details, including the genre when the deploy left it to Auto, and its jam entry. The token that deployed it has to hold `submit`, as the `opengame login` token does. When the creator asked only for a preview of an update to a live game, deploy with a token made in their settings with `deploy` alone, set as `OPENGAME_TOKEN`, so the release waits for them.
+
+`opengame submit` does not confirm a release that is already in review. The server keeps that submission and prints a `jam_answers_unused` notice: the jam answers you passed were not used. Pass them to `opengame publish` once review passes.
 
 While Game Jam #1 runs, a new game goes on OpenGame only as a jam entry, up to {{n jam.entriesPerCreator}} for each account. Mods and decomps publish outside the jam at any time and never enter it. When the jam cannot take a build, for example because the account already has {{n jam.entriesPerCreator}} entries, the build is not sent to review, and the deploy's page explains why. [Enter a jam](https://docs.opengame.io/guides/jams) has the rules.
 
@@ -189,7 +194,8 @@ opengame status --watch --json
 | `data.review.state` | What to do |
 | --- | --- |
 | `review`, `playtesting`, `waiting` | Review is running. Watch again. |
-| `awaiting_details`, `needs_certification` | Give the creator `data.review.url`. Watch again once they say they have published. |
+| `awaiting_details` | Run `opengame publish --json` when the creator asked you to publish. Otherwise give them `data.review.url`, and watch again once they say they have published. |
+| `needs_certification` | Give the creator `data.review.url`. Watch again once they say they have done it. |
 | `publishing`, `published` | The game is going live. `data.submission.gameUrl` is its page. |
 | `returned` | Read the findings, fix the game and deploy again. The new deploy is reviewed automatically. |
 

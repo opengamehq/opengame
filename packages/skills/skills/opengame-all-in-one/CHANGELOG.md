@@ -1,5 +1,13 @@
 # opengame-all-in-one changelog
 
+## 1.0.4
+
+Carries opengame-performance 1.1.1 and opengame-scene-audit 1.1.1.
+
+## 1.0.3
+
+Carries opengame-deploy 1.1.6.
+
 ## 1.0.2
 
 Carries opengame-multiplayer 1.1.0, opengame-sdk 1.0.13 and opengame-deploy 1.1.5: invite links that open the game on OpenGame, and PeerJS and game servers set up for it.

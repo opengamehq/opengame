@@ -130,14 +130,14 @@
       "kind": "manual",
       "blocking": true,
       "label": "Originality and IP",
-      "hint": "Declared by the creator, and removed on a valid DMCA notice"
+      "hint": "Removed on a valid DMCA notice"
     },
     {
       "key": "fresh",
       "kind": "manual",
       "blocking": true,
       "label": "Built after kickoff",
-      "hint": "Attested by the creator"
+      "hint": "The honor system, player reports and the winner checks"
     }
   ],
   "allowedGameOrigins": {

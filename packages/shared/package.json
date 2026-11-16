@@ -22,7 +22,6 @@
     "./lobby-configuration-wire": "./src/lobby-configuration-wire.js",
     "./serving-inventory": "./src/serving-inventory.ts",
     "./large-assets": "./src/large-assets.ts",
-    "./large-asset-statement": "./src/large-asset-statement.ts",
     "./runtime-contracts": "./src/runtime-contracts.ts",
     "./game-policy": "./src/game-policy.ts",
     "./unicode-casefold": "./src/unicode-casefold.ts",

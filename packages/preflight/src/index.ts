@@ -943,7 +943,7 @@ export async function preflight(
   for (const module of wasmModules) delete module.text;
   if (unsearched.length) findings.push({ code: "licence-search-incomplete", severity: "note", path: unsearched[0], more: unsearched.slice(1, 10),
     title: `${unsearched.length} file${unsearched.length === 1 ? " was" : "s were"} not searched for an engine licence stamp.`,
-    detail: "A stamp asks for that engine's publication statement. These files could not be read within the check's budget, so the search is incomplete for them; the server's scan reads them again." });
+    detail: "A stamp marks a build that engine made. These files could not be read within the check's budget, so the search is incomplete for them; the server's scan reads them again." });
   detected = await withGodotPckVersion(detected, kept, engineSources);
   const licences = [...stampsSeen].sort();
   const engine = { ...withRawRuntimeEvidence(detected, rawRuntimes), ...(licences.length ? { licences } : {}) };
@@ -965,7 +965,7 @@ export async function preflight(
       title: engineIds.has(id as EngineId)
         ? `${name} licence stamp found; this is normal for ${name} web builds.`
         : `${name} licence stamp found in a build that is not recognised as a ${name} export.`,
-      detail: "Leave the .wasm as the engine built it. Publishing asks you to accept the engine's publication statement." });
+      detail: "Leave the .wasm as the engine built it." });
   }
   /* Engine identity is routing, not admission: a 105-byte wasm with Kaigen's import
      names reads as Kaigen. This tells a creator early that the plan they chose does not

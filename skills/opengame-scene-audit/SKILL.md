@@ -2,7 +2,7 @@
 name: opengame-scene-audit
 description: Audit a 3D browser game's geometry with a script, and its flicker on film. Finds props floating off what is drawn, buried props, overlapping solids, faces tied on the shipped vertex grid, missing colliders and invisible walls, cameras inside solids and duplicate actors, walks every staircase, and proves each check on a planted defect. Use when the person says things float, z-fighting, flicker, invisible walls, I walk through things, the screen goes black, or before calling a level finished.
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Scene audit

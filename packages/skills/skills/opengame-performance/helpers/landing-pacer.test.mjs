@@ -82,3 +82,17 @@ test("a planted unpaced loop is caught by the age it reports", async () => {
   // Paced, the age stays bounded by a few GPU periods however long the run; unpaced it grows.
   assert.ok(fast <= 150, `paced p95 ${fast} ms`);
 });
+
+test("a frame whose promise rejects leaves the queue without counting as landed", async () => {
+  let t = 0;
+  const pacer = createLandingPacer({ now: () => t });
+  pacer.begin(); pacer.submitted(Promise.reject(new Error("device lost")));
+  t = 16; pacer.begin(); pacer.submitted(Promise.reject(new Error("device lost")));
+  await flush();
+  t = 200;
+  assert.equal(pacer.canBegin(), true, "two failures do not hold every later frame");
+  const s = pacer.stats();
+  assert.equal(s.inFlight, 0);
+  assert.equal(s.landed, 0);
+  assert.equal(s.failed, 2);
+});

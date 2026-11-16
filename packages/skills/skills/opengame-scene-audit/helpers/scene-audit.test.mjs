@@ -101,6 +101,9 @@ test("the three.js adapter reads hidden collision meshes as undrawn colliders, a
   assert.deepEqual(checkInvisible(scene).findings.map((f) => f.id), ["hidden gate"]);
   const withEdge = fromThreeScene(THREE, world, { colliders: [edge], groundY: 0 });
   assert.equal(withEdge.colliders[0].nodraw, "behind the cliff fence");
+  // A hidden collision mesh that says why it stops the player keeps its reason.
+  ghost.userData.nodraw = "the gate's bars";
+  assert.deepEqual(checkInvisible(fromThreeScene(THREE, world, { colliders: [], groundY: 0 })).findings, []);
 });
 
 test("on a quantised grid the coplanar plant sits between the steps, and is caught", () => {

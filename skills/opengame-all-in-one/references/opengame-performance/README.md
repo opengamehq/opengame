@@ -1,4 +1,4 @@
-> Carried from `opengame-performance` 1.1.0. Read it when: Keep a browser game smooth on an ordinary laptop and a shared GPU, with three.js and WebGPU specifics. Covers frame-time tails counted from frames the engine ran, bare timing runs, cost over frame rate, frame pacing by what lands, draw calls per pass, a fixed light set and warm-up, uploads that never stall, the world lowered before the gameplay layer, and whole-tab memory. Use when the game stutters, hitches, drops frames, swings between rates, has a slow menu or a mouse that feels slow.
+> Carried from `opengame-performance` 1.1.1. Read it when: Keep a browser game smooth on an ordinary laptop and a shared GPU, with three.js and WebGPU specifics. Covers frame-time tails counted from frames the engine ran, bare timing runs, cost over frame rate, frame pacing by what lands, draw calls per pass, a fixed light set and warm-up, uploads that never stall, the world lowered before the gameplay layer, and whole-tab memory. Use when the game stutters, hitches, drops frames, swings between rates, has a slow menu or a mouse that feels slow.
 
 
 # Performance

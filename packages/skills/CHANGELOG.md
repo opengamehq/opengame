@@ -22,6 +22,8 @@
 - `opengame-multiplayer` 1.1.0: invites open the game on OpenGame through `og.invite`, and
   PeerJS runs on the creator's own PeerServer with TURN. `opengame-sdk` 1.0.13 and
   `opengame-deploy` 1.1.5 teach the same, and `opengame-all-in-one` 1.0.2 carries them.
+- `opengame-performance` 1.1.1 and `opengame-scene-audit` 1.1.1 fix their helpers: a failed frame
+  leaves the landing pacer's queue, and a hidden collider keeps its `nodraw` reason.
 
 ## 1.4.0
 

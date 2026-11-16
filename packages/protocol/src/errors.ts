@@ -424,7 +424,7 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   large_asset_lane_not_granted: { exit: 3, retry: "never", status: 403,
     message: "This upload is past the standard limits and needs large-asset access on your account. Ask the OpenGame team to turn it on." },
   asset_plan_missing: say(input, "The asset plan file is missing. Give its path from the game folder, or an absolute path.", 400),
-  large_asset_statement_required: say(input, "This upload needs the Kaigen publication statement. Run opengame check with the same asset plan to read it, then deploy again with --accept-statement and the version it prints.", 400),
+  large_asset_statement_required: say(input, "No upload asks for a statement any more. Update the OpenGame CLI, then deploy again.", 400),
   rate_limited: limited, slow_down: limited,
   // Ours, or the network between us.
   network: ours, invalid_response: ours, temporarily_unavailable: ours, platform_unconfigured: ours,

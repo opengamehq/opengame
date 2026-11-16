@@ -36,9 +36,9 @@
       "digestPublished": "97a39796ecfa491f90e7eda736b79527e25f269aecbaa46a777912f014913dbf"
     },
     "opengame-deploy": {
-      "version": "1.1.5",
-      "digest": "5caddf88b1c2215f468e9013e4944df7a31dbc7da6e052d3398a3bc725ee292f",
-      "digestPublished": "b3b2fc9f9eb23f0e4ce175fbbe8a908c0b3bf175ab9556e9a9c558e839720283"
+      "version": "1.1.6",
+      "digest": "6b4820fe477955a8618088fd4b2b7caa45b50caed299353cac26512e45569d2d",
+      "digestPublished": "3afa686ffec4d8b5202bc161c19989c8f707494b4663332d35efb19a7088b50c"
     },
     "opengame-depth": {
       "version": "1.1.0",
@@ -111,9 +111,9 @@
       "digestPublished": "b31bb460da74c2c87a2188992ecd27b6148d529c8c91992db5bb438376001ce8"
     },
     "opengame-performance": {
-      "version": "1.1.0",
-      "digest": "8663b73009890483ea94fed477b8a4915c2ea99fac56f820e89ceadb547271f3",
-      "digestPublished": "8663b73009890483ea94fed477b8a4915c2ea99fac56f820e89ceadb547271f3"
+      "version": "1.1.1",
+      "digest": "118adf8429f7296153f03303e2d3e1dea17cb30c711de24dd6c2fd0d07b502cc",
+      "digestPublished": "118adf8429f7296153f03303e2d3e1dea17cb30c711de24dd6c2fd0d07b502cc"
     },
     "opengame-production": {
       "version": "1.1.0",
@@ -136,9 +136,9 @@
       "digestPublished": "a0002e6967404b1a8f58ad28410ba08b88ac943ab3711181028bf2e327b3a93f"
     },
     "opengame-scene-audit": {
-      "version": "1.1.0",
-      "digest": "0fdfb8854a7dee3ae06c27fec4df62fa991fa67a2226d146b49080f446483550",
-      "digestPublished": "0fdfb8854a7dee3ae06c27fec4df62fa991fa67a2226d146b49080f446483550"
+      "version": "1.1.1",
+      "digest": "61fa3eee75da7f6b560333b0d2c96621370e113a0e0d809b2747a58c8b3f584a",
+      "digestPublished": "61fa3eee75da7f6b560333b0d2c96621370e113a0e0d809b2747a58c8b3f584a"
     },
     "opengame-sdk": {
       "version": "1.0.13",
@@ -181,9 +181,9 @@
       "digestPublished": "f2895bf1c85e00750afc7c4cbba873f5d26ced3842950b3099687d501a590d35"
     },
     "opengame-all-in-one": {
-      "version": "1.0.2",
-      "digest": "c877ae07f5785b08da9d49cab98eda296292666e8ed9a56f2263aaedcfea7ced",
-      "digestPublished": "05c1eefc4164dffa809c0e18442bd1f6deb7961518c11c380af1383944c14e49"
+      "version": "1.0.4",
+      "digest": "07f45a016430367027f5044c61667b648f19ff506b512e78b3f076dcc34814c1",
+      "digestPublished": "870bed2820b4d54ccf14ae8ec6ef518dbecf789f6015635db57cd2acdc112c4e"
     }
   }
 }

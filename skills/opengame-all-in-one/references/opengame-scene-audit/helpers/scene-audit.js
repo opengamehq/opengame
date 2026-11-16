@@ -655,7 +655,7 @@ export function fromThreeScene(THREE, root, { colliders = [], groundY = null, fl
     const bounds = new THREE.Box3().setFromObject(object);
     if (bounds.isEmpty()) return;
     const part = { id: object.name || object.uuid, min: bounds.min.toArray(), max: bounds.max.toArray(), visible: shown ? undefined : false, solid: opaque && !data.decal,
-      collider: data.collider === true, nocollide: data.nocollide, hangs: data.hangs, group: data.group, prop: data.prop, decal: data.decal || material?.polygonOffset, gridStep: data.gridStep };
+      collider: data.collider === true, nodraw: data.nodraw, nocollide: data.nocollide, hangs: data.hangs, group: data.group, prop: data.prop, decal: data.decal || material?.polygonOffset, gridStep: data.gridStep };
     if (triangles && object.geometry?.attributes?.position) {
       const position = object.geometry.attributes.position, index = object.geometry.index;
       const count = index ? index.count : position.count;

@@ -1,5 +1,9 @@
 # opengame-deploy changelog
 
+## 1.1.6
+
+The creator no longer certifies anything on the deploy's page: entering the jam is the track and the models, then publish (16 Nov 2026).
+
 ## 1.1.5
 
 A multiplayer section: invite links through `og.invite.link`, PeerJS on the creator's own servers with TURN, and game servers over `wss:` with an exact `Origin` check and a token rather than a cookie.

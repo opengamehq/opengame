@@ -9,7 +9,6 @@ import { authCommand } from "./auth";
 import { assetPlanFlag, deployCommand, prepareDeploy, build } from "./deploy";
 import { assetPlanSummary, planDelivery } from "./unity-assets";
 import { largeAssetLimits } from "@opengame/shared/large-assets";
-import { largeAssetStatement } from "@opengame/shared/large-asset-statement";
 import { upgradeCommand } from "./upgrade";
 import { submitCommand } from "./submit";
 import { jamsCommand } from "./jams";
@@ -42,9 +41,9 @@ type Flag = { name: string; type: "boolean" | "string"; description: string; val
 const json: Flag = { name: "json", type: "boolean", description: "Print one formatted JSON result or error, including notices and findings." };
 const jsonl: Flag = { name: "jsonl", type: "boolean", description: "Stream one JSON event per line. The last line is a result or an error." };
 const stdin: Flag = { name: "token-stdin", type: "boolean", description: "Read the token from stdin instead of OPENGAME_TOKEN or the saved login." };
-const externalAssets: Flag = { name: "external-assets", type: "string", only: "Unity, Kaigen and large-game exports", description: 'Asset plan JSON naming its kind, or auto. For a large export, --external-assets auto is the same as a plan of {"delivery":"large-game-v1","assets":"auto"}: opengame chooses which files to send separately. For Kaigen: {"delivery":"kaigen-assets-v1","assets":["cooked/","oc_heads/"]}, where a path ending in / takes every eligible file under it. Kaigen and large-game-v1 need large-asset access on your account; the server checks every plan again.' };
+const externalAssets: Flag = { name: "external-assets", type: "string", only: "Unity, Kaigen and large-game exports", description: 'Asset plan JSON naming its kind, or auto. For a large export, --external-assets auto is the same as a plan of {"delivery":"large-game-v1","assets":"auto"}: opengame chooses which files to send separately. For Kaigen: {"delivery":"kaigen-assets-v1","assets":["cooked/","oc_heads/"]}, where a path ending in / takes every eligible file under it. Any account can use either plan; the server checks every plan again.' };
 const unityAssets: Flag = { name: "unity-assets", type: "string", only: "Unity, Kaigen and large-game exports", description: 'Unity asset plan JSON: {"assets":["Build/game.data"]}. The same as --external-assets for a Unity plan. Paths are relative to the export root; the server checks the plan again.' };
-const acceptStatement: Flag = { name: "accept-statement", type: "string", only: "Unity, Kaigen and large-game exports", description: "Accept the publication statement for a Kaigen asset plan, using the version opengame check prints beside its words. Unity and large-game-v1 plans need none." };
+const acceptStatement: Flag = { name: "accept-statement", type: "string", only: "Unity, Kaigen and large-game exports", description: "No longer needed: no asset plan asks for a statement. Accepted and ignored, so a command written for an older CLI still runs." };
 const human: Flag = { name: "human", type: "boolean", description: "Print for a person even when a coding agent's variable such as CLAUDECODE is set. Prompts still need a terminal." };
 const noBrowser: Flag = { name: "no-browser", type: "boolean", description: "Print the URL instead of opening a browser." };
 /* deploy and check --build install a project's missing packages from its lockfile before the
@@ -514,11 +513,10 @@ async function main() {
     if (assetPlan) {
       const { archive } = await prepareDeploy(root, output, Boolean(flags.build), { vendor: Boolean(flags.vendor), unityAssets: assetPlan.plan, unityOnly: assetPlan.unityOnly, install: !flags["no-install"], rerun: "opengame check --build" });
       const delivery = planDelivery(archive.unityAssets);
-      const statement = largeAssetStatement(delivery);
       output.emit({ type: "result", command, data: { ok: true, delivery, files: archive.fileCount, bytes: archive.byteSize,
         assets: archive.unityAssets!.assets, inputDigest: archive.unityAssets!.inputDigest, packaging: archive.packaging, sourceSettings,
-        limits: { boot: LIMITS.bundle, assets: largeAssetLimits(delivery) }, ...(statement ? { statement } : {}),
-        message: assetPlanSummary(archive.fileCount, archive.unityAssets!.assets.length, statement ?? undefined) } });
+        limits: { boot: LIMITS.bundle, assets: largeAssetLimits(delivery) },
+        message: assetPlanSummary(archive.fileCount, archive.unityAssets!.assets.length) } });
       await archive.dispose();
       return;
     }

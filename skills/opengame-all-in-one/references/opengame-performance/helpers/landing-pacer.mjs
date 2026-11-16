@@ -34,6 +34,7 @@ export function createLandingPacer({
   let lastBegin = null;
   let pending = null; // begin time of a frame begun but not yet submitted
   let held = 0;
+  let failed = 0;
 
   /** False while maxInFlight frames are out and the oldest is at least maxAgeMs old. */
   function canBegin() {
@@ -57,12 +58,18 @@ export function createLandingPacer({
     const started = pending ?? now();
     pending = null;
     inFlight.push(started);
-    Promise.resolve(landed).then(() => {
+    const settle = () => {
       const index = inFlight.indexOf(started);
       if (index >= 0) inFlight.splice(index, 1);
+    };
+    // A frame whose promise rejects (a lost device, a failed submit) still leaves the
+    // queue, or two failures would hold every later frame. It records no age, because
+    // nothing landed, and is counted apart.
+    Promise.resolve(landed).then(() => {
+      settle();
       ages.push(now() - started);
       if (ages.length > keep) ages.shift();
-    });
+    }, () => { settle(); failed++; });
   }
 
   function percentile(sorted, p) {
@@ -72,7 +79,7 @@ export function createLandingPacer({
 
   function stats() {
     const sorted = [...ages].sort((a, b) => a - b);
-    return { landed: ages.length, inFlight: inFlight.length, held, p50: percentile(sorted, 0.5), p95: percentile(sorted, 0.95) };
+    return { landed: ages.length, inFlight: inFlight.length, held, failed, p50: percentile(sorted, 0.5), p95: percentile(sorted, 0.95) };
   }
 
   return { canBegin, begin, submitted, stats };

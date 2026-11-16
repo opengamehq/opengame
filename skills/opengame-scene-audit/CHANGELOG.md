@@ -1,5 +1,9 @@
 # opengame-scene-audit changelog
 
+## 1.1.1
+
+`fromThreeScene` keeps `userData.nodraw` on a hidden collision mesh, so a boundary with a written reason is no longer reported as an invisible wall.
+
 ## 1.1.0
 
 Adds what OG Snipers and Last Contact taught. The helper gains an `invisible` check

@@ -65,7 +65,7 @@ export function deploymentSteps(input: DeploymentProgressInput): DeployStep[] {
   const owesDetails = submission?.state === "awaiting_details" || submission?.state === "needs_certification";
   const confirmed = ["approved", "publishing", "published"].includes(submission?.state ?? "");
   put("details", owesDetails ? "held" : confirmed ? "done" : "waiting", owesDetails ? "Confirm your game’s details below to continue."
-    : confirmed ? "Your details are confirmed." : "Your game’s details and statements, confirmed by you.");
+    : confirmed ? "Your details are confirmed." : "Your game’s details, confirmed by you.");
   put("publish", "waiting", "Make this version available to players.");
   put("live", "waiting", "Your game, ready to play and share.");
   // Only the file checks reach this list since 12 Nov 2026; a retired check's row on an

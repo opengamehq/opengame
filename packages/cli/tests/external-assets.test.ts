@@ -13,9 +13,8 @@ import { once } from "node:events";
 import { gunzipSync } from "node:zlib";
 import { LIMITS } from "@opengame/shared";
 import { compareAssetPaths, largeAssetPlan } from "@opengame/shared/large-assets";
-import { largeAssetStatement } from "@opengame/shared/large-asset-statement";
 import { incrementalArchiveBytes } from "@opengame/protocol";
-import { acceptedStatement, assetPlanNotices, assetPlanSummary, autoSplitAssets, parseAssetPlan, parseUnityAssetPlan, readUnityAssetPlan } from "../src/unity-assets";
+import { assetPlanNotices, assetPlanSummary, autoSplitAssets, parseAssetPlan, parseUnityAssetPlan, readUnityAssetPlan } from "../src/unity-assets";
 import { assetPlanFlag } from "../src/deploy";
 import { Api, encodeJsonBody } from "../src/http";
 import { canonicalArchive, uploadMissingFiles } from "../src/incremental";
@@ -59,23 +58,14 @@ test("a folder takes every eligible file beneath it and leaves code in the boot 
   await assert.rejects(readUnityAssetPlan(root, root, "plan.json", { unityOnly: false }), { code: "symlink" });
 }));
 
-test("a Kaigen plan is refused until the statement's current version is accepted", () => {
-  const statement = largeAssetStatement(KAIGEN)!;
-  assert.match(statement.statement, /Kaigen agreement permits me to publish/);
-  assert.throws(() => acceptedStatement(KAIGEN, undefined), (error: Error & { code?: string }) =>
-    error.code === "large_asset_statement_required" && error.message.includes(statement.statement) && error.message.includes(statement.version));
-  assert.throws(() => acceptedStatement(KAIGEN, "0".repeat(16)), { code: "large_asset_statement_required" });
-  assert.deepEqual(acceptedStatement(KAIGEN, statement.version), { key: "kaigen_publication", version: statement.version });
-  assert.equal(acceptedStatement("unity-assets-v1", undefined), undefined);
-  assert.throws(() => acceptedStatement("unity-assets-v1", statement.version), { code: "invalid_flag" });
-});
-
-test("check prints a Kaigen plan's statement and its version, and a Unity plan's nothing extra", () => {
-  const statement = largeAssetStatement(KAIGEN)!;
-  const kaigen = assetPlanNotices(KAIGEN, 3).find(notice => notice.code === "large_asset_statement");
-  assert.equal(kaigen?.version, statement.version);
-  assert.ok(kaigen?.message.includes(statement.statement) && kaigen.message.includes(`--accept-statement ${statement.version}`));
-  assert.deepEqual(assetPlanNotices("unity-assets-v1", 3).map(notice => notice.code), ["unity_assets_local_only"]);
+/* Since 16 Nov 2026 a Kaigen plan asks no statement, since nothing is attested any more; until then
+   check printed its publication statement and version, and deploy refused without
+   --accept-statement. Mutation: put the large_asset_statement notice back and this fails. */
+test("check prints no statement for any plan, Kaigen's included", () => {
+  for (const kind of [KAIGEN, "unity-assets-v1", "large-game-v1"]) {
+    assert.deepEqual(assetPlanNotices(kind, 3).map(notice => notice.code), ["unity_assets_local_only"], kind);
+    assert.doesNotMatch(assetPlanNotices(kind, 3)[0]!.message, /statement|Kaigen agreement/i);
+  }
 });
 
 /** Runs `run` with the helper's interpreter wrapped in one that records each launch, and
@@ -99,14 +89,12 @@ async function launches(root: string, run: () => Promise<void>) {
 test("check's last line counts each half once, and does not repeat the notices above it", () => {
   // Area F, 1 Nov 2026: a one-asset plan read "hashed 1 selected assets" and then, as the
   // result, "hashed 1 assets" again, and a Kaigen plan printed its statement twice.
-  const statement = largeAssetStatement(KAIGEN)!;
   assert.match(assetPlanNotices("unity-assets-v1", 1)[0]!.message, /hashed 1 selected asset\./);
   assert.match(assetPlanNotices("unity-assets-v1", 2)[0]!.message, /hashed 2 selected assets\./);
   assert.equal(assetPlanSummary(1, 1), "Ready to deploy: 1 file in the boot archive and 1 asset sent separately.");
   assert.equal(assetPlanSummary(1200, 3), "Ready to deploy: 1,200 files in the boot archive and 3 assets sent separately.");
-  const kaigen = assetPlanSummary(4, 2, statement);
-  assert.ok(kaigen.includes(`--accept-statement ${statement.version}`));
-  assert.ok(!kaigen.includes(statement.statement), "the statement is printed once, by its notice");
+  const kaigen = assetPlanSummary(4, 2);
+  assert.ok(!kaigen.includes("--accept-statement"), "no plan asks for a statement");
   assert.ok(!kaigen.includes("hashed"), "the hashing is said once, by its notice");
 });
 

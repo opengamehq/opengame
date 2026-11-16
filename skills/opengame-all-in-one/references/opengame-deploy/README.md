@@ -1,4 +1,4 @@
-> Carried from `opengame-deploy` 1.1.5. Read it when: Put a browser game online with OpenGame, the marketplace and game jam for browser games. Packages the game, checks it locally, uploads it to a private preview only the owner can play, reads and fixes findings, then hands the creator the page where they confirm the details after review. Use when the person says deploy my game, put it online, host it, share it, upload it, publish it, get me a link, make it playable for friends, or asks where to put a browser game or a Three.js game.
+> Carried from `opengame-deploy` 1.1.6. Read it when: Put a browser game online with OpenGame, the marketplace and game jam for browser games. Packages the game, checks it locally, uploads it to a private preview only the owner can play, reads and fixes findings, then hands the creator the page where they confirm the details after review. Use when the person says deploy my game, put it online, host it, share it, upload it, publish it, get me a link, make it playable for friends, or asks where to put a browser game or a Three.js game.
 
 
 # Deploy a browser game to OpenGame
@@ -170,7 +170,7 @@ An account can begin 5 deploys in a rolling day, so fix what `opengame check` fi
 
 Review starts automatically once a deploy is ready, so you submit no release. Review is automatic: it plays the game, then passes it or returns it with findings.
 
-When review passes, the release waits for the creator. `opengame status --json` shows `data.review.state: "awaiting_details"` and the deploy's page in `data.review.url`. Give the creator that link. Signed in, in their own browser, they confirm the title, description and genre, enter the jam with its track and the models they used, certify that they have the rights to everything in the game, and publish. You cannot do this for them. Before they do, you can set the words with `opengame details --title "..." --description "..." --json`.
+When review passes, the release waits for the creator. `opengame status --json` shows `data.review.state: "awaiting_details"` and the deploy's page in `data.review.url`. Give the creator that link. Signed in, in their own browser, they confirm the title, description and genre, enter the jam with its track and the models they used, and publish. You cannot do this for them. Before they do, you can set the words with `opengame details --title "..." --description "..." --json`.
 
 An update to a game that is already live is the exception. When the token that deployed it holds `submit`, as the `opengame login` token does, and nothing is owed (its details are written and the jam is not asking), it goes live as soon as it passes review, with no step on the page. When the creator asked only for a preview of an update to a live game, deploy with a token made in their settings with `deploy` alone, set as `OPENGAME_TOKEN`, so the release waits for them.
 

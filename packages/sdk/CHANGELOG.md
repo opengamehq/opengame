@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0
+
+- `og.invite.link(code)` is the game's page on opengame.io with `?join=CODE`, and
+  `og.invite.code` is the code the player opened the game with, so a game that runs its own
+  lobbies shares links that open on OpenGame and joins the friend to that lobby. `link`
+  returns null for a code the page would change, before `init` settles and outside
+  OpenGame; under `opengame dev` it links to the local page. The native bridge answers
+  `invite.code` and `invite.link`. The core is about 260 bytes gzip larger.
+
 ## 0.4.0
 
 - `og.player.stats()` reads the player's own entry on every leaderboard the game declares,

@@ -10,7 +10,7 @@ import { ERRORS, DEAD_UPLOAD_CODES, LISTING, OPERATION_STATUS, RELEASE_STATUS, S
 import { terminalDeploymentChecklist } from "./deployment-progress";
 import { operation, terminal, remember, readSavedOperation } from "./operation";
 import { readGame, refuseRemoved } from "./games";
-import { emitReview, followReview, readSubmission, reviewLine } from "./submit";
+import { emitReview, followReview, readSubmission, reviewLine, sendAgain } from "./submit";
 import { authCommand } from "./auth";
 import { readBootstrap } from "./bootstrap";
 import { Api, ApiError, UploadInterrupted } from "./http";
@@ -1107,7 +1107,14 @@ function reviewSummary(review: Submission, newest: string | null) {
   const next = review.state === "needs_certification" || review.state === "awaiting_details" ? "opengame status --watch"
     : held ? "opengame status"
     : open ? "opengame status --watch"
-    : review.state === "returned" ? (newest && newest !== review.releaseId ? "opengame status --watch" : "opengame deploy")
+    /* A jam entry returned for a fault of ours (the checks ran past their deadline, or the
+       playtest stopped on our side) needs no new build: submitting the same release with the
+       jam's answers runs the checks again. It said "opengame deploy", so an agent following
+       `next` uploaded the same bytes again (sweep, 16 Nov 2026). A return of an automatic
+       review that entered no jam keeps deploy: while a jam is the destination the server takes
+       a submission only with that jam's answers, and a new deploy goes to review by itself. */
+    : review.state === "returned" ? (newest && newest !== review.releaseId ? "opengame status --watch"
+      : sendAgain(review) && review.jam ? `opengame submit --release ${review.releaseId}` : "opengame deploy")
     : null;
   // `hold` is how an agent tells the launch policy's hold from an outage: both are
   // `waiting`, and only the outage is worth retrying anything over.

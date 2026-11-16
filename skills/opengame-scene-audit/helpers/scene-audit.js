@@ -1,7 +1,8 @@
 /**
  * A geometry audit for a 3D game scene: floating props, buried props, solids driven
- * through each other, coplanar faces that z-fight, visible solids with no collider, and
- * a walk bot that climbs every staircase holding forward only. No GPU, no browser.
+ * through each other, coplanar faces that z-fight, visible solids with no collider,
+ * colliders with nothing drawn (invisible walls), and a walk bot that climbs every
+ * staircase holding forward only. No GPU, no browser.
  *
  * Copy this file into the game and feed it the scene the game actually builds:
  *
@@ -21,9 +22,12 @@
  *   group      parts emitted together as one object; they may touch and overlap
  *   triangles  optional [[ax,ay,az, bx,by,bz, cx,cy,cz], ...] for the coplanar check;
  *              boxes without triangles contribute their six faces
- * plus `colliders` (boxes the controller collides with), `ramps` (invisible stair
- * ramps), `groundY` (a number or a function of x and z), `floors` (walkable heights)
- * and `routes` for the walk bot.
+ *   gridStep   the step of the vertex grid this part is shipped on, in metres, when the
+ *              format quantises positions; faces within two steps of one plane tie
+ * plus `colliders` (boxes the controller collides with, each optionally carrying
+ * `nodraw`: a reason the player can see why it stops them, such as "fence line"),
+ * `ramps` (invisible stair ramps), `groundY` (a number or a function of x and z),
+ * `floors` (walkable heights) and `routes` for the walk bot.
  *
  * EVERY CHECK PLANTS A DEFECT FIRST. Before measuring the real scene, each check runs on
  * a copy with a known defect placed at a site it chooses from the real scene, and the
@@ -45,7 +49,9 @@ export const TOLERANCES = Object.freeze({
   penFraction: 0.2,      // a fifth of the smaller part inside the other
   penSlack: 0.05,        // slack on "deeper than the thinner part"
   zEps: 0.002,           // faces closer than this to one plane have no depth winner
+  gridStep: 0,           // shipped vertex grid for every part; two steps widen zEps
   zArea: 0.02,           // overlap smaller than this many square metres is not visible
+  invisibleShare: 0.25,  // a quarter of a collider with nothing drawn in it is a wall
   bodyRadius: 0.35, bodyHeight: 1.8, stepHeight: 0.42, walkSpeed: 4.9,
   stuckSeconds: 1.0, routeSeconds: 30,
 });
@@ -261,20 +267,27 @@ export function overlapArea(t1, t2, n) {
  */
 export function checkCoplanar(scene, tol = TOLERANCES) {
   const faces = [];
+  // A format that stores positions on a grid rounds faces closer than a step or two
+  // into one plane, so "within 2 mm" passes real ties on a coarse grid. The pair's
+  // tolerance is two steps of the coarser of its two grids, or zEps if that is larger.
+  const stepOf = (p) => Math.max(tol.gridStep ?? 0, p.gridStep ?? 0);
+  let eps = tol.zEps;
+  for (const p of scene.parts) eps = Math.max(eps, 2 * stepOf(p));
+  const pairEps = (f, g) => Math.max(tol.zEps, 2 * Math.max(f.step, g.step));
   for (const p of scene.parts) {
     if (p.visible === false || !isSolid(p) || p.decal) continue;
     for (const t of p.triangles ?? boxTriangles(p)) {
       const n = triNormal(t);
       if (!n) continue;
       const d = n[0] * t[0] + n[1] * t[1] + n[2] * t[2];
-      if (n[1] < -0.999 && (scene.floors ?? [groundAt(scene, t[0], t[2])]).some((f) => f !== null && Math.abs(-d - f) < tol.zEps)) continue;
-      faces.push({ part: p.id, group: p.group, t, n, d, min: [0, 1, 2].map((a) => Math.min(t[a], t[3 + a], t[6 + a])), max: [0, 1, 2].map((a) => Math.max(t[a], t[3 + a], t[6 + a])) });
+      if (n[1] < -0.999 && (scene.floors ?? [groundAt(scene, t[0], t[2])]).some((f) => f !== null && Math.abs(-d - f) < Math.max(tol.zEps, 2 * stepOf(p)))) continue;
+      faces.push({ part: p.id, group: p.group, step: stepOf(p), t, n, d, min: [0, 1, 2].map((a) => Math.min(t[a], t[3 + a], t[6 + a])), max: [0, 1, 2].map((a) => Math.max(t[a], t[3 + a], t[6 + a])) });
     }
   }
   const bins = new Map();
   const keyOf = (f, slot) => `${Math.round(f.n[0] * 1000)},${Math.round(f.n[1] * 1000)},${Math.round(f.n[2] * 1000)},${slot}`;
   for (const f of faces) {
-    const slot = Math.floor(f.d / tol.zEps);
+    const slot = Math.floor(f.d / eps);
     const key = keyOf(f, slot);
     if (!bins.has(key)) bins.set(key, []);
     bins.get(key).push(f);
@@ -282,14 +295,15 @@ export function checkCoplanar(scene, tol = TOLERANCES) {
   const pairs = new Map();
   let examined = 0;
   for (const f of faces) {
-    const slot = Math.floor(f.d / tol.zEps);
+    const slot = Math.floor(f.d / eps);
     for (const s of [slot, slot + 1]) {
       for (const g of bins.get(keyOf(f, s)) ?? []) {
         if (g === f || g.part === f.part || (f.group !== undefined && f.group === g.group)) continue;
         if (s === slot && g.part < f.part) continue; // count each cross-part pair once
-        if (f.n[0] * g.n[0] + f.n[1] * g.n[1] + f.n[2] * g.n[2] < 0.9999 || Math.abs(f.d - g.d) > tol.zEps) continue;
+        const within = pairEps(f, g);
+        if (f.n[0] * g.n[0] + f.n[1] * g.n[1] + f.n[2] * g.n[2] < 0.9999 || Math.abs(f.d - g.d) > within) continue;
         let apart = false;
-        for (let a = 0; a < 3; a++) if (f.min[a] > g.max[a] + tol.zEps || g.min[a] > f.max[a] + tol.zEps) { apart = true; break; }
+        for (let a = 0; a < 3; a++) if (f.min[a] > g.max[a] + within || g.min[a] > f.max[a] + within) { apart = true; break; }
         if (apart) continue;
         examined++;
         const area = overlapArea(f.t, g.t, f.n);
@@ -320,6 +334,49 @@ export function checkColliders(scene) {
   const examined = scene.parts.filter((p) => p.visible !== false && isSolid(p)).length;
   const findings = uncollided(scene).map((p) => ({ id: p.id, at: site(p), why: "drawn solid with no collider and no nocollide reason: a body walks through it" }));
   return { name: "colliders", examined, findings };
+}
+
+/**
+ * invisible: the other direction. A collider with nothing drawn where it blocks is an
+ * invisible wall, and in our games it was the more repeated complaint of the two: one
+ * shooter's owner reported invisible walls in at least sixteen messages over ten days,
+ * one of them two hours after a removal was reported done. A collider counts as drawn where it
+ * lies inside a visible part that is neither walk-through (`nocollide`) nor a decal, so
+ * a collider over nothing but foliage is reported too. Collision under the ground is
+ * not judged: the share is of the part above ground, which is the part a body meets. A
+ * blocker the player can see the reason for (a fence line, a cliff edge) says so with
+ * `nodraw`. A flat collider (an invisible lid over a roof) is judged as if it had a thin
+ * thickness, so a sheet with no volume is still reported.
+ *
+ * Box level only: each part is its bounding box. An L-shaped mesh's box hides a collider
+ * in its empty corner, and a whole-map merged mesh or a terrain mesh read as one box
+ * hides every collider under its top, so split those into chunks (or leave terrain to
+ * `groundY`) before trusting a zero here. Run a ray sweep in the engine for the rest.
+ */
+export function checkInvisible(scene, tol = TOLERANCES) {
+  const colliders = scene.colliders ?? scene.parts.filter((p) => p.collider);
+  const drawn = scene.parts.filter((p) => p.visible !== false && !p.nocollide && !p.decal);
+  const m = tol.contactTol, n = 4, thin = 0.05;
+  const inside = (p, x, y, z) => x >= p.min[0] - m && x <= p.max[0] + m && y >= p.min[1] - m && y <= p.max[1] + m && z >= p.min[2] - m && z <= p.max[2] + m;
+  const findings = [];
+  colliders.forEach((c, i) => {
+    if (typeof c.nodraw === "string" && c.nodraw.trim()) return;
+    let empty = 0, above = 0;
+    for (let ix = 0; ix < n; ix++) for (let iy = 0; iy < n; iy++) for (let iz = 0; iz < n; iz++) {
+      const x = c.min[0] + ((ix + 0.5) / n) * sizeOf(c, 0), y = c.min[1] + ((iy + 0.5) / n) * sizeOf(c, 1), z = c.min[2] + ((iz + 0.5) / n) * sizeOf(c, 2);
+      const ground = groundAt(scene, x, z);
+      if (ground !== null && y <= ground) continue;
+      above++;
+      if (!drawn.some((p) => inside(p, x, y, z))) empty++;
+    }
+    if (above === 0) return;
+    const share = empty / above;
+    const volume = [0, 1, 2].reduce((v, a) => v * Math.max(sizeOf(c, a), thin), 1) * (empty / n ** 3);
+    if (share > tol.invisibleShare && volume > tol.penVolume) {
+      findings.push({ id: c.id ?? `collider${i}`, at: site(c), why: `${Math.round(share * 100)}% of this collider has nothing drawn in it and no nodraw reason: an invisible wall` });
+    }
+  });
+  return { name: "invisible", examined: colliders.length, findings };
 }
 
 /* the walk bot ---------------------------------------------------------------- */
@@ -501,7 +558,11 @@ const PLANTS = {
   coplanar(scene, tol) {
     const s = plantSite(scene, tol); if (!s) return null;
     const copy = clone(scene);
-    copy.parts.push(box("planted-panel-a", s.x - 0.25, s.y, s.z, 1, 1, 0.2), box("planted-panel-b", s.x + 0.25, s.y + 0.3, s.z, 1, 1, 0.2));
+    // On a quantised grid the plant sits a step and a half apart, not exactly tied, so a
+    // grid tolerance that stopped widening the check would miss it.
+    let step = tol.gridStep ?? 0;
+    for (const p of scene.parts) step = Math.max(step, p.gridStep ?? 0);
+    copy.parts.push(box("planted-panel-a", s.x - 0.25, s.y, s.z, 1, 1, 0.2, { gridStep: step }), box("planted-panel-b", s.x + 0.25, s.y + 0.3, s.z + 1.5 * step, 1, 1, 0.2, { gridStep: step }));
     return { scene: copy, id: "planted-panel-a + planted-panel-b" };
   },
   colliders(scene, tol) {
@@ -510,12 +571,21 @@ const PLANTS = {
     copy.parts.push(box("planted-ghost-wall", s.x, s.y, s.z, 1.6, 2, 0.2, { collider: false }));
     return { scene: copy, id: "planted-ghost-wall" };
   },
+  invisible(scene, tol) {
+    const s = plantSite(scene, tol); if (!s) return null;
+    const copy = clone(scene);
+    const wall = box("planted-invisible-wall", s.x, s.y, s.z, 1.6, 2, 0.2);
+    // A scene with its own collision layer gets the wall there; a scene whose drawn
+    // parts are their own colliders gets an undrawn part that collides.
+    if (copy.colliders) copy.colliders.push(wall); else copy.parts.push({ ...wall, visible: false });
+    return { scene: copy, id: "planted-invisible-wall" };
+  },
   stairs(_scene, tol) {
     return { scene: stairScene(0.17, tol.stepHeight + 0.08), id: "planted stairs" };
   },
 };
 
-const CHECKS = { float: checkFloat, buried: checkBuried, interpenetration: checkInterpenetration, coplanar: checkCoplanar, colliders: checkColliders, stairs: checkStairs };
+const CHECKS = { float: checkFloat, buried: checkBuried, interpenetration: checkInterpenetration, coplanar: checkCoplanar, colliders: checkColliders, invisible: checkInvisible, stairs: checkStairs };
 
 /**
  * Runs every check (or `only`), each after its plant. Returns
@@ -562,7 +632,9 @@ export function formatReport(report) {
 /**
  * Reads a three.js scene into the audit's shape. Pass the THREE namespace the game
  * already imports. Mesh flags come from `userData`: `collider`, `nocollide` (a reason),
- * `hangs` (a reason), `group`, `prop`, `decal`. Transparent and alpha-tested materials
+ * `hangs` (a reason), `group`, `prop`, `decal`, `gridStep`; a collider object may carry
+ * `userData.nodraw` (a reason the player can see why it stops them), and a Box3 a
+ * `nodraw` property. A hidden mesh marked `collider` is read as a collider nothing draws. Transparent and alpha-tested materials
  * are not opaque volume. `colliders` may be Box3s or meshes from the collision layer.
  */
 export function fromThreeScene(THREE, root, { colliders = [], groundY = null, floors, triangles = true } = {}) {
@@ -570,14 +642,20 @@ export function fromThreeScene(THREE, root, { colliders = [], groundY = null, fl
   const parts = [];
   const v = new THREE.Vector3();
   root.traverse((object) => {
-    if (!object.isMesh || !object.visible || object.isSkinnedMesh) return;
+    if (!object.isMesh || object.isSkinnedMesh) return;
     const material = Array.isArray(object.material) ? object.material[0] : object.material;
+    const data = object.userData ?? {};
+    // A mesh is drawn only if it and every ancestor are visible and its material draws.
+    // A hidden mesh that collides is still read, as an undrawn collider, so a collision
+    // layer kept in the scene graph can be judged by the invisible check.
+    let shown = material?.visible !== false;
+    for (let o = object; o && shown; o = o.parent) if (!o.visible) shown = false;
+    if (!shown && data.collider !== true) return;
     const opaque = !material || (!material.transparent && (material.alphaTest ?? 0) === 0 && (material.opacity ?? 1) >= 1);
     const bounds = new THREE.Box3().setFromObject(object);
     if (bounds.isEmpty()) return;
-    const data = object.userData ?? {};
-    const part = { id: object.name || object.uuid, min: bounds.min.toArray(), max: bounds.max.toArray(), solid: opaque && !data.decal,
-      collider: data.collider === true, nocollide: data.nocollide, hangs: data.hangs, group: data.group, prop: data.prop, decal: data.decal || material?.polygonOffset };
+    const part = { id: object.name || object.uuid, min: bounds.min.toArray(), max: bounds.max.toArray(), visible: shown ? undefined : false, solid: opaque && !data.decal,
+      collider: data.collider === true, nocollide: data.nocollide, hangs: data.hangs, group: data.group, prop: data.prop, decal: data.decal || material?.polygonOffset, gridStep: data.gridStep };
     if (triangles && object.geometry?.attributes?.position) {
       const position = object.geometry.attributes.position, index = object.geometry.index;
       const count = index ? index.count : position.count;
@@ -593,7 +671,7 @@ export function fromThreeScene(THREE, root, { colliders = [], groundY = null, fl
   });
   const boxes = colliders.map((c, i) => {
     const b = c.isBox3 ? c : new THREE.Box3().setFromObject(c);
-    return { id: c.name || `collider${i}`, min: b.min.toArray(), max: b.max.toArray() };
+    return { id: c.name || `collider${i}`, min: b.min.toArray(), max: b.max.toArray(), nodraw: c.userData?.nodraw ?? c.nodraw };
   });
   return { parts, colliders: boxes.length ? boxes : undefined, groundY, floors };
 }

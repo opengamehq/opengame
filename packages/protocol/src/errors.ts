@@ -212,7 +212,11 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   // opengame stats --csv: the file is somebody's, or cannot be written.
   csv_exists: input, csv_unwritable: input,
   invalid_jam: input, jam_answers_required: input, jam_choice_required: input,
-  submission_destination_mismatch: say(input, "The server selects the submission destination. Run opengame jams to read the current destination, then submit with its answers.", 409),
+  /* `page:` on the rows below is what the website says, from the Confirm details form and
+     the workspace's release list (16 Nov 2026). The CLI's sentence names a command, and the
+     form showed it as it was: "Run opengame jams <slug> to see it" to a person at a form. */
+  submission_destination_mismatch: { ...say(input, "The server selects the submission destination. Run opengame jams to read the current destination, then submit with its answers.", 409),
+    page: "Where this game can go changed after this page loaded. Reload, check the details, then confirm again. Nothing was published." },
   /* While a jam runs, a game goes on OpenGame only as an entry to it, for everybody but admins
      and the accounts listed for the marketplace (20261113580000): a confirmation or a
      publication with no jam is refused. The fix is entering the jam, or waiting for its close,
@@ -221,7 +225,8 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   submission_destination_unavailable: say({ exit: 5, retry: "later" }, "OpenGame cannot take submissions right now. Your private preview is unchanged; try submitting again later.", 503),
   release_not_found: { ...say(input, "This release was not found in your account. Check the release id that opengame deploy or opengame status printed.", 404),
     page: "That release is not one of this game’s.", console: "That release is not one of this game’s." },
-  release_not_ready: say(input, "This release is still being checked, or its files were cleaned up. Wait until opengame status says it is ready, or deploy again.", 409),
+  release_not_ready: { ...say(input, "This release is still being checked, or its files were cleaned up. Wait until opengame status says it is ready, or deploy again.", 409),
+    page: "This release is still being checked, or its files were cleaned up. Wait until this page says it is ready, or deploy again." },
   release_token_revoked: say(input, "This release was uploaded with a token that has since been revoked, so it cannot be submitted. Deploy it again while signed in.", 409),
   release_superseded: say(input, "A newer release of this game is already in review or live, so this older release cannot be submitted again. Check that release instead.", 409),
   review_open_elsewhere: say(input, "This game already has an entry in review from the website. Withdraw it on your entries page, or wait for its decision.", 409),
@@ -234,7 +239,8 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   qa_destination_not_permitted: say({ ...auth, retry: "never" }, "This account cannot submit to the QA destination. It needs a QA grant from an OpenGame owner in the console. Nothing was submitted, and nothing was entered in a jam.", 403),
   qa_destination_game_mismatch: say(input, "A game is a QA game or an ordinary one from its first submission. Submit this release to the destination this game already uses, or deploy a new game. Nothing was submitted.", 409),
   jam_entry_in_review: say(input, "This game's jam entry is in review. Submit this release with the current jam answers to replace it, or wait for its decision.", 409),
-  jam_not_found: say(input, "There is no jam with that name. Run opengame jams to see the open ones.", 404),
+  jam_not_found: { ...say(input, "There is no jam with that name. Run opengame jams to see the open ones.", 404),
+    page: "That jam is no longer taking this game. Reload to see where it can go. Nothing was published." },
   jam_closed: say(input, "That jam is not taking entries now. Your private preview remains available. Marketplace submissions open separately.", 409),
   // After the close a game's entry that judges play fixes its live version, in the jam and on
   // the marketplace alike (platform_jam_entry_judged), so no retry and no flag changes it.
@@ -243,7 +249,8 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   // a mod of somebody else's game cannot (game-kinds.json). Refused by the CLI from the local
   // manifest, by the submit route from the release, and by a trigger on jam_entries.
   kind_not_in_jam: say(input, JAM_KIND_REFUSAL, 409),
-  invalid_jam_answers: say(input, "The jam answers do not match the jam's current form. Run opengame jams <slug> to see it, then submit again.", 409),
+  invalid_jam_answers: { ...say(input, "The jam answers do not match the jam's current form. Run opengame jams <slug> to see it, then submit again.", 409),
+    page: "The jam's entry form changed after this page loaded. Reload, check your jam answers, then confirm again. Nothing was published." },
   metadata_conversion_required: say(input, "This game's current settings cannot be represented in opengame.json. Review your local settings, then deploy with --metadata=local to use them."),
   invalid_metadata_revision: say(input, "Your local metadata revision is newer than this game's. Check which game your project is linked to, then pull its current metadata before deploying again."),
   // The rest of what the v1 API answers with. Each was sent with no row, so an agent got
@@ -305,22 +312,28 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   not_returned: say(input, "Only a release returned with fixes can be appealed.", 409),
   invalid_appeal: say(input, `Say in a sentence or two what the review missed, up to ${TEXT.platformAppeal.max.toLocaleString("en-US")} characters.`, 409),
   superseded: say(input, "A newer release of this game is already in review, so this one cannot be appealed.", 409),
-  release_unavailable: say({ exit: 2, retry: "never" }, "This release is too old to appeal because its files have been cleared. Deploy it again and submit the new release.", 409),
+  release_unavailable: say({ exit: 2, retry: "never" }, "This release is too old to appeal because its files have been cleared. Deploy it again, and the new release goes to review by itself.", 409),
   // Rolling a game back to a release it published before: the owner from the game's
   // workspace, staff from the console. These were a third table, in @opengame/hosting.
-  game_not_live: say(input, "This game is not live, so there is nothing to roll back. Put it back up first.", 409),
+  game_not_live: { ...say(input, "This game is not live, so there is nothing to roll back. Put it back up first with opengame restore.", 409),
+    page: "This game is not live, so there is nothing to roll back. Put it back up from Your games first.",
+    console: "This game is not live, so there is nothing to roll back. Put it back up first. Nothing changed." },
   own_game_held: say({ exit: 3, retry: "never" }, "This is your own game, so another reviewer puts it back. Nothing changed.", 409),
   release_never_live: { ...say(input, "That release was never live, so it cannot be rolled back to. Submit it for review instead.", 409),
+    page: "That release was never live, so it cannot be made live from here. Nothing changed.",
     console: "That release was never live, so it cannot be rolled back to. Nothing changed." },
   release_not_promoted: { ...say(input, "That release has no public copy, so it cannot be served. Submit it for review instead.", 409),
+    page: "That release has no public copy, so it cannot be served. Nothing changed. Deploy that build again to send it to review.",
     console: "That release has no public copy, so it cannot be served. Nothing changed." },
   release_bytes_deleted: say({ exit: 2, retry: "never" }, "That release’s files were cleaned up, so it cannot be served again.", 409),
   release_copy_changed: { ...say({ exit: 5, retry: "never" }, "That release’s public copy no longer matches the files that were checked, so it was not served again. Nothing changed. Submit it for review instead.", 409),
+    page: "That release’s public copy no longer matches the files that were checked, so it was not served again. Nothing changed. Deploy that build again to send it to review.",
     console: "That release’s public copy in og-public no longer matches its scanned files, so it was not served again. Nothing changed." },
   publishing_in_progress: say({ exit: 5, retry: "later" }, "A release of this game is being published right now. Roll back once it is live, in a minute or two.", 409),
   report_open: { ...say({ exit: 2, retry: "later" }, "A report about this game is open, so that release waits for us to look at it first. Nothing changed.", 409),
     console: "A report about this game is open. Resolve it in Reports before rolling back. Nothing changed." },
-  release_held_by_us: say({ exit: 2, retry: "never" }, "We took the game off that release, so it cannot be made live again from here. Write to team@opengame.io to ask for another look, or submit a new release.", 409),
+  release_held_by_us: { ...say({ exit: 2, retry: "never" }, "We took the game off that release, so it cannot be made live again from here. Write to team@opengame.io to ask for another look, or submit a new release.", 409),
+    page: "We took the game off that release, so it cannot be made live again from here. Write to team@opengame.io to ask for another look, or deploy a new build." },
   invalid_reason: say(input, `Keep the reason under ${TEXT.reviewNote.max.toLocaleString("en-US")} characters.`, 409),
   // Ours. The sentence names the cause, so it is the caller's to write and these rows carry none.
   host_failed: { exit: 5, retry: "now", status: 502 },
@@ -344,11 +357,11 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   unpublish_refused: say({ exit: 2, retry: "never" }, "This game is not on the gallery, so there is nothing to take off it.", 409),
   restore_refused: say({ exit: 2, retry: "never" }, "Only a game you unpublished yourself can go back up.", 409),
   no_reviewed_build: { ...say({ exit: 2, retry: "never" }, "There is no reviewed build to serve, so putting this back would give players a page that does not load. Write to team@opengame.io and we will sort it out.", 409),
-    page: "There is no reviewed build to serve, so putting this back would give players a page that does not load. Write to us and we will sort it out." },
+    page: "There is no reviewed build to serve, so putting this back would give players a page that does not load. Write to team@opengame.io and we will sort it out." },
   take_down_unreachable: say({ exit: 5, retry: "later" }, "Nothing changed and your game is exactly where it was. We could not reach the part of our system that starts and stops serving a game, which is ours to fix rather than yours. Try again in a minute.", 503),
   restore_unverified: say({ exit: 5, retry: "later" }, "The address could not be checked. Your game and uploads are saved. Check its review status, then try again.", 503),
   unpublish_incomplete: { ...say({ exit: 5, retry: "now" }, "Your game is no longer being served and browsers have been told to drop what they cached. The gallery has not caught up yet, so it may still be listed for a moment. Run it again, and write to team@opengame.io if that keeps happening.", 502),
-    page: "Your game is no longer being served and browsers have been told to drop what they cached. The gallery has not caught up yet, so it may still be carded for a moment. Press it again, and write to us if that keeps happening." },
+    page: "Your game is no longer being served and browsers have been told to drop what they cached. The gallery has not caught up yet, so it may still be carded for a moment. Press it again, and write to team@opengame.io if that keeps happening." },
   restore_incomplete: say({ exit: 5, retry: "now" }, "Your game’s gallery status could not be confirmed. Your build and uploads are saved. Try again in a minute.", 502),
   /* Delete for good from the creator API, through the website's `deleteGameAs`. The typed
      title is compared on the server; `delete_refused` carries `verdicts`' sentence (a legal

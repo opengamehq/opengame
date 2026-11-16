@@ -40,15 +40,41 @@
         "./skills/opengame-lighting",
         "./skills/opengame-loading",
         "./skills/opengame-look",
+        "./skills/opengame-maps",
         "./skills/opengame-mobile",
+        "./skills/opengame-multiplayer",
         "./skills/opengame-performance",
         "./skills/opengame-production",
         "./skills/opengame-quality-bar",
+        "./skills/opengame-rhythm",
         "./skills/opengame-scene-audit",
         "./skills/opengame-stability",
         "./skills/opengame-verification",
         "./skills/opengame-weapons",
         "./skills/opengame-world-physics"
+      ]
+    },
+    {
+      "name": "opengame-video",
+      "description": "Film a browser game: plan, make and review a launch trailer or a gameplay montage.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/opengame-montage-make",
+        "./skills/opengame-montage-plan",
+        "./skills/opengame-montage-review-and-improve",
+        "./skills/opengame-trailer-make",
+        "./skills/opengame-trailer-plan",
+        "./skills/opengame-trailer-review-and-improve"
+      ]
+    },
+    {
+      "name": "opengame-all-in-one",
+      "description": "Every OpenGame skill in one, for a single install.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/opengame-all-in-one"
       ]
     }
   ]

@@ -1918,8 +1918,10 @@ function externalHostsNote(hosts: Map<string, string>): Finding {
  * It matters because of what a relay sees. `AGENTS.md` describes `og-platform.js` as
  * carrying "the ICE configuration that decides whether a player's IP is exposed", and a
  * game that dials somebody else's TURN sends its players' traffic, and their addresses,
- * through a stranger. Ours come from the broker at `rtcHttps` at runtime, so a game on
- * OpenGame rooms has no reason to carry any.
+ * through a stranger. Ours came from the broker at `rtcHttps` at runtime while OpenGame
+ * rooms existed; the broker has minted nothing since multiplayer left the SDK (the frame
+ * bridge answers every lobby ticket `unavailable`), so a game that needs a relay now
+ * brings its own, which is the next paragraph's case.
  *
  * STILL A WARNING ON THE OPEN NETWORK, WITH A DIFFERENT QUESTION. Since 2027-03 a game may
  * run its own multiplayer server, and its own relay is part of that, so naming one is not
@@ -1983,9 +1985,9 @@ function findIceServers(path: string, text: string, inert: Span[]): Finding[] {
       detail:
         `This is a STUN or TURN server. If your game uses it, your players' connections ` +
         `and their IP addresses go through it. That is allowed when it is your own relay ` +
-        `or one you chose on purpose, and the game's description should say so. Games on ` +
-        `OpenGame rooms get relay credentials from the broker while they run and do not ` +
-        `need to name one. If this is a library default your game overrides, it is dead ` +
+        `or one you chose on purpose, and the game's description should say so. OpenGame ` +
+        `runs no relay for games, so a game that needs one brings its own. If this is a ` +
+        `library default your game overrides, it is dead ` +
         `code and you can ignore this.`,
       path,
       line: lineAt(at),

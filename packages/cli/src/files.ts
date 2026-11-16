@@ -270,7 +270,7 @@ function assetPlanAdvice(over: "size" | "count", bytes: number, count: number, e
   const share = over === "size" ? readableBytes(row.bytes) : `${row.count.toLocaleString("en-GB")} files`;
   /* large-game-v1 admits any engine and so names none. When it is the only plan that
      fits, the engine sentence below printed blanks where the names go (30 Oct 2026). */
-  if (!engines.length) return ` ${share} of it can stay out of the upload on the large-game-v1 plan, which is for a decompilation, mod or recompilation and needs large-asset access on your account. If this is one and your account has it, pass --external-assets auto, as https://docs.opengame.io/guides/packaging shows.`;
+  if (!engines.length) return ` ${share} of it can stay out of the upload on the large-game-v1 plan, which opengame deploy chooses by itself for a build this size. To choose it in opengame check too, pass --external-assets auto, as https://docs.opengame.io/guides/packaging shows.`;
   return ` ${share} of it can stay out of the upload in a ${names} asset plan. If this is a ${names} game, list those files in a plan and pass it with --external-assets, as ${engines.map(engineGuide).join(" or ")} shows.`;
 }
 

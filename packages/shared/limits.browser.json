@@ -1533,6 +1533,9 @@
         }
       }
     },
+    "device": {
+      "inactiveDaysMax": 90
+    },
     "incrementalUpload": {
       "bodyBytesMax": 4194304,
       "archiveBytesMax": 209715200,

@@ -26,7 +26,19 @@ export function loadContext({ env = process.env } = {}) {
   // launch clock, which `{{launch opens}}` reads. Neither is typed into a skill.
   const npmRelease = npmReleaseForBuild(JSON.parse(readFileSync(fileURLToPath(new URL("npm-release.json", sharedRoot)), "utf8")), env);
   const launch = JSON.parse(readFileSync(fileURLToPath(new URL("launch.json", sharedRoot)), "utf8"));
-  return { limits, genres, kinds, npmRelease, launch };
+  return { limits, genres, kinds, npmRelease, launch, retiredChecks: retiredChecks() };
+}
+
+/* The checks no deploy runs any more (RETIRED_CHECKS in packages/protocol/src/review.ts, since
+   12 Nov 2026). limits.json still lists the malware scan in `checks`, and a skill rendered from
+   that list alone told agents every upload was scanned by ClamAV after the scan had gone. The
+   list is read from the protocol's source rather than copied here, and a source the pattern no
+   longer matches fails the build, so the two cannot drift apart quietly. */
+function retiredChecks() {
+  const source = readFileSync(fileURLToPath(new URL("../../protocol/src/review.ts", import.meta.url)), "utf8");
+  const match = /export const RETIRED_CHECKS: readonly string\[\] = (\[[^\]]*\]);/.exec(source);
+  if (!match) throw new Error("packages/protocol/src/review.ts no longer declares RETIRED_CHECKS as a string array; update retiredChecks in packages/skills/lib/render.mjs");
+  return JSON.parse(match[1]);
 }
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -87,7 +99,7 @@ const FORMATTERS = {
   typedkeys: (value) => Object.entries(value).filter(([key]) => !key.startsWith("_")).map(([key, type]) => `\`${key}\` (${type})`).join(", "),
   labels: (value) => value.map((item) => item.label).join("; "),
   viewports: (value) => value.map((v) => `${v.width} x ${v.height}${v.primary ? " (primary)" : ""}`).join(", "),
-  checktable: (value) => value.map((c) => `| \`${c.key}\` | ${c.label} | ${c.kind === "auto" ? "automatic" : "a person"} | ${c.blocking ? "yes" : "no, a warning"} |`).join("\n"),
+  checktable: (value) => value.map((c) => `| \`${c.key}\` | ${c.label} | ${c.blocking ? "yes" : "no, a warning"} |`).join("\n"),
 };
 
 /* A path may hold a hyphen because limits.json keys plan kinds by name
@@ -120,7 +132,13 @@ export function render(text, context, file = "template") {
     const format = FORMATTERS[name];
     if (!format) throw new Error(`${file}: unknown formatter "${name}"`);
     if (!path) throw new Error(`${file}: {{${name}}} needs a limits.json path`);
-    return format(lookup(context.limits, path));
+    const value = lookup(context.limits, path);
+    /* The table lists the checks a deploy runs. A retired one is left out, so no skill
+       describes a check nobody runs, and so is a `manual` row: those were a person's to
+       decide, and since 13 Nov 2026 nothing waits for a person. What review decides by itself is
+       said in the skill's own words beside the table. */
+    if (name === "checktable") return format(value.filter((c) => c.kind === "auto" && !(context.retiredChecks ?? []).includes(c.key)));
+    return format(value);
   });
   // Only an opening pair is a template: JSON examples legitimately end in "}}".
   if (out.includes("{{")) {

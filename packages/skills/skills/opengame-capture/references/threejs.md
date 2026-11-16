@@ -94,8 +94,24 @@ pixels with the drawing buffer size. Draw those points over the captured frame o
   target, or build a `VideoFrame` from the canvas right after rendering. If you configure the
   canvas context yourself, add `GPUTextureUsage.COPY_SRC` to its usage; OC read its swapchain
   with `copyTextureToBuffer` and `mapAsync` in 30.4 ms at 4K.
+- Headless WebGPU: read the canvas with `canvas.toBlob()` in the same task that rendered
+  it, one copy per frame, and hand frames to the host in batches (LC returned 20 at a
+  time). On LC, `drawImage` of the WebGPU canvas into a 2D canvas, `captureStream()`, the
+  CDP screencast and `page.screenshot` all returned black (79 of 79), so prove the path on
+  one frame and check its mean before a batch:
+
+  ```js
+  async function captureFrame(dt) {               // capture mode only, behind its flag
+    step(dt)
+    renderer.render(scene, camera)                // the read below must be in this task
+    const blob = await new Promise((r) => renderer.domElement.toBlob(r, 'image/png'))
+    return blob                                   // check the first one is not near black
+  }
+  ```
+
 - `canvas.captureStream(0)` with `track.requestFrame()` after each render feeds a
-  `MediaRecorder`. Its timestamps are wall time, so use it for real-time previews only.
+  `MediaRecorder`. Its timestamps are wall time, so use it for real-time previews only,
+  and check it is not black on a WebGPU canvas.
 - Refuse a software rasteriser. WebGL: read `UNMASKED_RENDERER_WEBGL` through
   `WEBGL_debug_renderer_info` and stop on SwiftShader or llvmpipe. WebGPU: inspect
   `adapter.info`, including `isFallbackAdapter` where the browser reports it.

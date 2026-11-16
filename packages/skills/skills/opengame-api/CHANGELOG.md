@@ -1,5 +1,9 @@
 # opengame-api changelog
 
+## 1.0.7
+
+Deploying without the CLI starts from `GET /api/v1/bootstrap` and its capabilities. An archive over 500 MiB goes in parts (`"multipart": true` and `/api/v1/operations/{id}/upload/parts`) or is refused with 413 `bundle_limit`, and a file-by-file deploy (`/api/v1/deploys/files`) sends only the files OpenGame does not already hold. Names the daily deploy allowance, 5 in any rolling 24 hours (`deploy_day_limited`), beside the hourly one. A ready deploy goes to review by itself.
+
 ## 1.0.6
 
 Any signed-in account can use the CLI, the creator API, uploads and jam entries before launch, so a `not_launched` answer means the request came with no account: sign in (`opengame login`) and run it again rather than waiting for 18 November.

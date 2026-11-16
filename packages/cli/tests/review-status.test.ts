@@ -63,6 +63,47 @@ test("status reports the review: a returned release's findings in the repair sha
   } finally { await api.close(); await root.remove(); }
 });
 
+/* Sweep, 16 Nov 2026: a return of ours (the checks ran past their deadline) needs no new build,
+   and `next` said "opengame deploy", so an agent following it uploaded the same bytes again.
+   Submitting the same release runs the checks again. */
+test("status points a jam entry returned for a fault of ours at submitting the same release again, not at a new deploy", async () => {
+  const ours = { ...submission("returned", { decision: "return", reason: null, appealable: false,
+    findings: reviewFindings(releaseId, [{ code: "check_timeout", check: "gpu-boot", message: "The checks ran out of time on our side." }], []) }),
+    jam: { slug: "jam-01", name: "OpenGame Jam 01", entryId: "66666666-6666-4666-8666-666666666666", tracks: [{ key: "orbit", kind: "theme" as const, name: "Small worlds" }] } };
+  assert.ok(ours.outcome!.findings.every(finding => "fault" in finding && finding.fault === "platform"), "the fixture is a return of ours");
+  const game = { id: gameId, publicId: "orbitrun01", title: "Orb Run", visibility: "draft", latestOperation: ready, publication: null, submission: ours };
+  const api = await fakeApi((req, res) => {
+    if (req.url === `/api/v1/games/${gameId}`) return reply(res, 200, { game });
+    if (req.url === `/api/v1/operations/${operationId}`) return reply(res, 200, { operation: ready });
+  });
+  const root = await linked(api.origin);
+  try {
+    const run = await spawnCli(["status", root.dir, "--jsonl"], { env: cleanEnv({ OPENGAME_API_URL: api.origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" }) });
+    assert.equal(run.code, 0, run.stdout + run.stderr);
+    const data = events(run.stdout).at(-1)!.data as { review: { next: string }; next: string };
+    assert.equal(data.review.next, `opengame submit --release ${releaseId}`);
+    assert.equal(data.next, `opengame submit --release ${releaseId}`);
+  } finally { await api.close(); await root.remove(); }
+});
+
+/* An automatic review that entered no jam keeps deploy: while a jam is the destination the
+   server takes a submission only with that jam's answers, so `submit` could not rerun it. */
+test("status keeps deploy for a return of ours that entered no jam", async () => {
+  const ours = submission("returned", { decision: "return", reason: null, appealable: false,
+    findings: reviewFindings(releaseId, [{ code: "check_timeout", check: "gpu-boot", message: "The checks ran out of time on our side." }], []) });
+  const game = { id: gameId, publicId: "orbitrun01", title: "Orb Run", visibility: "draft", latestOperation: ready, publication: null, submission: ours };
+  const api = await fakeApi((req, res) => {
+    if (req.url === `/api/v1/games/${gameId}`) return reply(res, 200, { game });
+    if (req.url === `/api/v1/operations/${operationId}`) return reply(res, 200, { operation: ready });
+  });
+  const root = await linked(api.origin);
+  try {
+    const run = await spawnCli(["status", root.dir, "--jsonl"], { env: cleanEnv({ OPENGAME_API_URL: api.origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" }) });
+    assert.equal(run.code, 0, run.stdout + run.stderr);
+    assert.equal((events(run.stdout).at(-1)!.data as { next: string }).next, "opengame deploy");
+  } finally { await api.close(); await root.remove(); }
+});
+
 test("status tells the launch policy's hold from an outage, in words and in the JSON", async () => {
   const say = async (review: Submission) => {
     const game = { id: gameId, publicId: "orbitrun01", title: "Orb Run", visibility: "draft", latestOperation: ready, publication: null, submission: review };

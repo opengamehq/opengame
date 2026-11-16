@@ -1,5 +1,17 @@
 # opengame-sdk changelog
 
+## 1.0.13
+
+Invite links: `og.invite.link(code)` is the game's page on opengame.io with `?join=CODE`, and `og.invite.code` is the code a player arrived with, so a game's own lobby links open on OpenGame and drop the friend straight into the lobby.
+
+## 1.0.12
+
+Profile sharing is no longer a setting: every signed-in player with a handle sends their handle, number and OG, and they are null for a guest, an account without a handle and a private preview. Any signed-in account can deploy, so only a CLI with no login hears that OpenGame is not open yet. The docs at docs.opengame.io are public, and the skill links them by address.
+
+## 1.0.11
+
+Pause in a shared online match stops the player's own input and sound rather than the match, and points to `opengame-multiplayer` for how a host hands over.
+
 ## 1.0.10
 
 og.player.stats() reads the player's own entry on every board in one request, a career board's row for all runs included, so XP and levels can be read back into a game. Higher event and score budgets, up to 25 boards a game, and no need to credit OG Radio's music.

@@ -41,7 +41,8 @@ opengame deploy .
 
 `init` writes `opengame.json`, the manifest with your game's title and build. It asks
 you one thing, the game's name, and you write the description, choose the genre and
-enter the jam on the deployment page afterwards, or have your agent do it. `check` runs the same checks the upload will, on your machine. `deploy` builds,
+enter the jam on the deployment page afterwards. Your agent can write the description
+and genre with `opengame details`; entering the jam and publishing are yours. `check` runs the same checks the upload will, on your machine. `deploy` builds,
 checks and uploads a release, then prints its deployment page:
 
 ```
@@ -73,7 +74,7 @@ Every command takes `--json` and prints one result object. For `deploy`:
 
 A failure prints `"type": "error"` with `ok: false`, a `code` such as `not_launched`, a
 `message` and the process exits with a non-zero code. `opengame help --json`
-lists every command, flag, error code and exit code. `--jsonl` streams progress events.
+lists every command, flag and exit code. `--jsonl` streams progress events.
 
 `opengame skills add .` installs the OpenGame skills for Claude Code, Codex, Cursor or
 OpenCode, so a coding agent can do all of the above for you.
@@ -83,15 +84,15 @@ OpenCode, so a coding agent can do all of the above for you.
 <!-- generated:commands -->
 | Command | What it does |
 | --- | --- |
-| `opengame init [dir] [options]` | Create opengame.json for an existing game. Every field defaults to Auto: Leave a field out, blank or "auto" and review writes it from your game; you accept or change it on the deploy's page. A person at a terminal is asked the game's name and nothing else, and Enter takes Auto. When opengame.json is already there, fill in the fields it leaves blank and keep the rest. |
+| `opengame init [dir] [options]` | Create opengame.json for an existing game. Every field defaults to Auto. Leave a field out, blank or "auto" and review writes it from your game; you accept or change it on the deploy's page. A person at a terminal is asked the game's name and nothing else, and Enter takes Auto. When opengame.json is already there, fill in the fields it leaves blank and keep the rest. |
 | `opengame check [dir] [options]` | Find local build and asset problems before uploading. |
 | `opengame dev [dir] [options]` | Serve a local export with game-runtime headers. Under a contract that adds the SDK, pages also get the host runtime and SDK, as they do when hosted. If the contract supports opting out, sdk.inject: false leaves out the SDK. |
 | `opengame login [options]` | Sign in through your browser. |
-| `opengame deploy [dir] [options]` | Build, check and upload a release, then return with the address of its deployment page, where the checks run and the private preview plays once they pass. Add --wait to stay until they finish. Once the preview is ready, the achievements opengame.json declares are saved by deploy --wait or by the next opengame status in this folder. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted. |
-| `opengame status [dir] [options]` | Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted. |
+| `opengame deploy [dir] [options]` | Build, check and upload a release, then return with the address of its deployment page, where the checks run and the private preview plays once they pass. Add --wait to stay until they finish. Once the preview is ready, the achievements opengame.json declares are saved by deploy --wait or by the next opengame status in this folder. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id> and take it out of opengame.json too, since a deploy that still declares it turns it back on. Unlocks are never deleted. |
+| `opengame status [dir] [options]` | Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id> and take it out of opengame.json too, since a deploy that still declares it turns it back on. Unlocks are never deleted. |
 | `opengame deployments [dir] [options]` | List the linked game's deploys, newest first: status, when, size, who started each one, why any stopped, and each one's page or preview. |
 | `opengame open [dir] [options]` | Open the linked game's private page in your browser. |
-| `opengame submit [dir] [options]` | Send one release to review, and enter it in a jam. A deploy goes to review by itself, so this is mostly for agents entering a jam with flags. A person who names no jam answer is given the deploy's page, where the track, models and sponsor tracks are chosen, and nothing is sent. |
+| `opengame submit [dir] [options]` | Send one release to review that was not sent by itself. A deploy goes to review by itself once it is ready, and the jam is entered on its deploy's page, so this is only for a build that was not sent: a QA game (--qa), a build deployed before reviews started by themselves, or one whose deploy token could not replace a jam entry. A release already in review keeps its submission, and jam answers given here are not used. A person who names no jam answer is given the deploy's page, and nothing is sent. |
 | `opengame jams [slug] [options]` | List open jams, or show one jam's tracks and flags. |
 | `opengame jam <withdraw\|reenter> [options]` | Withdraw the linked game's jam entry, freeing its place, or put a withdrawn one back while the jam is open, as your jam entries page does. Needs a token with submit; opengame login has it. |
 | `opengame releases [dir] [options]` | List the linked game's releases, newest first, as the Releases tab on its page does: which one is live, which were live before, which are drafts and which were cleaned up, and which can be made live again. |

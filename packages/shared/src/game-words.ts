@@ -148,7 +148,10 @@ const SHORTHAND: Readonly<Record<string, string>> = {
   b4: "before", bc: "because", cuz: "because", coz: "because", ppl: "people", tho: "though",
   thru: "through", lvl: "level", lvls: "levels", msg: "message",
 };
-const canonical = (word: string) => SHORTHAND[word] ?? word;
+/* `hasOwn`, because a word is somebody's typing and "constructor" would otherwise read Object's
+   own function off the prototype and compare its source against the tidy (Greptile on the
+   public mirror, opengamehq/opengame#14). */
+const canonical = (word: string) => Object.hasOwn(SHORTHAND, word) ? SHORTHAND[word]! : word;
 const wordsOf = (value: string) => value.normalize("NFKD").toLowerCase().split(/[^\p{L}\p{N}'’]+/u)
   .map(word => canonical(word.replace(/['’]/g, ""))).filter(Boolean);
 

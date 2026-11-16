@@ -102,6 +102,38 @@ export function kindBadge(kind: string | null | undefined): string | null {
 }
 
 /**
+ * What the corner of a gallery card says for an OpenGame Original (`games.is_original`), in the
+ * same badge a mod or a decomp wears (15 Nov 2026). It fits whole in the corner at phone widths,
+ * so it keeps the full name rather than "Original" alone.
+ */
+export const ORIGINAL_BADGE = "OpenGame Original";
+
+/**
+ * The one label in a card's top-left corner, or null: Mod, Decomp, World, or OpenGame Original.
+ *
+ * One corner, one label. A mod or a decomp is never an Original: the database refuses the pair
+ * (`games_original_is_not_derived`, 20261116020000), and if a row ever said both anyway the
+ * card would say Mod, because "OpenGame Original" on somebody else's reworked game is the
+ * claim that must not be made. An Original world says OpenGame Original, which is the thing
+ * the badge is for, seen across a grid; its page still says World in its facts. A game
+ * that is neither goes unbadged, as `kindBadge` explains.
+ */
+export function cornerBadge(kind: string | null | undefined, isOriginal: boolean | null | undefined): string | null {
+  const info = BY_SLUG.get(gameKindOrDefault(kind));
+  if (info?.basedOn) return info.label;
+  return isOriginal === true ? ORIGINAL_BADGE : kindBadge(kind);
+}
+
+/**
+ * Whether a game is shown as an OpenGame Original: its card's corner, its share card's lockup and
+ * that card's address all ask this, so none of them can say it where the others do not. Never for
+ * a mod or a decomp, by `cornerBadge`'s rule.
+ */
+export function showsOriginal(kind: string | null | undefined, isOriginal: boolean | null | undefined): boolean {
+  return cornerBadge(kind, isOriginal) === ORIGINAL_BADGE;
+}
+
+/**
  * "Mod of Doom", "Decomp of Super Mario 64": the line a game page and a card set under the
  * title for the two kinds made from another game, or null when there is nothing to say.
  */

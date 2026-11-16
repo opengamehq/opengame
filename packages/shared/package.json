@@ -13,6 +13,7 @@
     "./analytics": "./src/analytics.ts",
     "./game-events": "./src/game-events.js",
     "./game-links": "./src/game-links.js",
+    "./join-code": "./src/join-code.js",
     "./game-scores": "./src/game-scores.js",
     "./game-boards": "./src/game-boards.js",
     "./multiplayer-player": "./src/multiplayer-player.js",

@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline/promises";
-import { creatorGamePath, creatorGameSchema, creatorGamesPageSchema, ERRORS, gameDeploymentsPath, gameDeploymentsSchema, gameIdentifierSchema, gameCursorSchema, LISTING, OPERATION_STATUS, operationOutcome, RELEASE_STATUS, whenPacific, type CreatorGame, type Deployment } from "@opengame/protocol";
+import { creatorGamePath, creatorGameSchema, creatorGamesPageSchema, ERRORS, EXIT, gameDeploymentsPath, gameDeploymentsSchema, gameIdentifierSchema, gameCursorSchema, LISTING, OPERATION_STATUS, operationOutcome, RELEASE_STATUS, whenPacific, type CreatorGame, type Deployment } from "@opengame/protocol";
 import { readableBytes } from "./bytes";
 import { Api, ApiError } from "./http";
 import { activeToken } from "./credentials";
@@ -104,7 +104,7 @@ export async function gamesCommand(command: "games" | "link" | "open" | "deploym
     const requested = typeof flags.game === "string" ? flags.game : undefined;
     if (command === "deployments") {
       // Reading the link needs no lock, so this works beside a running deploy.
-      const id = requested ?? await linkedGameId(api, token, root);
+      const id = requested ?? await linkedGameId(api, token, root, { deployNews: true });
       if (!id) throw new CliError("not_linked", "Run this in a linked folder, or name the game with opengame deployments --game <id>.");
       const game = await readGame(api, token, id);
       const parsed = gameDeploymentsSchema.safeParse(await api.json(`/api/v1/games/${game.id}/deployments`, { token }));
@@ -123,7 +123,7 @@ export async function gamesCommand(command: "games" | "link" | "open" | "deploym
     }
     if (command === "open") {
       // Reading the link needs no lock, so open works while a deploy runs here.
-      const id = await linkedGameId(api, token, root);
+      const id = await linkedGameId(api, token, root, { deployNews: true });
       if (!id) throw new CliError("not_linked", "Run opengame link --game <id>, or opengame open --game <id>.");
       const game = await readGame(api, token, id);
       refuseRemoved(game);
@@ -175,15 +175,24 @@ function deploymentLines(row: Deployment): string {
 }
 
 
-export async function linkedGameId(api: Api, token: string, root: string): Promise<string | undefined> {
+/**
+ * The game this folder is linked to. `deployNews` is for the commands that read a deploy
+ * (`deployments`, `open`): a first deploy that ended is their answer, in its own words, code
+ * and exit. A command that acts on a game says only that there is none yet: unpublish, delete,
+ * rollback and the rest exited with the deploy's code and exit, 1 ("the game needs a change")
+ * for opengame unpublish, and its `next` (sweep, 16 Nov 2026).
+ */
+export async function linkedGameId(api: Api, token: string, root: string, options: { deployNews?: boolean } = {}): Promise<string | undefined> {
   const state = await readProject(root, api.origin);
   if (!state.gameId && state.deploy) {
     const op = await readSavedOperation(api, token, root, state);
     // A first deploy that failed or expired will never create a game, so "not yet" would
     // have somebody wait on nothing (review of #613). Say why it stopped and what to run.
     const ended = op && !state.gameId ? operationOutcome({ state: op.state, error: op.error }, op.findings ?? []) : null;
-    if (ended) throw new CliError(ended.code, `Your first deploy stopped before it created a game, so there is nothing to show. ${ended.message}`,
+    if (ended && options.deployNews) throw new CliError(ended.code, `Your first deploy stopped before it created a game, so there is nothing to show. ${ended.message}`,
       ended.exit, { next: ended.next ?? "opengame deploy" });
+    if (ended) throw new CliError("not_linked", "This folder's first deploy stopped before it created a game, so there is no game here yet. "
+      + "Run opengame status to see why it stopped, then deploy again.", EXIT.input, { next: "opengame status" });
     if (!state.gameId) throw new CliError(op ? "game_pending" : "upload_pending",
       op ? "This deploy has not created a game yet. Run opengame status to see its progress."
         : "Your deploy was saved before the server answered. Run opengame deploy to resume it.",

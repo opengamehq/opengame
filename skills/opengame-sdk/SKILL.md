@@ -2,15 +2,15 @@
 name: opengame-sdk
 description: Integrate a browser game with OpenGame through @opengamehq/sdk, the injected global or a native engine bridge. Covers start-up, the player and their OG at load, names, leaderboards, achievements, events, pause, mute, fullscreen, keys inside the frame and threaded builds. Use when the person says integrate with OpenGame, add the SDK, show the player's name or OG, add a leaderboard or achievement, track events, fix fullscreen or keys in the game frame, or asks how a game talks to OpenGame.
 metadata:
-  version: "1.0.10"
+  version: "1.0.13"
 ---
 
 # Integrate a game with OpenGame
 
 Inside an OpenGame page the SDK works as described here. Under `opengame dev` it runs a
-local stand-in that keeps scores and events in the browser. Until 18 November, the CLI
-that deploys the game prints "OpenGame opens for creators on 18 November." for anybody
-outside the OpenGame team; write the SDK calls now, and they are exercised on OpenGame once it opens.
+local stand-in that keeps scores and events in the browser. Any signed-in account can deploy
+now. Until 18 November, a CLI with no login hears
+"OpenGame opens for creators on 18 November." Sign in with `opengame login` first.
 
 The SDK is what ends up inside the game. It talks only to the OpenGame page around
 the game and to `https://api.opengame.gg`.
@@ -37,7 +37,7 @@ read the copy the game will ship before writing a call:
 - `node_modules/@opengamehq/sdk/AGENTS.md`: the short rules and the error catalogue,
   generated from the SDK's own error table.
 - `node_modules/@opengamehq/sdk/dist/*.d.ts`: the exact signatures.
-- With no package to hand, the SDK reference (`/reference/sdk` in the private docs).
+- With no package to hand, the SDK reference (`https://docs.opengame.io/reference/sdk`).
 
 Never guess a name. A call that is not in that README does not exist in that version.
 Where this skill and the installed README disagree, follow the README and tell the
@@ -126,7 +126,7 @@ Clash's scoreboard stuck open over the pause menu). Cancel the default of every 
 turn, arrow, Space and Page key the game consumes, so the page around it does not
 scroll.
 
-**HIGH: pause and mute are honoured.** `og.onPause` stops simulation, timers and audio;
+**HIGH: pause and mute are honoured.** `og.onPause` stops simulation, timers and audio (a game in a shared online match stops only its own input and sound, and `opengame-multiplayer` says how a host hands over);
 `og.audio.onHostMute` silences the game. The frame boots under a poster before the
 player presses Play, muted and paused from the first handshake, so keep loading through
 the pause. Start audio only from an `onHostMute(false)` that arrives after
@@ -136,8 +136,7 @@ the pause. Start audio only from an `onHostMute(false)` that arrives after
 player for or shows as theirs, such as a call sign, trainer name, player name, nickname,
 or their own HUD label or nameplate, is filled from `og.player.handle` inside
 `og.player.onChange`, so a signed-in player starts with the name they chose on OpenGame.
-`handle` is null for a guest, an account without a handle, a player not sharing their OG
-in games and every private preview; then keep the game's own default. Stop filling once
+`handle` is null for a guest, an account without a handle and every private preview; then keep the game's own default. Stop filling once
 the player edits the field, and when the game restores a name the player saved, show
 that one instead. Allow 20 characters, `_` and `-` included, in
 the field's `maxlength`, in the game's own name check and wherever the name is drawn.
@@ -199,6 +198,24 @@ time are measured by the page; do not track them yourself.
 
 Focus, the poster, pause, mute, fullscreen, keys, scrolling and opening an outside link
 with `og.openLink`: [references/frame.md](references/frame.md).
+
+## Invite links for a game's own lobbies
+
+OpenGame runs no rooms; a multiplayer game brings its own (`opengame-multiplayer`). The
+SDK gives it the link to share and the code a friend arrives with:
+
+```js
+await og.init()
+if (og.invite.code) joinLobby(og.invite.code)          // opened from an invite: skip the menu
+else showInvite(og.invite.link(lobbyCode) ?? lobbyCode) // hosting: share this; the code when null
+```
+
+**HIGH: share `og.invite.link(code)`, never the game's own address.** The link is the game's
+page on opengame.io with `?join=CODE`: whoever opens it gets the game on OpenGame, as
+themselves, and lands in the lobby. A link to `<label>.opengame.gg` opens a warning page instead of the
+game. A code is 4 to 12 capitals and digits, or exactly 22 of `A-Z a-z 0-9 _ -`; `link`
+returns null for anything else, rather than a link whose code the page would change.
+Under `opengame dev` the link is the local page, so two tabs can try it.
 
 ## OG Radio
 
@@ -266,5 +283,5 @@ Run each check and say which ones you could not run; an unrun check is unverifie
 - Every board and achievement used in code is declared in `opengame.json`, and
   `opengame check . --json` passes.
 - On the published game, signed in as a confirmed member (the only accounts given a
-  player during the private rollout) with sharing on, then with it off: the handle
+  player during the private rollout) with a handle, then as a guest: the handle
   shows only in the first case.

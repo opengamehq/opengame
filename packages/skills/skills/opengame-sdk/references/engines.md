@@ -89,5 +89,5 @@ isolation headers. The game still has three things to do:
    All three must read `true`. `opengame dev . --contract` with the isolated contract
    serves the same headers locally, but only the preview is the real page and frame.
 
-Memory diagnostics, WebGPU and each engine's export settings are in the private docs
-under engines.
+Memory diagnostics, WebGPU and each engine's export settings are in the docs at
+`https://docs.opengame.io/engines/overview`.

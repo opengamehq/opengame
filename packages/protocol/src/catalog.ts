@@ -49,9 +49,13 @@ export const operationSummarySchema = z.object({
   next: z.string().nullable().optional(),
   /** Why this deploy will not enter the jam, when the jam is where new games go and that is
    * already known (its kind, the creator's entry limit, the jam's window): said at upload, so
-   * the creator hears it before review runs rather than at the details step after it. The
-   * deploy still goes to review and may be published to the marketplace. Additive: absent
-   * when it enters the jam, when the marketplace is the destination, and from older servers. */
+   * the creator hears it before review runs rather than at the details step after it. What
+   * happens next is whether the gallery takes the game instead: a mod
+   * or a decomp, or a game from an admin or a listed publisher, still goes to review and may be
+   * published outside the jam. While the jam runs, any other account's original game goes live
+   * only as an entry, so a build with this notice is not sent to review at all (one-flow.ts),
+   * and its deploy page says why. Additive: absent when it enters the jam, when the marketplace
+   * is the destination, and from older servers. */
   jamNotice: z.object({ code: z.string().regex(/^[a-z_]{1,40}$/), message: z.string().min(1).max(600) }).optional(),
 }).refine(value => value.state !== "ready" || Boolean(value.gameId && value.releaseId));
 export type OperationSummary = z.infer<typeof operationSummarySchema>;

@@ -60,7 +60,7 @@ const basedOnFlag = (when: string): Flag => ({ name: "based-on", type: "string",
 /** One table drives parsing, `help` and `help --json`, so the schema an agent
  * reads is the parser it is talking to. */
 const commands: Record<string, { args?: string; description: string; flags: Flag[]; examples?: string[] }> = {
-  init: { args: "[dir]", description: `Create opengame.json for an existing game. Every field defaults to Auto: ${AUTO_HELP} A person at a terminal is asked the game's name and nothing else, and Enter takes Auto. When opengame.json is already there, fill in the fields it leaves blank and keep the rest.`, flags: [
+  init: { args: "[dir]", description: `Create opengame.json for an existing game. Every field defaults to Auto. ${AUTO_HELP} A person at a terminal is asked the game's name and nothing else, and Enter takes Auto. When opengame.json is already there, fill in the fields it leaves blank and keep the rest.`, flags: [
     { name: "title", type: "string", description: "Game title, or auto (the default). On Auto, review names the game from what it reads in it. A title you give is yours; review offers a tidied copy (title case, spacing) on the deploy's page, and you keep whichever you choose." }, { name: "description", type: "string", description: `One or two sentences about the game, ${LIMITS.text.gameDescription.productMin} to ${LIMITS.text.gameDescription.max} characters, or auto (the default), and review writes it from the game. Words you give are offered back with their casing and grammar tidied, and you can keep yours.` },
     { name: "output", type: "string", description: "Static build folder. Required when several outputs contain index.html." },
     { name: "engine", type: "string", values: [...ENGINE_IDS], description: "Engine export recipe. Otherwise detect source markers and built-export signatures; unknown projects use custom." },
@@ -81,14 +81,14 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "build", type: "boolean", description: "Run the build command from opengame.json first, so the check reads fresh output." },
     noInstall("--build"), json],
     examples: ["opengame check .", "opengame check . --build --json"] },
-  deploy: { args: "[dir]", description: "Build, check and upload a release, then return with the address of its deployment page, where the checks run and the private preview plays once they pass. Add --wait to stay until they finish. Once the preview is ready, the achievements opengame.json declares are saved by deploy --wait or by the next opengame status in this folder. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted.", flags: [externalAssets, unityAssets, acceptStatement,
+  deploy: { args: "[dir]", description: "Build, check and upload a release, then return with the address of its deployment page, where the checks run and the private preview plays once they pass. Add --wait to stay until they finish. Once the preview is ready, the achievements opengame.json declares are saved by deploy --wait or by the next opengame status in this folder. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id> and take it out of opengame.json too, since a deploy that still declares it turns it back on. Unlocks are never deleted.", flags: [externalAssets, unityAssets, acceptStatement,
     { name: "title", type: "string", description: "Title when deploy creates a missing manifest. Auto when left out." },
     { name: "description", type: "string", description: "Description when deploy creates a missing manifest. Auto when left out." },
     { name: "genre", type: "string", description: "Genre when deploy creates a missing manifest. Auto when left out." },
     kindFlag("Kind when deploy creates a missing manifest. Without it, a game."), basedOnFlag(" when deploy creates a missing manifest"),
     { name: "output", type: "string", description: "Static build folder when deploy creates a missing manifest." },
     { name: "vendor", type: "boolean", description: "Download dependencies from approved sources at the exact versions your code names into the packaging copy, with hashes and licenses." },
-    { name: "dry-run", type: "boolean", description: "Build, check and package without uploading. With --no-build, check and package only." },
+    { name: "dry-run", type: "boolean", description: "Build, check and package without uploading. With --no-build, check and package only. Like a deploy, it writes opengame.json first when the folder has none." },
     { name: "no-build", type: "boolean", description: "Skip the build command in opengame.json and package build.output as it is, when the export is already built and its command cannot run here, such as a Godot or Emscripten toolchain on another machine. A command that changes the export, such as one that adds the SDK, is skipped too." },
     noInstall("deploy"),
     { name: "idempotency-key", type: "string", description: "Retry key. Reuse it to resume one deploy; a new one starts another." },
@@ -98,7 +98,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "timeout", type: "string", description: `With --wait, stop watching after this many seconds (at most ${LIMITS.platform.operations.watchTimeoutMs / 1000}), exiting 5 with the checks still running. Setting it implies --wait.` },
     stdin, json],
     examples: ["opengame deploy .", "opengame deploy . --dry-run", "opengame deploy . --no-build", "opengame deploy . --wait --json"] },
-  status: { args: "[dir]", description: "Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id>. Unlocks are never deleted.", flags: [
+  status: { args: "[dir]", description: "Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id> and take it out of opengame.json too, since a deploy that still declares it turns it back on. Unlocks are never deleted.", flags: [
     { name: "watch", type: "boolean", description: "Follow the deploy until it is ready, refused, or the watch window closes." },
     { name: "timeout", type: "string", description: `Stop watching after this many seconds (at most ${LIMITS.platform.operations.watchTimeoutMs / 1000}), exiting 5 with the checks still running.` }, stdin, json],
     examples: ["opengame status . --watch"] },
@@ -175,13 +175,13 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "dry-run", type: "boolean", description: "Print the install command without running it." },
     { name: "allow-downgrade", type: "boolean", description: "Install the server's version even when it is older than this one." }, json] },
   version: { description: "Print the CLI version.", flags: [json] },
-  submit: { args: "[dir]", description: "Send one release to review, and enter it in a jam. A deploy goes to review by itself, so this is mostly for agents entering a jam with flags. A person who names no jam answer is given the deploy's page, where the track, models and sponsor tracks are chosen, and nothing is sent.", flags: [
+  submit: { args: "[dir]", description: "Send one release to review that was not sent by itself. A deploy goes to review by itself once it is ready, and the jam is entered on its deploy's page, so this is only for a build that was not sent: a QA game (--qa), a build deployed before reviews started by themselves, or one whose deploy token could not replace a jam entry. A release already in review keeps its submission, and jam answers given here are not used. A person who names no jam answer is given the deploy's page, and nothing is sent.", flags: [
     { name: "release", type: "string", description: "The release id to submit: releaseId from opengame status --json once the deploy is ready, or from opengame deployments --json. Agents must name it." },
     /* The window in /rules' own words ("Between entries opening and entries closing, deploy
        your game"), which is the rule the server holds this flag to: when the deploy BEGAN,
        not when the submit is run (cli.test.ts keeps the two sentences together). */
-    { name: "jam", type: "string", description: "The jam slug to enter, from opengame jams. A jam takes a release whose deploy began between entries opening and entries closing, submitted before they close. A build deployed before entries opened cannot enter, so deploy again once they do." },
-    { name: "no-jam", type: "boolean", description: "Submit without a jam, when the server accepts marketplace submissions." },
+    { name: "jam", type: "string", description: "The jam slug to enter, from opengame jams. A jam takes a release whose deploy began between entries opening and entries closing. A release already in review is entered on the deploy's page, not here. A build deployed before entries opened cannot enter, so deploy again once they do." },
+    { name: "no-jam", type: "boolean", description: "Submit without a jam. Refused while submissions go to a jam, which opengame jams shows; a mod or a decomp publishes outside the jam from its deploy's page." },
     { name: "qa", type: "boolean", description: "Send to review for the QA destination: no jam, and published unlisted once a reviewer approves it. The account needs a QA grant from an OpenGame owner. Takes no jam flags." },
     { name: "track", type: "string", description: "The jam track. opengame jams <slug> lists them." },
     { name: "models", type: "string", description: "Comma-separated models the game was made with, from the jam's form." },
@@ -199,7 +199,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "agent", type: "string", values: ["claude", "codex", "cursor", "opencode"], description: "Comma-separated agents to install for. Detected from the project when omitted." },
     { name: "dir", type: "string", description: "The project folder, when it is not given as an argument." },
     { name: "skill", type: "string", description: "Install named skills from the catalog, separated by commas." },
-    { name: "all", type: "boolean", description: "Install the full catalog instead of the starting set." },
+    { name: "all", type: "boolean", description: "Install every skill instead of the starting set, except opengame-all-in-one, which repeats them as one skill." },
     { name: "replace", type: "boolean", description: "Overwrite skills you have edited. Your edits are lost." },
     { name: "keep-edited", type: "boolean", description: "Leave skills you have edited as they are and install the rest." }, json],
     examples: ["opengame skills add .", "opengame skills add . --agent codex,cursor", "opengame skills add . --keep-edited", "opengame skills list --json"] },

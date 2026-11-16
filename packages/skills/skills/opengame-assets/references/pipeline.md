@@ -95,3 +95,70 @@ OC measured these unit costs. A Meshy textured job 30 credits ($0.60), a Meshy c
 credits ($0.06), fal images $0.057 to $0.108 each, ElevenLabs about 11 credits per second
 of sound effect and $0.000183 per credit. Check the log before buying anything that may
 already exist.
+
+LC's ledger kept the same shape (time, stream, provider, what, USD), one row before every
+call, with caps per stream: the dead, the armoury, the world, audio, combat, the body and
+the interface. OS added a row after each call too, so a call that failed or was refunded
+still balances.
+
+## Dry run first (LC)
+
+Every tool that can spend money prints what it would buy and what it would cost, and buys
+only with an explicit flag:
+
+```
+$ node tools/generate.mjs --spec specs/zombie-07.json
+DRY RUN  image-to-3d  zombie-07  30 credits ($0.60)  stream dead  $118.40 of $120 after
+         nothing bought; add --buy to spend
+```
+
+Read a buying tool's argument parser before passing it any flag. LC ran `--help` on one
+that did not know the flag and treated the run as a request: 77 readings were bought.
+
+## A licence table
+
+One row per shipped file or package, kept beside the asset manifest. The release fails
+on a file that has no row, and the credits page is generated from the rows that ask for a
+credit.
+
+```json
+{ "path": "assets/audio/rain-open-a.ogg", "source": "https://example.org/recording/123",
+  "author": "the recordist's name as published", "licence": "CC0-1.0",
+  "credit": null, "changes": "high-pass 55 Hz, swells flattened, loop folded" }
+```
+
+A file whose author is not recorded is dropped, not guessed. A split or unclear licence
+is the owner's call, and the file stays out of the public build until it is made.
+
+## Where each kind of asset settled (LC)
+
+| Asset | Source that held | What it taught |
+| --- | --- | --- |
+| Held weapons | Licensed CC BY artists' models for the most-held, generated two-picture meshes for the rest, small parts scripted | 0 of 73 generated weapons graded photoreal; look at the $0.18 pictures before paying $0.70 for the mesh |
+| Hands and gloves | A free CC0 base body, a scripted sculpt, a cloth simulation and an offline bake, with CC0 scan detail | $0.12 spent, on two composition-only pictures |
+| Enemies | Image-to-3D from a checked A-pose picture, re-baked to about 11,500 triangles with the head on its own sheet | About $2.44 a figure; ask for close-fitting clothes and arms well out |
+| World surfaces | 23 CC0 scan sets in KTX2 | 801 to about 185 MB on the GPU |
+| Trees and props | CC0 scans; 17 props remeshed after generation; sandbags made by rule | No CC0 sandbag existed, and generated ones were pouches |
+| Smoke and explosions | CC0 flipbooks | |
+| Fire | Baked offline from an MIT-licensed volumetric library into a 264 KB flipbook | Run live, it drew at 3.8 fps |
+| Gunshots | A CC0 firearm recording library | Its first 2 ms were clipped; cracks rebuilt, tails kept |
+| Rain and ambience | Credited public-domain recordings | A file with no recorded author dropped |
+| Voices of the dead, effects, title music | Generated, about half the takes refused by measurement | See `opengame-audio` |
+| Radio and player voices | Licensed library voices, auditioned, nothing cloned | Chosen by a recogniser through the radio chain |
+| Medals and interface art | Generated images | $1.34 for all interface art |
+
+## A weapon pipeline (LC)
+
+1. A spec sheet of the real object's dimensions and controls.
+2. A source: a licensed artist's model, or generated side pictures, looked at, then a mesh,
+   with soft parts and magazines made separately.
+3. A millimetre grid check against the spec.
+4. A script in a 3D tool that levels, scales and decimates, cuts moving parts out whole
+   (a magazine with its end walls, a handle whole) and writes the far level of detail.
+5. A packer: grade the maps, one sheet per weapon, WebP, content-hashed names.
+6. Passes on the texels: refinish, wear, wood, metal, sights, handles, then rounds last so
+   an empty magazine is a draw range.
+7. Judged offline, then on the owner's path, then by a camera following the lens at
+   arm's length, then by hiding one part at a time.
+
+A repack drops the texel passes, so the packer prints how to put each one back.

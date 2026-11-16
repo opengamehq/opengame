@@ -13,7 +13,9 @@ npx skills add opengamehq/opengame
 <!-- /install -->
 
 Through the CLI, `opengame skills add .` installs the starting set for the agent you use,
-and `opengame skills add . --all` installs every skill.
+`opengame skills add . --all` installs every skill once, each in its own folder (not
+`opengame-all-in-one`, which would repeat them), and
+`opengame skills add . --skill opengame-all-in-one` installs all of them as one.
 
 ### Get the CLI
 
@@ -67,10 +69,16 @@ is beside the skill and not in the list):
 Read it from code with `@opengamehq/skills/manifest.json`; a skill's folder resolves as
 `@opengamehq/skills/skills/<name>/SKILL.md`.
 
-There are two families. Platform skills cover OpenGame itself: the CLI, the API, the
+There are four families. Platform skills cover OpenGame itself: the CLI, the API, the
 SDK, deploys and jams. Craft skills cover making the game good: look, lighting, game
-feel, audio, performance, accessibility, testing and the rest. `opengame-router` points
-an agent at the ones a task needs, and `opengame-quality-bar` reviews the whole game.
+feel, maps, rhythm games, audio, performance, accessibility, testing and the
+rest. Video skills film it: a launch trailer and a gameplay montage, each planned, made and
+reviewed in rounds. `opengame-router` points an agent at the ones a task needs, and
+`opengame-quality-bar` reviews the whole game.
+
+The fourth family is one skill, `opengame-all-in-one`, which carries every other skill
+whole under its `references/` with the order to use them in, for somebody who wants a
+single install. The build assembles it from the others, so it cannot fall behind them.
 
 ## Documentation
 

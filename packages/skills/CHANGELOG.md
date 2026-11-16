@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.5.0
+
+- What OG Snipers (OS), Last Contact (LC) and OG Hero (OH) taught us, read from their
+  whole records, is in the craft skills. Twenty of them move to 1.1.0, and
+  `opengame-characters` to 1.2.0: accessibility, assets, audio, capture,
+  depth, enemies, front-end, game-feel, lighting, loading, look, mobile, performance,
+  production, quality-bar, scene-audit, stability, verification, weapons and world-physics.
+  `opengame-quality-bar` defines the new game codes.
+- New craft skills: `opengame-rhythm` 1.0.0, `opengame-maps` 1.0.0 and
+  `opengame-multiplayer` 1.0.0, which teaches a game to bring its own server.
+- A new video family: `opengame-trailer-plan`, `opengame-trailer-make`,
+  `opengame-trailer-review-and-improve`, `opengame-montage-plan`, `opengame-montage-make`
+  and `opengame-montage-review-and-improve`, all 1.0.0.
+- `opengame-all-in-one` 1.0.0 carries every other skill whole, with the order to use them
+  in, for a single install. `opengame skills add --all` leaves it out, because it repeats
+  the others.
+- `opengame-router` 1.0.8 routes to the new skills, `opengame-deploy` 1.1.3 says how to
+  install every skill as one, and `opengame-sdk` 1.0.11 says what pause means in a shared
+  online match.
+- `opengame-multiplayer` 1.1.0: invites open the game on OpenGame through `og.invite`, and
+  PeerJS runs on the creator's own PeerServer with TURN. `opengame-sdk` 1.0.13 and
+  `opengame-deploy` 1.1.5 teach the same, and `opengame-all-in-one` 1.0.2 carries them.
+
 ## 1.4.0
 
 - `opengame-sdk` 1.0.10 teaches `og.player.stats()`, which reads the player's own entry on

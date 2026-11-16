@@ -1,5 +1,17 @@
 # opengame-deploy changelog
 
+## 1.1.5
+
+A multiplayer section: invite links through `og.invite.link`, PeerJS on the creator's own servers with TURN, and game servers over `wss:` with an exact `Origin` check and a token rather than a cookie.
+
+## 1.1.4
+
+The procedure now says review starts by itself once a deploy is ready, and the creator confirms the details on the deploy's page; init's fields default to Auto. OpenGame no longer scans builds for malware or keys, moderates images or reviews text: the packaging reference says to keep keys on the creator's server and rotate any that shipped, lists the native programs a build is refused for, and drops the malware scan and the checks a person used to decide from its table. The JSON reference lists exit code 7 (`not_launched`) and shows the engine finding as the CLI prints it now.
+
+## 1.1.3
+
+Says that `opengame skills add .` installs a starting set, how to add one more skill, and that `--skill opengame-all-in-one` installs every skill as one.
+
 ## 1.1.2
 
 Any signed-in account can use the CLI, the creator API, uploads and jam entries before launch, so a `not_launched` answer means the request came with no account: sign in (`opengame login`) and run it again rather than waiting for 18 November.

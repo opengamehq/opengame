@@ -132,11 +132,48 @@ test("every bundled skill validates, and the registry, folders and families agre
   const craft = skills.filter((s) => s.family === "craft").map((s) => s.name).sort();
   assert.deepEqual(craft, ["accessibility", "assets", "audio", "characters", "depth", "front-end", "game-feel", "lighting", "look",
     "performance", "quality-bar", "scene-audit", "verification", "world-physics",
-    "weapons", "enemies", "loading", "mobile", "stability", "capture", "production"].sort().map((n) => `opengame-${n}`));
+    "weapons", "enemies", "loading", "mobile", "stability", "capture", "production", "rhythm", "maps", "multiplayer"].sort().map((n) => `opengame-${n}`));
   for (const skill of skills.filter((s) => s.family === "craft")) {
     const rules = readRules(skill.files["SKILL.md"]);
     assert.ok(rules.length >= 4, `${skill.name} has ${rules.length} rules`);
   }
+  const video = skills.filter((s) => s.family === "video").map((s) => s.name).sort();
+  assert.deepEqual(video, ["trailer-plan", "trailer-make", "trailer-review-and-improve", "montage-plan", "montage-make", "montage-review-and-improve"]
+    .sort().map((n) => `opengame-${n}`));
+  assert.deepEqual(skills.filter((s) => s.family === "bundle").map((s) => s.name), ["opengame-all-in-one"]);
+});
+
+test("the all-in-one skill carries every other skill whole, as README.md with no frontmatter", async () => {
+  const { skills } = await collectSkills();
+  const bundle = skills.find((s) => s.family === "bundle");
+  for (const skill of skills.filter((s) => s.family !== "bundle")) {
+    const carried = bundle.files[`references/${skill.name}/README.md`];
+    assert.ok(carried, `${skill.name} is not carried`);
+    assert.ok(!/(?:^|\n)---\nname:/.test(carried), `${skill.name}'s frontmatter was carried, which some installers read as a second skill`);
+    assert.ok(carried.endsWith(skill.files["SKILL.md"].replace(/^---\n[\s\S]*?\n---\n/, "")), `${skill.name}'s body was not carried whole`);
+    assert.ok(carried.includes(`\`${skill.name}\` ${skill.version}`), `${skill.name}'s carried copy does not name its version`);
+    for (const [path, text] of Object.entries(skill.files)) {
+      if (path === "SKILL.md") continue;
+      assert.equal(bundle.files[`references/${skill.name}/${path}`], text, `${skill.name}/${path} differs in the bundle`);
+    }
+  }
+  assert.ok(!Object.keys(bundle.files).some((path) => path !== "SKILL.md" && path.endsWith("/SKILL.md")), "no second SKILL.md inside the bundle");
+});
+
+test("a skill added without a route from the all-in-one skill fails the build", async () => {
+  const root = await mkdtemp(join(tmpdir(), "og-skills-bundle-"));
+  try {
+    const body = (name, extra = "") => `---\nname: ${name}\ndescription: An example. Use when the person says example.\nmetadata:\n  version: "1.0.0"\n---\n\n# Example\n${extra}`;
+    const write = async (name, text) => { await mkdir(join(root, "skills", name), { recursive: true }); await writeFile(join(root, "skills", name, "SKILL.md"), text); await writeFile(join(root, "skills", name, "CHANGELOG.md"), "# x\n\n## 1.0.0\n\nx\n"); };
+    await write("opengame-one", body("opengame-one"));
+    await write("opengame-two", body("opengame-two"));
+    await write("opengame-bundle", body("opengame-bundle", "\n[one](references/opengame-one/README.md)\n"));
+    await writeFile(join(root, "skills.json"), JSON.stringify({ skills: [
+      { name: "opengame-one", family: "platform" }, { name: "opengame-two", family: "platform" }, { name: "opengame-bundle", family: "bundle" }] }));
+    const { problems } = await collectSkills({ sourceDir: join(root, "skills"), registryPath: join(root, "skills.json") });
+    assert.ok(problems.some((p) => p.includes("opengame-bundle/references/opengame-two/README.md") && p.includes("nothing links")), problems.join("\n"));
+    assert.ok(!problems.some((p) => p.includes("opengame-one/README.md")), problems.join("\n"));
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test("the plan's four helpers ship inside their skills and nothing ships a test", async () => {
@@ -155,7 +192,7 @@ test("a build writes every rendered file and a manifest whose digests match", as
     const { manifest } = await buildSkills({ outDir: out });
     const written = JSON.parse(await readFile(join(out, "manifest.json"), "utf8"));
     assert.deepEqual(written, manifest);
-    assert.equal(written.skills.length, 27);
+    assert.equal(written.skills.length, JSON.parse(await readFile(new URL("../skills.json", import.meta.url), "utf8")).skills.length);
     assert.deepEqual(written.skills.filter(skill => skill.default).map(skill => skill.name), ["opengame-deploy", "opengame-quality-bar", "opengame-router"]);
     const deploy = await readFile(join(out, "opengame-deploy", "SKILL.md"), "utf8");
     assert.ok(!deploy.includes("{{"));
@@ -181,11 +218,42 @@ test("a build refuses an invalid skill and writes nothing", async () => {
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-test("no bundled skill teaches multiplayer, which the SDK does not have", async () => {
+/* The SDK lost its rooms, lobby, netcode and broker on 3 Nov 2026 (packages/sdk/CHANGELOG.md),
+   and until 15 Nov this test banned the words "multiplayer", "lobby", "netcode" and "PeerJS"
+   from every skill, so that none would teach calls that now answer `unavailable`. The words
+   came back with opengame-multiplayer, which teaches a game to bring its own server, as the
+   guide's own multiplayer section does, and with OG Snipers and Last Contact, whose bot lobbies
+   and private rooms are what the other skills' numbers were measured in. What must not come
+   back is the removed surface, so that is what is banned, by name, everywhere. */
+const REMOVED_ROOM_SURFACE = new RegExp([
+  String.raw`@opengamehq\/sdk\/(?:multiplayer|netcode)`, String.raw`opengame-(?:multiplayer|netcode)\.js`,
+  String.raw`\bog\.(?:multiplayer|netcode|rooms?|lobby)\b`, String.raw`\bOpenGame\.(?:multiplayer|Multiplayer|Room|RoomError|Lobby|mountLobby|netcode)\b`,
+  String.raw`\broom\.(?:host|join|joinInvite|close|ready|phase|state|stats|now)\b`, String.raw`\b(?:sendTo|disconnectPeer|maxPacketBytes)\b`,
+  String.raw`\b(?:mountLobby|ogJoinCode|ogInviteBase|ogLobbyTicket|ogIceServers|ogPeerOptions|ogHostPeerId|ogLobbySession|OG_RTC|OG_DIRECT_ONLY_NOTICE)\b`,
+  String.raw`\b(?:defineMessages|InputHistory|InputQueue|symmetricQuantizer|lagCompensationMs|EventLedger)\b`,
+  String.raw`lobby[- ]tickets?`, String.raw`\blobby-controls\b`,
+].join("|"));
+
+test("no bundled skill teaches the room API the SDK no longer has", async () => {
   const { skills } = await collectSkills();
   const hits = skills.flatMap((s) => Object.entries(s.files).flatMap(([path, text]) => String(text).split("\n")
-    .map((line, i) => /multiplayer|\blobb(?:y|ies)\b|netcode|\bpeerjs\b/i.test(line) ? `${s.name}/${path}:${i + 1}` : null).filter(Boolean)));
+    .map((line, i) => REMOVED_ROOM_SURFACE.test(line) ? `${s.name}/${path}:${i + 1}` : null).filter(Boolean)));
   assert.deepEqual(hits, []);
+  for (const planted of ["import { multiplayer } from \"@opengamehq/sdk/multiplayer\"", "await og.multiplayer.host()", "mint a lobby ticket",
+    "OpenGame.mountLobby(el)", "OpenGame.multiplayer.host()", "room.close()", "defineMessages({})", "ogLobbySession()"]) {
+    assert.ok(REMOVED_ROOM_SURFACE.test(planted), planted);
+  }
+  // The words themselves stay allowed: a game's own server, its lobby screen and OS's bots.
+  for (const allowed of ["The game brings its own server.", "a multiplayer shooter", "the lobby screen", "netcode belongs to the game", "PeerJS links browsers"]) {
+    assert.ok(!REMOVED_ROOM_SURFACE.test(allowed), allowed);
+  }
+});
+
+test("the multiplayer skill says OpenGame runs no rooms and the game brings its own server", async () => {
+  const { skills } = await collectSkills();
+  const body = skills.find((s) => s.name === "opengame-multiplayer").files["SKILL.md"];
+  assert.match(body, /OpenGame does not run your rooms/);
+  assert.match(body, /brings its own server/);
 });
 
 

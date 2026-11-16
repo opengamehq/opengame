@@ -1,5 +1,9 @@
 # opengame-deploy changelog
 
+## 1.1.7
+
+An agent publishes with `opengame publish` or `opengame deploy --publish` when the creator asks, and otherwise gives them the deploy's page. An update of a live game publishes by itself, keeping its details and jam entry (16 Nov 2026).
+
 ## 1.1.6
 
 The creator no longer certifies anything on the deploy's page: entering the jam is the track and the models, then publish (16 Nov 2026).

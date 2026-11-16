@@ -11,6 +11,7 @@ import { terminalDeploymentChecklist } from "./deployment-progress";
 import { operation, terminal, remember, readSavedOperation } from "./operation";
 import { readGame, refuseRemoved } from "./games";
 import { emitReview, followReview, readSubmission, reviewLine, sendAgain } from "./submit";
+import { publishAnswers, publishGame } from "./publish";
 import { authCommand } from "./auth";
 import { readBootstrap } from "./bootstrap";
 import { Api, ApiError, UploadInterrupted } from "./http";
@@ -489,7 +490,7 @@ async function sweepPackaging(directory: string) {
 export function detailsLine(provisional: readonly string[] | undefined): string {
   const words: Record<string, string> = { title: "name", description: "description", genre: "genre" };
   const owed = ["title", "description", "genre"].filter(field => provisional?.includes(field)).map(field => words[field]!);
-  return owed.length ? `\nReview writes its ${new Intl.ListFormat("en").format(owed)} from the game. On that page, check what it wrote once review passes, and enter the jam if you like. Your agent can set any of them with opengame details.` : "";
+  return owed.length ? `\nReview writes its ${new Intl.ListFormat("en").format(owed)} from the game. On that page, check what it wrote once review passes, and enter the jam if you like, or publish from here with opengame publish. Your agent can set any of them with opengame details.` : "";
 }
 
 /**
@@ -688,8 +689,18 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
   }
   const timeout = Math.ceil(requestedTimeout);
   if (flags.wait && flags["no-wait"]) throw new CliError("conflicting_flags", "Use --wait or --no-wait, not both. A deploy returns once the upload is in unless you pass --wait.", 2);
+  /* --publish waits for the checks and then for review, so it cannot also return at once. Its
+     answers are read before anything is uploaded, so a flag the server would refuse costs
+     nothing; the jam's flags mean nothing without it. */
+  if (flags.publish && flags["no-wait"]) throw new CliError("conflicting_flags", "Use --publish or --no-wait, not both. --publish waits for review and publishes when it passes.", 2);
+  /* Only the jam's flags: deploy's own --title, --description and --genre write a missing
+     opengame.json, so the game then has those words and publishing them again would be refused. */
+  const jamFlags = ["no-jam", "track", "models", "sponsor", "sponsor-email"];
+  const publishing = command === "deploy" && flags.publish ? publishAnswers(Object.fromEntries(Object.entries(flags).filter(([name]) => jamFlags.includes(name)))) : null;
+  const strayJam = jamFlags.find(name => flags[name] !== undefined);
+  if (command === "deploy" && !publishing && strayJam) throw new CliError("conflicting_flags", `--${strayJam} answers the publish step, so it goes with --publish.`, 2);
   // --timeout only ever meant how long to watch, so a job that sets it is asking to wait.
-  const wait = Boolean(flags.wait) || (!flags["no-wait"] && flags.timeout !== undefined);
+  const wait = Boolean(flags.wait) || Boolean(publishing) || (!flags["no-wait"] && flags.timeout !== undefined);
   if (metadata !== "preserve" && metadata !== "local") throw new CliError("invalid_metadata", "Use --metadata=preserve or --metadata=local.");
   const api = new Api();
   try {
@@ -1047,6 +1058,16 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
     if (op.state !== "ready" && !terminal(op) && result.achievements?.length) {
       output.emit({ type: "notice", code: "achievements_pending", message: "The achievements in opengame.json are saved once the preview is ready. Run opengame status in this folder after that, or deploy with --wait." });
     }
+    /* --publish: once the preview is ready, the release goes to review by itself; this follows
+       that review and publishes it the moment it passes, as opengame publish --wait does. A
+       deploy that did not get to ready is reported as without the flag. */
+    if (publishing && op.state === "ready" && op.gameId) {
+      if (result.title) await output.arrive(result.title);
+      const published = await publishGame(api, token, op.gameId, { release: op.releaseId ?? null, answers: publishing, wait: true, output, page: deploymentUrl(api, op.id) });
+      output.emit({ type: "result", command, data: { operationId: op.id, state: op.state, gameId: op.gameId, publicId: op.publicId ?? null, releaseId: op.releaseId,
+        deploymentUrl: deploymentUrl(api, op.id), ...published, timingsMs: { ...timings, total: Math.round(performance.now() - started) } } });
+      return;
+    }
     await report(op, command, api, output, { resumable: true, timedOut, title: result.title, kind: result.kind, arrive: true, timingsMs: { ...timings, total: Math.round(performance.now() - started) } });
   } finally { await api.close(); }
 }
@@ -1100,11 +1121,13 @@ function reviewSummary(review: Submission, newest: string | null) {
   const held = submissionStatus(review) === "held";
   const open = (SUBMISSION_OPEN as readonly string[]).includes(review.state) && !held;
   const message = reviewLine(review, newest);
-  // `next` is always a command an agent can run; the certify page and the deploy page where
-  // a passed review's details are confirmed are a person's, so they are `url`. A return of the
-  // newest release needs a fixed deploy, which goes to review by itself (the one flow); a
-  // newer release than the returned one is already in review.
-  const next = review.state === "needs_certification" || review.state === "awaiting_details" ? "opengame status --watch"
+  // `next` is always a command an agent can run. A passed review's details are confirmed with
+  // opengame publish since 16 Nov 2026, or on the deploy's page, which stays the `url`. The
+  // certify page is a person's. A return of the newest release needs a fixed deploy, which
+  // goes to review by itself (the one flow); a newer release than the returned one is already
+  // in review.
+  const next = review.state === "awaiting_details" ? "opengame publish"
+    : review.state === "needs_certification" ? "opengame status --watch"
     : held ? "opengame status"
     : open ? "opengame status --watch"
     /* A jam entry returned for a fault of ours (the checks ran past their deadline, or the

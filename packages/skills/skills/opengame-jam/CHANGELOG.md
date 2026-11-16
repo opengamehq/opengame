@@ -1,5 +1,9 @@
 # opengame-jam changelog
 
+## 1.1.0
+
+The entry is made with `opengame publish --track ... --models ...` when the person asks, or on the deploy's page. Nobody certifies anything to enter (16 Nov 2026).
+
 ## 1.0.9
 
 No person reviews a game: review starts by itself once a deploy is ready, then either lets it through or returns it with the reason. The person enters the jam on the deploy's page (Confirm details: the track, the models, any sponsor track, then certify), and `opengame submit` is no longer the way in, since it cannot confirm a release its deploy already sent to review. While the jam runs, a new original game goes on OpenGame only as a jam entry, up to the account's allowance, unless the account is an admin or an approved publisher; mods and decomps go on under Just for fun at any time; after the close anyone can publish to the gallery. A sponsor track asks for the email of the account used there, not an evidence note. After the close an entered game keeps the version that was live then.

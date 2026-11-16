@@ -3,7 +3,7 @@
 How a coding agent deploys a creator's game with the `opengame` command. The command and exit code tables at the end are the CLI's own help; `opengame help --json` has every flag.
 
 <!-- generated:procedure -->
-Deploy the creator's game to a private preview and give them its link. Review starts automatically, and the creator publishes the game on the deploy's page. Read each command's result before you run the next one.
+Deploy the creator's game to a private preview and give them its link. Review starts automatically. When it passes, publish the game with `opengame publish` if the creator asked you to, or give them the deploy's page to publish it themselves. Read each command's result before you run the next one.
 
 ## Install
 
@@ -163,11 +163,16 @@ An account can begin 5 deploys in a rolling day, so fix what `opengame check` fi
 
 Review starts automatically once a deploy is ready, so you submit no release. Review is automatic: it plays the game, then passes it or returns it with findings.
 
-When review passes, the release waits for the creator. `opengame status --json` shows `data.review.state: "awaiting_details"` and the deploy's page in `data.review.url`. Give the creator that link. Signed in, in their own browser, they confirm the title, description and genre, enter the jam with its track and the models they used, and publish. You cannot do this for them. Before they do, you can set the words with `opengame details --title "..." --description "..." --json`.
+When review passes, a game's first release waits to be published. `opengame status --json` shows `data.review.state: "awaiting_details"`, `data.review.next: "opengame publish"` and the deploy's page in `data.review.url`.
 
-An update to a game that is already live is the exception. When the token that deployed it holds `submit`, as the `opengame login` token does, and nothing is owed (its details are written and the jam is not asking), it goes live as soon as it passes review, with no step on the page. When the creator asked only for a preview of an update to a live game, deploy with a token made in their settings with `deploy` alone, set as `OPENGAME_TOKEN`, so the release waits for them.
+- **The creator asked you to publish it.** Run `opengame publish --json`. It confirms the title, description and genre review wrote, publishes, waits until the game is live and prints the address to share in `data.url`. Change what review wrote with `--description`, `--genre` and the other flags in `opengame publish --help`. While a new game goes on OpenGame only as a jam entry, pass the jam's track and the models used with `--track` and `--models`; `opengame jams <slug> --json` lists them.
+- **They did not ask.** Give them `data.review.url`. Signed in, they check the details, enter the jam and publish on that page.
 
-`opengame submit` cannot take the confirmation step either. The release is already in review, so the server keeps that submission and prints a `jam_answers_unused` notice: the jam answers you passed were not used.
+To publish in one step, `opengame deploy --publish --json` stays until review passes, then publishes, and takes the same jam flags.
+
+An update to a game that is already live publishes by itself once it passes review. It keeps the live game's details, including the genre when the deploy left it to Auto, and its jam entry. The token that deployed it has to hold `submit`, as the `opengame login` token does. When the creator asked only for a preview of an update to a live game, deploy with a token made in their settings with `deploy` alone, set as `OPENGAME_TOKEN`, so the release waits for them.
+
+`opengame submit` does not confirm a release that is already in review. The server keeps that submission and prints a `jam_answers_unused` notice: the jam answers you passed were not used. Pass them to `opengame publish` once review passes.
 
 While Game Jam #1 runs, a new game goes on OpenGame only as a jam entry, up to 2 for each account. Mods and decomps publish outside the jam at any time and never enter it. When the jam cannot take a build, for example because the account already has 2 entries, the build is not sent to review, and the deploy's page explains why. [Enter a jam](https://docs.opengame.io/guides/jams) has the rules.
 
@@ -180,7 +185,8 @@ opengame status --watch --json
 | `data.review.state` | What to do |
 | --- | --- |
 | `review`, `playtesting`, `waiting` | Review is running. Watch again. |
-| `awaiting_details`, `needs_certification` | Give the creator `data.review.url`. Watch again once they say they have published. |
+| `awaiting_details` | Run `opengame publish --json` when the creator asked you to publish. Otherwise give them `data.review.url`, and watch again once they say they have published. |
+| `needs_certification` | Give the creator `data.review.url`. Watch again once they say they have done it. |
 | `publishing`, `published` | The game is going live. `data.submission.gameUrl` is its page. |
 | `returned` | Read the findings, fix the game and deploy again. The new deploy is reviewed automatically. |
 
@@ -222,7 +228,7 @@ Play the private preview before you tell the creator the game works.
 <!-- generated:commands -->
 | Command | What it does |
 | --- | --- |
-| `opengame init [dir] [options]` | Create opengame.json for an existing game. Every field defaults to Auto. Leave a field out, blank or "auto" and review writes it from your game; you accept or change it on the deploy's page. A person at a terminal is asked the game's name and nothing else, and Enter takes Auto. When opengame.json is already there, fill in the fields it leaves blank and keep the rest. |
+| `opengame init [dir] [options]` | Create opengame.json for an existing game. Every field defaults to Auto. Leave a field out, blank or "auto" and review writes it from your game; you accept or change it on the deploy's page, or with opengame publish. A person at a terminal is asked the game's name and nothing else, and Enter takes Auto. When opengame.json is already there, fill in the fields it leaves blank and keep the rest. |
 | `opengame check [dir] [options]` | Find local build and asset problems before uploading. |
 | `opengame dev [dir] [options]` | Serve a local export with game-runtime headers. Under a contract that adds the SDK, pages also get the host runtime and SDK, as they do when hosted. If the contract supports opting out, sdk.inject: false leaves out the SDK. |
 | `opengame login [options]` | Sign in through your browser. |
@@ -230,6 +236,7 @@ Play the private preview before you tell the creator the game works.
 | `opengame status [dir] [options]` | Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id> and take it out of opengame.json too, since a deploy that still declares it turns it back on. Unlocks are never deleted. |
 | `opengame deployments [dir] [options]` | List the linked game's deploys, newest first: status, when, size, who started each one, why any stopped, and each one's page or preview. |
 | `opengame open [dir] [options]` | Open the linked game's private page in your browser. |
+| `opengame publish [dir] [options]` | Publish the linked game's release that passed review, as Confirm and publish does on its deploy's page, then follow it until it is live and print the address to share. Each detail left out is what that page would have sent: the game's words and genre, and review's choice for anything the deploy left to Auto. An update of a game that is already live publishes with no command once it passes review, so this is for a first publish, or a release that waits for a detail only you can give, such as the jam's track. Needs a token with submit; opengame login has it. |
 | `opengame submit [dir] [options]` | Send one release to review that was not sent by itself. A deploy goes to review by itself once it is ready, and the jam is entered on its deploy's page, so this is only for a build that was not sent: a QA game (--qa), a build deployed before reviews started by themselves, or one whose deploy token could not replace a jam entry. A release already in review keeps its submission, and jam answers given here are not used. A person who names no jam answer is given the deploy's page, and nothing is sent. |
 | `opengame jams [slug] [options]` | List open jams, or show one jam's tracks and flags. |
 | `opengame jam <withdraw\|reenter> [options]` | Withdraw the linked game's jam entry, freeing its place, or put a withdrawn one back while the jam is open, as your jam entries page does. Needs a token with submit; opengame login has it. |

@@ -1,4 +1,4 @@
-> Carried from `opengame-api` 1.0.7. Read it when: Call the OpenGame creator API directly over HTTPS. Covers the base URL, creator tokens and scopes, the OpenAPI document, the error shape and retry fields, deploying without the CLI, and checking whether OpenGame is open. Use when the person wants to deploy from their own tool or CI without the CLI, asks about the OpenGame REST API, api/v1, openapi.json or a creator token, or an API call returned an error code you need to read.
+> Carried from `opengame-api` 1.0.8. Read it when: Call the OpenGame creator API directly over HTTPS. Covers the base URL, creator tokens and scopes, the OpenAPI document, the error shape and retry fields, deploying without the CLI, and checking whether OpenGame is open. Use when the person wants to deploy from their own tool or CI without the CLI, asks about the OpenGame REST API, api/v1, openapi.json or a creator token, or an API call returned an error code you need to read.
 
 
 # Call the OpenGame creator API
@@ -73,8 +73,9 @@ pack the missing ones, and `POST /api/v1/operations/{id}/files/complete` assembl
 build and queues the checks. The request bodies are in `openapi.json`.
 
 Reuse one `Idempotency-Key` for every retry of the same deploy; a new key starts a new
-operation. A ready deploy goes to review by itself, and the creator confirms its details
-on the deploy's page.
+operation. A ready deploy goes to review by itself. Once it passes, the creator confirms its
+details on the deploy's page, or `POST /api/v1/submissions/{id}/publish` does with a token
+holding `submit`. An update of a game that is already live publishes by itself.
 
 An account may begin 5 deploys in any rolling 24
 hours (429 `deploy_day_limited`), and has an hourly allowance too (429

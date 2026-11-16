@@ -62,8 +62,9 @@ game; it asks a person nothing but the game's name.
 
 A folder with no description of its own gets a placeholder sentence, which the deploy marks
 provisional, and so does a genre init could not read from the game's words. Do not ask the
-creator for either before deploying: the deploy's page asks them, and `opengame details
---description` sets the description from here once the game exists. A game cannot publish
+creator for either before deploying: the deploy's page asks them, `opengame publish
+--description` answers it from here once review passes, and `opengame details
+--description` sets the description once the game exists. A game cannot publish
 with the placeholder.
 
 ## Who owns which value

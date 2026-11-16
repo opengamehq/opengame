@@ -85,4 +85,4 @@ export async function resolveAuto(value: unknown, root: string): Promise<{ value
 }
 
 /** The one line help and init print about Auto. */
-export const AUTO_HELP = `Leave a field out, blank or "${AUTO}" and review writes it from your game; you accept or change it on the deploy's page.`;
+export const AUTO_HELP = `Leave a field out, blank or "${AUTO}" and review writes it from your game; you accept or change it on the deploy's page, or with opengame publish.`;

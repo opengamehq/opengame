@@ -164,6 +164,9 @@
               "at_entry_limit",
               "gpu_quota_exhausted",
               "submission_not_found",
+              "review_pending",
+              "publish_not_possible",
+              "jam_answers_required",
               "certification_incomplete",
               "slow_down",
               "authorization_pending",
@@ -33850,7 +33853,7 @@
         },
         "responses": {
           "200": {
-            "description": "Nothing new was submitted. Either this is a retry under the same key (`submission.replayed`), or the release already has a review open (`submission.existing`), usually the one its deploy started by itself once it was ready. With `existing`, the jam answers and metadata in this request were not used: the details, and any jam entry, are confirmed in a browser on the page `certifyUrl` names.",
+            "description": "Nothing new was submitted. Either this is a retry under the same key (`submission.replayed`), or the release already has a review open (`submission.existing`), usually the one its deploy started by itself once it was ready. With `existing`, the jam answers and metadata in this request were not used: once review passes, the details and any jam entry are confirmed with `POST /api/v1/submissions/{id}/publish`, or on the page `certifyUrl` names.",
             "content": {
               "application/json": {
                 "schema": {
@@ -34332,6 +34335,372 @@
             "lang": "bash",
             "label": "cURL",
             "source": "curl --request GET \\\n  --url 'https://opengame.io/api/v1/submissions/6b0d3f9e-2a7c-4d18-9f4b-3e6a1c8d5b02' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\""
+          }
+        ]
+      }
+    },
+    "/api/v1/submissions/{id}/publish": {
+      "post": {
+        "tags": [
+          "Submissions"
+        ],
+        "operationId": "publishSubmission",
+        "security": [
+          {
+            "creatorToken": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "Publish a release that passed review",
+        "description": "Confirms the details of a release waiting on its creator (state `awaiting_details`) and publishes it, as Confirm and publish does on the deploy's page, through the same confirmation. Needs the `submit` scope on the submission's game. An update of a game that is already live publishes by itself once it passes, so this is for a first publish, or a release that waits on an answer only its creator gives, such as the jam's track. Every field is optional: one left out is what the deploy's page would have sent untouched, which is the game's own words and genre, and review's choice for anything the deploy left to Auto. Words the game has already are not changed here; `PATCH /api/v1/games/{id}` changes them. A release with nothing left to confirm (publishing, published, returned) is answered with where it stands. A browser session must send `Origin` set to the OpenGame origin. Then poll `GET /api/v1/submissions/{id}` until `state` is `published`, when `live.url` is the address to share.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Submission UUID.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "6b0d3f9e-2a7c-4d18-9f4b-3e6a1c8d5b02"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "examples": [
+                  {
+                    "description": "A five-lane rhythm game of original songs, where how well you play changes the mix.",
+                    "genre": "party-social-sandbox",
+                    "controller": false
+                  }
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "description": "The title, only when the deploy guessed it."
+                  },
+                  "tagline": {
+                    "type": "string",
+                    "maxLength": 280,
+                    "description": "The tagline, only when the game has none."
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "description": "The description, 40 to 500 characters, only when the game has none of its own yet. Left out, review's when it wrote one."
+                  },
+                  "keepOwnWords": {
+                    "type": "boolean",
+                    "description": "Keep the creator's own words as written, rather than the tidied copy review offers on a first publish."
+                  },
+                  "genre": {
+                    "type": "string",
+                    "enum": [
+                      "shooter-survival",
+                      "action-adventure",
+                      "rpg",
+                      "platformer",
+                      "strategy",
+                      "simulation-management",
+                      "racing-sports",
+                      "fighting",
+                      "puzzle-casual",
+                      "party-social-sandbox"
+                    ],
+                    "description": "Left out: the genre the release was deployed with, or review's when the deploy left it to Auto."
+                  },
+                  "subgenre": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 40,
+                    "description": "A subgenre under that genre, or null for none."
+                  },
+                  "controller": {
+                    "type": "boolean",
+                    "description": "Whether the game supports a gamepad."
+                  },
+                  "jam": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "additionalProperties": false,
+                    "required": [
+                      "track",
+                      "models"
+                    ],
+                    "description": "The jam's answers, when the release enters the jam, from `GET /api/v1/jams/{slug}/form`. Null publishes to the gallery instead, refused with `marketplace_closed` while a new game or an update goes on OpenGame only as a jam entry. Left out: the jam only when it is the one place this release can go, and then its answers are owed (`jam_answers_required`).",
+                    "properties": {
+                      "track": {
+                        "type": "string",
+                        "maxLength": 80
+                      },
+                      "models": {
+                        "type": "array",
+                        "maxItems": 64,
+                        "items": {
+                          "type": "string",
+                          "maxLength": 80
+                        }
+                      },
+                      "sponsors": {
+                        "type": "array",
+                        "maxItems": 16,
+                        "items": {
+                          "type": "string",
+                          "maxLength": 80
+                        },
+                        "default": []
+                      },
+                      "sponsorEmails": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string",
+                          "maxLength": 320
+                        },
+                        "default": {},
+                        "description": "The email of the account used at each sponsor in `sponsors`."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Confirmed, and publishing (or already where it stands). The submission's `state` is `publishing` until the game is live.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "apiVersion",
+                    "submission"
+                  ],
+                  "properties": {
+                    "apiVersion": {
+                      "type": "string",
+                      "examples": [
+                        "1"
+                      ]
+                    },
+                    "submission": {
+                      "$ref": "#/components/schemas/Submission"
+                    }
+                  }
+                },
+                "example": {
+                  "apiVersion": "1",
+                  "submission": {
+                    "id": "6b0d3f9e-2a7c-4d18-9f4b-3e6a1c8d5b02",
+                    "ref": "SUB-1042",
+                    "state": "publishing",
+                    "releaseId": "c6f19a03-5b8e-4d27-9e4a-2b70d1f8c345",
+                    "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                    "gamePublicId": "tq7m4x2k9p",
+                    "submittedAt": "2026-10-21T14:40:12Z",
+                    "certifiedAt": "2026-10-21T14:41:05Z",
+                    "jam": {
+                      "slug": "global-ai-game-jam-2026",
+                      "name": "Game Jam #1",
+                      "entryId": "7a2f5c8e-1d4b-4f93-b6e0-2c8a5d1f9e37",
+                      "tracks": [
+                        {
+                          "key": "racing-sports",
+                          "kind": "theme",
+                          "name": "Racing and sports"
+                        },
+                        {
+                          "key": "elevenlabs",
+                          "kind": "sponsor",
+                          "name": "ElevenLabs"
+                        }
+                      ]
+                    },
+                    "certifyUrl": null,
+                    "gameUrl": "https://opengame.io/g/tq7m4x2k9p",
+                    "queuePosition": null,
+                    "outcome": null,
+                    "live": null,
+                    "replacedBy": null,
+                    "replayed": false,
+                    "existing": false,
+                    "hold": null
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_request`: the body does not match the schema, a word the game has already was sent, a description is owed and none was given, a subgenre is not under the genre, or a sponsor's email is not a whole address. Nothing was published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "invalid_request",
+                  "message": "The details could not be read. Check the command’s flags and run it again. Nothing was published."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`sign_in_required`, `token_invalid` or `token_revoked`. Sign in again, or use a token that has not been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "sign_in_required",
+                  "message": "Sign in to continue.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`insufficient_scope`: the token lacks `submit` on this game. `forbidden`: a browser request came from another origin. `entries_closed`: the jam has closed and this game is entered in it, so it can make no version live but its entry's own. `not_member`: this account does not have access to the creator API. `account_inactive`: the account is suspended or deleted. `account_banned`: OpenGame's moderators have banned the account, so it can read and roll back to a version that was live, but cannot ship anything new, and `retry` is `never`. `not_launched`: the creator API is not open to this caller. Every signed-in account may use it, so in practice only a request with no account hears this, before `creatorsOpenAt`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "insufficient_scope",
+                  "message": "This token cannot do this. Create a token with the needed permission in OpenGame settings.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`submission_not_found`: no submission with this ID belongs to your account. Or `not_found`: this server does not serve the creator API.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "submission_not_found",
+                  "message": "This submission was not found in your account.",
+                  "retry": "after-fix"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A refusal the message explains: `review_pending` (review has not passed it yet, so wait and send it again), `publish_not_possible` (nothing confirmed could put this release live, and the message says why), `jam_answers_required`, `marketplace_closed`, `submission_destination_mismatch` (jam answers for a release that is not entering a jam), `jam_closed`, `jam_not_open`, `at_entry_limit`, `invalid_jam_answers`, `kind_not_in_jam`, `jam_entry_judged`, `jam_entry_in_review`, or `certification_replaced` (a newer release replaced this one).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "review_pending",
+                  "message": "This release is still in review. Run opengame publish --wait to publish it the moment it passes.",
+                  "retry": "later"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`body_too_large`: the body is over `platform.manifest.bytesMax` (65536) bytes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "body_too_large",
+                  "message": "The request body is too large."
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`content_type`: send `Content-Type: application/json`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "content_type",
+                  "message": "Send a JSON request body."
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "rate_limited",
+                  "message": "This token has made too many requests. Wait a minute and try again.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error`: a failure retrying cannot fix. Quote `requestId` when you report it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "OpenGame hit an error it cannot recover from by retrying. Quote 2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246 when you report it.",
+                  "retry": "never",
+                  "requestId": "2f7b9c14-6e3a-4d85-b1f0-8a5c3e9d7246"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`submission_intake_paused`: submissions are briefly paused, so wait `retryAfterSeconds`. `submission_destination_unavailable`: submissions have nowhere to go right now, so nothing was published. `temporarily_unavailable` or `platform_unconfigured`: send it again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "submission_intake_paused",
+                  "message": "Submissions are briefly paused. Your game and saved request are still here. Try again in a few minutes.",
+                  "retry": "later",
+                  "retryAfterSeconds": 60
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://opengame.io/api/v1/submissions/6b0d3f9e-2a7c-4d18-9f4b-3e6a1c8d5b02/publish' \\\n  --header \"Authorization: Bearer $OPENGAME_TOKEN\" \\\n  --header 'Content-Type: application/json' \\\n  --data '{\n  \"description\": \"A five-lane rhythm game of original songs, where how well you play changes the mix.\",\n  \"genre\": \"party-social-sandbox\",\n  \"controller\": false\n}'"
           }
         ]
       }

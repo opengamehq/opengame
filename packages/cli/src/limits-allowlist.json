@@ -115,6 +115,7 @@
     "platform.preview.documentBufferBytesMax",
     "platform.preview.inventoryBytesMax",
     "platform.review.autonomous",
+    "platform.review.decisionDeadlineSeconds",
     "platform.review.statusPollMs",
     "platform.runtimeContracts.threadedContract",
     "platform.runtimeContracts.threadedMoves",

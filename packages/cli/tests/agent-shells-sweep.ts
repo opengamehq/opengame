@@ -56,6 +56,9 @@ export const RUNS: Record<string, string[][]> = {
   version: [["version"]],
   submit: [["submit", "{root}"], ["submit", "{root}", "--release", releaseId, "--no-jam", "--no-wait"]],
   jams: [["jams"], ["jams", "fixture-jam"]],
+  /* Against the stand-in, the game it reads has no review to publish, so it ends at once; a
+     wrong flag value is refused before anything is sent. */
+  publish: [["publish", "{root}"], ["publish", "{root}", "--game", "abc123", "--controller", "maybe"]],
   skills: [["skills", "list", "{root}"], ["skills", "add", "{fresh}"]],
   // Both games at once is refused before any request, so it ends on its own too.
   stats: [["stats", "{root}"], ["stats", gameId, "--game", gameId]],

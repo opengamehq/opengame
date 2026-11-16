@@ -95,8 +95,9 @@ No person reviews a game. Once these pass, review plays it and decides by itself
 game goes on to be published, or back to the creator with the reason. It goes back when the
 build fails packaging, when its review cost more than any game should need (make it smaller
 or simpler), or when a confident verdict reads it as not a real game, as made for a phone
-held upright, or as not running on a supported web runtime. The creator then
-confirms the details and certifies the rights on the deploy's page.
+held upright, or as not running on a supported web runtime. A game's first release then
+waits for its creator to confirm the details, on the deploy's page or with `opengame
+publish`; an update of a live game publishes by itself.
 
 Thresholds that warn rather than refuse: an initial download over
 {{mib performance.initialTransferBytesWarn}} before the first playable frame, time to

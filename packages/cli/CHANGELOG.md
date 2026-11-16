@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.10.0
+
+- `opengame publish` publishes a release that passed review, as Confirm and publish does on
+  the deploy's page and through the same confirmation: the details review wrote, or the ones
+  given as flags (`--description`, `--genre`, `--subgenre`, `--tagline`, `--controller`,
+  `--keep-words`), and for a jam entry its track, models and sponsor tracks
+  (`--track`, `--models`, `--sponsor`, `--sponsor-email`), or `--no-jam` for the gallery. It
+  follows the publication until the game is live and prints the address to share. `--wait`
+  waits for review first. Needs a token with `submit`; `opengame login` has it.
+- `opengame deploy --publish` waits for the checks and review and publishes the release the
+  moment review passes, first publish included, taking the same jam flags.
+- An update of a game that is already live publishes by itself once it passes review, keeping
+  the live game's details and jam entry, so `opengame status` no longer sends you to the
+  deploy's page for it. For a release that waits, `next` is now `opengame publish`.
+- A deploy step past its usual time says how long it has run ("18 s so far"), not that it is
+  taking longer than usual.
+- Carries the skills from `@opengamehq/skills` 1.6.0, which publish with `opengame publish`.
+
 ## 0.9.9
 
 - Carries the skills from `@opengamehq/skills` 1.5.0: what OG Snipers, Last Contact and OG Hero

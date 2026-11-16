@@ -2243,6 +2243,7 @@
     },
     "review": {
       "autonomous": true,
+      "decisionDeadlineSeconds": 900,
       "statusPollMs": 15000
     },
     "manifest": {

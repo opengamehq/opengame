@@ -207,11 +207,17 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   edit_unavailable: { exit: 5, retry: "after-fix" }, handle_required_argument: input,
   // opengame jam withdraw and reenter: a subcommand that is not one.
   jam_action_required: input,
+  /* opengame publish and deploy --publish (16 Nov 2026): a server from before its route, a game
+     with no release to publish, a --release that is not the one waiting, and a review that
+     returned or blocked the release instead of passing it. */
+  publish_unavailable: { exit: 5, retry: "after-fix" }, nothing_to_publish: input, release_not_waiting: input,
+  release_returned: { exit: 1, retry: "after-fix" }, release_blocked: { exit: 1, retry: "never" },
   // opengame achievements retire: no id, or one the game does not have.
   achievement_required: input, achievement_not_found: input,
   // opengame stats --csv: the file is somebody's, or cannot be written.
   csv_exists: input, csv_unwritable: input,
-  invalid_jam: input, jam_answers_required: input, jam_choice_required: input,
+  invalid_jam: input, jam_choice_required: input,
+  jam_answers_required: say(input, "This release goes live as a jam entry, so it needs the jam's answers: its track and the models you used. Run opengame jams <slug> to see them. Nothing was published.", 409),
   /* `page:` on the rows below is what the website says, from the Confirm details form and
      the workspace's release list (16 Nov 2026). The CLI's sentence names a command, and the
      form showed it as it was: "Run opengame jams <slug> to see it" to a person at a form. */
@@ -292,6 +298,12 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   jam_not_open: say(input, "This jam was not open for entries yet, so this build cannot enter it. Deploy again once it opens to enter. Nothing was submitted.", 409),
   certification_incomplete: say(input, "Tick every statement to certify this release.", 400),
   submission_not_found: say(input, "This submission was not found in your account.", 404),
+  /* `opengame publish` (16 Nov 2026) of a release whose review has not answered yet. Waiting is
+     what fixes it, so `later`: run it again with --wait, or once review has passed. */
+  review_pending: say({ exit: 5, retry: "later" }, "This release is still in review. Run opengame publish --wait to publish it the moment it passes.", 409),
+  /* The details step's own sentence for a release nothing confirmed could put live: a jam entry
+     judges play, a closed jam's freeze, a gallery closed to a game the jam cannot take. */
+  publish_not_possible: say({ exit: 2, retry: "never" }, "This release cannot be published. The message says why.", 409),
   preview_not_ready: { exit: 4, retry: "later", status: 409 },
   invalid_request: say(input, "The request could not be read. Check the command's flags and run it again.", 400),
   invalid_range: input, range_not_supported: input, content_type: input, body_too_large: input,

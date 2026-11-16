@@ -87,7 +87,7 @@ export async function submitCommand(root: string, flags: Flags, output: Output) 
       const url = await releasePage(api, token, root, inProject, release);
       if (!flags["no-browser"]) openBrowser(url, true, api.origin);
       output.emit({ type: "result", command: "submit", data: { submitted: false, url,
-        message: `Your deploy is already in review. Enter the jam on its page, where you choose the track, the models you used and any sponsor track:\n${url}` } });
+        message: `Your deploy is already in review. Once it passes, enter the jam with opengame publish --track <track> --models <models>, or on its page, where you choose the track, the models you used and any sponsor track:\n${url}` } });
       return;
     }
     const jam = destination;
@@ -142,8 +142,8 @@ export async function submitCommand(root: string, flags: Flags, output: Output) 
       let page: string | null = null;
       try { page = result.certifyUrl ? trustedBrowserUrl(result.certifyUrl, api.origin) : null; } catch { /* said without the link */ }
       output.emit({ type: "notice", code: "jam_answers_unused", message: page
-        ? `This release was already in review, sent there by its deploy, so these jam answers were not used. Enter the jam on its deploy page once review finishes: ${page}`
-        : "This release was already in review, sent there by its deploy, so these jam answers were not used." });
+        ? `This release was already in review, sent there by its deploy, so these jam answers were not used. Once review passes, enter the jam with opengame publish and the same jam flags, or on its deploy page: ${page}`
+        : "This release was already in review, sent there by its deploy, so these jam answers were not used. Once review passes, enter the jam with opengame publish and the same jam flags." });
     }
     if (result.state === "needs_certification" && result.certifyUrl) {
       // Validate before printing too: an agent may hand this link to the creator.

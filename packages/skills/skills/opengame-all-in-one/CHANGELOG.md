@@ -1,5 +1,9 @@
 # opengame-all-in-one changelog
 
+## 1.0.5
+
+Carries `opengame-api` 1.0.8, `opengame-cli` 1.9.0, `opengame-deploy` 1.1.7 and `opengame-jam` 1.1.0, which publish with `opengame publish` (16 Nov 2026).
+
 ## 1.0.4
 
 Carries opengame-performance 1.1.1 and opengame-scene-audit 1.1.1.

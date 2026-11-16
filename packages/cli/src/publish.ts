@@ -26,8 +26,10 @@ export function publishAnswers(flags: Flags): PublishAnswers {
   const answers: PublishAnswers = {};
   for (const field of ["title", "tagline", "description"] as const) if (typeof flags[field] === "string") answers[field] = flags[field] as string;
   if (flags["keep-words"]) answers.keepOwnWords = true;
-  if (typeof flags.genre === "string" && flags.genre !== "auto") {
-    if (!(GENRE_SLUGS as readonly string[]).includes(flags.genre)) throw new CliError("invalid_flag", `Use --genre with one of ${GENRE_SLUGS.join(", ")}, or auto.`, EXIT.input);
+  /* No auto here: leaving the flag out is Auto where the deploy left the genre to it, and keeps
+     the genre the creator deployed with otherwise, which is what the page starts on. */
+  if (typeof flags.genre === "string") {
+    if (!(GENRE_SLUGS as readonly string[]).includes(flags.genre)) throw new CliError("invalid_flag", `Use --genre with one of ${GENRE_SLUGS.join(", ")}. Leave it out to keep the genre the game was deployed with, or review's choice when that was Auto.`, EXIT.input);
     answers.genre = flags.genre;
   }
   if (typeof flags.subgenre === "string") answers.subgenre = flags.subgenre === "none" ? null : flags.subgenre;
@@ -43,7 +45,9 @@ export function publishAnswers(flags: Flags): PublishAnswers {
     const sponsors = list(flags.sponsor);
     const sponsorEmails: Record<string, string> = {};
     for (const pair of list(flags["sponsor-email"])) {
-      const [sponsor, email] = pair.split("=", 2).map(part => part?.trim() ?? "");
+      // At the first "=", so an address with one of its own keeps the rest of it.
+      const at = pair.indexOf("=");
+      const sponsor = at < 0 ? "" : pair.slice(0, at).trim(), email = at < 0 ? "" : pair.slice(at + 1).trim();
       if (!sponsor || !email) throw new CliError("invalid_flag", "Use --sponsor-email sponsor=email, separated by commas for several, as in --sponsor-email fal=you@example.com.", EXIT.input);
       sponsorEmails[sponsor] = email;
     }

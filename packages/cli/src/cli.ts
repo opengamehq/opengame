@@ -117,11 +117,11 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "tagline", type: "string", description: "The tagline, when the game has none yet." },
     { name: "description", type: "string", description: `The description, ${LIMITS.text.gameDescription.productMin} to ${LIMITS.text.gameDescription.max} characters, when the game still has the placeholder. Without it, review's when it wrote one.` },
     { name: "keep-words", type: "boolean", description: "Keep your title, tagline and description as you wrote them, not the tidied copy review offers on a first publish." },
-    { name: "genre", type: "string", description: "A genre slug, or auto for review's choice. Without it, the genre the game was deployed with, or auto when the deploy left it to Auto." },
+    { name: "genre", type: "string", description: "A genre slug. Without it, the genre the game was deployed with, or review's choice when the deploy left it to Auto." },
     { name: "subgenre", type: "string", description: "A subgenre slug under that genre, or none." },
     { name: "controller", type: "string", values: ["yes", "no"], description: "Whether the game supports a gamepad." },
     ...publishFlags(""), stdin, json],
-    examples: ["opengame publish", "opengame publish --wait --json", "opengame publish --description \"Race the rain to the river.\" --genre racing --json",
+    examples: ["opengame publish", "opengame publish --wait --json", "opengame publish --description \"Race the rain to the river before the rising water closes every road home.\" --genre racing-sports --json",
       "opengame publish --track rpg --models claude,fal --sponsor fal --sponsor-email fal=you@example.com --json"] },
   status: { args: "[dir]", description: "Show the most recent deploy for this folder, with its findings. Finishes saving its declared achievements if the deploy could not. Removing an achievement from opengame.json does not switch it off. To retire one, run opengame achievements retire <id> and take it out of opengame.json too, since a deploy that still declares it turns it back on. Unlocks are never deleted.", flags: [
     { name: "watch", type: "boolean", description: "Follow the deploy until it is ready, refused, or the watch window closes." },

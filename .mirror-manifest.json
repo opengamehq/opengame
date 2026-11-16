@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "cabbdc790bf37f7ef895b26744e035d4036bcc6c"
+    "commit": "5cdc4c4b9d1adeedd46cbd567b92c8e9a4c66786"
   },
-  "digest": "89365f2c5ae4d94031ba5fd054e88e5225f606b71079b935c6c7e412077de34d",
+  "digest": "b3bb0bb89a4de4d86aa5cde56f4aea1f79283e7072fd5675fb6acc4d2731b663",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -327,8 +327,8 @@
     },
     {
       "path": "packages/cli/src/cli.ts",
-      "bytes": 63347,
-      "sha256": "b946da52748f6d06eb84bb1fc49e9d9aaecda8c5d9a3a81060f7674ddcfdce6f",
+      "bytes": 63383,
+      "sha256": "e2d2bc2220b1d62846eb4d772c4eb71a4f07f9bf94b9fc0bc3439d6717c774d0",
       "executable": false
     },
     {
@@ -501,8 +501,8 @@
     },
     {
       "path": "packages/cli/src/publish.ts",
-      "bytes": 12478,
-      "sha256": "d6c8ab4b7aa7b4c0b242ffee1586577a10e95f6ead5adfd4db80162ac71c4026",
+      "bytes": 12874,
+      "sha256": "d96a566fbf269426c768fc7cfd3161df7082cb4c4f87e3e1c77fd30cc5dff145",
       "executable": false
     },
     {
@@ -1331,6 +1331,12 @@
       "path": "packages/cli/tests/protection-bypass.test.ts",
       "bytes": 7661,
       "sha256": "70eb7a2f17d0a274bd1557cb75b707eeb79f1c2d5862713ccb6ce1a195a9a0f2",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/publish-flags.test.ts",
+      "bytes": 1337,
+      "sha256": "6b733c929f20b5db1cc11b804680098264264e85e676366f8053197cf4d4af23",
       "executable": false
     },
     {

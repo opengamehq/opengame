@@ -62,6 +62,14 @@ Call the bridge from the browser's main thread. `window.OpenGame` does not exist
 Web Worker and shared memory does not change that; send the call to the main thread
 with the engine's own mechanism.
 
+Unreal Engine 5.9's Wasm package is always threaded, so OpenGame adds the SDK to its page
+and the game needs no script of its own. From C++, call `window.OpenGame` inside
+`MAIN_THREAD_EM_ASM`, behind `#ifdef __EMSCRIPTEN__`, which runs the JavaScript on the
+page's thread whichever Unreal thread calls it, and waits until the page has read any
+string argument. The async variant returns first, so a temporary string can be freed
+before the page reads it. The docs page `engines/unreal` has a
+header with ready, score and achievement calls.
+
 ## Threaded and WebAssembly builds
 
 A build that uses threads needs `SharedArrayBuffer`, which a frame has only when it is

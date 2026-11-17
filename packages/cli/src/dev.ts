@@ -300,7 +300,24 @@ export async function startDevServer(options: { snapshot: Map<string, Uint8Array
       response.statusCode = 200; response.setHeader("Content-Type", "application/json"); response.setHeader("Content-Length", body.byteLength);
       return response.end(request.method === "HEAD" ? undefined : body);
     }
-    path = path === "/" ? LIMITS.bundle.entryPoint : path.slice(1);
+    /* Page addresses resolve as og-games resolves them (infra/worker/src/page-address.ts):
+       a folder's address with its slash is its index.html, an address with no suffix that is
+       not a file is name.html, and a folder's address without the slash is sent to the slash. Until 17 Nov 2026 dev
+       answered 400 to /menu/ and 404 to /about, so a Next.js or Astro game's second page
+       failed here while it worked once hosted. Only a page navigation, as there: a script's
+       fetch of a missing address gets its 404 here too, or it would work locally and fail
+       once hosted. */
+    path = path === "/" ? LIMITS.bundle.entryPoint : path.endsWith("/") ? `${path.slice(1)}${LIMITS.bundle.entryPoint}` : path.slice(1);
+    if (request.headers["sec-fetch-mode"] === "navigate" && !files.has(path) && !external?.paths.has(path) &&
+        !path.slice(path.lastIndexOf("/") + 1).includes(".") && !path.startsWith("_og/")) {
+      if (files.has(`${path}.html`)) path = `${path}.html`;
+      else if (files.has(`${path}/${LIMITS.bundle.entryPoint}`)) {
+        const query = (request.url ?? "").includes("?") ? (request.url ?? "").slice((request.url ?? "").indexOf("?")) : "";
+        response.statusCode = 308;
+        response.setHeader("Location", `/${path.split("/").map(encodeURIComponent).join("/")}/${query}`);
+        return response.end();
+      }
+    }
     /* Here the export is the top-level page, so a game can read `?wave=3` from its own
        address and it works. On OpenGame a parameter added to the play page never reaches
        the game: OpenGame sets the frame's address and loads it with no referrer.

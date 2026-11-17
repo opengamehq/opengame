@@ -182,7 +182,7 @@ export async function collectFiles(folder: string, options: { externalAssets?: R
       // The project's own files are never part of the game and are not news:
       // reporting "Excluded opengame.json" on every check read like a problem.
       if (entry.name === "opengame.json" || bundlePath === "opengame-assets" || bundlePath === ".opengame") continue;
-      if (isExcludedPath(bundlePath)) {
+      if (isExcludedPath(bundlePath, entry.isDirectory())) {
         excluded.push(bundlePath); continue;
       }
       if (options.externalAssets?.has(bundlePath)) {
@@ -345,11 +345,16 @@ export const AGENT_FOLDERS = [".claude", ".agents", ".codex", ".cursor", ".openc
  */
 export const GIT_FILES = [".gitignore", ".gitattributes", ".gitmodules", ".gitkeep"] as const;
 
-export function isExcludedPath(bundlePath: string): boolean {
+/** A compressed copy of a page (Unreal's index.html.br). og-games never serves a page encoded,
+ * so it is litter. A file name only, as preflight JUNK and names.py is_junk read it. */
+const COMPRESSED_PAGE = /\.html?\.(?:br|gz)$/i;
+
+export function isExcludedPath(bundlePath: string, directory = false): boolean {
   // The preflight and the archive stage drop desktop.ini and .Spotlight-V100 as junk too,
   // so listing them here is what puts them in the "Excluded from upload" notice.
   return bundlePath.split("/").some(name => ["node_modules", ".git", ".opengame", ".DS_Store", "Thumbs.db", "desktop.ini", ".Spotlight-V100", "__MACOSX", ...AGENT_FOLDERS, ...GIT_FILES].includes(name)
-    || name.startsWith("._") || /^\.env/i.test(name) || /\.(?:js|mjs|cjs|css|wasm)\.map$/i.test(name));
+    || name.startsWith("._") || /^\.env/i.test(name) || /\.(?:js|mjs|cjs|css|wasm)\.map$/i.test(name))
+    || (!directory && COMPRESSED_PAGE.test(bundlePath.split("/").at(-1)!));
 }
 
 /** How long a rename on Windows keeps retrying a file something else has open. */

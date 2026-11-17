@@ -21,7 +21,7 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-15-paint-fullscreen-offer";
+export const GAME_AUDIO_VERSION = "audio-16-godot-loader";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 const SCREENSHOT = (({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }) =>
@@ -226,23 +226,109 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // all it buys is its own cover staying up or coming off.
   let painted = false;
   let paintTimed = false;
+  // GODOT'S OWN LOADING SCREEN IS NOT THE GAME, AND NOBODY SHOULD SEE IT. Every Godot web
+  // export ships an HTML shell whose #status overlay (a grey #242424 ground, the boot splash
+  // image, which is the Godot logo unless the creator replaced it, and a progress bar) sits
+  // over the canvas while the engine downloads and compiles, and is removed by the shell the
+  // moment engine.startGame() settles, which is after the engine's first frame. That splash
+  // image was this document's first contentful paint, so the parent's cover came off a tenth
+  // of a second in, and a player watched Godot's logo, grey and a progress bar for as long as
+  // forty megabytes of wasm took, instead of our own loader (17 Nov 2026). So here, for a
+  // document shaped like Godot's shell and nothing else:
+  // the overlay is hidden, which keeps it from ever counting as a paint and from showing
+  // through a cover that lifts for any other reason, and 'painted' waits until the shell has
+  // taken its overlay down. Godot's own failure notice (#status-notice: a browser missing a
+  // feature, a file that failed) stays visible and counts as the end of the wait, because
+  // the reason a game will not start is worth more than our spinner. Nothing about the
+  // game's files changes; this is a stylesheet in this realm and an observer, and a shell
+  // that renamed its elements simply gets the first contentful paint as before.
+  // ':has' scopes the rule to the shell's exact shape: the canvas and the overlay as children
+  // of body, and the progress bar inside the overlay. A browser without ':has' ignores the
+  // rule, and the cover still waits, so it is only the cover lifting early that shows less.
+  const SHELL = 'body:has(> canvas#canvas) > #status:has(> #status-progress)';
+  let contentful = false;
+  let shell = null;
+  let notice = null;
+  // Down is out of the document, as Godot 4's shell takes it, or hidden by the shell itself
+  // (its own inline style, or anything that makes it display:none), as a customised or older
+  // shell may do instead. Its computed visibility is never read: the rule below hides it.
+  const shellDown = () => {
+    try { return !shell.isConnected || shell.style.display === 'none' || shell.style.visibility === 'hidden' || getComputedStyle(shell).display === 'none'; } catch { return true; }
+  };
+  const noticeShown = () => {
+    try { return Boolean(notice && notice.isConnected && getComputedStyle(notice).display !== 'none' && notice.textContent.trim()); } catch { return false; }
+  };
+  const findShell = () => {
+    if (shell) return;
+    try {
+      const status = document.getElementById('status');
+      if (status && status.isConnected && status.matches(SHELL)) watchShell(status);
+    } catch { /* No selector support for :has, or no DOM yet: no shell to wait for. */ }
+  };
+  // Whether Godot's loading overlay is still what the shell is showing.
+  const shellUp = () => { findShell(); return Boolean(shell && !shellDown() && !noticeShown()); };
+  // A first paint from something parsed above the overlay, a title a creator added over
+  // Godot's canvas, would go out before the overlay is found. So while a document whose body
+  // already holds Godot's canvas is still parsing, the report waits for the parse to finish.
+  const mayBeShell = () => { try { return document.readyState === 'loading' && Boolean(document.querySelector('body > canvas#canvas')); } catch { return false; } };
+  const reportPaint = () => {
+    if (painted || !contentful || shellUp() || (!shell && mayBeShell())) return;
+    painted = true;
+    if (documentParent) host.postMessage({ og: 1, type: 'painted' }, documentParent);
+  };
+  // The shell taking its overlay down is the engine having started and drawn, so it counts
+  // as a paint even where the browser never times one on a WebGL canvas. Counted two
+  // animation frames later, not at once: the overlay goes in a microtask after the engine's
+  // first frame is drawn and before it is presented, and a report sent then can start the
+  // cover's fade a frame ahead of the game, over the shell's bare body. The timer is for a
+  // frame the browser has stopped animating, which nobody is looking at. Only the overlay's
+  // own attributes and the notice are watched, never the whole overlay, so a shell that
+  // animates its loader through inline styles costs nothing per frame here.
+  function watchShell(status) {
+    shell = status;
+    notice = status.querySelector(':scope > #status-notice');
+    let counted = false;
+    const count = () => { if (!counted) { counted = true; contentful = true; reportPaint(); } };
+    const watchers = [];
+    const stop = () => watchers.forEach((watcher) => watcher.disconnect());
+    const changed = () => {
+      if (shellUp()) return;
+      if (shellDown()) stop();
+      try { requestAnimationFrame(() => requestAnimationFrame(count)); } catch { /* No frames: the timer counts it. */ }
+      setTimeout(count, 500);
+    };
+    const watch = (target, options) => { const watcher = new MutationObserver(changed); watcher.observe(target, options); watchers.push(watcher); };
+    const looks = ['style', 'class', 'hidden'];
+    watch(status.parentNode, { childList: true });
+    watch(status, { attributes: true, attributeFilter: looks });
+    if (notice) watch(notice, { attributes: true, attributeFilter: looks, childList: true, characterData: true, subtree: true });
+  }
   try {
     if (typeof PerformanceObserver === 'function' && (PerformanceObserver.supportedEntryTypes || []).includes('paint')) {
       new PerformanceObserver((list, observer) => {
         if (!list.getEntries().some((entry) => entry.name === 'first-contentful-paint')) return;
         observer.disconnect();
-        painted = true;
-        if (documentParent) host.postMessage({ og: 1, type: 'painted' }, documentParent);
+        contentful = true;
+        reportPaint();
       }).observe({ type: 'paint', buffered: true });
       paintTimed = true;
     }
   } catch { /* No paint timing: the report below says nothing about painting. */ }
+  // Only where paints are timed: a parent that cannot be told when the engine started lifts
+  // its cover on parsing, and there Godot's own loader is better than a black frame.
+  if (paintTimed) {
+    try {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(SHELL + '{visibility:hidden!important}' + SHELL + ' > #status-notice{visibility:visible!important}');
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    } catch { /* No constructable stylesheets: the cover's wait is the whole of it. */ }
+  }
   const reportDocument = () => {
     if (documentParent && documentParsed) {
       host.postMessage(paintTimed ? { og: 1, type: 'document-loaded', painted } : { og: 1, type: 'document-loaded' }, documentParent);
     }
   };
-  document.addEventListener('DOMContentLoaded', () => { documentParsed = true; reportDocument(); }, { once: true });
+  document.addEventListener('DOMContentLoaded', () => { documentParsed = true; if (paintTimed) { findShell(); reportPaint(); } reportDocument(); }, { once: true });
   // A game that moves its own frame to a second page, as Mario Colosseum does from its
   // ownership question to play.html, takes down the document the parent's cover was
   // lifted for. The next one starts blank, so the parent is told before this one goes,

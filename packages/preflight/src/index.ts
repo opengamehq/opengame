@@ -132,8 +132,11 @@ export interface PreflightResult {
    opengame.json, and a game with no build step deploys that folder, so CLI 0.9.7 and older
    shipped it to the public origin (final production pass, D13, 14 Nov 2026). The CLI and Drop
    leave them out since 0.9.8; this drops them from any upload that did not. Named, not every
-   dotfile, because .well-known/ is a path a web export may serve on purpose. */
-const JUNK = /(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini|__MACOSX\/|\.git(?:ignore|attributes|modules|keep)$)/i;
+   dotfile, because .well-known/ is a path a web export may serve on purpose.
+   A compressed copy of a page (`index.html.br`, which every Unreal 5.9 Wasm export writes) is
+   litter too: og-games serves a page identity only and answers 404 for a page with an
+   encoding, so the copy can never reach a browser, and it is not an archive to refuse. */
+const JUNK = /(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini|__MACOSX\/|\.git(?:ignore|attributes|modules|keep)$|[^/]+\.html?\.(?:br|gz)$)/i;
 
 /** Dropped with a note, because the creator may not know they were being shipped. */
 const SOURCE_MAP = /\.(?:js|mjs|cjs|css|wasm)\.map$/i;
@@ -275,6 +278,16 @@ function isInert(spans: Span[], at: number): boolean {
 /** Windows separators, `./` prefixes and stray leading slashes, all gone. */
 function normalise(path: string): string {
   return path.replace(/\\/g, "/").replace(/^\.\//, "").replace(/^\/+/, "");
+}
+
+/** A decoded payload held one byte per character (latin1) back as bytes. Written as a loop
+ * into one preallocated array because `Uint8Array.from(text, mapFn)` collects every element
+ * first, and on the 140 MB module of a real Unreal 5.9 export that intermediate array ran
+ * the CLI out of heap ("invalid array length") before the check printed anything. */
+export function latin1Bytes(text: string): Uint8Array {
+  const out = new Uint8Array(text.length);
+  for (let i = 0; i < text.length; i++) out[i] = text.charCodeAt(i) & 0xff;
+  return out;
 }
 
 function dirOf(path: string): string {
@@ -498,8 +511,12 @@ export async function preflight(
      watches a spinner. */
   const credentialHits = new Map<string, string[]>();
   for (const file of credentialChecks() ? files : []) {
+    /* A precompressed copy is the same file to a browser, so `credentials.json.br` is a
+       service-account key too. That name was refused as an archive until .json joined the
+       precompressed types for Unreal (17 Nov 2026), so the name check has to look through it. */
+    const named = compressedBrowserAsset(file.path)?.path ?? file.path;
     for (const { re, what } of CREDENTIAL) {
-      if (!re.test(file.path)) continue;
+      if (!re.test(file.path) && !re.test(named)) continue;
       const found = credentialHits.get(what);
       if (found) found.push(file.path);
       else credentialHits.set(what, [file.path]);
@@ -899,9 +916,9 @@ export async function preflight(
     try {
       const held = reading.indexOf(file);
       const decoded = held >= 0 ? texts[held] ?? null : null;
-      if (decoded != null) bytes = Uint8Array.from(decoded, (char) => char.charCodeAt(0) & 0xff);
+      if (decoded != null) bytes = latin1Bytes(decoded);
       else if (!compressedBrowserAsset(file.path)) bytes = file.bytes ? await file.bytes() : new TextEncoder().encode(await file.text());
-      else if (file.decodedText) bytes = Uint8Array.from(await file.decodedText(), (char) => char.charCodeAt(0) & 0xff);
+      else if (file.decodedText) bytes = latin1Bytes(await file.decodedText());
     } catch { bytes = null; }
     if (!bytes) continue;
     wasmModules.push(wasmModule(file.path, bytes));

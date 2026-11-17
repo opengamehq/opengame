@@ -1,7 +1,7 @@
 import { LIMITS } from "@opengame/shared";
 import { parseScript } from "./script-source";
 import { parse as parseHtml, type DefaultTreeAdapterTypes } from "parse5";
-import { credentialChecks, preflight, type Finding, type PreflightFile, type PreflightOptions } from "./index";
+import { credentialChecks, latin1Bytes, preflight, type Finding, type PreflightFile, type PreflightOptions } from "./index";
 import { compressedBrowserAsset } from "./names";
 import { collectTextEvidence } from "./text-evidence";
 import { redactFinding } from "./diagnostic-text";
@@ -147,7 +147,7 @@ export async function platformPreflight(files: PreflightFile[], options: Preflig
     try {
       /* A precompressed .ktx.gz or .ktx.br is decoded first, one byte per character, as
          the browser and the server both read it. */
-      if (compressedBrowserAsset(path)) head = file?.decodedText ? Uint8Array.from((await file.decodedText()).slice(0, 64), (c) => c.charCodeAt(0) & 0xff) : null;
+      if (compressedBrowserAsset(path)) head = file?.decodedText ? latin1Bytes((await file.decodedText()).slice(0, 64)) : null;
       else head = file?.head ? await file.head(64) : file?.bytes ? (await file.bytes()).subarray(0, 64) : null;
     } catch { head = null; }
     if (!head || ktx1Decodable(head)) continue;

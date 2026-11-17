@@ -190,6 +190,18 @@ function layoutProbes(paths: string[], sources: EngineSource[]): DetectedEngine[
   if (((loader && parts.length > 0) || legacy) && textHas(/\bcreateUnityInstance\b|\bUnityLoader\b/)) out.push({ id: "unity", name: "Unity", version: null,
     evidence: loader ? `${loader} beside ${parts.length} build file${parts.length === 1 ? "" : "s"}` : `${legacy}` });
 
+  /* Unreal 5.9's Wasm platform stages the game under <Project>/Binaries/Wasm/ (the glue and the
+     module, `TPPWeb590-Wasm-Shipping.js` and `.wasm` in a Shipping stage), writes
+     wasm-manifest.json beside the page, and ships a page whose scripts hang their state on
+     `window.ueCompat` and `Module.ueWebPage`. All three, because each alone is a folder name,
+     a manifest name or a string anybody can write. Read from a real Third Person export on
+     17 Nov 2026. A Shipping stage names no engine version anywhere, so none is reported. */
+  const ueBinary = has(/(?:^|\/)Binaries\/Wasm\/[^/]+\.(?:js|wasm)$/i);
+  const ueManifest = has(/(?:^|\/)wasm-manifest\.json$/i);
+  const ueLoader = textHas(/\bwindow\.ueCompat\b|\bModule\.ueWebPage\b/);
+  if (ueBinary && ueManifest && ueLoader) out.push({ id: "unreal", name: "Unreal Engine", version: null,
+    evidence: `${ueBinary} beside ${ueManifest} and the loader in ${ueLoader.path}` });
+
   const c3 = has(/(?:^|\/)(?:c3runtime\.js|scripts\/c3main\.js)$/i);
   const c2 = has(/(?:^|\/)c2runtime\.js$/i);
   const scirra = textHas(/<meta[ \t\n\r\f\v]+name=["']generator["'][ \t\n\r\f\v]+content=["']Scirra Construct/i);
@@ -585,6 +597,13 @@ export const ENGINE_DEFAULT_REFS: EngineDefault[] = [
   { engine: "unity", value: "decompress.js", detail: "a module inside the brotli decoder Unity's loader carries, not a file it fetches" },
   { engine: "unity", value: "./dictionary.bin.js", detail: "a module inside the brotli decoder Unity's loader carries, not a file it fetches" },
   { engine: "unity", value: "/index.js", detail: "the module resolver inside Unity's bundled brotli decoder, not a file it fetches" },
+  /* Unreal 5.9's Wasm page, read in a real Third Person Shipping export on 17 Nov 2026.
+     wasm-compat.js loads `wasm-bench.js` only for a `?bench=` link, and says the engine
+     template has none; wasm-prewarm.js writes webgpu-capture.json into the browser's private
+     file system (OPFS) with `getFileHandle(..., { create: true })`, and never fetches it. */
+  { engine: "unreal", value: "wasm-bench.js", detail: "a benchmark script Unreal's page loads only for a ?bench= link; the engine template ships none" },
+  { engine: "unreal", value: "webgpu-capture.json", detail: "a diagnostics file Unreal's page writes into the browser's private storage, never one it fetches" },
+  { engine: "unreal", value: "logs/webgpu-capture.json", detail: "where Unreal's page says it wrote its WebGPU diagnostics in the browser's private storage, never a file it fetches" },
 ];
 
 /** The trailing `\n` a banner template carries is part of the matched text, not the URL. */

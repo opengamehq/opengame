@@ -1,4 +1,4 @@
-> Carried from `opengame-sdk` 1.0.13. Read it when: Integrate a browser game with OpenGame through @opengamehq/sdk, the injected global or a native engine bridge. Covers start-up, the player and their OG at load, names, leaderboards, achievements, events, pause, mute, fullscreen, keys inside the frame and threaded builds. Use when the person says integrate with OpenGame, add the SDK, show the player's name or OG, add a leaderboard or achievement, track events, fix fullscreen or keys in the game frame, or asks how a game talks to OpenGame.
+> Carried from `opengame-sdk` 1.0.14. Read it when: Integrate a browser game with OpenGame through @opengamehq/sdk, the injected global or a native engine bridge. Covers start-up, the player and their OG at load, names, leaderboards, achievements, events, pause, mute, fullscreen, keys inside the frame and threaded builds. Use when the person says integrate with OpenGame, add the SDK, show the player's name or OG, add a leaderboard or achievement, track events, fix fullscreen or keys in the game frame, or asks how a game talks to OpenGame.
 
 
 # Integrate a game with OpenGame
@@ -46,7 +46,7 @@ OpenGame team which line here is wrong.
 | Bundled JavaScript | `import { og } from '@opengamehq/sdk'` | the import |
 | No build step | copy `dist/opengame.js` beside the game, in a `<script>` before the game's own | `OpenGame.og` |
 | Already ships `js/og-platform.js` (Studio template, our Originals) | replace that file with the SDK's `dist/og-platform.js` | its `og` export |
-| A native engine (WebAssembly, Kaigen, Unity, Godot) | `OpenGame.bridge`, called from the main thread | the bridge's operations |
+| A native engine (WebAssembly, Kaigen, Unity, Godot, Unreal Engine) | `OpenGame.bridge`, called from the main thread | the bridge's operations |
 
 Ship the SDK with the game rather than loading it from a CDN, so an outage cannot take it
 away.

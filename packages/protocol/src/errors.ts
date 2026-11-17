@@ -101,7 +101,7 @@ export const ERRORS: Readonly<Record<string, Row>> = {
      none installed and no lockfile to install from, or the lockfile's install failed. */
   dependencies_missing: game, install_failed: game,
   archive_limit: game, symlink: game, special_file: game, unportable_name: game, unicode_collision: game, build_changed: game,
-  manifest_invalid: game, manifest_unreadable: game, folder_missing: game,
+  manifest_invalid: game, manifest_unreadable: game, folder_missing: game, static_build_required: game,
   reserved_runtime_path: game, entry_missing: game, vendor_hash: game,
   // No opengame.json at all: the folder needs `opengame init`, which is a step, not a change to the game.
   manifest_missing: say(input, "There is no opengame.json in this folder. Run opengame init."),

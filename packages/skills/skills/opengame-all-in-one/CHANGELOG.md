@@ -1,5 +1,13 @@
 # opengame-all-in-one changelog
 
+## 1.0.9
+
+Carries opengame-sdk 1.0.14 and opengame-deploy 1.1.11, which name Unreal Engine 5.9 and say how its C++ reaches the SDK. (17 Nov 2026)
+
+## 1.0.8
+
+Carries opengame-deploy 1.1.10. (17 Nov 2026)
+
 ## 1.0.7
 
 Carries opengame-cli 1.9.2, opengame-deploy 1.1.9, opengame-jam 1.1.1, opengame-router 1.0.9 and opengame-performance 1.1.2, and says `opengame setup` leaves this skill out too. (17 Nov 2026)

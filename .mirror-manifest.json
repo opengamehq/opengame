@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "9580a2e0a957fc25df62e030f987ac8f5d44c084"
+    "commit": "6a3a4959b5d33072cf9db6127189f4730fd90a82"
   },
-  "digest": "f235a705f0f66184d3467f8a116e9648a5141bc8e39ddd474471ac703d3d09ab",
+  "digest": "255831b7164a9a7061232a38a18fe8c8b16700165703969cd3d1f1825872132f",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -201,8 +201,8 @@
     },
     {
       "path": "infra/worker/src/game-audio.ts",
-      "bytes": 76263,
-      "sha256": "9cf863edee62e1b2e1129890bb9909326c0ddcd16995d937a46ef3e1c1511a70",
+      "bytes": 82200,
+      "sha256": "b67d6fff3bb06ec7fb940286cbda0d4387f336deb90367e762d83a44190a387f",
       "executable": false
     },
     {
@@ -226,7 +226,7 @@
     {
       "path": "packages/cli/CHANGELOG.md",
       "bytes": 20172,
-      "sha256": "1714ab79f00adcfbbfbc112b7d707dc39a9cda1deabc689dd4e4ad501dc5ce08",
+      "sha256": "cee97fb4fe1e7589998603ce032c57ff8241253a14c7525af91d9a41e7b89691",
       "executable": false
     },
     {
@@ -315,8 +315,8 @@
     },
     {
       "path": "packages/cli/src/build-output.ts",
-      "bytes": 38337,
-      "sha256": "eec997dff80d564ebb30290ad2a0985b749989f554d333a461f37b7f1052e638",
+      "bytes": 38608,
+      "sha256": "991a76b2203af0e24fc32d0d455f23fc9e1ca63b9fb3b33b5fc584403362d921",
       "executable": false
     },
     {
@@ -339,8 +339,8 @@
     },
     {
       "path": "packages/cli/src/deploy.ts",
-      "bytes": 91159,
-      "sha256": "cb063745465e456c0c5309c9ce56a9642ad0d2675a2cd0285ff590aee8efe33a",
+      "bytes": 91853,
+      "sha256": "1d4713bd1302211e709d63b0a953d4f97afb315da9b4e36b71b6742c538cc07a",
       "executable": false
     },
     {
@@ -747,8 +747,8 @@
     },
     {
       "path": "packages/cli/tests/build-output.test.ts",
-      "bytes": 30106,
-      "sha256": "b1bd4680ee388c67b4a7ad0b49f8d209359be96eed431caf84c4edd9cba4896e",
+      "bytes": 30919,
+      "sha256": "a6a532a159b5433520047612589e1e0ece9a2f24682f98cc9175cc8687f26c98",
       "executable": false
     },
     {

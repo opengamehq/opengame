@@ -340,6 +340,13 @@ export async function build(command: string, root: string, output: Output, timeo
     : `The build command failed. Its output is ${capture ? "in the finding above" : "above"}.`, 1, { finding, ...(missing?.install ? { next: missing.install } : {}) });
 }
 
+/** Whether a build command is the package's own build script, as init writes it (`npm run
+ * build`, `pnpm run build`, `yarn build`, `bun run build`), so reading that script says what it
+ * will do. Any other command is the creator's, and its result is judged by its files. */
+export function runsBuildScript(command: string | undefined): boolean {
+  return typeof command === "string" && /^\s*(?:npm\s+run(?:-script)?|pnpm(?:\s+run)?|yarn(?:\s+run)?|bun\s+run)\s+build\s*$/.test(command);
+}
+
 /**
  * The site framework building this project, read before its build runs, or undefined.
  *
@@ -349,10 +356,12 @@ export async function build(command: string, root: string, output: Output, timeo
  * judged by its files alone. check, deploy and dev --build all read it, so the three agree.
  */
 export async function frameworkBeforeBuild(root: string, manifest: GameManifest, building: boolean) {
-  /* Only before a build that will run. An export built some other way (`nuxt generate` run
-     by hand beside a `nuxt build` script, then --no-build) is judged by its files, which is
-     what plain check and --no-build are for (review, 17 Nov 2026). */
-  if (!building || !manifest.build?.command) return undefined;
+  /* Only before a build that will run, and only when that build is the package's own build
+     script, which is what siteFramework reads. An export built some other way (`nuxt
+     generate` run by hand beside a `nuxt build` script, then --no-build) is judged by its
+     files, and so is one whose opengame.json runs another command, such as `npx nuxt
+     generate` (review, 17 Nov 2026). */
+  if (!building || !runsBuildScript(manifest.build?.command)) return undefined;
   const pkg = await readBuildPackage(root).catch(() => undefined);
   return pkg ? siteFramework(root, pkg) : undefined;
 }
@@ -368,7 +377,7 @@ export async function frameworkBeforeBuild(root: string, manifest: GameManifest,
  */
 export async function builtExportFolder(root: string, manifest: GameManifest, framework: SiteFramework | undefined, built: boolean): Promise<string> {
   return outputFolder(root, manifest).catch(async (error: unknown) => {
-    if (built && error instanceof CliError && error.code === "folder_missing" && manifest.build?.command) {
+    if (built && error instanceof CliError && error.code === "folder_missing" && manifest.build?.command && runsBuildScript(manifest.build.command)) {
       const pkg = await readBuildPackage(root).catch(() => undefined);
       if (pkg) await siteFramework(root, pkg, { strict: true });
       const output = manifest.build.output ?? ".";

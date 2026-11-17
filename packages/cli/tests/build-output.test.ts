@@ -366,6 +366,9 @@ test("site frameworks get their own static build folder, and a server build is r
     assert.equal((await detectBuildOutput(root, { scripts: { build: "vite build --base=/" }, devDependencies: { vite: "8" } })).output, "dist");
     assert.equal((await detectBuildOutput(root, { scripts: { build: "vite build --base ./" }, devDependencies: { vite: "8" } })).output, "dist");
     await assert.rejects(detectBuildOutput(root, { scripts: { build: "vite build --base=/sub/" }, devDependencies: { vite: "8" } }), { code: "static_build_required" });
+    // A build that names its own config reads that one, not vite.config.js.
+    assert.equal(await siteFramework(root, { scripts: { build: "vite build --config vite.opengame.config.ts" }, devDependencies: { vite: "8" } }), undefined);
+    assert.equal(await siteFramework(root, { scripts: { build: "vite build -c=vite.opengame.config.ts" }, devDependencies: { vite: "8" } }), undefined);
   });
   await project({ "vite.config.js": 'export default { base: "./" };', "index.html": '<script type="module" src="/src/main.js"></script>' }, async root => {
     assert.equal((await detectBuildOutput(root, { scripts: { build: "vite build" }, devDependencies: { vite: "8" } })).output, "dist");
@@ -399,6 +402,9 @@ test("a build that leaves no export says which framework setting is why", async 
     await writeFile(join(root, "package.json"), JSON.stringify({ scripts: { build: "next build" }, dependencies: { next: "16" } }));
     // A config deploy cannot read for output: let the build run, then explain the missing folder.
     await writeFile(join(root, "next.config.mjs"), "export default {};");
+    // A command other than the package's build script is the creator's, and is not read.
+    assert.equal(await frameworkBeforeBuild(root, { ...manifest, build: { ...manifest.build, command: "npx nuxt generate" } } as never, true), undefined);
+    await assert.rejects(builtExportFolder(root, { ...manifest, build: { ...manifest.build, command: "npx next build" } } as never, undefined, true), { code: "folder_missing" });
     // Nothing is read when no build will run: a prebuilt export is judged by its files.
     assert.equal(await frameworkBeforeBuild(root, manifest as never, false), undefined);
     const framework = await frameworkBeforeBuild(root, manifest as never, true);

@@ -419,7 +419,9 @@ export async function siteFramework(root: string, pkg: Package, options: { stric
   /* Plain Vite has the same trap under another name: `base: "/my-repo/"`, which a GitHub
      Pages tutorial adds, makes every built page ask for /my-repo/assets/…. check reported it
      as a missing import per file with no word about base. */
-  if (deps.vite || runs(/vite\s+build\b/)) {
+  /* Only the config Vite will read: a build script that names its own with --config or -c
+     (say vite.opengame.config.ts beside a GitHub Pages vite.config.ts) is left to the build. */
+  if ((deps.vite || runs(/vite\s+build\b/)) && !/(?:^|[\s;&|(])vite\s+build\b[^;&|)]*\s(?:--config|-c)(?:=|\s)/.test(script)) {
     const flag = /(?:^|[\s;&|(])vite\s+build\b[^;&|)]*?\s--base(?:=|\s+)(["']?)([^\s"';&|)]*)\1/.exec(script)?.[2];
     refuseBase(await frameworkConfigs(base, ["vite.config"]), "base", "Vite", "vite.config", flag);
   }

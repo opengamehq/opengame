@@ -1,5 +1,9 @@
 # opengame-deploy changelog
 
+## 1.1.12
+
+`opengame.json` takes `players`: `"single"`, or private lobbies or online with the fewest and the most players, set with `opengame init --players` and `opengame publish --players`, and Auto when left out. (17 Nov 2026)
+
 ## 1.1.11
 
 Names Unreal Engine among the engines OpenGame hosts, from the docs' agent guide. (17 Nov 2026)

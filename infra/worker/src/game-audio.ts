@@ -21,7 +21,7 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-16-godot-loader";
+export const GAME_AUDIO_VERSION = "audio-19-unreal-toast";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 const SCREENSHOT = (({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }) =>
@@ -235,8 +235,9 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // of a second in, and a player watched Godot's logo, grey and a progress bar for as long as
   // forty megabytes of wasm took, instead of our own loader (17 Nov 2026). So here, for a
   // document shaped like Godot's shell and nothing else:
-  // the overlay is hidden, which keeps it from ever counting as a paint and from showing
-  // through a cover that lifts for any other reason, and 'painted' waits until the shell has
+  // the overlay is hidden under a parent whose cover stands in for it (hideShell, below), which
+  // keeps it from showing through a cover that lifts for any other reason, and 'painted' waits
+  // until the shell has
   // taken its overlay down. Godot's own failure notice (#status-notice: a browser missing a
   // feature, a file that failed) stays visible and counts as the end of the wait, because
   // the reason a game will not start is worth more than our spinner. Nothing about the
@@ -258,21 +259,93 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   const noticeShown = () => {
     try { return Boolean(notice && notice.isConnected && getComputedStyle(notice).display !== 'none' && notice.textContent.trim()); } catch { return false; }
   };
+  // UNREAL'S COVER IS THE SAME PROBLEM IN A BIGGER COAT. A UE 5.9 Wasm package's page
+  // (index.html with wasm-play.js and wasm-loader.js beside it) lays an opaque #cover over its
+  // canvas while the engine boots: a dark gradient, the project's name in 800-weight type, a
+  // yellow bar, "Loading the level... 41 s", and a checklist at top left naming the browser,
+  // the graphics card and the settings it picked. All of it showed in a private preview on
+  // 17 Nov 2026, and the owner asked for ours instead. The cover's title was the first contentful paint,
+  // so the parent's cover lifted onto Epic's for the whole boot, which is most of a minute.
+  //
+  // The page says where it is, which is what makes this cheap: wasm-play.js moves
+  // body[data-cover] forward through loading, engine, level, ready, click and lifted (or
+  // failed, or ended), and lifts the cover only after the engine's first frame has reached the
+  // canvas ('ue-first-canvas-frame', or three seconds after ready), at which point the cover
+  // takes the class 'lifting', its own rule stops hiding the canvas, and 600 ms later it is
+  // hidden. So here, for a page shaped exactly like Epic's (its ue-project meta, the canvas and
+  // the cover as children of body, and the cover's bar), the cover is hidden under a parent
+  // whose own cover stands in for it, the stage is reported as progress, and 'painted' waits
+  // for the cover to be gone. Epic's error card stays visible and ends the wait, as Godot's
+  // notice does, and its end card is left alone.
+  const UE_PAGE = 'html:has(> head > meta[name="ue-project"]) > body:has(> canvas#canvas)';
+  const UE_COVER = '#cover:has(> #art #progressbar)';
+  const UE_TOAST = '#toast:has(> #toast-text):has(> button#toast-close)';
+  let ueCover = null;
+  // Down is gone (hidden, which wasm-play.js sets 600 ms after the lift), waiting for the
+  // click that ue-start=click asks for, or stopped: in every one the canvas, the start screen
+  // or the error card is what the page shows. Not the lift itself: with the real package on a GPU worker
+  // the WebGPU canvas reached the screen 370 ms after the class landed, under load, so a report
+  // then had the parent's 220 ms fade end on Epic's bare #101010 for a moment (17 Nov 2026).
+  // By hidden, Epic's own half-second fade has finished over a drawn canvas.
+  //
+  // And gone only counts once the engine has said it drew: its first canvas frame
+  // ('ue-first-canvas-frame', from the WebGPU RHI) or its ready marker ('ue-ready', and the
+  // older names). wasm-play.js lifts the cover by itself two minutes into the level whatever
+  // the engine has done, and on a slow link on production that lift came 44 s before the level
+  // drew, over a black canvas (Unreal lane's run 2, 17 Nov 2026). Until the engine speaks, the
+  // stage stays 'level' and the parent's cover stays up; its ceiling still bounds the wait.
+  let ueEngineDrew = false;
+  let ueChanged = null;
+  // The first canvas frame counts only once the page is at ready or past it: Epic's own notes
+  // say frame 1 can be presented before anything drew, and one that came during the level would
+  // otherwise let the two-minute lift through (review, 17 Nov 2026). The ready marker counts
+  // whenever it comes.
+  const ueSpoke = (event) => {
+    let state = '';
+    try { state = document.body ? document.body.dataset.cover : ''; } catch { /* No body yet. */ }
+    if (event.type === 'ue-first-canvas-frame' && state !== 'ready' && state !== 'click' && state !== 'lifted') return;
+    ueEngineDrew = true;
+    if (ueChanged) ueChanged();
+  };
+  for (const name of ['ue-first-canvas-frame', 'ue-ready', 'ue-site-ready', 'ue-interactive']) addEventListener(name, ueSpoke);
+  const ueDown = () => {
+    try {
+      const state = document.body ? document.body.dataset.cover : '';
+      if (ueCover.classList.contains('click') || state === 'click' || state === 'failed' || state === 'ended') return true;
+      return (!ueCover.isConnected || ueCover.hidden) && ueEngineDrew;
+    } catch { return true; }
+  };
+  // The level's own count, when the engine sends one ('ue-progress', the event wasm-play.js
+  // reads). Read here from the first byte, never cancelled, and kept only as a number.
+  let ueLevel = null;
+  addEventListener('ue-progress', (event) => {
+    try {
+      const fraction = event.detail && event.detail.fraction;
+      if (typeof fraction === 'number' && fraction >= 0 && fraction <= 1) ueLevel = Math.max(ueLevel || 0, fraction);
+    } catch { /* Not a count. */ }
+  });
   const findShell = () => {
-    if (shell) return;
+    if (shell || ueCover) return;
     try {
       const status = document.getElementById('status');
-      if (status && status.isConnected && status.matches(SHELL)) watchShell(status);
+      if (status && status.isConnected && status.matches(SHELL)) { watchShell(status); return; }
+      const cover = document.getElementById('cover');
+      if (cover && cover.isConnected && cover.matches(UE_PAGE + ' > ' + UE_COVER)) watchUnreal(cover);
     } catch { /* No selector support for :has, or no DOM yet: no shell to wait for. */ }
   };
-  // Whether Godot's loading overlay is still what the shell is showing.
-  const shellUp = () => { findShell(); return Boolean(shell && !shellDown() && !noticeShown()); };
+  // Whether Godot's loading overlay, or Unreal's cover, is still what the page is showing.
+  const shellUp = () => {
+    findShell();
+    if (ueCover) return !ueDown();
+    return Boolean(shell && !shellDown() && !noticeShown());
+  };
   // A first paint from something parsed above the overlay, a title a creator added over
   // Godot's canvas, would go out before the overlay is found. So while a document whose body
-  // already holds Godot's canvas is still parsing, the report waits for the parse to finish.
+  // already holds an engine's canvas is still parsing, the report waits for the parse to
+  // finish. Unreal's page holds the same canvas#canvas, so this covers its cover's title too.
   const mayBeShell = () => { try { return document.readyState === 'loading' && Boolean(document.querySelector('body > canvas#canvas')); } catch { return false; } };
   const reportPaint = () => {
-    if (painted || !contentful || shellUp() || (!shell && mayBeShell())) return;
+    if (painted || !contentful || shellUp() || (!shell && !ueCover && mayBeShell())) return;
     painted = true;
     if (documentParent) host.postMessage({ og: 1, type: 'painted' }, documentParent);
   };
@@ -284,24 +357,121 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // frame the browser has stopped animating, which nobody is looking at. Only the overlay's
   // own attributes and the notice are watched, never the whole overlay, so a shell that
   // animates its loader through inline styles costs nothing per frame here.
-  function watchShell(status) {
-    shell = status;
-    notice = status.querySelector(':scope > #status-notice');
+  // HOW FAR THE DOWNLOAD HAS GOT, so the parent can tell a slow link from a dead game. With
+  // Godot's own loader hidden, the parent's cover stood over the whole engine download, and
+  // its thirty-second "has not started" came up over a game that was loading fine on a slow
+  // link: the QA export's engine took 60 to 90 s at 110 to 280 KB/s (17 Nov 2026). The shell already
+  // knows: Godot's onProgress sets the progress bar's value and max, which reflect into its
+  // attributes, so they are read here and nothing in the engine is touched. A fraction and
+  // nothing else, at most once a second and only when it has grown, and never once the
+  // engine has drawn. The parent treats it as the game's claim: it can delay its own notice,
+  // never past a ceiling the parent keeps (use-frame-arrival.ts).
+  //
+  // Unreal's page adds a stage, which is the part of it a player can use: 'download', 'engine'
+  // or 'level', read off body[data-cover]. A fraction rides along only where Epic's page has a
+  // real count, its data cache's bytes (window.ueBootDownload) or the engine's level count
+  // ('ue-progress'). og-games refuses the data cache's service worker, so on og-games the
+  // download has no count and the stage goes alone; an eased bar is not a count, and is not
+  // passed on. With a stage the report also goes every few seconds (limits.json) while it
+  // stands, because nothing in Epic's page counts the wasm's bytes or the level's load, each
+  // of which can outlast the parent's twenty quiet seconds (41 s for the level in that
+  // preview). That says Epic's loader is still running and has not failed, which is what the
+  // parent's notice is about; the parent's ceiling still bounds it.
+  let progressShown = -1;
+  let progressStage = null;
+  let progressAt = 0;
+  let progressTimer = 0;
+  // What the page's loader says now, as [fraction or null, stage or null]. Kept so the probe
+  // that names a late parent can send what was dropped before it did.
+  let progressRead = null;
+  const reportProgress = () => {
+    if (painted || !documentParent || !progressRead) return;
+    let fraction, stage;
+    try { [fraction, stage] = progressRead(); } catch { return; }
+    if (fraction === null && stage === null) return;
+    const moved = stage !== progressStage;
+    const grew = fraction !== null && fraction > (moved ? -1 : progressShown);
+    const beat = stage !== null && Date.now() - progressAt >= __OG_PROGRESS_HEARTBEAT__;
+    if (!grew && !moved && !beat) return;
+    const wait = __OG_PROGRESS_INTERVAL__ - (Date.now() - progressAt);
+    if (wait > 0) { if (!progressTimer) progressTimer = setTimeout(() => { progressTimer = 0; reportProgress(); }, wait); return; }
+    progressShown = fraction === null ? -1 : Math.max(moved ? -1 : progressShown, fraction);
+    progressStage = stage;
+    progressAt = Date.now();
+    const message = { og: 1, type: 'progress' };
+    if (fraction !== null) message.fraction = progressShown;
+    if (stage !== null) message.stage = stage;
+    host.postMessage(message, documentParent);
+  };
+  // One watcher for an engine's own loader, Godot's overlay or Unreal's cover. Each change to
+  // what is watched asks whether the loader is still up; while it is, still() runs (Unreal
+  // reports its stage), and once it is not, the paint is counted two animation frames later,
+  // as described above. over() says the loader is gone for good, which stops the watching.
+  function watchLoader(targets, { over, still }) {
     let counted = false;
     const count = () => { if (!counted) { counted = true; contentful = true; reportPaint(); } };
     const watchers = [];
     const stop = () => watchers.forEach((watcher) => watcher.disconnect());
     const changed = () => {
-      if (shellUp()) return;
-      if (shellDown()) stop();
+      if (shellUp()) { if (still) still(); return; }
+      if (over()) stop();
       try { requestAnimationFrame(() => requestAnimationFrame(count)); } catch { /* No frames: the timer counts it. */ }
       setTimeout(count, 500);
     };
-    const watch = (target, options) => { const watcher = new MutationObserver(changed); watcher.observe(target, options); watchers.push(watcher); };
+    for (const [target, options] of targets) { const watcher = new MutationObserver(changed); watcher.observe(target, options); watchers.push(watcher); }
+    return { watchers, changed };
+  }
+  function watchShell(status) {
+    shell = status;
+    notice = status.querySelector(':scope > #status-notice');
     const looks = ['style', 'class', 'hidden'];
-    watch(status.parentNode, { childList: true });
-    watch(status, { attributes: true, attributeFilter: looks });
-    if (notice) watch(notice, { attributes: true, attributeFilter: looks, childList: true, characterData: true, subtree: true });
+    const targets = [[status.parentNode, { childList: true }], [status, { attributes: true, attributeFilter: looks }]];
+    if (notice) targets.push([notice, { attributes: true, attributeFilter: looks, childList: true, characterData: true, subtree: true }]);
+    const { watchers } = watchLoader(targets, { over: shellDown });
+    const bar = status.querySelector(':scope > #status-progress');
+    if (bar && paintTimed) {
+      progressRead = () => {
+        const value = Number(bar.getAttribute('value'));
+        const max = Number(bar.getAttribute('max'));
+        return [value > 0 && max > 0 ? Math.min(1, value / max) : null, null];
+      };
+      // Godot sets value and max for every chunk it reads, hundreds of times a second on a
+      // fast link, so this does no more than read two attributes before the throttle; the
+      // overlay's own watcher above disconnects it once the shell is down.
+      const progress = new MutationObserver(() => { if (painted) progress.disconnect(); else reportProgress(); });
+      progress.observe(bar, { attributes: true, attributeFilter: ['value', 'max'] });
+      watchers.push(progress);
+      reportProgress();
+    }
+  }
+  // Unreal's cover, from the moment the parse has it. The lift is counted two animation frames
+  // after the class lands, as Godot's removal is: the canvas becomes visible in that style
+  // change and is presented on the next frame. Only body's data-cover and the cover's own class
+  // and hidden are watched; the bar, the line and the checklist under them change four times a
+  // second and are read on the report's own timer instead, while the cover is up. Epic's
+  // states only move forward (wasm-play.js coverTo), so down is down for good.
+  function watchUnreal(cover) {
+    ueCover = cover;
+    const { changed } = watchLoader([[document.body, { attributes: true, attributeFilter: ['data-cover'] }], [cover, { attributes: true, attributeFilter: ['class', 'hidden'] }]],
+      { over: () => true, still: reportProgress });
+    ueChanged = changed;
+    if (paintTimed) {
+      progressRead = () => {
+        if (ueDown()) return [null, null];
+        // No data-cover until the engine starts: wasm-play.js sets it only on a change, and the
+        // page begins in loading, which is the download. Lifted is still the level here, since
+        // this is only asked while the engine has not drawn.
+        const state = document.body.dataset.cover || 'loading';
+        if (state === 'engine') return [null, 'engine'];
+        if (state === 'level' || state === 'ready' || state === 'lifted') return [ueLevel, 'level'];
+        if (state !== 'loading') return [null, null];
+        const boot = window.ueBootDownload;
+        const bytes = boot && Number(boot.bytes), total = boot && Number(boot.total);
+        return [bytes > 0 && total > 0 ? Math.min(1, bytes / total) : null, 'download'];
+      };
+      const ticker = setInterval(() => { if (painted || ueDown()) clearInterval(ticker); else reportProgress(); }, __OG_PROGRESS_INTERVAL__);
+    }
+    changed();
   }
   try {
     if (typeof PerformanceObserver === 'function' && (PerformanceObserver.supportedEntryTypes || []).includes('paint')) {
@@ -316,13 +486,50 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   } catch { /* No paint timing: the report below says nothing about painting. */ }
   // Only where paints are timed: a parent that cannot be told when the engine started lifts
   // its cover on parsing, and there Godot's own loader is better than a black frame.
-  if (paintTimed) {
+  //
+  // AND ONLY UNDER A PARENT WHOSE COVER STANDS IN FOR IT. Opened on its own, as
+  // 'opengame dev --contract 2027-02' prints it, or framed by a page that is not one of ours,
+  // nothing covers the frame, and hiding Godot's loader left a blank canvas for the whole
+  // download (Greptile on #1718, 17 Nov 2026). So the loader is hidden once an allowed parent
+  // is known: from the first byte where the browser lists ancestors (Chromium, WebKit and
+  // Firefox since 2025), and otherwise when the page's probe names it, until which the
+  // loader is under the page's cover anyway. The paint report waits for the engine either
+  // way; this decides only what shows.
+  let shellHidden = false;
+  const hideShell = () => {
+    if (shellHidden || !paintTimed || !documentParent) return;
+    shellHidden = true;
     try {
       const sheet = new CSSStyleSheet();
-      sheet.replaceSync(SHELL + '{visibility:hidden!important}' + SHELL + ' > #status-notice{visibility:visible!important}');
+      // Unreal's cover is hidden, not removed, because wasm-play.js keeps working on it, and
+      // only while it is a loader: not once the game has ended, when the same cover carries
+      // the end card, and not while it waits for the click a ue-start=click page asks for.
+      // That wait is the game's own start screen, "Ready: click to play", and the click is
+      // what gives the game its sound and pointer lock, so it shows, and the parent's cover
+      // lifts onto it; a clear cover left the player a still frame and no reason to click
+      // (code review, 17 Nov 2026). The error card shows through, as Godot's notice does.
+      const ueHidden = UE_PAGE + ':not([data-cover="ended"]) > ' + UE_COVER + ':not(.click)';
+      sheet.replaceSync(SHELL + '{visibility:hidden!important}' + SHELL + ' > #status-notice{visibility:visible!important}'
+        + ueHidden + '{visibility:hidden!important}' + ueHidden + ' #error{visibility:visible!important}'
+        // The checklist at top left, the browser, the graphics card and the settings Epic
+        // picked, is the part the owner pointed at; it stays hidden on the start screen too.
+        + UE_PAGE + ':not([data-cover="ended"]) > ' + UE_COVER + ' > #steps{visibility:hidden!important}'
+        // And Epic's toast, a note wasm-play.js lays over the top left of the running game for
+        // ten seconds after the lift: "TPPWeb590 plays best in Chrome: try it there." in a
+        // browser wasm-compat.js does not take for Chrome (headless Chrome on production, 17 Nov
+        // 2026), or word of a GPU restart, which goes too: only our interface goes around a
+        // game on OpenGame (the owner, 17 Nov 2026), and the game plays on. Matched by its
+        // markup, a child of the page's body holding the note's text and its dismiss button,
+        // not by what it says, since the project's name and the note vary. Display, not
+        // visibility: a visible child would show through.
+        + UE_PAGE + ' > ' + UE_TOAST + '{display:none!important}'
+        // wasm-loader.js writes the same advice on the cover as well, in #notice with the class
+        // 'advice', and a ue-start=click page shows that cover as its start screen.
+        + UE_PAGE + ' > ' + UE_COVER + ' #notice.advice{display:none!important}');
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
     } catch { /* No constructable stylesheets: the cover's wait is the whole of it. */ }
-  }
+  };
+  hideShell();
   const reportDocument = () => {
     if (documentParent && documentParsed) {
       host.postMessage(paintTimed ? { og: 1, type: 'document-loaded', painted } : { og: 1, type: 'document-loaded' }, documentParent);
@@ -1290,7 +1497,9 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     }
     if (data.type === 'document-status') {
       documentParent = event.origin;
+      hideShell();
       reportDocument();
+      reportProgress();
       return;
     }
     if (data.type === 'capture') {
@@ -1323,6 +1532,8 @@ export function gameAudioRuntime(origins: string[]): string {
   const capture = JSON.stringify(SCREENSHOT);
   return GAME_AUDIO_RUNTIME
     .replace("__OG_INPUT_INTERVAL__", () => String(limits.analytics.runtime.inputIntervalMs))
+    .replaceAll("__OG_PROGRESS_INTERVAL__", () => String(limits.play.frameProgress.reportIntervalMs))
+    .replaceAll("__OG_PROGRESS_HEARTBEAT__", () => String(limits.play.frameProgress.heartbeatMs))
     .replace("__OG_GAMEPAD_INTERVAL__", () => String(limits.analytics.runtime.inputIntervalMs))
     .replace("__OG_GAMEPAD_DEADZONE__", () => String(limits.analytics.runtime.gamepadDeadzone))
     .replace("__OG_CAPTURE__", () => capture)

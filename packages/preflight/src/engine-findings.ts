@@ -1,9 +1,9 @@
-import { LIMITS } from "@opengame/shared";
+import { LIMITS, formatBytes } from "@opengame/shared";
 import type { Finding, PreflightFile } from "./index";
 import { detectedIds, godotPackOrder, godotPckVersion, type EngineReport, type EngineSource } from "./engines";
 import { parseScript, type ScriptNode } from "./script-source";
 import { parse as parseHtml, type DefaultTreeAdapterTypes } from "parse5";
-import { engineArchive, engineArchiveMembers, engineArchiveShape } from "./names";
+import { compressedBrowserAsset, engineArchive, engineArchiveMembers, engineArchiveShape } from "./names";
 import { zipMemberNames } from "./raw-runtime";
 
 /** Only runtime delivery URLs, not an engine's homepage or an arbitrary CDN file. */
@@ -327,4 +327,59 @@ export async function engineArchiveShapeFindings(files: PreflightFile[], engineI
       detail: "OpenGame accepts an archive inside a game only when it is one the engine itself loads. Unpack this one into the folder, or upload the archive your engine exported." });
   }
   return findings;
+}
+
+/* WHAT A PLAYER DOWNLOADS BEFORE THE ENGINE CAN START, IN SECONDS. Added on 17 Nov 2026, after
+   an Unreal preview took a minute and a half to load, with a goal of a few seconds end to end
+   for every game. size-warn says how big the whole build is; this says how long the part every play waits for
+   takes on a 50 Mbps line, because that is the number a creator can act on and the one a player
+   feels. The files are the ones an engine fetches whole before its first frame: its .wasm
+   modules, Unity's .data and framework, Godot's .pck and Emscripten's .data. Unreal's .pak,
+   .utoc and .ucas are left out: its engine reads them by range as the level asks (sending them
+   whole on the first read was tried on 17 Nov 2026 and made the level later, #1758), and so is
+   anything a game streams after it starts, which this cannot see.
+
+   Each file is counted once, as the copy og-games sends: a stored .br or .gz twin at its size,
+   the smaller where there are both; a plain .wasm at what og-games' in-transit Brotli leaves of
+   one; any other plain file whole. og-games compresses a plain .pck or .data on the way too, by
+   an amount that depends on what is in it, so when one is counted the note says "up to". */
+const BOOT_FILE = /\.(?:wasm|data|pck)$|\.framework\.js$/i;
+const BOOT_ADVICE: Partial<Record<string, string>> = {
+  unity: "In Unity: Brotli with Decompression Fallback off, Code Optimization set to Disk Size with LTO, Strip Engine Code on and Managed Stripping Level High. Load what the first scene does not need with Addressables.",
+  godot: "In Godot: build a custom export template from a profile made in Project > Tools > Engine Compilation Configuration Editor, and put later levels in their own packs loaded with ProjectSettings.load_resource_pack().",
+  unreal: "In Unreal: package in Shipping and keep the startup map small.",
+  emscripten: "With Emscripten: build with -O3 or -Oz, keep the default loader so the module compiles while it downloads, and preload only what the first screen needs.",
+};
+
+export function bootDownloadFindings(files: readonly { path: string; size: number }[], engines: ReadonlySet<string>): Finding[] {
+  const { bootDownloadMbps, bootDownloadNoteSeconds, wasmTransitRatio } = LIMITS.performance;
+  /* A bundle whose limits projection leaves these out would otherwise say "NaN s on a
+     undefined Mbps connection" on every check, which is what the CLI did before its
+     allowlist named them. No numbers, no note. */
+  if (![bootDownloadMbps, bootDownloadNoteSeconds, wasmTransitRatio].every(value => typeof value === "number" && value > 0)) return [];
+  /* The copy sent for each plain path: the smallest stored twin, else the plain file. */
+  const sent = new Map<string, { path: string; size: number; stored: boolean }>();
+  for (const file of files) {
+    const plain = compressedBrowserAsset(file.path)?.path ?? file.path;
+    const stored = plain !== file.path;
+    const held = sent.get(plain);
+    if (!held || (stored && (!held.stored || file.size < held.size))) sent.set(plain, { path: file.path, size: file.size, stored });
+  }
+  const boot = [...sent].flatMap(([plain, file]) => {
+    if (!BOOT_FILE.test(plain)) return [];
+    if (file.stored) return [{ path: file.path, wire: file.size, ceiling: false }];
+    if (/\.wasm$/i.test(plain)) return [{ path: file.path, wire: Math.round(file.size * wasmTransitRatio), ceiling: false }];
+    return [{ path: file.path, wire: file.size, ceiling: true }];
+  }).sort((a, b) => b.wire - a.wire);
+  const wire = boot.reduce((sum, file) => sum + file.wire, 0);
+  const seconds = (wire * 8) / (bootDownloadMbps * 1_000_000);
+  if (seconds < bootDownloadNoteSeconds) return [];
+  const engine = ["unity", "godot", "unreal", "emscripten"].find(id => engines.has(id));
+  const about = boot.some(file => file.ceiling) ? "up to about" : "about";
+  const largest = boot.slice(0, 3).map(file => `${file.path} (${file.ceiling ? "up to about" : "about"} ${formatBytes(file.wire)})`).join(", ");
+  return [{
+    code: "boot-download", severity: "note", path: boot[0]?.path,
+    title: `Players download ${about} ${formatBytes(wire)} before this game can start: ${about} ${Math.round(seconds)} s on a ${bootDownloadMbps} Mbps connection.`,
+    detail: `Largest: ${largest}. Every player waits for these on their first visit; a repeat visit reads them from the browser's cache. ${engine ? BOOT_ADVICE[engine] : "Load what the first screen does not need after the game starts."}`,
+  }];
 }

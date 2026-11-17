@@ -50,8 +50,9 @@ The jam's rules page is the authority; `opengame jams` links to it. For the firs
   no account, sign-in or email address before a player can play.
 - Built during the jam. Entrants enter as individuals, and each has a limited number of
   entries, which submit enforces.
-- Judged by people on fun, craft, use of AI, technical execution and originality. A menu
-  that is a button on black, silence, and no feedback on hits all cost points.
+- Judged by people on five criteria, none weighted above another: creativity and
+  originality, depth, fun, performance and visual fidelity. A menu that is a button on
+  black, silence, and no feedback on hits all cost points.
 
 ## Keep these working
 

@@ -2,7 +2,7 @@
 name: opengame-jam
 description: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, deploys one exact release, and enters it with the person's own answers, with opengame publish or on the deploy's page. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
 metadata:
-  version: "1.1.1"
+  version: "1.1.2"
 ---
 
 # Enter an OpenGame jam
@@ -121,5 +121,6 @@ deploy's. Fix them and deploy again; the new release goes to review by itself. W
 takes entries, a redeploy of a game whose entry is live is entered again with the same
 answers, so it keeps its place.
 
-The jam's judging criteria are published on its rules page. Fun and craft carry the
-most weight; the craft skills (`opengame-quality-bar` first) are how to raise them.
+The jam's judging criteria are published on its rules page, which is the authority: creativity
+and originality, depth, fun, performance and visual fidelity, none weighted above another. The
+craft skills (`opengame-quality-bar` first) are how to raise them.

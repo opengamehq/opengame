@@ -1,7 +1,8 @@
 import { basename, resolve } from "node:path";
 import { realpath } from "node:fs/promises";
 import { AUTO, LIMITS, chooseTitle, isAutoValue, pageTitle, slurTextProblem } from "@opengame/shared";
-import { AUTO_MANIFEST_FIELDS, PLACEHOLDER_DESCRIPTION, type DeployProvisional } from "@opengame/protocol";
+import { AUTO_MANIFEST_FIELDS, PLACEHOLDER_DESCRIPTION, playersSchema, playersToMultiplayer, type DeployProvisional, type Players } from "@opengame/protocol";
+import { CliError } from "./output";
 import { readBuildPackage } from "./build-output";
 import { projectText } from "./engines";
 
@@ -40,9 +41,11 @@ export function rememberAuto<T extends object>(manifest: T, fields: AutoField[])
 }
 
 /** Which Auto fields the deploy request names provisional. The tagline is optional in the
- *  manifest, so an Auto tagline is simply none, which the details form already offers review's for. */
+ *  manifest, so an Auto tagline is simply none, which the details form already offers review's for.
+ *  Players the same: an Auto `players` sends no `multiplayer`, and the details form offers what
+ *  review found. */
 export function provisionalAuto(fields: readonly AutoField[]): DeployProvisional[] {
-  return fields.filter((field): field is Exclude<AutoField, "tagline"> => field !== "tagline");
+  return fields.filter((field): field is Exclude<AutoField, "tagline" | "players"> => field !== "tagline" && field !== "players");
 }
 
 /**
@@ -81,7 +84,55 @@ export async function resolveAuto(value: unknown, root: string): Promise<{ value
   if (isAutoValue(controls) || (Array.isArray(controls) && (controls.length === 0 || controls.every(isAutoValue)))) {
     raw.controls = [...FALLBACK_CONTROLS]; auto.push("controls");
   }
+  /* How the game is played (17 Nov 2026): `players` is the file's word and `multiplayer` the
+     wire's (packages/protocol, playersSchema), so the one becomes the other here, where the
+     file becomes a manifest. An older file's `multiplayer` is read as it is. */
+  if ("players" in raw) {
+    if (raw.multiplayer !== undefined) {
+      throw new CliError("manifest_invalid", "opengame.json names both players and multiplayer. Keep players and remove multiplayer, which is the older way of saying the same thing.", 1);
+    }
+    if (isAutoValue(raw.players)) auto.push("players");
+    else {
+      const players = playersSchema.safeParse(raw.players);
+      if (!players.success) {
+        const issue = players.error.issues.find(each => each.code !== "invalid_union") ?? players.error.issues[0];
+        throw new CliError("manifest_invalid", `players: ${issue?.message && issue.message !== "Invalid input" ? issue.message : PLAYERS_HELP}`, 1);
+      }
+      raw.multiplayer = playersToMultiplayer(players.data);
+    }
+    delete raw.players;
+  } else if (raw.multiplayer === undefined) auto.push("players");
   return { value: raw, auto };
+}
+
+/** What `players` takes, said where a file or a flag gets it wrong. */
+export const PLAYERS_HELP = `Use "single", or { "mode": "private" or "online", "min": 1 to ${LIMITS.platform.manifest.playersMax}, "max": 2 to ${LIMITS.platform.manifest.playersMax} }, or "auto".`;
+
+/**
+ * --players, --min-players and --max-players, as init and publish take them: undefined when
+ * none is given, "auto" for Auto, else how the game is played. Refused before anything is
+ * written or sent, by the same schema opengame.json's `players` is read with.
+ */
+export function playersFlags(flags: Record<string, string | boolean>): Players | typeof AUTO | undefined {
+  const mode = typeof flags.players === "string" ? flags.players.trim().toLowerCase() : undefined;
+  const count = (name: "min-players" | "max-players") => {
+    const value = flags[name];
+    if (typeof value !== "string") return undefined;
+    if (!/^\d+$/.test(value.trim())) throw new CliError("invalid_flag", `Use a whole number for --${name}.`, 2);
+    return Number(value.trim());
+  };
+  const min = count("min-players"), max = count("max-players");
+  if (mode === undefined && min === undefined && max === undefined) return undefined;
+  if (mode === undefined) throw new CliError("invalid_flag", "Name the mode with --players private or --players online when you give --min-players or --max-players.", 2);
+  if (isAutoValue(mode) || mode === "single") {
+    if (min !== undefined || max !== undefined) throw new CliError("invalid_flag", `--players ${mode} takes no --min-players or --max-players.`, 2);
+    return isAutoValue(mode) ? AUTO : { mode: "single" };
+  }
+  if (mode !== "private" && mode !== "online") throw new CliError("invalid_flag", "Use --players single, private, online or auto.", 2);
+  if (max === undefined) throw new CliError("invalid_flag", `Give --max-players, the most players in one session, with --players ${mode}.`, 2);
+  const parsed = playersSchema.safeParse({ mode, ...(min === undefined ? {} : { min }), max });
+  if (!parsed.success) throw new CliError("invalid_flag", `--min-players and --max-players: ${PLAYERS_HELP}`, 2);
+  return parsed.data;
 }
 
 /** The one line help and init print about Auto. */

@@ -59,13 +59,11 @@ npm run build
 npm test
 ```
 
-## Issues and pull requests
+## Issues
 
 Open an issue for a bug, a confusing error, an engine export the CLI gets wrong or a skill
-that teaches the wrong thing. Pull requests are welcome too. This repository is copied from
-OpenGame's own monorepo at each release, so a pull request is not merged here: when we take
-one, we copy it into the monorepo with credit to you, and it arrives in the next release.
-[CONTRIBUTING.md](CONTRIBUTING.md) has the details.
+that teaches the wrong thing. Include the command you ran, the CLI version (`opengame version`)
+and what it printed. This repository does not take pull requests.
 
 To report a vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening an issue.
 

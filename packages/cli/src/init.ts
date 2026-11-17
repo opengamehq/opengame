@@ -12,7 +12,7 @@ import type { Output } from "./output";
 import { detectBuildOutput, lockfileInstall, readBuildPackage } from "./build-output";
 import { engineSetup, ENGINE_PRESETS, GENERIC_EXPORT, namedEngine } from "./engines";
 import { ask, choose } from "./prompt";
-import { AUTO_FIELDS, AUTO_HELP, autoFields, provisionalAuto, resolveAuto } from "./auto";
+import { AUTO_FIELDS, AUTO_HELP, autoFields, playersFlags, provisionalAuto, resolveAuto } from "./auto";
 export { FALLBACK_GENRE } from "./auto";
 import { folderArgument, replaceFile, withoutBom } from "./files";
 
@@ -129,6 +129,7 @@ const stated = (value: string | boolean | undefined) => typeof value === "string
 export async function initProject(root: string, flags: Record<string, string | boolean>, options: { interactive?: boolean; prompts?: InitPrompts; output?: Output } = {}) {
   const pkg = await readBuildPackage(root);
   const genre = genreFlag(flags) ?? AUTO;
+  const players = playersFlags(flags) ?? AUTO;
   let { kind, basedOn } = kindFlags(flags);
   const prompts = options.prompts ?? TERMINAL;
   // Read before anything is asked, so a person with a finished opengame.json is asked nothing.
@@ -178,7 +179,7 @@ export async function initProject(root: string, flags: Record<string, string | b
   const manifest = {
     $schema: "https://opengame.io/schema/opengame.json", title, tagline: AUTO, description: stated(flags.description), genre, kind, ...(basedOn ? { basedOn } : {}),
     ...(command || output !== "." || typeof flags.output === "string" ? { build: { ...(command ? { command } : {}), output } } : {}),
-    controls: AUTO,
+    controls: AUTO, players,
     ...(engine.requires ? { requires: engine.requires } : {}),
   };
   const credentialIssue = manifestCredentialIssue(manifest);
@@ -337,6 +338,11 @@ async function fillManifest(root: string, existing: Record<string, unknown>, ori
   if (blank(existing.description)) filled.description = stated(flags.description);
   if (blank(existing.genre)) filled.genre = context.genre;
   if (blank(existing.controls)) filled.controls = AUTO;
+  /* How the game is played, only when --players says it and the file says nothing of it in
+     either word: a file without it is Auto already, so writing "auto" into every older file
+     would turn a complete one into one init rewrites. */
+  const players = playersFlags(flags);
+  if (players !== undefined && blank(existing.players) && existing.multiplayer === undefined) filled.players = players;
   if (!Object.keys(filled).length) throw await manifestExists(root);
   const manifest = { ...existing, ...filled };
   const credentialIssue = manifestCredentialIssue(manifest);
@@ -367,7 +373,7 @@ async function fillManifest(root: string, existing: Record<string, unknown>, ori
   const names = Object.keys(filled);
   /* Every flag init could have used and did not: a value the file already sets, and the
      flags that only shape a new file (what it is, and where its build goes). */
-  const kept = ["title", "description", "genre", "kind", "based-on", "output", "engine"]
+  const kept = ["title", "description", "genre", "kind", "based-on", "output", "engine", "players"]
     .filter(field => typeof flags[field] === "string" && !(field in filled)).map(field => `--${field}`);
   const needs = [...new Set(issues.map(issue => issue.path.join(".")))];
   const next = `opengame check ${folderArgument(root)}`;

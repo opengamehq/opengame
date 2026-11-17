@@ -1,5 +1,9 @@
 # opengame-jam changelog
 
+## 1.1.2
+
+Name the rules page's five judging criteria (creativity and originality, depth, fun, performance, visual fidelity), none weighted above another, instead of saying fun and craft carry the most weight. (17 Nov 2026)
+
 ## 1.1.1
 
 Ask for the account email the person used at each sponsor, which `--sponsor-email` takes, not sponsor evidence. (17 Nov 2026)

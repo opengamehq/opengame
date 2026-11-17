@@ -1516,12 +1516,28 @@
                 "enum": [
                   "none",
                   "p2p"
-                ]
+                ],
+                "description": "none: played alone. p2p: played by more than one person, in the game's own netcode."
+              },
+              "minPlayers": {
+                "description": "With p2p, the fewest players a session needs: 1 when it can also be played alone. Defaults to 2.",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16
               },
               "maxPlayers": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 16
+                "maximum": 16,
+                "description": "The most players in one session: 1 with none."
+              },
+              "lobbies": {
+                "description": "With p2p, how players meet: private, by a code or a link, or online, matched with strangers. Defaults to private.",
+                "type": "string",
+                "enum": [
+                  "private",
+                  "online"
+                ]
               },
               "lobby": {
                 "type": "object",
@@ -2373,11 +2389,24 @@
                     "maxPlayers": {
                       "const": 1,
                       "type": "integer"
+                    },
+                    "minPlayers": {
+                      "const": 1,
+                      "type": "integer"
                     }
                   },
                   "not": {
-                    "required": [
-                      "lobby"
+                    "anyOf": [
+                      {
+                        "required": [
+                          "lobby"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "lobbies"
+                        ]
+                      }
                     ]
                   }
                 }
@@ -34526,6 +34555,55 @@
                   "controller": {
                     "type": "boolean",
                     "description": "Whether the game supports a gamepad."
+                  },
+                  "players": {
+                    "description": "How the game is played, as `players` in opengame.json says it. Left out: what the deploy said, or review's reading when the deploy left it to Auto.",
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "mode"
+                        ],
+                        "properties": {
+                          "mode": {
+                            "const": "single",
+                            "description": "Played by one person.",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "mode",
+                          "max"
+                        ],
+                        "properties": {
+                          "mode": {
+                            "type": "string",
+                            "enum": [
+                              "private",
+                              "online"
+                            ],
+                            "description": "private: friends join by a code or a link. online: players are matched with strangers."
+                          },
+                          "min": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 16,
+                            "description": "The fewest players a session needs: 1 when it can also be played alone. Defaults to 2."
+                          },
+                          "max": {
+                            "type": "integer",
+                            "minimum": 2,
+                            "maximum": 16,
+                            "description": "The most players in one session."
+                          }
+                        }
+                      }
+                    ]
                   },
                   "jam": {
                     "type": [

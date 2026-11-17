@@ -1,5 +1,13 @@
 # opengame-all-in-one changelog
 
+## 1.0.11
+
+Carries `opengame-jam` 1.1.2, which names the rules page's five judging criteria with none weighted above another. (17 Nov 2026)
+
+## 1.0.10
+
+Carries opengame-deploy 1.1.12, where `opengame.json` says how the game is played with `players`. (17 Nov 2026)
+
 ## 1.0.9
 
 Carries opengame-sdk 1.0.14 and opengame-deploy 1.1.11, which name Unreal Engine 5.9 and say how its C++ reaches the SDK. (17 Nov 2026)

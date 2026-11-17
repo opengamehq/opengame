@@ -1,5 +1,5 @@
 import { LARGE_ASSET_DELIVERY, isLargeAssetPath, largeAssetLimits, largeAssetPlan, largeAssetPlanAdmits, validateLargeAssetFiles, type LargeAssetFile } from "@opengame/shared/large-assets";
-import { engineFindings, encryptedPckFindings, engineArchiveShapeFindings, engineRuntimeUrl, sourceUsesThreads, withGodotPckVersion } from "./engine-findings";
+import { bootDownloadFindings, engineFindings, encryptedPckFindings, engineArchiveShapeFindings, engineRuntimeUrl, sourceUsesThreads, withGodotPckVersion } from "./engine-findings";
 import { defoldCustomKeyFindings } from "./defold-archive";
 import { nameFindings, compressedBrowserAsset, canonicalName, precompressedAsset } from "./names";
 import { modulePathAnalysis } from "./module-paths";
@@ -1022,6 +1022,7 @@ export async function preflight(
     texts[i] == null ? [] : [{ path: file.path, text: texts[i]! }]).concat(reading.flatMap((file, i) =>
       file.path === "opengame.json" && texts[i] != null && options.manifestRequires === undefined ? [{ path: file.path, text: texts[i]! }] : []))
     .concat(options.manifestRequires === undefined ? [] : [{ path: "opengame.json", text: JSON.stringify({ requires: options.manifestRequires }) }]), engine, sharedModules));
+  findings.push(...bootDownloadFindings(kept.filter((f) => !external.has(f.path)), engineIds));
   findings.push(...await encryptedPckFindings(kept));
   if (engineIds.has("defold")) findings.push(...await defoldCustomKeyFindings(kept));
   /* The glue's word or the module's own memory flags, whichever speaks. The second is the

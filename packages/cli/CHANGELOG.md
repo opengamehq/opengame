@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.0
+
+- `opengame.json` says how the game is played with `players`: `"single"`, or
+  `{ "mode": "private", "min": 2, "max": 8 }` for friends who join by a code or a link, or
+  `"mode": "online"` for players matched with strangers. `min` 1 is a game that can also be
+  played alone. Left out, or `"auto"`, review works it out and the deploy's page offers it. A
+  file with the older `"multiplayer": { "mode": "none" | "p2p" }` deploys as before.
+- `opengame init` writes `"players": "auto"`, or what `--players`, `--min-players` and
+  `--max-players` say, and `opengame publish` takes the same three flags.
+- `opengame pull` writes the website's players back as `players`.
+
 ## 0.12.0
 
 - Unreal Engine 5.9 Wasm packages. `opengame init` recognises a `.uproject`, sets the export

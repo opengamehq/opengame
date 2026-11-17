@@ -3,7 +3,7 @@ import { open, unlink, realpath } from "node:fs/promises";
 import { replaceFile } from "./files";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { gameMetadataSnapshotSchema, manifestSchema, METADATA_FIELDS, type GameManifest } from "@opengame/protocol";
+import { gameMetadataSnapshotSchema, manifestSchema, METADATA_FIELDS, multiplayerToPlayers, playersSchema, type GameManifest } from "@opengame/protocol";
 import { LIMITS } from "@opengame/shared";
 import { Api } from "./http";
 import { activeToken } from "./credentials";
@@ -60,7 +60,12 @@ export async function pullCommand(root: string, flags: Record<string, string | b
         const controls = Array.isArray(local.controls) ? local.controls.filter(value => value !== "gamepad") : [];
         metadata.controls = [...controls, ...(snapshot.controllerSupport ? ["gamepad"] : [])];
       }
-      const merged = manifestSchema.safeParse({ ...Object.fromEntries(Object.entries(local).filter(([key]) => !METADATA_FIELDS.includes(key as typeof METADATA_FIELDS[number]))), ...metadata });
+      /* `players` is the file's word for the website's `multiplayer` (packages/protocol,
+         playersSchema): set aside while the two are checked as one manifest, then written back
+         as `players` when the website says how the game is played, and kept as it was when the
+         website says nothing of it. */
+      const { players: localPlayers, ...rest } = local;
+      const merged = manifestSchema.safeParse({ ...Object.fromEntries(Object.entries(rest).filter(([key]) => !METADATA_FIELDS.includes(key as typeof METADATA_FIELDS[number]))), ...metadata });
       if (!merged.success) {
         /* A multiplayer game whose player count opengame.json cannot hold (none recorded, or
            more than a lobby takes) comes down as a `multiplayer` the manifest refuses. That is
@@ -70,20 +75,26 @@ export async function pullCommand(root: string, flags: Record<string, string | b
         if (website.length) {
           const count = website.some(issue => issue.path[1] === "maxPlayers");
           throw new CliError("metadata_conversion_required", (count
-            ? `This game's player count on the website cannot be written in opengame.json, which takes 2 to ${LIMITS.rtc.peersPerLobbyMax} players.`
+            ? `This game's player count on the website cannot be written in opengame.json, which takes 2 to ${LIMITS.platform.manifest.playersMax} players.`
             : "This game's multiplayer settings on the website cannot be written in opengame.json.")
-            + " Set multiplayer in opengame.json, check its other fields against the website, then use deploy --metadata=local to replace them.");
+            + " Set players in opengame.json, check its other fields against the website, then use deploy --metadata=local to replace them.");
         }
         throw new CliError("manifest_invalid", "The website metadata and local build settings do not form a valid manifest. Check build, sdk and controls in opengame.json, then pull again.");
       }
-      const next: GameManifest = merged.data;
+      const { multiplayer, ...pulled } = merged.data;
+      const next: Omit<GameManifest, "multiplayer"> & { players?: unknown } = multiplayer ? { ...pulled, players: multiplayerToPlayers(multiplayer) }
+        : localPlayers !== undefined ? { ...pulled, players: localPlayers } : pulled;
       /* Nothing about a cover comes down any more. Until 30 Oct 2026 this downloaded the
          website's cover into opengame-assets/ and wrote its path into the file; OpenGame
          now makes the cover after approval, so there is nothing of the creator's to bring
          down, and an older server's snapshot.cover is not read. A cover already in
          opengame.json is not a metadata field, so it is left exactly as it was, and
          check says it can go. */
-      const changes = METADATA_FIELDS.filter(key => JSON.stringify(local[key]) !== JSON.stringify(next[key]));
+      // The file's players as the website would say them, whichever word the file used.
+      const wasPlayers = localPlayers !== undefined ? playersSchema.safeParse(localPlayers).data ?? localPlayers
+        : manifestSchema.shape.multiplayer.safeParse(local.multiplayer).data ? multiplayerToPlayers(manifestSchema.shape.multiplayer.parse(local.multiplayer)!) : undefined;
+      const changes = [...METADATA_FIELDS.filter(key => key !== "multiplayer"), "players" as const]
+        .filter(key => JSON.stringify(key === "players" ? wasPlayers : local[key]) !== JSON.stringify((next as Record<string, unknown>)[key]));
       if (previous !== null && changes.length) await atomicWrite(join(base, ".opengame", "manifest-before-pull.json"), previous);
       // The file is first: an interrupted state write leaves an older revision,
       // so a deploy preserves website metadata instead of overwriting it.

@@ -64,6 +64,13 @@ const publishFlags = (when: string): Flag[] => [
   { name: "sponsor", type: "string", description: `${when}Comma-separated sponsor tracks to enter.` },
   { name: "sponsor-email", type: "string", description: `${when}The email of the account you used at each sponsor, as sponsor=email, separated by commas.` },
 ];
+/* How the game is played (17 Nov 2026): the flags for what `players` in opengame.json says
+   (packages/protocol playersSchema). Metadata only: the game brings its own netcode. */
+const playersFlags = (lead: string): Flag[] => [
+  { name: "players", type: "string", values: ["single", "private", "online", "auto"], description: `${lead}single: played alone. private: friends join by a code or a link. online: players are matched with strangers.` },
+  { name: "min-players", type: "string", description: `With --players private or online, the fewest players a session needs, 1 to ${LIMITS.platform.manifest.playersMax}. 1 when it can also be played alone. Defaults to 2.` },
+  { name: "max-players", type: "string", description: `With --players private or online, the most players in one session, 2 to ${LIMITS.platform.manifest.playersMax}.` },
+];
 const basedOnFlag = (when: string): Flag => ({ name: "based-on", type: "string",
   description: `The game a decomp or a mod is made from, as in --based-on "Doom"${when}. Required for a decomp or a mod, and not allowed for a game or a world.` });
 
@@ -75,8 +82,9 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "output", type: "string", description: "Static build folder. Required when several outputs contain index.html." },
     { name: "engine", type: "string", values: [...ENGINE_IDS], description: "Engine export recipe. Otherwise detect source markers and built-export signatures; unknown projects use custom." },
     { name: "genre", type: "string", description: `auto (the default) or a genre slug. On Auto, review picks the genre and its subgenre from the game, and the deploy's page shows them to accept or change. A wrong slug lists them.` },
+    ...playersFlags("Without it, auto: review works out how the game is played from the game. "),
     kindFlag("What you are making. Without it, a game. init does not ask."), basedOnFlag(""), json],
-    examples: ['opengame init . --title "My game"', 'opengame init . --kind mod --based-on "Doom"'] },
+    examples: ['opengame init . --title "My game"', 'opengame init . --kind mod --based-on "Doom"', "opengame init . --players private --min-players 2 --max-players 8"] },
   dev: { args: "[dir]", description: "Serve a local export with game-runtime headers. Under a contract that adds the SDK, pages also get the host runtime and SDK, as they do when hosted. If the contract supports opting out, sdk.inject: false leaves out the SDK.", flags: [
     { name: "port", type: "string", description: "Loopback port. Zero (the default) chooses a free port." },
     { name: "contract", type: "string", description: contractHelp() },
@@ -121,6 +129,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "genre", type: "string", description: "A genre slug. Without it, the genre the game was deployed with, or review's choice when the deploy left it to Auto." },
     { name: "subgenre", type: "string", description: "A subgenre slug under that genre, or none." },
     { name: "controller", type: "string", values: ["yes", "no"], description: "Whether the game supports a gamepad." },
+    ...playersFlags("Without it, what opengame.json said, or review's reading when it left players to Auto. "),
     ...publishFlags(""), stdin, json],
     examples: ["opengame publish", "opengame publish --wait --json", "opengame publish --description \"Race the rain to the river before the rising water closes every road home.\" --genre racing-sports --json",
       "opengame publish --track rpg --models claude,fal --sponsor fal --sponsor-email fal=you@example.com --json"] },

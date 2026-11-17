@@ -199,6 +199,52 @@ const boardSchema = z.strictObject({
   })).max(cap.boardVariantsMax).optional(),
 });
 
+/**
+ * HOW A GAME IS PLAYED, as a creator says it (17 Nov 2026): single player, private lobbies
+ * from X to Y players, or online from X to Y. Three modes, and a count for the two played
+ * together:
+ *
+ *   "players": "single"
+ *   "players": { "mode": "private", "min": 2, "max": 8 }    friends join by a code or a link
+ *   "players": { "mode": "online", "min": 1, "max": 16 }    matched with strangers
+ *
+ * `min` 1 is a game that can also be played alone (the games row's `both`), and it defaults
+ * to 2. `"auto"`, blank or left out, and review works out how the game is played and the
+ * details step offers it as Auto. Metadata only: the game brings its own netcode.
+ *
+ * The file's word, `players`, and the wire's, `multiplayer`, are one model: the CLI and Drop
+ * turn one into the other (`playersToMultiplayer`), and a pull turns it back
+ * (`multiplayerToPlayers`), so a creator never has to write `multiplayer` again.
+ */
+export const PLAYER_LOBBIES = ["private", "online"] as const;
+export type PlayerLobbies = typeof PLAYER_LOBBIES[number];
+export type Players = { mode: "single" } | { mode: PlayerLobbies; min: number; max: number };
+const playerCount = (min: number) => z.number().int().min(min).max(LIMITS.platform.manifest.playersMax);
+export const playersSchema = z.union([
+  z.literal("single").meta({ description: "Played by one person." }),
+  z.strictObject({ mode: z.literal("single") }),
+  z.strictObject({
+    mode: z.enum(PLAYER_LOBBIES).meta({ description: "private: friends join by a code or a link. online: players are matched with strangers." }),
+    min: playerCount(1).optional().meta({ description: "The fewest players a session needs. 1 when it can also be played alone. Defaults to 2." }),
+    max: playerCount(2).meta({ description: "The most players in one session." }),
+  }).refine(value => (value.min ?? 2) <= value.max, { path: ["min"], message: "Use a smallest number of players no larger than the largest." }),
+]).transform((value): Players => value === "single" || value.mode === "single" ? { mode: "single" } : { mode: value.mode, min: value.min ?? 2, max: value.max });
+
+/** The wire's `multiplayer` for a creator's `players`. */
+export function playersToMultiplayer(players: Players): NonNullable<GameManifest["multiplayer"]> {
+  return players.mode === "single" ? { mode: "none", maxPlayers: 1 }
+    : { mode: "p2p", minPlayers: players.min, maxPlayers: players.max, lobbies: players.mode };
+}
+
+/** A creator's `players` for the wire's `multiplayer`, old files included: `p2p` without
+ *  `lobbies` is private lobbies, and without `minPlayers` it starts at 2, as the games row
+ *  has always read a `multiplayer` game. */
+export function multiplayerToPlayers(multiplayer: Pick<NonNullable<GameManifest["multiplayer"]>, "mode" | "maxPlayers" | "minPlayers" | "lobbies">): Players {
+  if (multiplayer.mode === "none") return { mode: "single" };
+  const max = Math.max(2, multiplayer.maxPlayers);
+  return { mode: multiplayer.lobbies ?? "private", min: Math.min(multiplayer.minPlayers ?? 2, max), max };
+}
+
 export const manifestSchema = z.strictObject({
   $schema: z.literal("https://opengame.io/schema/opengame.json").optional(),
   /* The OpenGame account this project deploys as, written `@handle`. Optional on every path,
@@ -238,20 +284,25 @@ export const manifestSchema = z.strictObject({
   controls: z.array(z.enum(["keyboard", "mouse", "gamepad"])).min(1)
     .refine((items) => new Set(items).size === items.length, "List each control once.").meta({ uniqueItems: true }),
   requires: gameRequirementsSchema.optional(),
-  /* MULTIPLAYER IS GONE AND `p2p` IS STILL READ, ON PURPOSE (5 Nov 2026). The SDK's
-     lobbies and the playtest's multiplayer check were taken out for launch, so no value
-     here turns anything on. Refusing `p2p` would still break things that exist: checkouts
-     written before the removal, stored releases, and the metadata head the database
-     rebuilds from a games row with private or online lobbies, which writes {"mode":"p2p"}
-     back (online since 20261106180000, so a pull keeps an online game multiplayer).
-     `opengame check` and every deploy
-     from those would fail on a field that now does nothing. So it parses as it did, under
-     its old shape rules, and nothing that documents the manifest should offer it: "none"
-     is what to write. The editor schema still lists it, because that schema is what
-     validates the same old files in an editor. */
+  /* HOW THE GAME IS PLAYED, ON THE WIRE (17 Nov 2026). What a creator writes in opengame.json
+     is `players` (`playersSchema` below); the CLI and Drop turn it into this before a deploy
+     (`playersToMultiplayer`), and this is what a release stores and the database reads
+     (platform_freeze_candidate). It describes the game and turns nothing on: games bring
+     their own netcode, and the SDK's lobbies and the playtest's multiplayer check, removed
+     for launch on 5 Nov 2026, stay removed. So `p2p` here means only "played by more than
+     one person", and `lobbies` says how they meet: `private` by a code or a link, `online`
+     matched with strangers. `minPlayers` 1 is a game that can also be played alone.
+     A file written before `players`, with `none` or `p2p` and no `lobbies`, reads as it
+     always did: p2p is private lobbies from two players (`multiplayerToPlayers`). Left out
+     altogether, review works out how the game is played and the details step offers it as
+     Auto. `lobby` is the retired room settings, still parsed so an old checkout deploys. */
   multiplayer: z.strictObject({
-    mode: z.enum(["none", "p2p"]),
-    maxPlayers: z.number().int().min(1).max(LIMITS.rtc.peersPerLobbyMax),
+    mode: z.enum(["none", "p2p"]).meta({ description: "none: played alone. p2p: played by more than one person, in the game's own netcode." }),
+    minPlayers: z.number().int().min(1).max(LIMITS.platform.manifest.playersMax).optional()
+      .meta({ description: "With p2p, the fewest players a session needs: 1 when it can also be played alone. Defaults to 2." }),
+    maxPlayers: z.number().int().min(1).max(LIMITS.platform.manifest.playersMax).meta({ description: "The most players in one session: 1 with none." }),
+    lobbies: z.enum(PLAYER_LOBBIES).optional()
+      .meta({ description: "With p2p, how players meet: private, by a code or a link, or online, matched with strangers. Defaults to private." }),
     lobby: lobbyConfigurationSchema.optional(),
   }).optional(),
   leaderboards: z.array(boardSchema).max(cap.boardCountMax).optional(),
@@ -339,6 +390,12 @@ export const manifestSchema = z.strictObject({
   if (value.multiplayer?.mode === "none" && value.multiplayer.maxPlayers !== 1) {
     ctx.addIssue({ code: "custom", path: ["multiplayer", "maxPlayers"], message: "Single-player games have one player." });
   }
+  if (value.multiplayer?.mode === "p2p" && value.multiplayer.minPlayers !== undefined && value.multiplayer.minPlayers > value.multiplayer.maxPlayers) {
+    ctx.addIssue({ code: "custom", path: ["multiplayer", "minPlayers"], message: "Use a smallest number of players no larger than the largest." });
+  }
+  if (value.multiplayer?.mode === "none" && (value.multiplayer.lobbies !== undefined || (value.multiplayer.minPlayers ?? 1) !== 1)) {
+    ctx.addIssue({ code: "custom", path: ["multiplayer"], message: "Single-player games have one player and no lobbies." });
+  }
   if (value.multiplayer?.mode === "none" && value.multiplayer.lobby) {
     // Not "set mode p2p": that would advertise the legacy value the comment above retires.
     ctx.addIssue({ code: "custom", path: ["multiplayer", "lobby"], message: "Remove lobby. Room settings were part of multiplayer, which has been removed." });
@@ -348,7 +405,10 @@ export const manifestSchema = z.strictObject({
 export type GameManifest = z.infer<typeof manifestSchema>;
 
 /** The opengame.json fields that take "auto", or may be left out, in the file a creator edits. */
-export const AUTO_MANIFEST_FIELDS = ["title", "tagline", "description", "genre", "controls"] as const;
+/* `players` since 17 Nov 2026: left out, the release carries no `multiplayer` and review works out
+   how the game is played (`playersSchema`). Unlike the others it is never named in a deploy's
+   `provisional`, because the missing field already says it. */
+export const AUTO_MANIFEST_FIELDS = ["title", "tagline", "description", "genre", "controls", "players"] as const;
 
 export function manifestJsonSchema() {
   const schema = z.toJSONSchema(manifestSchema);
@@ -395,7 +455,7 @@ export function manifestJsonSchema() {
     },
     allOf: [{
       if: { required: ["multiplayer"], properties: { multiplayer: { properties: { mode: { const: "none" } }, required: ["mode"] } } },
-      then: { properties: { multiplayer: { properties: { maxPlayers: { const: 1 } }, not: { required: ["lobby"] } } } },
+      then: { properties: { multiplayer: { properties: { maxPlayers: { const: 1 }, minPlayers: { const: 1 } }, not: { anyOf: [{ required: ["lobby"] }, { required: ["lobbies"] }] } } } },
     }, {
       if: { required: ["multiplayer"], properties: { multiplayer: { properties: { mode: { const: "p2p" } }, required: ["mode"] } } },
       then: { properties: { multiplayer: { properties: { maxPlayers: { minimum: 2 } } } } },
@@ -441,7 +501,14 @@ export function manifestFileJsonSchema() {
       { type: "null" },
       ...(field === "controls" ? [{ type: "array", items: autoText, description: "Auto, as a list: empty, or every entry auto." }] : [])] };
   }
-  return { ...schema, required: (schema.required ?? []).filter(field => !(AUTO_MANIFEST_FIELDS as readonly string[]).includes(field)), properties };
+  /* `players`, the file's word for how the game is played (`playersSchema`), which the CLI and
+     Drop send as `multiplayer`. Auto too: left out, blank or "auto" and review works it out. A
+     file names one of the two, never both. */
+  properties.players = { anyOf: [z.toJSONSchema(playersSchema, { io: "input" }),
+    { ...autoText, description: "Auto: review works out how the game is played, and you accept or change it on the deploy's page." }, { type: "null" }],
+  description: "How the game is played: \"single\", or { \"mode\": \"private\" | \"online\", \"min\", \"max\" }. Leave it out for Auto." };
+  return { ...schema, required: (schema.required ?? []).filter(field => !(AUTO_MANIFEST_FIELDS as readonly string[]).includes(field)), properties,
+    allOf: [...(schema.allOf ?? []), { not: { required: ["players", "multiplayer"] } }] };
 }
 
 export function parseManifest(input: unknown): GameManifest {

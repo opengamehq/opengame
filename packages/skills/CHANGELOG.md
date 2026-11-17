@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.2
+
+- `opengame-deploy` 1.1.12 and `opengame-all-in-one` 1.0.10: `opengame.json` says how the game
+  is played with `players`, set by `opengame init --players` and `opengame publish --players`.
+
 ## 1.7.1
 
 - Unreal Engine 5.9 Wasm packages are hosted: `opengame-sdk` 1.0.14 says how C++ calls the

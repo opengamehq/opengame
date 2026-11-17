@@ -43,7 +43,7 @@ test("paths cannot leave the build, encode traversal or name remote assets", () 
 test("limits agree with database code-point counts and broker capacity", () => {
   assert.equal(parseManifest({ ...game(), title: "🚀".repeat(LIMITS.text.gameTitle.max) }).title.length, LIMITS.text.gameTitle.max * 2);
   assert.throws(() => parseManifest({ ...game(), title: "a".repeat(LIMITS.text.gameTitle.max + 1) }));
-  assert.throws(() => parseManifest({ ...game(), multiplayer: { mode: "p2p", maxPlayers: LIMITS.rtc.peersPerLobbyMax + 1 } }));
+  assert.throws(() => parseManifest({ ...game(), multiplayer: { mode: "p2p", maxPlayers: LIMITS.platform.manifest.playersMax + 1 } }));
   assert.throws(() => parseManifest({ ...game(), controls: ["touch"] }));
 });
 
@@ -498,4 +498,26 @@ test("a legacy p2p manifest still validates, and lobby errors do not ask for p2p
   assert.deepEqual(parseManifest(legacy).multiplayer, legacy.multiplayer);
   assert.equal(new Ajv2020({ strict: false }).compile(manifestJsonSchema())(legacy), true);
   assert.throws(() => parseManifest({ ...game(), multiplayer: { mode: "none", maxPlayers: 1, lobby: { settings: [] } } }), /Remove lobby/);
+});
+
+/* How a game is played (17 Nov 2026): the file says `players`, the wire `multiplayer`, and an
+   older file's `none` or `p2p` reads as it did. */
+test("multiplayer on the wire takes a smallest count and how players meet, and a single-player game takes neither", async () => {
+  const { parseManifest, multiplayerToPlayers, playersSchema, playersToMultiplayer } = await import("../src/manifest");
+  const base = { title: "Tide runner", description: "Race the rain to the river before the water closes every road.", genre: "racing-sports", controls: ["keyboard"] };
+  assert.deepEqual(parseManifest({ ...base, multiplayer: { mode: "p2p", minPlayers: 1, maxPlayers: 16, lobbies: "online" } }).multiplayer,
+    { mode: "p2p", minPlayers: 1, maxPlayers: 16, lobbies: "online" });
+  assert.throws(() => parseManifest({ ...base, multiplayer: { mode: "p2p", minPlayers: 6, maxPlayers: 4 } }), /no larger than the largest/);
+  assert.throws(() => parseManifest({ ...base, multiplayer: { mode: "none", maxPlayers: 1, lobbies: "online" } }), /one player and no lobbies/);
+  assert.throws(() => parseManifest({ ...base, multiplayer: { mode: "none", maxPlayers: 1, minPlayers: 2 } }));
+  // The old shapes, unchanged.
+  assert.deepEqual(parseManifest({ ...base, multiplayer: { mode: "p2p", maxPlayers: 4 } }).multiplayer, { mode: "p2p", maxPlayers: 4 });
+  assert.deepEqual(multiplayerToPlayers({ mode: "p2p", maxPlayers: 4 }), { mode: "private", min: 2, max: 4 }, "p2p is private lobbies from two");
+  assert.deepEqual(multiplayerToPlayers({ mode: "none", maxPlayers: 1 }), { mode: "single" });
+  // The two words round-trip.
+  for (const players of [{ mode: "single" }, { mode: "private", min: 2, max: 8 }, { mode: "online", min: 1, max: 16 }] as const) {
+    assert.deepEqual(multiplayerToPlayers(playersToMultiplayer(playersSchema.parse(players))), players);
+  }
+  assert.throws(() => playersSchema.parse({ mode: "online", max: 1 }));
+  assert.throws(() => playersSchema.parse({ mode: "private", min: 0, max: 4 }));
 });

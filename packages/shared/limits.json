@@ -15,6 +15,9 @@
   },
   "performance": {
     "initialTransferBytesWarn": 52428800,
+    "bootDownloadMbps": 50,
+    "bootDownloadNoteSeconds": 3,
+    "wasmTransitRatio": 0.25,
     "timeToPlayableMsWarn": 10000,
     "firstFrameMsFail": 30000,
     "medianFpsWarn": 45
@@ -972,6 +975,10 @@
   },
   "play": {
     "sessionRefreshTimeoutMs": 10000,
+    "frameProgress": {
+      "reportIntervalMs": 1000,
+      "heartbeatMs": 5000
+    },
     "frameEventStringCharsMax": 120,
     "frameEventDigitRunMin": 9,
     "frameEventNameMax": 48,
@@ -1214,9 +1221,6 @@
       "min": 1,
       "max": 2000
     }
-  },
-  "rtc": {
-    "peersPerLobbyMax": 16
   },
   "studio": {
     "preview": {
@@ -2253,6 +2257,7 @@
     },
     "manifest": {
       "bytesMax": 65536,
+      "playersMax": 16,
       "lobbySettingsMax": 4,
       "lobbyChoicesMax": 6,
       "lobbyIdCharsMax": 16,

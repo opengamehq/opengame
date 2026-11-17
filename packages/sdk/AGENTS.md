@@ -105,7 +105,7 @@ opengame init . --title "My game" --json
 opengame init . --title "Doom but blue" --kind mod --based-on "Doom" --json
 ```
 
-Do not ask the creator for a description or a genre before deploying. When you know them, pass `--description` (40 characters or more) and `--genre`; when you do not, leave them out. Every field defaults to Auto: review writes the description and the genre from the game, and the creator accepts or changes them on the deploy's page, where they also enter the jam. A title or description you pass is offered back with its casing and grammar tidied, and `opengame publish --keep-words` keeps it as written. After the deploy you can set the description yourself with `opengame details --description "..." --json`. If the file already exists, `init` fills in only the fields it leaves blank; edit the file to change the rest.
+Do not ask the creator for a description or a genre before deploying. When you know them, pass `--description` (40 characters or more), `--genre` and `--players`; when you do not, leave them out. Every field defaults to Auto: review writes the description and the genre from the game, and the creator accepts or changes them on the deploy's page, where they also enter the jam. A title or description you pass is offered back with its casing and grammar tidied, and `opengame publish --keep-words` keeps it as written. After the deploy you can set the description yourself with `opengame details --description "..." --json`. If the file already exists, `init` fills in only the fields it leaves blank; edit the file to change the rest.
 
 For a game that already exists on OpenGame, in a new checkout, link the folder first so the deploy does not create a second game:
 

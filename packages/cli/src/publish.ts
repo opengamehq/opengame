@@ -7,6 +7,7 @@ import { linkedGameId, readGame, refuseRemoved } from "./games";
 import { Api, ApiError } from "./http";
 import { CliError, Output, terminalText } from "./output";
 import { emitReview, followReview, reviewLine } from "./submit";
+import { playersFlags } from "./auto";
 
 type Flags = Record<string, string | boolean>;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,6 +18,8 @@ const list = (value: string | boolean | undefined) => typeof value === "string" 
 export interface PublishAnswers {
   title?: string; tagline?: string; description?: string; keepOwnWords?: boolean;
   genre?: string; subgenre?: string | null; controller?: boolean;
+  /** How the game is played (17 Nov 2026), as opengame.json's `players` says it. */
+  players?: { mode: "single" } | { mode: "private" | "online"; min: number; max: number };
   jam?: { track: string; models: string[]; sponsors: string[]; sponsorEmails: Record<string, string> } | null;
 }
 
@@ -37,6 +40,9 @@ export function publishAnswers(flags: Flags): PublishAnswers {
     if (flags.controller !== "yes" && flags.controller !== "no") throw new CliError("invalid_flag", "Use --controller yes or --controller no.", EXIT.input);
     answers.controller = flags.controller === "yes";
   }
+  // Auto is what leaving the flags out already means: what opengame.json said, or review's reading.
+  const players = playersFlags(flags);
+  if (players !== undefined && players !== "auto") answers.players = players;
   const jamFlags = ["track", "models", "sponsor", "sponsor-email"].filter(name => flags[name] !== undefined);
   if (flags["no-jam"] && jamFlags.length) throw new CliError("conflicting_flags", `Use --no-jam to publish to the gallery, or ${jamFlags.map(f => `--${f}`).join(", ")} to enter the jam, not both.`, EXIT.input);
   if (flags["no-jam"]) answers.jam = null;

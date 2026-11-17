@@ -112,7 +112,10 @@ test("pull brings the website's kind down, and a game there removes the checkout
    freezes and publishes from it. A player count the manifest cannot hold is refused by name. */
 test("pull then deploy of an online multiplayer game keeps its players in the manifest it sends", async () => {
   const root = await mkdtemp(join(tmpdir(), "og-pull-online-"));
-  const players = { mode: "p2p", maxPlayers: 4 } as const;
+  /* The website's head says how players meet and the fewest of them (20261117210000), and the
+     file says it as `players`, so a pull keeps an online game online. */
+  const players = { mode: "p2p", maxPlayers: 4, minPlayers: 2, lobbies: "online" } as const;
+  const filePlayers = { mode: "online", min: 2, max: 4 } as const;
   let websitePlayers: Record<string, unknown> = players;
   const deploys: Record<string, unknown>[] = [];
   const server = createServer(async (req, res) => {
@@ -135,11 +138,13 @@ test("pull then deploy of an online multiplayer game keeps its players in the ma
   const env = { ...process.env, OPENGAME_API_URL: origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" };
   try {
     await writeFile(join(root, "index.html"), "<!doctype html><title>Game</title>");
-    await writeFile(join(root, "opengame.json"), JSON.stringify({ ...metadata, multiplayer: players }));
+    await writeFile(join(root, "opengame.json"), JSON.stringify({ ...metadata, players: filePlayers }));
     await withProject(root, origin, async (state, save) => { state.gameId = id; await save(); });
     const pulled = JSON.parse((await run(process.execPath, [binary, "pull", root, "--json"], { env })).stdout);
     assert.deepEqual(pulled.data.changes, [], "nothing about the players changed on the website");
-    assert.deepEqual(JSON.parse(await readFile(join(root, "opengame.json"), "utf8")).multiplayer, players);
+    const written = JSON.parse(await readFile(join(root, "opengame.json"), "utf8"));
+    assert.deepEqual(written.players, filePlayers, "written back in the file's word");
+    assert.equal(written.multiplayer, undefined);
     await run(process.execPath, [binary, "deploy", root, "--jsonl"], { env });
     assert.equal(deploys.length, 1);
     assert.equal(deploys[0]!.metadata, "preserve");
@@ -148,7 +153,7 @@ test("pull then deploy of an online multiplayer game keeps its players in the ma
     // Listed for more than a lobby holds: the pull names the field and the way past it, and
     // leaves the checkout as it was.
     const before = await readFile(join(root, "opengame.json"), "utf8");
-    websitePlayers = { mode: "p2p", maxPlayers: LIMITS.rtc.peersPerLobbyMax + 1 };
+    websitePlayers = { mode: "p2p", maxPlayers: LIMITS.platform.manifest.playersMax + 1 };
     await assert.rejects(run(process.execPath, [binary, "pull", root, "--jsonl"], { env }), (error: unknown) => {
       const { stdout } = error as { stdout: string };
       const last = JSON.parse(stdout.trim().split("\n").at(-1)!);

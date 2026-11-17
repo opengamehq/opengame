@@ -35,9 +35,9 @@ test("init with no flags writes Auto for every field it collects, and check read
   await writeFile(join(root, "index.html"), TAP_COUNTER);
   const result = await initProject(root, {});
   const file = await written(root);
-  for (const field of ["title", "tagline", "description", "genre", "controls"]) assert.equal(file[field], "auto", field);
+  for (const field of ["title", "tagline", "description", "genre", "controls", "players"]) assert.equal(file[field], "auto", field);
   assert.deepEqual(result.needs, []);
-  assert.match(result.message, /^Created opengame\.json\.\nAuto: title, tagline, description, genre,? and controls\. Leave a field out, blank or "auto" and review writes it from your game; you accept or change it on the deploy's page, or with opengame publish\./);
+  assert.match(result.message, /^Created opengame\.json\.\nAuto: title, tagline, description, genre, controls,? and players\. Leave a field out, blank or "auto" and review writes it from your game; you accept or change it on the deploy's page, or with opengame publish\./);
   // What `opengame check` reads first: the file init wrote has to pass it, and say what was Auto.
   const manifest = await loadManifest(root);
   assert.equal(manifest.title, "CLI test (delete me)", "an Auto title deploys as the page's own name until review offers its own");
@@ -45,7 +45,8 @@ test("init with no flags writes Auto for every field it collects, and check read
   assert.equal(manifest.genre, FALLBACK_GENRE);
   assert.deepEqual(manifest.controls, ["keyboard", "mouse"]);
   assert.equal("tagline" in manifest, false);
-  assert.deepEqual(autoFields(manifest), ["title", "tagline", "description", "genre", "controls"]);
+  assert.deepEqual(autoFields(manifest), ["title", "tagline", "description", "genre", "controls", "players"]);
+  assert.equal(manifest.multiplayer, undefined, "Auto players sends no multiplayer");
   assert.deepEqual(await provisionalFields(root, manifest), ["title", "description", "genre", "controls"]);
 }));
 
@@ -55,7 +56,7 @@ test("a flag says a field, auto in any case is Auto, and a wrong genre lists aut
   assert.equal(file.title, "Night shift");
   assert.equal(file.description, DESCRIPTION);
   assert.equal(file.genre, "auto");
-  assert.match(result.message, /\nAuto: tagline, genre,? and controls\./);
+  assert.match(result.message, /\nAuto: tagline, genre, controls,? and players\./);
   assert.deepEqual(await provisionalFields(root, await loadManifest(root)), ["genre", "controls"]);
   await fixture(async other => {
     await assert.rejects(initProject(other, { genre: "space" }), (error: { code: string; message: string }) =>
@@ -137,7 +138,7 @@ test("an opengame.json init cannot read is still refused, and a blank genre is A
   assert.equal(await readFile(join(root, "opengame.json"), "utf8"), "{ not json");
   // What used to be refused as a missing genre is Auto now.
   await writeFile(join(root, "opengame.json"), JSON.stringify({ title: "Night shift", description: DESCRIPTION, genre: "", controls: ["keyboard"] }));
-  assert.deepEqual(autoFields(await loadManifest(root)), ["tagline", "genre"]);
+  assert.deepEqual(autoFields(await loadManifest(root)), ["tagline", "genre", "players"]);
   // A wrong slug is still the creator's to fix, and the fix names Auto.
   await writeFile(join(root, "opengame.json"), JSON.stringify({ title: "Night shift", description: DESCRIPTION, genre: "space", controls: ["keyboard"] }));
   await assert.rejects(loadManifest(root), (error: { message: string }) => /genre/.test(error.message));

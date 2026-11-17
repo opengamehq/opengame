@@ -509,3 +509,30 @@ test("bundled dev --external-assets serves a plan's files from disk and keeps th
     assert.equal((await closed)[0], 0);
   } finally { child.kill("SIGKILL"); await closed; await root.remove(); }
 });
+
+test("dev resolves a site's page addresses the way og-games does", async () => {
+  // A Next.js export (about.html) and Astro's directory pages (menu/index.html), linked as /about and /menu.
+  const page = (text: string) => Buffer.from(`<!doctype html><h1>${text}</h1>`);
+  const running = await startDevServer({ contract: "2026-11", snapshot: new Map([["index.html", page("home")], ["about.html", page("about")],
+    ["menu/index.html", page("menu")], ["notes.txt", Buffer.from("notes")]]) });
+  try {
+    const navigate = { "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" };
+    // A folder's address without its slash is sent to the slash, as og-games sends it.
+    const folder = await get(running.url, "/menu?level=2", navigate);
+    assert.equal(folder.status, 308);
+    assert.equal(folder.headers.location, "/menu/?level=2");
+    for (const [address, text] of [["/about", "about"], ["/menu/", "menu"]] as const) {
+      const response = await get(running.url, address, navigate);
+      assert.equal(response.status, 200, address);
+      assert.match(response.body, new RegExp(`<h1>${text}</h1>`), address);
+      assert.match(String(response.headers["content-type"]), /text\/html/, address);
+    }
+    assert.equal((await get(running.url, "/nowhere", navigate)).status, 404);
+    // An address with a suffix is only ever that file.
+    assert.equal((await get(running.url, "/about.json", navigate)).status, 404);
+    // A script's fetch is not a page navigation, so a missing address stays missing, as on og-games.
+    assert.equal((await get(running.url, "/about", { "sec-fetch-mode": "cors", "sec-fetch-dest": "empty" })).status, 404);
+    // A folder's address is its index.html for every request, as normalisePath makes it there.
+    assert.equal((await get(running.url, "/menu/")).status, 200);
+  } finally { await running.close(); }
+});

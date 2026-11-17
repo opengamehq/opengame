@@ -395,7 +395,7 @@ test("every recipe is a registry engine under the registry's name, and every reg
 
 test("unknown projects fall back to custom and unsupported IDs are explicit errors", async () => fixture(async root => {
   assert.equal((await engineSetup(root, {})).id, "custom");
-  await assert.rejects(engineSetup(root, {}, "unreal"), { code: "engine_invalid" });
+  await assert.rejects(engineSetup(root, {}, "unigine"), { code: "engine_invalid" });
   assert.equal((await engineSetup(root, {}, "flame")).command, "flutter build web --no-web-resources-cdn");
   assert.equal((await engineSetup(root, {}, "stride")).command, undefined);
 }));
@@ -444,6 +444,44 @@ test("a Kaigen project gets its own build, folder, renderer and instructions", a
   }
   assert.doesNotMatch(result.engine.instructions, /editor|Cocos|—/);
   assert.equal(result.engine.docs, "https://docs.opengame.io/engines/kaigen");
+}));
+
+/* Unreal 5.9 packages a Wasm stage into <archive folder>/Wasm; the sample project used Build.
+   Its page refuses a browser without WebGPU and has no WebGL path, so requires is set. */
+test("an Unreal project gets its Wasm folder, renderer and instructions", async () => fixture(async root => {
+  await writeFile(join(root, "Game.uproject"), "{}\n");
+  await mkdir(join(root, "Content"), { recursive: true });
+  for (let i = 0; i <= LIMITS.bundle.fileCountMax; i++) await writeFile(join(root, "Content", `a${i}.uasset`), "");
+  const result = await initProject(root, metadata);
+  assert.equal(result.engine.id, "unreal");
+  assert.equal(result.engine.name, "Unreal Engine");
+  assert.equal(result.engine.evidence, "Game.uproject");
+  assert.deepEqual(result.manifest.build, { output: "Build/Wasm" });
+  assert.deepEqual(JSON.parse(await readFile(join(root, "opengame.json"), "utf8")).requires, { renderer: "webgpu" });
+  for (const words of [/Platforms > Wasm > Package Project/, /Shipping/, /Build\/Wasm/, /requires\.renderer webgpu/]) assert.match(result.engine.instructions, words);
+  assert.doesNotMatch(result.engine.instructions, /—/);
+  assert.equal(result.engine.docs, "https://docs.opengame.io/engines/unreal");
+}));
+
+test("--engine unreal at a project root takes Build/Wasm without walking Content", async () => fixture(async root => {
+  await writeFile(join(root, "Game.uproject"), "{}\n");
+  await mkdir(join(root, "Content"), { recursive: true });
+  for (let i = 0; i <= LIMITS.bundle.fileCountMax; i++) await writeFile(join(root, "Content", `a${i}.uasset`), "");
+  const result = await initProject(root, { ...metadata, engine: "unreal" });
+  assert.deepEqual(result.manifest.build, { output: "Build/Wasm" });
+  assert.match(result.engine.instructions, /Inject isolation headers can be on or off/);
+}));
+
+test("init run in an Unreal Wasm stage names the engine from the export", async () => fixture(async root => {
+  await mkdir(join(root, "Game/Binaries/Wasm"), { recursive: true });
+  await writeFile(join(root, "index.html"), "<!doctype html><title>Game</title><canvas id=canvas></canvas><script src=wasm-loader.js></script>");
+  await writeFile(join(root, "wasm-loader.js"), "const unsupported = window.ueCompat ? window.ueCompat.check() : null;");
+  await writeFile(join(root, "wasm-manifest.json"), "[]");
+  await writeFile(join(root, "Game/Binaries/Wasm/Game-Wasm-Shipping.js"), "var Module = {};");
+  await writeFile(join(root, "Game/Binaries/Wasm/Game-Wasm-Shipping.wasm"), new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
+  const result = await initProject(root, metadata);
+  assert.equal(result.engine.id, "unreal");
+  assert.deepEqual(result.manifest.requires, { renderer: "webgpu" });
 }));
 
 /* A real Kaigen project holds thousands of cooked files, so the output search refused OG Clash

@@ -6,7 +6,7 @@ import { tokensCommand } from "./tokens";
 import { pullCommand } from "./pull";
 import { gamesCommand } from "./games";
 import { authCommand } from "./auth";
-import { assetPlanFlag, deployCommand, prepareDeploy, build } from "./deploy";
+import { assetPlanFlag, deployCommand, prepareDeploy, build, builtExportFolder, frameworkBeforeBuild } from "./deploy";
 import { assetPlanSummary, planDelivery } from "./unity-assets";
 import { largeAssetLimits } from "@opengame/shared/large-assets";
 import { upgradeCommand } from "./upgrade";
@@ -23,7 +23,7 @@ import { applyNetworkDefaults } from "./network";
 import { initProject, ensureDeployManifest } from "./init";
 import { AUTO_HELP } from "./auto";
 import { inspectArchive } from "./archive";
-import { folderArgument, loadManifest, outputFolder, projectFor } from "./files";
+import { folderArgument, loadManifest, projectFor } from "./files";
 import { CLI_VERSION } from "./version";
 import { skillsCommand } from "./skills";
 import { refreshSkills, setupCommand } from "./setup";
@@ -567,8 +567,9 @@ async function main() {
       await archive.dispose();
       return;
     }
+    const framework = await frameworkBeforeBuild(root, manifest, Boolean(flags.build));
     if (flags.build && manifest.build?.command) await build(manifest.build.command, root, output, undefined, { install: !flags["no-install"], rerun: "opengame check --build" });
-    const inspection = await inspectArchive(await outputFolder(root, manifest), manifest, output, { vendor: Boolean(flags.vendor) });
+    const inspection = await inspectArchive(await builtExportFolder(root, manifest, framework, Boolean(flags.build)), manifest, output, { vendor: Boolean(flags.vendor) });
     // check reads no byte after this; the copy it checked goes now.
     await inspection.snapshot.dispose();
     output.emit({ type: "result", command, data: { ok: true, files: inspection.result.fileCount, bytes: inspection.result.totalBytes,

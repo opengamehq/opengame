@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.1
+
+- Unreal Engine 5.9 Wasm packages are hosted: `opengame-sdk` 1.0.14 says how C++ calls the
+  `window.OpenGame` OpenGame adds to a threaded page, `opengame-deploy` 1.1.11 names Unreal
+  among the engines, and `opengame-all-in-one` 1.0.9 carries both.
+- `opengame-deploy` 1.1.10, also in this release: any web framework that builds static files
+  deploys, and a Next.js app needs `output: "export"`. `opengame-all-in-one` 1.0.8 carried it.
+
 ## 1.7.0
 
 - Matched to the CLI, the SDK and the API on 17 Nov 2026: `opengame-cli` 1.9.2, `opengame-deploy`

@@ -219,7 +219,9 @@ OpenGame runs no game server or rooms. A multiplayer game brings its own, throug
 
 ## Engines
 
-OpenGame supports games built with Three.js, Unity, Godot, Kaigen and WebAssembly, and static web builds from any JavaScript engine. `opengame check` and the server detect the engine from the build. Any other static browser export uploads as a custom build, under the same file and runtime checks.
+OpenGame supports games built with Three.js, Unity, Godot, Unreal Engine, Kaigen and WebAssembly, and static web builds from any JavaScript engine. `opengame check` and the server detect the engine from the build. Any other static browser export uploads as a custom build, under the same file and runtime checks.
+
+Any web framework works once it builds static files: Vite, React, React Three Fiber, webpack, Parcel, Astro, SvelteKit with adapter-static, Nuxt with `nuxt generate`, and Next.js with `output: "export"` in `next.config`, which writes `out/`. `init` reads the framework's config and writes the folder the build fills. A project configured for a server fails with `static_build_required`, which names the setting to change; change that setting instead of passing `--output`. [Web frameworks](https://docs.opengame.io/guides/web-frameworks) has each one.
 
 Run `opengame init . --engine <id>` to record an engine's export folder. `opengame help --json` lists the IDs, and `init` prints the export steps and the guide for the one you choose. The [engine overview](https://docs.opengame.io/engines/overview) links every engine page.
 

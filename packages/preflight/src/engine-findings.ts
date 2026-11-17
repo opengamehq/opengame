@@ -184,8 +184,13 @@ export function engineFindings(paths: string[], sources: EngineSource[], report:
   const guarded = scriptCalls.get(CONFIG_SW_REGISTER);
   const armed = guarded === undefined ? undefined : !ids.has("godot") ? guarded : namedWorker(sources);
   const serviceWorker = paths.find(path => /(?:^|\/)(?:sw\.js|service-worker\.js|[^/]+\.service\.worker\.js)$/.test(path)) ?? register ?? armed;
-  if (serviceWorker) add("engine-service-worker", "note", "This export includes a service worker.",
-    "Game origins refuse service-worker scripts. Disable offline or PWA export features and verify the game starts without its install step.", serviceWorker);
+  /* Unreal 5.9 stages sw.js in every Wasm export as a data cache (and as the isolation fallback
+     for hosts without headers). Its loader carries on uncached when registration fails, and
+     og-games sends the isolation headers itself, so there is nothing to turn off. Measured by
+     playing a real export from a local og-games on 17 Nov 2026. */
+  if (serviceWorker) add("engine-service-worker", "note", "This export includes a service worker.", ids.has("unreal")
+    ? "Unreal's sw.js is the page's optional data cache. Game origins refuse service-worker scripts, so the loader reads each file over the network instead, and OpenGame sends the isolation headers it would otherwise add. Nothing to change in the build."
+    : "Game origins refuse service-worker scripts. Disable offline or PWA export features and verify the game starts without its install step.", serviceWorker);
   if ([...scriptCalls.keys()].some(call => /^(?:(?:window|globalThis)\.)?(?:alert|confirm|prompt)$/.test(call))) add("engine-modal-dialog", "note",
     "This export calls a browser modal dialog.", "The game frame does not allow modal dialogs. Replace alert, confirm, prompt or GameMaker show_message with an in-game panel.");
   if (ids.has("unity")) {

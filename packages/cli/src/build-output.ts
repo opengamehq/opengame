@@ -35,6 +35,10 @@ export async function detectBuildOutput(root: string, pkg: Package, explicit?: s
       }
     }
   }
+  /* A site framework's own config decides both whether the build can be hosted at all and
+     where it lands, so it is read first, and a build that needs a server is refused here,
+     with its fix, rather than surfacing later as a folder that never appears. */
+  const framework = await siteFramework(base, pkg, { strict: true });
   if (explicit !== undefined) {
     await validateOutput(explicit);
     return { output: explicit, candidates: [explicit], inferred: false };
@@ -45,14 +49,18 @@ export async function detectBuildOutput(root: string, pkg: Package, explicit?: s
   }
   const candidates: string[] = [];
   let visited = 0;
-  const ignored = new Set(["Library", "Temp", "obj", ".godot", ".next", "target", "Packages"]);
+  /* Toolchain caches are never the export. SvelteKit keeps a prerendered copy of every page
+     under .svelte-kit/output beside the real build/, and until 17 Nov 2026 that copy made
+     every built SvelteKit game ask which of the two to upload. */
+  const ignored = new Set(["Library", "Temp", "obj", ".godot", ".next", "target", "Packages",
+    ".svelte-kit", ".astro", ".nuxt", ".parcel-cache", ".vercel", ".netlify", ".turbo", ".angular", ".docusaurus"]);
   // Search actual entries, including named editor exports, without following
   // symlinks or walking a toolchain's cache. Stop rather than guessing on overflow.
   async function walk(folder: string, depth: number) {
     const entries = await readdir(join(base, folder), { withFileTypes: true });
     for (const entry of entries) {
       const name = folder === "." ? entry.name : `${folder}/${entry.name}`;
-      if (isExcludedPath(name) || ignored.has(entry.name) || entry.isSymbolicLink()) continue;
+      if (isExcludedPath(name, entry.isDirectory()) || ignored.has(entry.name) || entry.isSymbolicLink()) continue;
       if (++visited > LIMITS.bundle.fileCountMax) throw new CliError("build_output_required", "There are too many project files to infer an export safely. Choose --output <folder>.", 2);
       if (entry.isDirectory() && depth < 4) await walk(name, depth + 1);
       else if (entry.isFile() && entry.name === LIMITS.bundle.entryPoint) candidates.push(folder);
@@ -65,7 +73,7 @@ export async function detectBuildOutput(root: string, pkg: Package, explicit?: s
     async function list(dir: string, depth: number) {
       for (const entry of await readdir(join(base, folder, dir), { withFileTypes: true })) {
         const name = dir ? `${dir}/${entry.name}` : entry.name;
-        if (entry.isSymbolicLink() || isExcludedPath(name) || ignored.has(entry.name)) continue;
+        if (entry.isSymbolicLink() || isExcludedPath(name, entry.isDirectory()) || ignored.has(entry.name)) continue;
         if (paths.length >= LIMITS.bundle.fileCountMax) return;
         if (entry.isFile()) paths.push(name);
         else if (entry.isDirectory() && depth < 4) await list(name, depth + 1);
@@ -76,18 +84,27 @@ export async function detectBuildOutput(root: string, pkg: Package, explicit?: s
   }
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   // A workspace that hoists Vite to its own root leaves it out of this package.json,
-  // so a build script that runs vite is evidence too.
+  // so a build script that runs vite is evidence too. SvelteKit builds with vite too, but
+  // its adapter decides the folder, which siteFramework has already read.
   const vite = Boolean(pkg.scripts?.build && (deps.vite || /(?:^|[\s;&|(])vite(?:\s|$)/.test(pkg.scripts.build)));
-  const viteOut = vite ? await viteOutDir(base, pkg.scripts!.build!) : undefined;
+  const viteOut = vite && !framework ? await viteOutDir(base, pkg.scripts!.build!) : undefined;
   const bundler = pkg.scripts?.build && ["webpack", "parcel", "esbuild", "rollup"].some(name => deps[name]);
-  const parcelOut = pkg.scripts?.build && deps.parcel ? parcelDistDir(pkg.scripts.build) : undefined;
-  const bundlerOut = bundler ? parcelOut ?? "dist" : undefined;
-  /* The output folder of a tool whose settings were actually read: Vite's config or its
-     default, or parcel's --dist-dir. webpack, esbuild and rollup name theirs in code or in a
-     flag this does not read, and an esbuild build can bundle straight into src/
-     (review, 11 Nov 2026), so for them a page under src/ is not ruled out. */
-  const builtBy = viteOut ?? parcelOut;
+  /* parcel writes dist unless --dist-dir says otherwise. Until 17 Nov 2026 only the flag was
+     read, so `parcel build src/index.html` left src/ as the only page before a build, and
+     init wrote the unbuilt source as the export. */
+  const parcelOut = pkg.scripts?.build && deps.parcel && /(?:^|[\s;&|(])parcel\s+build\b/.test(pkg.scripts.build) ? parcelDistDir(pkg.scripts.build) ?? "dist" : undefined;
+  const webpackOut = pkg.scripts?.build && deps.webpack ? await webpackOutDir(base) : undefined;
+  const bundlerOut = bundler ? parcelOut ?? webpackOut ?? "dist" : undefined;
+  /* The output folder of a tool whose settings were actually read: a site framework's config,
+     Vite's config or its default, parcel's --dist-dir or its default, or the plain path in a
+     webpack config. esbuild and rollup name theirs in a flag this does not read, and an
+     esbuild build can bundle straight into src/ (review, 11 Nov 2026), so for them a page
+     under src/ is not ruled out. */
+  const builtBy = framework?.output ?? viteOut ?? parcelOut ?? webpackOut;
   const insideBuilt = (folder: string) => builtBy !== undefined && (folder === builtBy || folder.startsWith(`${builtBy}/`));
+  /* Tools whose input is an HTML page with a module in it: Vite, parcel, and the site
+     frameworks, whose source has no index.html at all but whose public/ is copied in. */
+  const bundlesHtml = vite || Boolean(framework) || parcelOut !== undefined;
   const underSrc = (folder: string) => folder === "src" || folder.startsWith("src/");
   // A nested recognised demo says nothing about the parent. Drop only known
   // build inputs: Vite's source page or CRA's unexpanded HTML template.
@@ -110,19 +127,26 @@ export async function detectBuildOutput(root: string, pkg: Package, explicit?: s
       if (["rust", "bevy"].includes(engine?.id ?? "") && folder === "." &&
           node.attrs?.some(attr => attr.name === "data-trunk")) sourceRoots.add(folder);
     }
-    // Vite copies public/ into its output, so that folder is never the export.
-    if (vite && folder === "public") sourceRoots.add(folder);
+    /* Vite, Next.js and Astro copy public/ into their output, and html-webpack-plugin reads
+       public/index.html as the template it writes the real page from, so that folder is
+       never the export unless the build writes into it. */
+    if ((vite || framework || deps["html-webpack-plugin"]) && folder === "public" && !insideBuilt(folder)) sourceRoots.add(folder);
+    /* A page inside the build's own folder is one more page of that export, not another
+       export. A multi-page build has one in every route's folder: a Next.js export with
+       trailingSlash writes out/about/index.html and out/404/index.html, and until 17 Nov 2026
+       each one was offered as a separate choice beside out/. */
+    if (builtBy !== undefined && folder !== builtBy && insideBuilt(folder)) sourceRoots.add(folder);
     /* Vite and parcel read src/ and write to the folder read above, so a page under src/ is
        one of their inputs or a tool page beside them, never the export. On 11 Nov 2026 a Three.js game
        built with `vite build` kept a weapons lab at src/weapons/lab/index.html, and init
        wrote that as build.output, because the root page was rightly dropped as Vite's input
        and the lab was the only index.html left. */
     if (builtBy !== undefined && !insideBuilt(folder) && underSrc(folder)) sourceRoots.add(folder);
-    /* The root page, or one under src/, that loads a local module is one Vite serves in
-       development and builds from. Only those two: a build script can move Vite's output
-       anywhere afterwards (`vite build && mv dist docs` publishes docs/), and the page it
-       moved loads modules too. */
-    if (vite && !insideBuilt(folder) && (folder === "." || underSrc(folder))) {
+    /* The root page, or one under src/, that loads a local module is one Vite or parcel
+       serves in development and builds from. Only those two: a build script can move the
+       output anywhere afterwards (`vite build && mv dist docs` publishes docs/), and the page
+       it moved loads modules too. */
+    if (bundlesHtml && !insideBuilt(folder) && (folder === "." || underSrc(folder))) {
       let local = false;
       type Node = { tagName?: string; attrs?: { name: string; value: string }[]; childNodes?: Node[] };
       const pending: Node[] = [parseHtml(text) as Node];
@@ -163,6 +187,7 @@ export async function detectBuildOutput(root: string, pkg: Package, explicit?: s
      set aside. Until 11 Nov 2026 every candidate was read first, a Vite project's whole root
      among them, one helper process per file, and then the root was thrown away as source. */
   if (outputs.length === 1) { await validateOutput(outputs[0]!); return { output: outputs[0]!, candidates: outputs, inferred: true, engine: await exportEngine(outputs[0]!) }; }
+  if (framework) { await validateOutput(framework.output); return { output: framework.output, candidates: [], inferred: true }; }
   if (viteOut) { await validateOutput(viteOut); return { output: viteOut, candidates: [], inferred: true }; }
   if (bundlerOut) { await validateOutput(bundlerOut); return { output: bundlerOut, candidates: [], inferred: true }; }
   if (pkg.scripts?.build && deps["react-scripts"]) { await validateOutput("build"); return { output: "build", candidates: [], inferred: true }; }
@@ -228,6 +253,177 @@ async function viteOutDir(base: string, script: string) {
     throw new CliError("build_output_required", "Vite's root or output folder is set in a way that cannot be read without running the build. Run opengame init --output <folder> with the folder your build produces.", 2, { next: "opengame init --output <folder>" });
   }
   return distinct[0];
+}
+
+/** webpack's output.path, when the config spells it as a plain folder beside the config:
+ * `path: path.resolve(__dirname, "build")` or `path.join(__dirname, "build")`. The config is
+ * code and is not run, so anything else (a variable, two different folders, two configs) is
+ * no answer, and the caller keeps its old guess of dist. */
+async function webpackOutDir(base: string): Promise<string | undefined> {
+  const found: string[] = [];
+  for (const name of ["webpack.config.js", "webpack.config.cjs", "webpack.config.mjs", "webpack.config.ts"]) {
+    const raw = await projectText(base, name);
+    if (raw === undefined) continue;
+    const text = withoutComments(raw);
+    for (const match of text.matchAll(/\bpath\s*:\s*(?:path\.)?(?:resolve|join)\(\s*__dirname\s*,\s*(["'`])([^"'`$]+)\1\s*\)/g)) {
+      found.push(match[2]!.replace(/^\.\//, "").replace(/\/+$/, ""));
+    }
+  }
+  const distinct = [...new Set(found)];
+  return distinct.length === 1 && isBundlePath(distinct[0]!) ? distinct[0] : undefined;
+}
+
+/** Line and block comments, so a commented-out option is not read as set. Strings are
+ * skipped whole, so a // inside a URL or the /* that a glob such as "/images/**" holds is
+ * not taken for a comment: read that way, the glob opened a comment that ran to the next
+ * real one and took output: "export" with it. A regex literal is not recognised, which
+ * config files rarely hold and which at worst reads as one more string. */
+function withoutComments(text: string) {
+  let out = "";
+  for (let at = 0; at < text.length;) {
+    const char = text[at]!;
+    if (char === '"' || char === "'" || char === "`") {
+      let end = at + 1;
+      while (end < text.length && text[end] !== char && !(char !== "`" && text[end] === "\n")) end += text[end] === "\\" ? 2 : 1;
+      out += text.slice(at, end + 1);
+      at = end + 1;
+    } else if (text.startsWith("//", at)) {
+      const end = text.indexOf("\n", at);
+      at = end < 0 ? text.length : end;
+    } else if (text.startsWith("/*", at)) {
+      const end = text.indexOf("*/", at + 2);
+      at = end < 0 ? text.length : end + 2;
+      out += " ";
+    } else { out += char; at++; }
+  }
+  return out;
+}
+
+/** A site framework whose static build init knows: where it writes and what it is called. */
+export type SiteFramework = { id: "next" | "astro" | "sveltekit" | "nuxt"; name: string; output: string };
+
+/** Every config file a framework might read, comments taken out, under one name stem. */
+async function frameworkConfigs(base: string, stems: string[]) {
+  const texts: string[] = [];
+  for (const stem of stems) for (const extension of ["js", "mjs", "cjs", "ts", "mts", "cts"]) {
+    const raw = await projectText(base, `${stem}.${extension}`);
+    if (raw !== undefined) texts.push(withoutComments(raw));
+  }
+  return texts;
+}
+
+/** What the configs say about one option: each value written as a plain string, and whether
+ * the name also appears some other way (a variable, a ternary, a shorthand property), in
+ * which case the value cannot be known without running the config. */
+function option(texts: string[], key: string) {
+  const values: string[] = [];
+  let other = false;
+  for (const text of texts) {
+    const literals = [...text.matchAll(new RegExp(`\\b${key}\\s*:\\s*(["'\`])([^"'\`$]*)\\1`, "g"))].map(match => match[2]!);
+    values.push(...literals);
+    if ((text.match(new RegExp(`\\b${key}\\b`, "g"))?.length ?? 0) > literals.length) other = true;
+  }
+  return { values: [...new Set(values)], other, named: values.length > 0 || other };
+}
+
+/** The value an option certainly has when it is one this refuses: every way the config writes
+ * it is a refused value, and nothing writes it some other way. A config that picks between two
+ * by an environment variable, "export" in one build and "standalone" in another, is left to the
+ * build, which knows which one it ran with; refusing it would stop a static build that works
+ * (review, 17 Nov 2026). */
+function certainly(found: ReturnType<typeof option>, refused: (value: string) => boolean): string | undefined {
+  return !found.other && found.values.length > 0 && found.values.every(refused) ? found.values[0] : undefined;
+}
+
+/** A base path on the game's own address other than its root. A game is served at the root
+ * of its own address, so a build that asks for /my-game/assets/… finds nothing there. A full
+ * URL is a CDN the creator hosts the files on, which the open contracts allow, so it is theirs. */
+const subPath = (value: string) => value.startsWith("/") && !value.startsWith("//") && value.replace(/\/+$/, "") !== "";
+
+const STATIC_DOCS = "https://docs.opengame.io/guides/web-frameworks";
+
+function staticRequired(message: string) {
+  return new CliError("static_build_required", `${message} Guide: ${STATIC_DOCS}`, 1);
+}
+
+/** A base path in a framework's config, refused with its name. `override` is the value the
+ * build command itself passes (`vite build --base=/`), which wins over the config's. */
+function refuseBase(texts: string[], key: string, name: string, file: string, override?: string) {
+  const value = override !== undefined ? (subPath(override) ? override : undefined) : certainly(option(texts, key), subPath);
+  if (value !== undefined) throw staticRequired(`${file} sets ${key} to "${value}", so every page asks for its files under ${value}, and OpenGame serves your game at the root of its own address. Remove ${key} from ${file} for the OpenGame build (or set it from an environment variable your other host sets), then run this again. ${name} builds for the root by default.`);
+}
+
+/**
+ * The site framework building this project, read from package.json's build script and the
+ * framework's own config, or undefined when there is none.
+ *
+ * Any framework works on OpenGame when it builds to static files, and each of these can,
+ * but only some of them do by default. A Next.js app builds a Node server unless its config
+ * says `output: "export"`, SvelteKit needs adapter-static, Nuxt needs `nuxt generate`, and
+ * Astro needs to stay on its default static output. Until 17 Nov 2026 none of them was read:
+ * a Next.js game with three.js in it got Three.js's folder, dist, while Next writes out/, and
+ * a Next.js app with API routes got the same answer and failed later with "the build folder
+ * does not exist", which says nothing about why.
+ *
+ * Each refusal names the setting and the change. Only literal evidence refuses, a string
+ * written in the config or a missing adapter in package.json, with one exception under
+ * `strict`, which init uses: a Next.js config that never mentions `output` is a server
+ * build, since that is Next's default. Deploy reads the same configs without `strict`, so a
+ * project whose output is set somewhere this cannot read (a shared config spread in) still
+ * deploys when its build writes the folder.
+ */
+export async function siteFramework(root: string, pkg: Package, options: { strict?: boolean } = {}): Promise<SiteFramework | undefined> {
+  const script = pkg.scripts?.build ?? "";
+  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+  const runs = (tool: RegExp) => new RegExp(`(?:^|[\\s;&|(])${tool.source}`).test(script);
+  const base = await realpath(root);
+  if (deps.next && runs(/next\s+build\b/)) {
+    const texts = await frameworkConfigs(base, ["next.config"]);
+    const output = option(texts, "output");
+    const fix = `Add output: "export" to next.config so next build writes a static export to out/, then run this again. A static export cannot use server actions, cookies, rewrites, middleware or route handlers that read the request; next build names any it finds.`;
+    const server = certainly(output, value => value !== "export");
+    if (server !== undefined) throw staticRequired(`next.config sets output to "${server}", which builds a Node server, and OpenGame hosts static files. ${fix}`);
+    // `next build && next export` is how Next.js 13 and earlier wrote out/ without the option.
+    if (options.strict && !output.named && !runs(/next\s+export\b/)) throw staticRequired(`This Next.js app builds a Node server, because next.config does not set output: "export", and OpenGame hosts static files. ${fix}`);
+    refuseBase(texts, "basePath", "Next.js", "next.config");
+    const dist = option(texts, "distDir");
+    // With output: "export", distDir is where the export goes (Next's static-exports guide).
+    const folder = dist.values.length === 1 && !dist.other ? dist.values[0]!.replace(/^\.\//, "").replace(/\/+$/, "") : "out";
+    return { id: "next", name: "Next.js", output: isBundlePath(folder) ? folder : "out" };
+  }
+  if (deps.astro && runs(/astro\s+build\b/)) {
+    const texts = await frameworkConfigs(base, ["astro.config"]);
+    const server = certainly(option(texts, "output"), value => value === "server" || value === "hybrid");
+    if (server !== undefined) throw staticRequired(`astro.config sets output to "${server}", which needs a server, and OpenGame hosts static files. Remove output (static is Astro's default) and the server adapter, then run this again.`);
+    refuseBase(texts, "base", "Astro", "astro.config");
+    const out = option(texts, "outDir");
+    const folder = out.values.length === 1 && !out.other ? out.values[0]!.replace(/^\.\//, "").replace(/\/+$/, "") : "dist";
+    return { id: "astro", name: "Astro", output: isBundlePath(folder) ? folder : "dist" };
+  }
+  if (deps["@sveltejs/kit"] && runs(/vite\s+build\b/)) {
+    if (!deps["@sveltejs/adapter-static"]) throw staticRequired(`This SvelteKit app has no static adapter, so vite build makes a server app, and OpenGame hosts static files. Install @sveltejs/adapter-static, use it as the adapter, and add export const prerender = true to your root +layout.js (or pass fallback: "index.html" to the adapter for a game that renders in the browser), then run this again.`);
+    // SvelteKit 3 takes its options in the vite plugin, earlier versions in svelte.config.
+    const texts = await frameworkConfigs(base, ["svelte.config", "vite.config"]);
+    refuseBase(texts, "base", "SvelteKit", "the SvelteKit config");
+    const pages = option(texts, "pages");
+    const folder = pages.values.length === 1 && !pages.other ? pages.values[0]!.replace(/^\.\//, "").replace(/\/+$/, "") : "build";
+    return { id: "sveltekit", name: "SvelteKit", output: isBundlePath(folder) ? folder : "build" };
+  }
+  if (deps.nuxt && runs(/nux[ti]\s+(?:build|generate)\b/)) {
+    /* Nuxt 2 generates into dist/; Nuxt 3 and later into .output/public, and `nuxt build
+       --prerender` is the same static build as `nuxt generate`. */
+    const nuxt2 = /^[\^~>=v\s]*2(?:\.|$)/.test(deps.nuxt);
+    if (!runs(/nux[ti]\s+generate\b/) && (nuxt2 || !runs(/nux[ti]\s+build\b[^;&|]*\s--prerender\b/))) throw staticRequired(`The build script runs nuxt build, which makes a server, and OpenGame hosts static files. Change it to nuxt generate, which writes a static site to ${nuxt2 ? "dist" : ".output/public"}, then run this again.`);
+    return { id: "nuxt", name: "Nuxt", output: nuxt2 ? "dist" : ".output/public" };
+  }
+  /* Plain Vite has the same trap under another name: `base: "/my-repo/"`, which a GitHub
+     Pages tutorial adds, makes every built page ask for /my-repo/assets/…. check reported it
+     as a missing import per file with no word about base. */
+  if (deps.vite || runs(/vite\s+build\b/)) {
+    const flag = /(?:^|[\s;&|(])vite\s+build\b[^;&|)]*?\s--base(?:=|\s+)(["']?)([^\s"';&|)]*)\1/.exec(script)?.[2];
+    refuseBase(await frameworkConfigs(base, ["vite.config"]), "base", "Vite", "vite.config", flag);
+  }
+  return undefined;
 }
 
 export async function readBuildPackage(root: string): Promise<Package> {

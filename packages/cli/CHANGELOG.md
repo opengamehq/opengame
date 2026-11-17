@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.12.0
+
+- Unreal Engine 5.9 Wasm packages. `opengame init` recognises a `.uproject`, sets the export
+  folder to `Build/Wasm` and adds `"requires": { "renderer": "webgpu" }`, and run inside a
+  package it names Unreal Engine from the package itself. `check` admits the Brotli copies
+  Unreal writes beside its `.pak`, `.utoc`, `.ushaderbytecode`, `.stinfo` and `.json` files, and
+  leaves out `index.html.br`, a compressed copy of the page that OpenGame never serves.
+- `check` no longer runs out of memory on a large Brotli-compressed `.wasm`: a 140 MB module
+  stopped it with "invalid array length" before it printed anything.
+- `opengame init` reads a site framework's own config for the output folder: `out/` for a
+  Next.js static export (or `distDir`), `dist/` for Astro, `build/` for SvelteKit's
+  adapter-static (or `pages`), `.output/public/` for `nuxt generate`, webpack's
+  `output.path`, and parcel's default `dist/`. Until now a Next.js game with three.js in it
+  got `dist/`, and a webpack or parcel project could get its source page.
+- A project set to build a server stops with `static_build_required` and the setting to
+  change: a Next.js app without `output: "export"`, SvelteKit without adapter-static,
+  `nuxt build`, Astro's server output, or a base path such as Next.js `basePath: "/game"`.
+- A multi-page build is one export: pages inside the build folder, and the copy SvelteKit
+  keeps under `.svelte-kit/`, are no longer offered as separate choices.
+- `opengame dev` serves `/menu/` as `menu/index.html`, `/about` as `about.html`, and sends
+  `/menu` to `/menu/`, the way games are served on OpenGame.
+- Carries the skills from `@opengamehq/skills` 1.7.1.
+
 ## 0.11.0
 
 - `opengame setup` gives your coding agents the OpenGame skills: every skill this CLI carries,

@@ -2,6 +2,7 @@
   "public": [
     "threejs",
     "unity",
+    "unreal",
     "godot",
     "kaigen",
     "webassembly",

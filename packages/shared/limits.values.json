@@ -1657,7 +1657,12 @@
         "gltf",
         "bin",
         "ktx",
-        "ktx2"
+        "ktx2",
+        "pak",
+        "utoc",
+        "ushaderbytecode",
+        "stinfo",
+        "json"
       ],
       "precompressedEncodings": [
         "gz",

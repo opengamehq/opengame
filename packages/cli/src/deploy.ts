@@ -18,7 +18,7 @@ import { Api, ApiError, UploadInterrupted } from "./http";
 import { activeToken } from "./credentials";
 import { collectFiles, loadManifest, outputFolder, replaceFile } from "./files";
 import { archiveDigest, createArchive, readArchiveRange, type PackedArchive } from "./archive";
-import { lockfileInstall, missingDependencies, readBuildPackage } from "./build-output";
+import { lockfileInstall, missingDependencies, readBuildPackage, siteFramework, type SiteFramework } from "./build-output";
 import { ensureProjectIgnored, ensureDeployManifest, kindPhrase, provisionalFields } from "./init";
 import { readProject, savedSubmit, updateProject, validKey, withProject, type Project } from "./project";
 import { CliError, Output, terminalText } from "./output";
@@ -340,6 +340,55 @@ export async function build(command: string, root: string, output: Output, timeo
     : `The build command failed. Its output is ${capture ? "in the finding above" : "above"}.`, 1, { finding, ...(missing?.install ? { next: missing.install } : {}) });
 }
 
+/** Whether a build command is the package's own build script, as init writes it (`npm run
+ * build`, `pnpm run build`, `yarn build`, `bun run build`), so reading that script says what it
+ * will do. Any other command is the creator's, and its result is judged by its files. */
+export function runsBuildScript(command: string | undefined): boolean {
+  return typeof command === "string" && /^\s*(?:npm\s+run(?:-script)?|pnpm(?:\s+run)?|yarn(?:\s+run)?|bun\s+run)\s+build\s*$/.test(command);
+}
+
+/**
+ * The site framework building this project, read before its build runs, or undefined.
+ *
+ * A framework config that can only build a server (or one that serves under a base path) is
+ * refused here, before the build spends minutes on it, with the setting to change
+ * (build-output.ts, siteFramework). Only a project with a build command: a prebuilt export is
+ * judged by its files alone. check, deploy and dev --build all read it, so the three agree.
+ */
+export async function frameworkBeforeBuild(root: string, manifest: GameManifest, building: boolean) {
+  /* Only before a build that will run, and only when that build is the package's own build
+     script, which is what siteFramework reads. An export built some other way (`nuxt
+     generate` run by hand beside a `nuxt build` script, then --no-build) is judged by its
+     files, and so is one whose opengame.json runs another command, such as `npx nuxt
+     generate` (review, 17 Nov 2026). */
+  if (!building || !runsBuildScript(manifest.build?.command)) return undefined;
+  const pkg = await readBuildPackage(root).catch(() => undefined);
+  return pkg ? siteFramework(root, pkg) : undefined;
+}
+
+/**
+ * The export folder once the build has run, and when a build that ran left none, why.
+ *
+ * A Next.js app that never set output: "export" builds .next/ and nothing else, so the folder
+ * is missing for a reason the generic sentence ("run your build command first", about the
+ * build that just ran) does not name. Read strictly here, because the build has now shown
+ * what the config does; and when the framework writes somewhere other than build.output, the
+ * folder it writes is named.
+ */
+export async function builtExportFolder(root: string, manifest: GameManifest, framework: SiteFramework | undefined, built: boolean): Promise<string> {
+  return outputFolder(root, manifest).catch(async (error: unknown) => {
+    if (built && error instanceof CliError && error.code === "folder_missing" && manifest.build?.command && runsBuildScript(manifest.build.command)) {
+      const pkg = await readBuildPackage(root).catch(() => undefined);
+      if (pkg) await siteFramework(root, pkg, { strict: true });
+      const output = manifest.build.output ?? ".";
+      if (framework && output !== framework.output) {
+        throw new CliError("folder_missing", `The build finished but ${output === "." ? "the project folder" : output} has no export. ${framework.name} writes its static build to ${framework.output}/ here, so set build.output in opengame.json to ${framework.output}.`);
+      }
+    }
+    throw error;
+  });
+}
+
 /**
  * `noBuild` is deploy's --no-build, which is a different thing from `runBuild` being false.
  * check passes false because a build there is opt-in and says nothing about it; deploy runs
@@ -352,6 +401,7 @@ export async function prepareDeploy(root: string, output: Output, runBuild = tru
   autoAssets?: boolean } & BuildOptions = {}) {
   if (options.unityAssets && options.vendor) throw new CliError("conflicting_flags", "Use an asset plan without --vendor; the explicit asset plan preserves exported file paths and bytes.", 2);
   const manifest = await loadManifest(root, output, options.unityAssets ? safeReadFile : undefined);
+  const framework = await frameworkBeforeBuild(root, manifest, runBuild && !options.noBuild);
   if (runBuild && manifest.build?.command) await build(manifest.build.command, root, output, undefined, { install: options.install, rerun: options.rerun });
   // After the build, whose own output owns the terminal while it runs.
   await output.face();
@@ -362,7 +412,7 @@ export async function prepareDeploy(root: string, output: Output, runBuild = tru
   /* The ordinary missing-folder sentence says to run the build command first, which is
      advice deploy normally follows itself. Under --no-build nothing ran, so the creator is
      told that, and that leaving the flag off is the other way out when there is a command. */
-  const folder = await outputFolder(root, manifest).catch((error: unknown) => {
+  const folder = await builtExportFolder(root, manifest, framework, runBuild && !options.noBuild).catch(async (error: unknown) => {
     if (!options.noBuild || !(error instanceof CliError) || error.code !== "folder_missing") throw error;
     throw new CliError("folder_missing", `The build folder ${where} does not exist, and --no-build means deploy did not build it. Build the export there first${manifest.build?.command ? ", or drop --no-build so deploy runs the build command" : ""}.`);
   });

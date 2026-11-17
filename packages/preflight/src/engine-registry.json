@@ -11,6 +11,12 @@
     "reason": "Existing layout and loader detector retained. No new Gate H validation is implied.",
     "signatures": []
   },
+  "unreal": {
+    "name": "Unreal Engine",
+    "evidenceStatus": "existing-detector",
+    "reason": "Layout and loader detector read from a real UE 5.9 Wasm Shipping export (TPPWeb590, 17 Nov 2026): Binaries/Wasm beside wasm-manifest.json and the page's loader. No Gate H validation is implied.",
+    "signatures": []
+  },
   "construct": {
     "name": "Construct",
     "evidenceStatus": "existing-detector",

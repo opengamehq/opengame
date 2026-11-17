@@ -138,7 +138,9 @@ test("help --json describes every command, flag, exit code and environment varia
     "--assets", "--base", "--config", "--filter", "--log", "--mode", "--out", "--root", "--target",
     // The locked installs deploy runs before a build (deploy.ts, installDependencies), and
     // parcel's output folder, read from a build script by build-output.ts.
-    "--frozen-lockfile", "--immutable", "--dist-dir"]);
+    "--frozen-lockfile", "--immutable", "--dist-dir",
+    // `nuxt build --prerender`, a static Nuxt build that build-output.ts accepts.
+    "--prerender"]);
   const unknown = [...named].filter(flag => !flags.has(flag) && !/^--evidence-/.test(flag) && !externalFlags.has(flag)).sort();
   assert.deepEqual(unknown, [], "the source names flags that no command accepts");
 });

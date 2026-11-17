@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { detectBuildOutput } from "../src/build-output";
+import { detectBuildOutput, siteFramework } from "../src/build-output";
 import { packagingReceipt } from "../src/packaging-receipt";
 import { accountAllowance } from "../src/allowance";
 import release from "../../shared/npm-release.json";
@@ -262,5 +262,159 @@ test("one file past the per-file limit is refused by name before anything is pac
     await over.truncate(LIMITS.bundle.fileBytesMax + 1); await over.close();
     await assert.rejects(collectFiles(root), (error: Error & { code?: string }) =>
       error.code === "bundle_limit" && /^over\.bin is [\d.]+ GiB, and one file can be at most 1 GiB\./.test(error.message));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("site frameworks get their own static build folder, and a server build is refused with its fix", async () => {
+  const project = async (files: Record<string, string>, run: (root: string) => Promise<void>) => {
+    const root = await mkdtemp(join(tmpdir(), "og-framework-"));
+    try {
+      for (const [name, text] of Object.entries(files)) { await mkdir(join(root, name, ".."), { recursive: true }); await writeFile(join(root, name), text); }
+      await run(root);
+    } finally { await rm(root, { recursive: true, force: true }); }
+  };
+  const next = { scripts: { build: "next build" }, dependencies: { next: "16", react: "19", three: "0.180" } };
+  const exported = 'const nextConfig = { output: "export" };\nexport default nextConfig;\n';
+  // three.js is in package.json, and Three.js's folder is dist, but Next writes out/.
+  await project({ "next.config.mjs": exported, "app/page.jsx": "export default () => null;" }, async root => {
+    assert.equal((await detectBuildOutput(root, next)).output, "out");
+    // After a build with trailingSlash: every route has its own index.html inside out/.
+    for (const page of ["out/index.html", "out/about/index.html", "out/404/index.html"]) { await mkdir(join(root, page, ".."), { recursive: true }); await writeFile(join(root, page), "<!doctype html>"); }
+    assert.equal((await detectBuildOutput(root, next)).output, "out");
+  });
+  await project({ "next.config.ts": 'export default { output: "export", distDir: "build/web" };' }, async root => {
+    assert.equal((await detectBuildOutput(root, next)).output, "build/web");
+  });
+  await project({ "next.config.mjs": "export default {};" }, async root => {
+    await assert.rejects(detectBuildOutput(root, next), { code: "static_build_required", message: /output: "export"/ });
+    // Deploy's own reading is not strict: a config this cannot read is left to the build.
+    assert.equal((await siteFramework(root, next))?.output, "out");
+  });
+  await project({ "next.config.mjs": 'export default { output: "standalone" };' }, async root => {
+    await assert.rejects(siteFramework(root, next), { code: "static_build_required", message: /"standalone"/ });
+  });
+  await project({ "next.config.js": 'module.exports = { output: "export", basePath: "/game" };' }, async root => {
+    await assert.rejects(detectBuildOutput(root, next, "out"), { code: "static_build_required", message: /basePath to "\/game"/ });
+  });
+  // A config that chooses between a static export and a server is left to the build.
+  await project({ "next.config.mjs": 'export default process.env.STATIC ? { output: "export" } : { output: "standalone" };' }, async root => {
+    assert.equal((await detectBuildOutput(root, next)).output, "out");
+  });
+  await project({ "next.config.js": 'module.exports = { output: "export", basePath: process.env.PAGES ? "/game" : "" };' }, async root => {
+    assert.equal((await detectBuildOutput(root, next)).output, "out", "a base path only some builds set is left to the build");
+  });
+  await project({ "next.config.mjs": 'export default { output: process.env.OUT };' }, async root => {
+    assert.equal((await detectBuildOutput(root, next)).output, "out", "a computed output is left to the build");
+  });
+  // A commented-out setting is not a setting.
+  await project({ "next.config.mjs": '// output: "export",\nexport default {};' }, async root => {
+    await assert.rejects(detectBuildOutput(root, next), { code: "static_build_required" });
+  });
+  // A glob in a string is not a comment: read as one, it ran to the next real comment and took output with it.
+  await project({ "next.config.mjs": 'export default { images: { remotePatterns: [{ pathname: "/img/**" }] },\n  output: "export",\n  /* note */ };' }, async root => {
+    assert.equal((await detectBuildOutput(root, next)).output, "out");
+  });
+  // A trailing comment is a comment too.
+  await project({ "next.config.mjs": 'export default { output: "export", // was output: "standalone"\n};' }, async root => {
+    assert.equal((await detectBuildOutput(root, next)).output, "out");
+  });
+  // Next.js 13 and earlier exported with a second command and no option.
+  await project({ "next.config.js": "module.exports = {};" }, async root => {
+    assert.equal((await detectBuildOutput(root, { ...next, scripts: { build: "next build && next export" } })).output, "out");
+  });
+  // Next listed but not what builds the game: nothing to say.
+  await project({ "index.html": "<canvas></canvas>" }, async root => {
+    assert.equal(await siteFramework(root, { scripts: { build: "echo done" }, dependencies: { next: "16" } }), undefined);
+  });
+
+  const astro = { scripts: { build: "astro build" }, dependencies: { astro: "7", three: "0.180" } };
+  await project({ "astro.config.mjs": "export default {};", "public/index.html": "<!doctype html>" }, async root => {
+    assert.equal((await detectBuildOutput(root, astro)).output, "dist");
+  });
+  await project({ "astro.config.mjs": 'export default { output: "server" };' }, async root => {
+    await assert.rejects(detectBuildOutput(root, astro), { code: "static_build_required", message: /"server"/ });
+  });
+
+  const kit = { scripts: { build: "vite build" }, devDependencies: { "@sveltejs/kit": "3", "@sveltejs/adapter-static": "3", vite: "8" }, dependencies: { three: "0.180" } };
+  await project({ "vite.config.js": "export default { plugins: [sveltekit({ adapter: adapter() })] };", "src/app.html": "%sveltekit.body%" }, async root => {
+    assert.equal((await detectBuildOutput(root, kit)).output, "build", "adapter-static writes build/, not Vite's dist/");
+    // The prerendered copy SvelteKit keeps in its cache is not a second export.
+    for (const page of ["build/index.html", ".svelte-kit/output/prerendered/pages/index.html"]) { await mkdir(join(root, page, ".."), { recursive: true }); await writeFile(join(root, page), "<!doctype html>"); }
+    assert.equal((await detectBuildOutput(root, kit)).output, "build");
+  });
+  await project({ "svelte.config.js": 'export default { kit: { adapter: adapter({ pages: "site" }) } };' }, async root => {
+    assert.equal((await detectBuildOutput(root, kit)).output, "site");
+  });
+  await project({ "svelte.config.js": "export default {};" }, async root => {
+    const auto = { ...kit, devDependencies: { "@sveltejs/kit": "3", "@sveltejs/adapter-auto": "3", vite: "8" } };
+    await assert.rejects(detectBuildOutput(root, auto), { code: "static_build_required", message: /adapter-static/ });
+  });
+
+  await project({ "nuxt.config.ts": "export default {};" }, async root => {
+    assert.equal((await detectBuildOutput(root, { scripts: { build: "nuxt generate" }, dependencies: { nuxt: "4" } })).output, ".output/public");
+    await assert.rejects(detectBuildOutput(root, { scripts: { build: "nuxt build" }, dependencies: { nuxt: "4" } }), { code: "static_build_required", message: /nuxt generate/ });
+    assert.equal((await detectBuildOutput(root, { scripts: { build: "nuxt build --prerender" }, dependencies: { nuxt: "4" } })).output, ".output/public");
+    assert.equal((await detectBuildOutput(root, { scripts: { build: "nuxt generate" }, dependencies: { nuxt: "^2.17.3" } })).output, "dist");
+  });
+
+  // Plain Vite with a GitHub Pages base path.
+  await project({ "vite.config.js": 'export default { base: "/my-game/" };', "index.html": '<script type="module" src="/src/main.js"></script>' }, async root => {
+    await assert.rejects(detectBuildOutput(root, { scripts: { build: "vite build" }, devDependencies: { vite: "8" } }), { code: "static_build_required", message: /base to "\/my-game\/"/ });
+  });
+  // The build script's own --base wins over the config's.
+  await project({ "vite.config.js": 'export default { base: "/my-game/" };', "index.html": '<script type="module" src="/src/main.js"></script>' }, async root => {
+    assert.equal((await detectBuildOutput(root, { scripts: { build: "vite build --base=/" }, devDependencies: { vite: "8" } })).output, "dist");
+    assert.equal((await detectBuildOutput(root, { scripts: { build: "vite build --base ./" }, devDependencies: { vite: "8" } })).output, "dist");
+    await assert.rejects(detectBuildOutput(root, { scripts: { build: "vite build --base=/sub/" }, devDependencies: { vite: "8" } }), { code: "static_build_required" });
+    // A build that names its own config reads that one, not vite.config.js.
+    assert.equal(await siteFramework(root, { scripts: { build: "vite build --config vite.opengame.config.ts" }, devDependencies: { vite: "8" } }), undefined);
+    assert.equal(await siteFramework(root, { scripts: { build: "vite build -c=vite.opengame.config.ts" }, devDependencies: { vite: "8" } }), undefined);
+  });
+  await project({ "vite.config.js": 'export default { base: "./" };', "index.html": '<script type="module" src="/src/main.js"></script>' }, async root => {
+    assert.equal((await detectBuildOutput(root, { scripts: { build: "vite build" }, devDependencies: { vite: "8" } })).output, "dist");
+  });
+});
+
+test("parcel and webpack sources are never offered as the export", async () => {
+  const root = await mkdtemp(join(tmpdir(), "og-bundlers-"));
+  try {
+    await mkdir(join(root, "src")); await mkdir(join(root, "public"));
+    await writeFile(join(root, "src/index.html"), '<script type="module" src="./main.js"></script>');
+    // parcel writes dist without being told.
+    const parcel = { scripts: { build: "parcel build src/index.html" }, devDependencies: { parcel: "2" } };
+    assert.equal((await detectBuildOutput(root, parcel)).output, "dist");
+    await mkdir(join(root, "dist")); await writeFile(join(root, "dist/index.html"), "<!doctype html>");
+    assert.equal((await detectBuildOutput(root, parcel)).output, "dist");
+    await rm(join(root, "dist"), { recursive: true });
+    // A CRA-style webpack config: public/index.html is html-webpack-plugin's template, build/ the export.
+    await writeFile(join(root, "public/index.html"), '<div id="root"></div>');
+    await writeFile(join(root, "webpack.config.js"), 'module.exports = { output: { path: path.resolve(__dirname, "build") }, plugins: [new HtmlWebpackPlugin({ template: "public/index.html" })] };');
+    const webpack = { scripts: { build: "webpack --mode production" }, devDependencies: { webpack: "5", "webpack-cli": "6", "html-webpack-plugin": "5" } };
+    assert.equal((await detectBuildOutput(root, webpack, undefined)).output, "build");
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("a build that leaves no export says which framework setting is why", async () => {
+  const { builtExportFolder, frameworkBeforeBuild } = await import("../src/deploy");
+  const root = await mkdtemp(join(tmpdir(), "og-built-"));
+  try {
+    const manifest = { title: "Game", build: { command: "npm run build", output: "out" } } as const;
+    await writeFile(join(root, "package.json"), JSON.stringify({ scripts: { build: "next build" }, dependencies: { next: "16" } }));
+    // A config deploy cannot read for output: let the build run, then explain the missing folder.
+    await writeFile(join(root, "next.config.mjs"), "export default {};");
+    // A command other than the package's build script is the creator's, and is not read.
+    assert.equal(await frameworkBeforeBuild(root, { ...manifest, build: { ...manifest.build, command: "npx nuxt generate" } } as never, true), undefined);
+    await assert.rejects(builtExportFolder(root, { ...manifest, build: { ...manifest.build, command: "npx next build" } } as never, undefined, true), { code: "folder_missing" });
+    // Nothing is read when no build will run: a prebuilt export is judged by its files.
+    assert.equal(await frameworkBeforeBuild(root, manifest as never, false), undefined);
+    const framework = await frameworkBeforeBuild(root, manifest as never, true);
+    assert.equal(framework?.output, "out");
+    await assert.rejects(builtExportFolder(root, manifest as never, framework, true), { code: "static_build_required", message: /output: "export"/ });
+    // Without a build that ran, the ordinary sentence stands.
+    await assert.rejects(builtExportFolder(root, manifest as never, framework, false), { code: "folder_missing" });
+    // A static export written somewhere other than build.output names the folder it went to.
+    await writeFile(join(root, "next.config.mjs"), 'export default { output: "export" };');
+    const elsewhere = { ...manifest, build: { ...manifest.build, output: "dist" } };
+    await assert.rejects(builtExportFolder(root, elsewhere as never, await frameworkBeforeBuild(root, elsewhere as never, true), true), { code: "folder_missing", message: /set build\.output in opengame\.json to out/ });
   } finally { await rm(root, { recursive: true, force: true }); }
 });

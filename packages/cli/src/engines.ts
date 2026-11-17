@@ -41,7 +41,7 @@ const EXPORT_FOLDERS: Record<EngineId, string> = {
   threejs: "dist", phaser: "dist", pixijs: "dist", babylonjs: "dist", playcanvas: "dist",
   excalibur: "dist", kaplay: "dist", melonjs: "dist", littlejs: "dist", react: "dist", ctjs: "Export/html5",
   construct: "export", gdevelop: "export", rpgmaker: "www", cocos: "build/web-mobile", heaps: "bin", haxe: "bin",
-  unity: "Build", godot: "build/web", defold: "bundle", gamemaker: "html5", emscripten: "dist", raylib: "dist",
+  unity: "Build", unreal: "Build/Wasm", godot: "build/web", defold: "bundle", gamemaker: "html5", emscripten: "dist", raylib: "dist",
   love2d: "build", renpy: "web", solar2d: "build", kaigen: "out/wasm/release", bevy: "dist", rust: "dist",
   ebiten: "web", go: "web", zig: "zig-out/web", swift: "Bundle", dotnet: "publish/wwwroot",
   csharp: "publish/wwwroot", kni: "publish/wwwroot", monogame: "publish/wwwroot", stride: "publish/wwwroot",
@@ -290,7 +290,7 @@ async function detectSourceEngine(root: string, pkg: { dependencies?: Record<str
     if (id === "luau" && entries.some(entry => entry.name.endsWith(".project.json"))) continue;
     if (texts.has(marker)) return { id, evidence: marker };
   }
-  for (const [pattern, id] of [[/\.yyp$/i, "gamemaker"], [/\.c3p$/i, "construct"], [/\.gbsproj$/i, "gbstudio"], [/\.p8$/i, "pico8"]] as const) {
+  for (const [pattern, id] of [[/\.uproject$/i, "unreal"], [/\.yyp$/i, "gamemaker"], [/\.c3p$/i, "construct"], [/\.gbsproj$/i, "gbstudio"], [/\.p8$/i, "pico8"]] as const) {
     const name = has(pattern); if (name) return { id, evidence: name };
   }
   const pubspec = texts.get("pubspec.yaml");
@@ -344,6 +344,23 @@ export async function engineSetup(root: string, pkg: Parameters<typeof detectSou
     // web is a JavaScript page with a VM in it, so it reads the generic JavaScript page.
     docs: engineGuide(preset.id) };
   if (preset.id === "unity") setup.instructions = `Choose a Web build in Unity. Export index.html and the Build folder together, and select the folder containing both with --output. A threaded build (Enable Native C/C++ Multithreading) is supported: a release whose scan finds threads is moved onto contract ${THREADED_TARGET} automatically, which adds cross-origin isolation.`;
+  /* Unreal 5.9 Wasm, read from a real Third Person Shipping export (17 Nov 2026). Package
+     Project archives the stage into <archive folder>/Wasm, so with Build as the archive
+     folder (the sample project's choice) the export is Build/Wasm. Its page refuses a
+     browser without WebGPU and has no WebGL path, so requires.renderer is set. Its sw.js is
+     an optional data cache: og-games refuses service workers and the loader then reads
+     every file over the network, with no change to the build. */
+  if (preset.id === "unreal") {
+    setup.requires = { renderer: "webgpu" };
+    // A project folder (Content, Intermediate, DerivedDataCache) is far past the entry count
+    // init will search, as Kaigen's is; Package Project decides the folder, so take it.
+    if ((await readdir(root, { withFileTypes: true })).some(entry => entry.isFile() && /\.uproject$/i.test(entry.name))) setup.outputKnown = true;
+    setup.instructions = "Package with Platforms > Wasm > Package Project in Unreal Engine 5.9, Shipping configuration, and choose Build as the archive folder. "
+      + "Deploy the Wasm folder it writes (Build/Wasm): index.html, the wasm-*.js scripts, wasm-manifest.json, wasm-cache.json and the <Project> and Engine folders, with their .br copies. "
+      + "OpenGame sends the isolation headers itself, so Inject isolation headers can be on or off. "
+      + `${THREADED_EXPORTS} `
+      + "The game draws with WebGPU only, so init added requires.renderer webgpu to opengame.json.";
+  }
   if (preset.id === "godot") setup.instructions = `Export with a Web preset; keep the .pck, .wasm and loader together. Disable PWA/service-worker output. ${THREADED_EXPORTS}`;
   if (["construct", "gdevelop", "rpgmaker", "gamemaker", "ctjs", "cocos"].includes(preset.id)) setup.instructions = "Use the editor's HTML5/Web export. For Cocos choose Web Mobile. Select the folder containing index.html with --output; init does not run or alter the editor.";
   if (["stride", "monogame"].includes(preset.id)) setup.instructions = "This engine has no assumed native browser export. Port to a working KNI/browser target first, then select its static wwwroot. No build command is invented.";

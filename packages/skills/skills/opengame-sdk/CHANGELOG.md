@@ -1,5 +1,9 @@
 # opengame-sdk changelog
 
+## 1.0.14
+
+Unreal Engine 5.9: C++ calls the `window.OpenGame` that OpenGame adds to every threaded page, inside `MAIN_THREAD_EM_ASM`, which runs on the page's thread and waits for it to read any string argument. (17 Nov 2026)
+
 ## 1.0.13
 
 Invite links: `og.invite.link(code)` is the game's page on opengame.io with `?join=CODE`, and `og.invite.code` is the code a player arrived with, so a game's own lobby links open on OpenGame and drop the friend straight into the lobby.

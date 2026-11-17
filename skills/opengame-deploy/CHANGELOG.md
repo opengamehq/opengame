@@ -1,5 +1,13 @@
 # opengame-deploy changelog
 
+## 1.1.11
+
+Names Unreal Engine among the engines OpenGame hosts, from the docs' agent guide. (17 Nov 2026)
+
+## 1.1.10
+
+Any web framework that builds static files deploys: Vite, React, React Three Fiber, webpack, Parcel, Astro, SvelteKit with adapter-static, Nuxt with `nuxt generate`, and Next.js with `output: "export"`. A project set to build a server stops with `static_build_required` and the setting to change. (17 Nov 2026)
+
 ## 1.1.9
 
 `opengame.json` takes `auto` for the title, tagline, description, genre and controls, which review writes. The JSON reference tells `--json` (one object) from `--jsonl` (one event a line), lists the stages the CLI emits, and shows `platform-engine` as a notice. The procedure says what each review state means, `approved`, `blocked`, `withdrawn` and `superseded` included, and keeps `releaseId` for `opengame publish --release`. (17 Nov 2026)

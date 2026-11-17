@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "e7fbcff05cf7d1ebca94e924516f321d7b28f39f"
+    "commit": "887f5cc22d00200cf1f706622879603c04afd454"
   },
-  "digest": "09f41267f47bd58a5a03fd3fb47d83215ed2c1fb33e4ddd1dfb2fb73a3cae923",
+  "digest": "4ea6d3f5673e5edd0ddf46202984483e9b99f8f66d8de00fc7f0dd150dfb56ac",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -225,8 +225,8 @@
     },
     {
       "path": "packages/cli/CHANGELOG.md",
-      "bytes": 18028,
-      "sha256": "10da315dbd5ebd0c4aebb3cae5c3f161d880b82748c439823572ad881ba98202",
+      "bytes": 18484,
+      "sha256": "d44fe3d5956efa9643d28f959a8ae605d46f15f35e243d449c600c975956a005",
       "executable": false
     },
     {
@@ -543,8 +543,8 @@
     },
     {
       "path": "packages/cli/src/setup.ts",
-      "bytes": 15796,
-      "sha256": "2fa351cef3fd1dcc829ca1d88a57d2a75a20f3b098c4cef40d93ae2834397800",
+      "bytes": 19067,
+      "sha256": "647062224b63d50ccb920fe3f194ec9fd4c608790514d15534ce6007ace461b0",
       "executable": false
     },
     {
@@ -1419,8 +1419,8 @@
     },
     {
       "path": "packages/cli/tests/setup.test.ts",
-      "bytes": 15700,
-      "sha256": "1769feae9d35a97eaee55ef92ba9481a8f62aad762cc37c372fb0c63d71711f4",
+      "bytes": 19152,
+      "sha256": "f6eaed11b39a82473568de802c48ec7b30577a684eb97bd92701aad96ee467da",
       "executable": false
     },
     {

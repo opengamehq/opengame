@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { binary, cleanEnv, manifest } from "./shell";
 import { CLI_VERSION } from "../src/version";
+import { afterRefresh } from "../src/setup";
 
 /**
  * `opengame setup` and the refresh every other command runs (src/setup.ts), against the BUILT
@@ -37,6 +38,12 @@ function run(home: string, args: string[], extra: Record<string, string | undefi
 
 const list = async (path: string) => (await readdir(path).catch(() => [] as string[])).filter((name) => name.startsWith("opengame-")).sort();
 const state = async (home: string) => JSON.parse(await readFile(join(home, ".config/opengame/skills.json"), "utf8"));
+/** What an older CLI left: every recorded agent at version 0.0.1, so the next command refreshes them. */
+async function age(home: string, only?: string[]) {
+  const recorded = await state(home);
+  for (const [agent, record] of Object.entries(recorded.agents as Record<string, { cli: string }>)) if (!only || only.includes(agent)) record.cli = "0.0.1";
+  await writeFile(join(home, ".config/opengame/skills.json"), JSON.stringify(recorded));
+}
 
 /** Rewrites an installed skill as an older copy of ours: different bytes, with a marker that matches them. */
 async function makeOlder(folder: string) {
@@ -64,7 +71,11 @@ test("setup installs every skill for each agent found in the home folder, and a 
   assert.equal(first.last.data.counts.installed, every.length * 4);
   assert.match(first.last.data.message, /They update when the CLI does/);
   assert.equal(first.last.data.start, join(home, ".claude/skills/opengame-router/SKILL.md"));
-  assert.deepEqual({ ...(await state(home)), skills: undefined }, { format: 1, auto: true, cli: CLI_VERSION, agents: ["claude", "codex", "cursor", "opencode"], skills: undefined });
+  const recorded = await state(home);
+  assert.equal(recorded.format, 2);
+  assert.equal(recorded.auto, true);
+  assert.deepEqual(Object.keys(recorded.agents), ["claude", "codex", "cursor", "opencode"]);
+  for (const record of Object.values(recorded.agents) as { cli: string; skills: string[] }[]) assert.deepEqual({ cli: record.cli, skills: [...record.skills].sort() }, { cli: CLI_VERSION, skills: every });
 
   const second = run(home, ["setup"]);
   assert.equal(second.status, 0);
@@ -116,8 +127,7 @@ test("after an update the refresh brings older copies current, keeps edits, and 
   await writeFile(join(root, "opengame-cli", "SKILL.md"), "Mine now.\n");
   await rm(join(root, "opengame-jam"), { recursive: true });
   // What an older CLI wrote: the refresh runs once per CLI version.
-  const recorded = await state(home);
-  await writeFile(join(home, ".config/opengame/skills.json"), JSON.stringify({ ...recorded, cli: "0.0.1" }));
+  await age(home);
 
   const result = run(home, ["whoami"]);
   assert.match(result.notices.find((notice) => notice.code === "skills_installed")?.message ?? "", /^Updated the OpenGame skills for Claude Code/);
@@ -125,7 +135,7 @@ test("after an update the refresh brings older copies current, keeps edits, and 
   assert.deepEqual(await readFile(join(root, "opengame-deploy", "SKILL.md")), expected);
   assert.equal(await readFile(join(root, "opengame-cli", "SKILL.md"), "utf8"), "Mine now.\n");
   assert.deepEqual(await list(root), every.filter((name) => name !== "opengame-jam"));
-  assert.equal((await state(home)).cli, CLI_VERSION);
+  assert.equal((await state(home)).agents.claude.cli, CLI_VERSION);
 });
 
 test("setup --no-skills stops the refresh for good, and setup turns it back on", async (t) => {
@@ -200,11 +210,54 @@ test("setup --agent adds to the agents set up before, so a later refresh keeps a
   assert.equal(run(home, ["setup", "--agent", "claude"]).status, 0);
   await rm(join(home, ".claude/skills/opengame-jam"), { recursive: true });
   assert.equal(run(home, ["setup", "--agent", "codex"]).status, 0);
-  assert.deepEqual((await state(home)).agents, ["claude", "codex"]);
-  const recorded = await state(home);
-  await writeFile(join(home, ".config/opengame/skills.json"), JSON.stringify({ ...recorded, cli: "0.0.1" }));
+  assert.deepEqual(Object.keys((await state(home)).agents), ["claude", "codex"]);
+  await age(home);
   run(home, ["whoami"]);
   assert.deepEqual(await list(join(home, ".claude/skills")), every.filter((name) => name !== "opengame-jam"));
+});
+
+/* Greptile on the public mirror, opengamehq/opengame#17: with one version for every agent,
+   setup --agent codex after an update marked Claude Code current, and later commands never
+   brought its older copies up. Mutation: record attempted agents as every recorded agent in
+   afterRefresh, or compare one shared version in refreshSkills. Red here. */
+test("setup for one agent after an update leaves the others to the refresh, which brings them current", async (t) => {
+  const home = await scratch(t, [".claude", ".codex"]);
+  assert.equal(run(home, ["setup"]).status, 0);
+  await makeOlder(join(home, ".claude/skills/opengame-deploy"));
+  await age(home);
+  assert.equal(run(home, ["setup", "--agent", "codex"]).status, 0);
+  const between = await state(home);
+  assert.equal(between.agents.codex.cli, CLI_VERSION);
+  assert.equal(between.agents.claude.cli, "0.0.1");
+  const result = run(home, ["whoami"]);
+  assert.match(result.notices.find((notice) => notice.code === "skills_installed")?.message ?? "", /Claude Code/);
+  assert.deepEqual(await readFile(join(home, ".claude/skills/opengame-deploy/SKILL.md")), await readFile(new URL("../dist/skills/opengame-deploy/SKILL.md", import.meta.url)));
+  assert.equal((await state(home)).agents.claude.cli, CLI_VERSION);
+});
+
+test("a state file from CLI 0.11.0, one version for every agent, is read as each agent's own", async (t) => {
+  const home = await scratch(t, [".claude"]);
+  await mkdir(join(home, ".config/opengame"), { recursive: true });
+  await writeFile(join(home, ".config/opengame/skills.json"), JSON.stringify({ format: 1, auto: true, cli: "0.0.1", agents: ["claude"], skills: ["opengame-jam"] }));
+  run(home, ["whoami"]);
+  // opengame-jam was installed before and is not on disk, so the person removed it.
+  assert.deepEqual(await list(join(home, ".claude/skills")), every.filter((name) => name !== "opengame-jam"));
+  const recorded = await state(home);
+  assert.equal(recorded.format, 2);
+  assert.equal(recorded.agents.claude.cli, CLI_VERSION);
+});
+
+/* Greptile, opengamehq/opengame#17: the refresh wrote back the auto: true it read before
+   installing, so a --no-skills saved meanwhile was undone. afterRefresh is what the refresh
+   writes, computed from the file as it is at write time under the lock. Mutation: make it
+   return auto: true. Red here. */
+test("the refresh's write keeps an opt-out saved while it was installing, and every other agent's record", () => {
+  const now = { format: 2 as const, auto: false, agents: { codex: { cli: "0.0.1", skills: ["opengame-cli"] } } };
+  const next = afterRefresh(now, ["claude"], [{ agent: "claude", name: "opengame-deploy" }, { agent: "codex", name: "opengame-jam" }]);
+  assert.equal(next.auto, false);
+  assert.deepEqual(next.agents.codex, { cli: "0.0.1", skills: ["opengame-cli"] });
+  assert.deepEqual(next.agents.claude, { cli: CLI_VERSION, skills: ["opengame-deploy"] });
+  assert.equal(afterRefresh(null, [], []).auto, true);
 });
 
 /* Security review, 16 Nov 2026: a repository can carry a `.opengame-staging` beside its agent

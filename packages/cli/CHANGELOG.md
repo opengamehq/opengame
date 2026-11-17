@@ -17,6 +17,11 @@
 - The staging folder an install uses beside an agent's folder must be a real folder, never a
   link, and is tidied only where an install writes.
 - Carries the skills from `@opengamehq/skills` 1.7.0, which install the CLI with `opengame setup`.
+- `~/.config/opengame/skills.json` records each agent's own CLI version and skills, so
+  `opengame setup --agent codex` after an update leaves Claude Code to be refreshed by the next
+  command rather than marking it current. A file from before is read as each agent's own.
+- An `opengame setup --no-skills` saved while another command was installing skills stands:
+  every change to that file is read and written under a lock, from the file as it is then.
 - `opengame` with no command lists `publish` among the first five, in place of `submit`, which
   is now only for a release that was not sent to review by itself. `achievements` no longer
   says the website has a retire control; `opengame achievements retire` is the way.

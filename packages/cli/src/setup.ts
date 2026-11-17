@@ -1,4 +1,4 @@
-import { lstat, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { configDirectory } from "./credentials";
@@ -18,8 +18,8 @@ import { CLI_VERSION } from "./version";
  *   step prints it under the CLI's own (npm-release.mjs, CLI_SETUP_COMMAND).
  * - Any other command does the same once, the first time it runs, for a person who installed the
  *   CLI and never ran setup; and again after the CLI has been updated, since the skills ship
- *   inside it. One small file in the CLI's config folder (`skills.json`) records the version that
- *   last did it, so every other run costs one read.
+ *   inside it. One small file in the CLI's config folder (`skills.json`) records, for each agent,
+ *   the version that last did it and the skills it installed, so every other run costs one read.
  * - In a project whose agent folders hold copies from `opengame skills add`, check, dev and
  *   deploy bring any older copy up to this CLI's (cli.ts, REFRESHES_PROJECT_SKILLS), because a project's skill
  *   shadows the same skill in the home folder and would otherwise stay as old as the day it was
@@ -73,26 +73,89 @@ export async function detectAgents(targets = homeTargets()): Promise<Agent[]> {
   return found;
 }
 
-/** What the last setup did, in the CLI's config folder. */
-type State = { format: 1; auto: boolean; cli: string; agents: Agent[]; skills: string[] };
+/**
+ * What the last setup did, in the CLI's config folder: whether the automatic install is on, and
+ * for each agent the CLI version that last installed its skills and which skills those were.
+ *
+ * Per agent since 17 Nov 2026 (format 2). Format 1 kept one version and one list for every
+ * agent, so `opengame setup --agent codex` after an update marked Claude Code current too and
+ * later commands never refreshed it, and a skill new to Codex read as one the person had
+ * removed from Claude Code (Greptile on the public mirror, opengamehq/opengame#17). A format 1
+ * file is read as each of its agents holding that version and list.
+ */
+type AgentRecord = { cli: string; skills: string[] };
+export type State = { format: 2; auto: boolean; agents: Partial<Record<Agent, AgentRecord>> };
 
 const stateFile = () => join(configDirectory(), "skills.json");
+const skillNames = (value: unknown) => Array.isArray(value) ? value.filter((name): name is string => typeof name === "string") : [];
+const isAgent = (agent: string): agent is Agent => Object.hasOwn(AGENT_DIRS, agent);
 
 async function readState(): Promise<State | null> {
   try {
-    const value = JSON.parse(await readFile(stateFile(), "utf8")) as Partial<State>;
-    if (value.format !== 1 || typeof value.auto !== "boolean" || typeof value.cli !== "string" || !Array.isArray(value.agents) || !Array.isArray(value.skills)) return null;
-    return { format: 1, auto: value.auto, cli: value.cli, agents: value.agents.filter((agent): agent is Agent => Object.hasOwn(AGENT_DIRS, agent)), skills: value.skills.filter((name) => typeof name === "string") };
+    const value = JSON.parse(await readFile(stateFile(), "utf8")) as Record<string, unknown>;
+    if (typeof value.auto !== "boolean") return null;
+    const agents: State["agents"] = {};
+    if (value.format === 1 && typeof value.cli === "string" && Array.isArray(value.agents)) {
+      for (const agent of value.agents) if (typeof agent === "string" && isAgent(agent)) agents[agent] = { cli: value.cli, skills: skillNames(value.skills) };
+    } else if (value.format === 2 && value.agents && typeof value.agents === "object") {
+      for (const [agent, record] of Object.entries(value.agents as Record<string, { cli?: unknown; skills?: unknown } | null>)) {
+        if (isAgent(agent) && typeof record?.cli === "string") agents[agent] = { cli: record.cli, skills: skillNames(record.skills) };
+      }
+    } else return null;
+    return { format: 2, auto: value.auto, agents };
   } catch { return null; }
 }
 
 /** Written beside and renamed over, so a second CLI running at the same moment never reads half a file. */
-async function writeState(state: Omit<State, "format">): Promise<void> {
+async function writeState(state: State): Promise<void> {
   const file = stateFile();
-  await mkdir(configDirectory(), { recursive: true, mode: 0o700 });
   const temporary = `${file}.${process.pid}.tmp`;
-  await writeFile(temporary, JSON.stringify({ format: 1, ...state }, null, 2) + "\n", { mode: 0o600 });
+  await writeFile(temporary, JSON.stringify(state, null, 2) + "\n", { mode: 0o600 });
   await replaceFile(temporary, file);
+}
+
+/**
+ * Every change to skills.json is read, changed and written under one lock, from the file as it
+ * is at that moment rather than as it was when the command began. A refresh installs for
+ * seconds between its first read and its write, and before 17 Nov 2026 it wrote back the
+ * `auto: true` it had read, so an `opengame setup --no-skills` saved meanwhile was undone and
+ * later commands went on changing the person's agent folders (Greptile,
+ * opengamehq/opengame#17). The lock is a file made with O_EXCL; one left by a CLI that died is
+ * taken over after a few seconds, since the work it guards is one small read and write.
+ */
+const LOCK_STALE_MS = 3_000;
+async function updateState(change: (current: State | null) => State): Promise<State> {
+  await mkdir(configDirectory(), { recursive: true, mode: 0o700 });
+  const lock = `${stateFile()}.lock`;
+  const started = Date.now();
+  for (;;) {
+    try { await (await open(lock, "wx", 0o600)).close(); break; } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      const age = await stat(lock).then((info) => Date.now() - info.mtimeMs, () => 0);
+      if (age > LOCK_STALE_MS || Date.now() - started > LOCK_STALE_MS * 2) { await rm(lock, { force: true }); continue; }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+  try {
+    const next = change(await readState());
+    await writeState(next);
+    return next;
+  } finally { await rm(lock, { force: true }); }
+}
+
+/**
+ * The state after an install for `attempted`: each of those agents is recorded at this CLI's
+ * version with what it held before plus what was installed for it now, every other agent keeps
+ * its own record, and the switch stays as the file has it now, so an opt-out saved by another
+ * process while this one was installing stands.
+ */
+export function afterRefresh(current: State | null, attempted: Agent[], steps: Pick<InstalledStep, "agent" | "name">[]): State {
+  const agents = { ...(current?.agents ?? {}) };
+  for (const agent of attempted) {
+    const installed = steps.filter((step) => step.agent === agent).map((step) => step.name);
+    agents[agent] = { cli: CLI_VERSION, skills: [...new Set([...(agents[agent]?.skills ?? []), ...installed])] };
+  }
+  return { format: 2, auto: current?.auto ?? true, agents };
 }
 
 /** Whether the automatic install is off for this process: CI, or OPENGAME_SKILLS_AUTO=0. */
@@ -111,7 +174,7 @@ async function installHome(targets: HomeTarget[], previous: State | null): Promi
   const every = bundle.skills.filter((skill) => skill.family !== "bundle");
   const steps: InstalledStep[] = [];
   for (const target of targets) {
-    const seen = previous?.agents.includes(target.agent) ? new Set(previous.skills) : new Set<string>();
+    const seen = new Set(previous?.agents[target.agent]?.skills ?? []);
     const present = new Set(await readdir(target.root).catch(() => [] as string[]));
     const selected = every.filter((skill) => !seen.has(skill.name) || present.has(skill.name));
     if (selected.length) steps.push(...await installInto([target], selected, bundle, "keep"));
@@ -126,10 +189,9 @@ const where = (targets: HomeTarget[]) => {
 };
 
 export async function setupCommand(flags: Record<string, string | boolean>, output: Output) {
-  const previous = await readState();
   if (flags["no-skills"] === true) {
     if (typeof flags.agent === "string") throw new CliError("arguments", "Use --no-skills on its own: it stops the skills for every agent.", undefined, { next: "opengame setup --no-skills" });
-    await writeState({ auto: false, cli: CLI_VERSION, agents: previous?.agents ?? [], skills: previous?.skills ?? [] });
+    await updateState((current) => ({ format: 2, auto: false, agents: current?.agents ?? {} }));
     output.emit({ type: "result", command: "setup", data: { auto: false, skills: [],
       message: "The CLI will no longer install or update the OpenGame skills in your agents' folders, and what is there stays as it is. Run opengame setup to turn it back on." } });
     return;
@@ -137,12 +199,11 @@ export async function setupCommand(flags: Record<string, string | boolean>, outp
   const all = homeTargets();
   // The flag is read the way `skills add` reads it; detection is the home folder's, not a project's.
   const agents = typeof flags.agent === "string" ? (await chooseAgents(flags.agent, "")).agents : await detectAgents(all);
-  /* The agents a refresh keeps up to date are every one set up so far, not only those named
-     now: dropping one would make the next refresh treat it as new and bring back the skills
-     its person had removed (code review, 16 Nov 2026). */
-  const recorded = [...new Set([...(previous?.agents ?? []), ...agents])];
+  /* Every agent set up before keeps its own record, not only those named now: dropping one
+     would make the next refresh treat it as new and bring back the skills its person had
+     removed (code review, 16 Nov 2026). Setup is the one write that turns auto back on. */
   if (!agents.length) {
-    await writeState({ auto: true, cli: CLI_VERSION, agents: recorded, skills: previous?.skills ?? [] });
+    await updateState((current) => ({ ...afterRefresh(current, [], []), auto: true }));
     output.emit({ type: "result", command: "setup", data: { auto: true, agents: [], skills: [], counts: countSteps([]),
       message: "No coding agent was found in your home folder, so no skills were installed (looked for ~/.claude, ~/.codex, ~/.cursor and ~/.config/opencode). Run opengame setup --agent claude, or codex, cursor or opencode, to install them for one." } });
     return;
@@ -150,8 +211,7 @@ export async function setupCommand(flags: Record<string, string | boolean>, outp
   const targets = agents.map((agent) => all[agent]);
   // An explicit setup also brings back a skill the person had removed: they asked for all of them.
   const steps = await installHome(targets, null);
-  const names = [...new Set(steps.map((step) => step.name))];
-  await writeState({ auto: true, cli: CLI_VERSION, agents: recorded, skills: [...new Set([...(previous?.skills ?? []), ...names])] });
+  await updateState((current) => ({ ...afterRefresh(current, agents, steps), auto: true }));
   const counts = countSteps(steps);
   const parts = (Object.entries(counts) as [keyof typeof counts, number][]).filter(([, n]) => n).map(([state, n]) => `${n} ${state}`);
   const kept = steps.filter((step) => step.state === "kept");
@@ -201,11 +261,13 @@ export async function refreshSkills(output: Pick<Output, "emit">, project: strin
     if (state?.auto === false) return;
     const all = homeTargets(env, home);
     found = await detectAgents(all);
-    const recorded = state?.agents ?? [];
-    if (!(state && state.cli === CLI_VERSION && found.every((agent) => recorded.includes(agent)))) {
-      const targets = found.map((agent) => all[agent]);
-      const steps = targets.length ? await installHome(targets, state) : [];
-      await writeState({ auto: true, cli: CLI_VERSION, agents: [...new Set([...recorded, ...found])], skills: [...new Set([...(state?.skills ?? []), ...steps.map((step) => step.name)])] });
+    /* Only the agents this CLI version has not installed for: one brought current by
+       `setup --agent` leaves the others to be refreshed here. */
+    const due = found.filter((agent) => state?.agents[agent]?.cli !== CLI_VERSION);
+    if (due.length) {
+      const targets = due.map((agent) => all[agent]);
+      const steps = await installHome(targets, state);
+      await updateState((current) => afterRefresh(current, due, steps));
       recordedHome = true;
       const changed = steps.filter((step) => step.state === "installed" || step.state === "updated");
       if (changed.length) {
@@ -231,7 +293,8 @@ export async function refreshSkills(output: Pick<Output, "emit">, project: strin
        home install already recorded itself, the failure was the project's, and that record
        stands. */
     if (!recordedHome) {
-      await writeState({ auto: true, cli: CLI_VERSION, agents: [...new Set([...(state?.agents ?? []), ...(found ?? [])])], skills: state?.skills ?? [] }).catch(() => {});
+      const attempted = (found ?? []).filter((agent) => state?.agents[agent]?.cli !== CLI_VERSION);
+      await updateState((current) => afterRefresh(current, attempted, [])).catch(() => {});
     }
     const detail = error instanceof CliError ? error.message : (error as NodeJS.ErrnoException)?.code ?? "an unexpected error";
     output.emit({ type: "notice", code: "skills_not_installed", message: `The OpenGame skills could not be installed in your agents' folders (${detail}). Your command was not affected. Run opengame setup to try again.` });

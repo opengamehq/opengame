@@ -6,8 +6,11 @@ ownership before editing. Use the host's permissions and available tools.
 
 Choose the smallest change that completes the request. Ask for missing information
 only when it changes what can be done safely or correctly. Keep publication and
-account actions within the user's authorization. A deploy is a private preview;
-public release needs its own approval.
+account actions within the user's authorization. A deploy of a new game is a private
+preview, and publishing it needs the user's approval. An update of a game that is already
+live publishes by itself once it passes review when the token can submit, as the
+`opengame login` token can, so deploy one only when the user wants players to get it, or
+follow `opengame-deploy` to deploy it as a preview.
 
 Use the user's time, spend and reporting limits. Set a bounded checkpoint before
 starting uncertain research or a paid call. Stop at that checkpoint and report the

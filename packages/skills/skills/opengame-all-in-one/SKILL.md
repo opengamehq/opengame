@@ -2,7 +2,7 @@
 name: opengame-all-in-one
 description: Every OpenGame skill in one install, with the order to use them in, for taking a browser game from an idea to a AAA-feeling release, a trailer and a montage. Carries the platform, craft and video skills whole. Use when someone wants one skill that covers everything, says make it AAA or make it game of the year, starts a big game with agents, or does not know which OpenGame skill to load.
 metadata:
-  version: "1.0.5"
+  version: "1.0.7"
 ---
 
 # Make a browser game that feels AAA
@@ -184,12 +184,12 @@ core loop first, then every generated asset, then the front end, then playtest.
 | Long builds with agents and rounds of notes | [production](references/opengame-production/README.md) |
 | Which skill for a task | [router](references/opengame-router/README.md) |
 | The SDK in the frame | [SDK](references/opengame-sdk/README.md) |
-| Check, deploy, preview | [deploy](references/opengame-deploy/README.md), [CLI](references/opengame-cli/README.md) |
+| Check, deploy, preview, publish | [deploy](references/opengame-deploy/README.md), [CLI](references/opengame-cli/README.md) |
 | Your own tools and CI | [API](references/opengame-api/README.md) |
 | Jam fields and eligibility | [jam](references/opengame-jam/README.md) |
 | A launch trailer | [plan](references/opengame-trailer-plan/README.md), [make](references/opengame-trailer-make/README.md), [review](references/opengame-trailer-review-and-improve/README.md) |
 | A gameplay montage | [plan](references/opengame-montage-plan/README.md), [make](references/opengame-montage-make/README.md), [review](references/opengame-montage-review-and-improve/README.md) |
 
 Each carried skill says, in its first line, the version it was carried at. The separate
-skills are the same text, so install this one or those, not both: `opengame skills add
---all` leaves this one out for that reason.
+skills are the same text, so install this one or those, not both: `opengame setup` and
+`opengame skills add --all` leave this one out for that reason.

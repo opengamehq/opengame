@@ -2,7 +2,7 @@
 name: opengame-performance
 description: Keep a browser game smooth on an ordinary laptop and a shared GPU, with three.js and WebGPU specifics. Covers frame-time tails counted from frames the engine ran, bare timing runs, cost over frame rate, frame pacing by what lands, draw calls per pass, a fixed light set and warm-up, uploads that never stall, the world lowered before the gameplay layer, and whole-tab memory. Use when the game stutters, hitches, drops frames, swings between rates, has a slow menu or a mouse that feels slow.
 metadata:
-  version: "1.1.1"
+  version: "1.1.2"
 ---
 
 # Performance
@@ -24,8 +24,8 @@ upload ring) are in [references/webgpu.md](references/webgpu.md).
 
 ## Measure the running game
 
-Install `opengame-verification` with `opengame skills add --skill opengame-verification`
-and use its `opengame-verification/helpers/browser-evidence.mjs` for frame-time samples and input evidence.
+`opengame setup` installs `opengame-verification`; to add it to one project, run
+`opengame skills add . --skill opengame-verification`. Use its `opengame-verification/helpers/browser-evidence.mjs` for frame-time samples and input evidence.
 Set a frame-time tolerance from the target hardware's measured baseline. Record the
 CPU throttle and soak duration alongside the result. Compare the same scene and
 player route before and after a change. Inspect memory separately when diagnosing a

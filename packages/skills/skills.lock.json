@@ -31,14 +31,14 @@
       "digestPublished": "ac05537f449788b3572c068177fc20e5e45e16775739ebcb1034fd4b73a96072"
     },
     "opengame-cli": {
-      "version": "1.9.0",
-      "digest": "7e5ce43dc49328523e6c7ae9c5155970d779dfcf8e4ec5a4ab8012627c5602e7",
-      "digestPublished": "cd4a9ba6eca74420c85e1606e6e8b0e3bc58105ac8655898febae066a7ec6ebc"
+      "version": "1.9.2",
+      "digest": "9164d94ff270e4b444a4d440716e9ec55c032fe8feecf1fdcc1ffd9097130506",
+      "digestPublished": "0f5629565203c35ed80d57fa35cc6de365cc9eb706eb79569b6b5d65ff655ad6"
     },
     "opengame-deploy": {
-      "version": "1.1.7",
-      "digest": "2d64de30ae8a1d3752fc4b667959008033e0fa74dee82a8e25e05fbfb21dc690",
-      "digestPublished": "1c5e008f199dd73c66c9b0649f7cfe61acaa215827f1379fcf0e12cfe597ebf4"
+      "version": "1.1.9",
+      "digest": "043c65e48c5deafdea61208cf6a5789876040e774352b85f649be96a0c6381b2",
+      "digestPublished": "cf3f56f08ebcc1960f86eda5fa989f7be5ff98a1e55362e113685229a4f88c5c"
     },
     "opengame-depth": {
       "version": "1.1.0",
@@ -61,9 +61,9 @@
       "digestPublished": "ab55b90104023d452b2c0af3bb24bb5b7173237782c72da254d33a0805780a3a"
     },
     "opengame-jam": {
-      "version": "1.1.0",
-      "digest": "608fd525cb7730718af19c0953455565243019f11749d38b9cd5fb9e5442c861",
-      "digestPublished": "608fd525cb7730718af19c0953455565243019f11749d38b9cd5fb9e5442c861"
+      "version": "1.1.1",
+      "digest": "d3f7631feea6c8a3f0aa87dcbfa5ad04f12069d5ab728d874c1e7fb3603d915c",
+      "digestPublished": "d3f7631feea6c8a3f0aa87dcbfa5ad04f12069d5ab728d874c1e7fb3603d915c"
     },
     "opengame-lighting": {
       "version": "1.1.0",
@@ -111,9 +111,9 @@
       "digestPublished": "b31bb460da74c2c87a2188992ecd27b6148d529c8c91992db5bb438376001ce8"
     },
     "opengame-performance": {
-      "version": "1.1.1",
-      "digest": "118adf8429f7296153f03303e2d3e1dea17cb30c711de24dd6c2fd0d07b502cc",
-      "digestPublished": "118adf8429f7296153f03303e2d3e1dea17cb30c711de24dd6c2fd0d07b502cc"
+      "version": "1.1.2",
+      "digest": "07c1882634eb06c00c43cd3c48831b6f78dd5610eeb423a9e00a1886e6f2182a",
+      "digestPublished": "07c1882634eb06c00c43cd3c48831b6f78dd5610eeb423a9e00a1886e6f2182a"
     },
     "opengame-production": {
       "version": "1.1.0",
@@ -131,9 +131,9 @@
       "digestPublished": "f032b2429ba52d0f1472fdba1b7c1445d911b02b5375f39c61eefa39445067d4"
     },
     "opengame-router": {
-      "version": "1.0.8",
-      "digest": "a0002e6967404b1a8f58ad28410ba08b88ac943ab3711181028bf2e327b3a93f",
-      "digestPublished": "a0002e6967404b1a8f58ad28410ba08b88ac943ab3711181028bf2e327b3a93f"
+      "version": "1.0.9",
+      "digest": "df839971a0c9fcd99303dd97864480b3f5e5832334d01676fe6d462eb8f7793b",
+      "digestPublished": "df839971a0c9fcd99303dd97864480b3f5e5832334d01676fe6d462eb8f7793b"
     },
     "opengame-scene-audit": {
       "version": "1.1.1",
@@ -181,9 +181,9 @@
       "digestPublished": "f2895bf1c85e00750afc7c4cbba873f5d26ced3842950b3099687d501a590d35"
     },
     "opengame-all-in-one": {
-      "version": "1.0.5",
-      "digest": "3df0a9df06d2a08a3eb5274091764711943b37d5c456778a9a524d60650712d1",
-      "digestPublished": "6b571e68a5727c1758dbcb92a41a6308832a5ca681b47fe169f87a2f87dda822"
+      "version": "1.0.7",
+      "digest": "fa17599f3b0e935a0ce6d99be5a2bf98034fd59a9eedc49c3b385515bffd481b",
+      "digestPublished": "228328efb929ee6776b5ce5bb5a9cc0c67834ba1505ada006c38286e0d618793"
     }
   }
 }

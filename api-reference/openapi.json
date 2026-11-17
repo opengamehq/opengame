@@ -909,7 +909,8 @@
               "commit",
               "folder"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Where the files came from, when it was not your own disk: a public GitHub repository at one commit, with the branch or release and the folder. The server checks that the commit is that branch's or release's own before anything is stored. The GitHub tab on the deploy page sends it."
           },
           "provisional": {
             "maxItems": 4,
@@ -922,7 +923,8 @@
                 "description",
                 "title"
               ]
-            }
+            },
+            "description": "The manifest fields this deploy sent only as placeholders, which review fills in and you confirm once review has passed: any of `title`, `description`, `genre` and `controls` that opengame.json leaves to Auto (a tagline is never named here), or a title read from the folder. `opengame deploy` sends it. Name each field once."
           }
         },
         "required": [
@@ -1092,7 +1094,8 @@
               "commit",
               "folder"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Where the files came from, when it was not your own disk: a public GitHub repository at one commit, with the branch or release and the folder. The server checks that the commit is that branch's or release's own before anything is stored. The GitHub tab on the deploy page sends it."
           },
           "provisional": {
             "maxItems": 4,
@@ -1105,7 +1108,8 @@
                 "description",
                 "title"
               ]
-            }
+            },
+            "description": "The manifest fields this deploy sent only as placeholders, which review fills in and you confirm once review has passed: any of `title`, `description`, `genre` and `controls` that opengame.json leaves to Auto (a tagline is never named here), or a title read from the folder. `opengame deploy` sends it. Name each field once."
           },
           "delivery": {
             "const": "unity-assets-v1",
@@ -12891,6 +12895,28 @@
                   "sha256",
                   "manifest"
                 ],
+                "examples": [
+                  {
+                    "gameId": "b3e1d9a4-27c6-4f80-9d15-0a6e8c4b2f71",
+                    "byteSize": 40363,
+                    "fileCount": 2,
+                    "sha256": "b8d366f9c6b992934298623f0295a2e61b6ca91b7a25304a553695b9e98f0ef0",
+                    "manifest": {
+                      "$schema": "https://opengame.io/schema/opengame.json",
+                      "title": "Tide Runner",
+                      "genre": "racing-sports",
+                      "kind": "game",
+                      "controls": [
+                        "keyboard",
+                        "gamepad"
+                      ],
+                      "description": "Steer a paper boat down a storm drain and pick up every lost marble before the water rises."
+                    },
+                    "metadataRevision": null,
+                    "metadata": "preserve",
+                    "multipart": true
+                  }
+                ],
                 "properties": {
                   "gameId": {
                     "type": "string",
@@ -12951,6 +12977,70 @@
                       true
                     ],
                     "description": "This client can send the archive in parts. Used for an archive over 67108864 bytes; a smaller one still gets one `upload`."
+                  },
+                  "provisional": {
+                    "maxItems": 4,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "genre",
+                        "controls",
+                        "description",
+                        "title"
+                      ]
+                    },
+                    "description": "The manifest fields this deploy sent only as placeholders, which review fills in and you confirm once review has passed: any of `title`, `description`, `genre` and `controls` that opengame.json leaves to Auto (a tagline is never named here), or a title read from the folder. `opengame deploy` sends it. Name each field once."
+                  },
+                  "source": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "github"
+                      },
+                      "owner": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"
+                      },
+                      "repo": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9._-]{1,100}$"
+                      },
+                      "ref": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255,
+                        "pattern": "^[^\\s~^:?*[\\\\]+$"
+                      },
+                      "refKind": {
+                        "type": "string",
+                        "enum": [
+                          "branch",
+                          "release"
+                        ]
+                      },
+                      "commit": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{40}$"
+                      },
+                      "folder": {
+                        "type": "string",
+                        "maxLength": 512,
+                        "pattern": "^(?:[^/\\\\:]+(?:\\/[^/\\\\:]+)*)?$"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "owner",
+                      "repo",
+                      "ref",
+                      "refKind",
+                      "commit",
+                      "folder"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Where the files came from, when it was not your own disk: a public GitHub repository at one commit, with the branch or release and the folder. The server checks that the commit is that branch's or release's own before anything is stored. The GitHub tab on the deploy page sends it."
                   }
                 }
               }
@@ -33744,6 +33834,9 @@
                       },
                       "sponsorDetails": {
                         "type": "object",
+                        "propertyNames": {
+                          "maxLength": 80
+                        },
                         "additionalProperties": {
                           "type": "object",
                           "additionalProperties": false,
@@ -33774,8 +33867,7 @@
                       "kind",
                       "controls",
                       "engine",
-                      "termsAccepted",
-                      "sponsorDetails"
+                      "termsAccepted"
                     ],
                     "properties": {
                       "title": {
@@ -33824,6 +33916,10 @@
                       },
                       "sponsorDetails": {
                         "type": "object",
+                        "propertyNames": {
+                          "maxLength": 80
+                        },
+                        "default": {},
                         "additionalProperties": {
                           "type": "object",
                           "additionalProperties": false,
@@ -34441,7 +34537,7 @@
                       "track",
                       "models"
                     ],
-                    "description": "The jam's answers, when the release enters the jam, from `GET /api/v1/jams/{slug}/form`. Null publishes to the gallery instead, refused with `marketplace_closed` while a new game or an update goes on OpenGame only as a jam entry. Left out: the jam only when it is the one place this release can go, and then its answers are owed (`jam_answers_required`).",
+                    "description": "The jam's answers, when the release enters the jam, from `GET /api/v1/jams/{slug}/form`. Null publishes to the gallery instead, refused with `marketplace_closed` while a new game or an update goes on OpenGame only as a jam entry, and with `submission_destination_mismatch` for a release already entered in a jam, which publishes as that entry. Left out: the jam only when it is the one place this release can go, and then its answers are owed (`jam_answers_required`).",
                     "properties": {
                       "track": {
                         "type": "string",
@@ -34466,12 +34562,15 @@
                       },
                       "sponsorEmails": {
                         "type": "object",
+                        "propertyNames": {
+                          "maxLength": 80
+                        },
                         "additionalProperties": {
                           "type": "string",
                           "maxLength": 320
                         },
                         "default": {},
-                        "description": "The email of the account used at each sponsor in `sponsors`."
+                        "description": "The email of the account used at each sponsor in `sponsors`, keyed by the sponsor."
                       }
                     }
                   }
@@ -34605,7 +34704,7 @@
             }
           },
           "409": {
-            "description": "A refusal the message explains: `review_pending` (review has not passed it yet, so wait and send it again), `publish_not_possible` (nothing confirmed could put this release live, and the message says why), `jam_answers_required`, `marketplace_closed`, `submission_destination_mismatch` (jam answers for a release that is not entering a jam), `jam_closed`, `jam_not_open`, `at_entry_limit`, `invalid_jam_answers`, `kind_not_in_jam`, `jam_entry_judged`, `jam_entry_in_review`, or `certification_replaced` (a newer release replaced this one).",
+            "description": "A refusal the message explains: `review_pending` (review has not passed it yet, so wait and send it again), `publish_not_possible` (nothing confirmed could put this release live, and the message says why), `jam_answers_required`, `marketplace_closed`, `submission_destination_mismatch` (jam answers for a release the jam is not offered to, or `jam: null` for a release already entered in a jam), `jam_closed`, `jam_not_open`, `at_entry_limit`, `invalid_jam_answers`, `kind_not_in_jam`, `jam_entry_judged`, `jam_entry_in_review`, or `certification_replaced` (a newer release replaced this one).",
             "content": {
               "application/json": {
                 "schema": {

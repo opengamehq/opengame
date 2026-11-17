@@ -1,4 +1,4 @@
-> Carried from `opengame-router` 1.0.8. Read it when: Build, test and submit a browser game on OpenGame. Routes game work to the deploy guide, whole-game review and relevant craft skills. Use when someone asks to make a game, improve a game, check it, deploy it or enter an OpenGame jam.
+> Carried from `opengame-router` 1.0.9. Read it when: Build, test and submit a browser game on OpenGame. Routes game work to the deploy guide, whole-game review and relevant craft skills. Use when someone asks to make a game, improve a game, check it, deploy it or enter an OpenGame jam.
 
 
 # Work on an OpenGame game
@@ -11,13 +11,15 @@ That is not a fault in the game.
 Read [the working process](references/process.md) before changing the game. Keep the
 user's scope and budget. Read only the specialists that apply to the next change.
 
-The starting set is this router, `opengame-deploy` and `opengame-quality-bar`.
-Run `opengame skills list --json` to see the installed CLI's catalog. Use
-`opengame help --json` for its skill selection options before installing a specialist.
+`opengame setup` installs every OpenGame skill for the agents on the machine, and the CLI
+keeps them current. `opengame skills add .` installs a starting set into one project: this
+router, `opengame-deploy` and `opengame-quality-bar`. Run `opengame skills list --json` to
+see the installed CLI's catalog, and add a specialist to the project with
+`opengame skills add . --skill <name>`.
 
 | Work | Skill |
 | --- | --- |
-| Check, deploy, private preview, submit | `opengame-deploy` |
+| Check, deploy, private preview, publish | `opengame-deploy` |
 | A CLI command, its output or its exit code | `opengame-cli` |
 | Calling the API from your own tool or CI | `opengame-api` |
 | Review the whole game | `opengame-quality-bar` |

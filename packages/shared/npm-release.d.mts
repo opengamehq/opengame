@@ -8,6 +8,8 @@ export declare const releaseWorkflowApproved: (env: Record<string, string | unde
 export declare function npmReleaseForBuild<R extends Release>(release: R, env: Record<string, string | undefined> | undefined): R;
 export declare const INSTALL_CLOSED: Readonly<Record<InstallStep, string>>;
 export declare function installCommand(name: InstallName, release: Release, options?: { starter?: boolean }): string | null;
+export declare const CLI_SETUP_COMMAND: string;
+export declare function installLines(name: InstallStep, command: string): string[];
 export declare function installMarkdown(name: InstallStep, release: Release): string;
 export declare function writeInstallBlocks(text: string, release: Release): string;
 export declare const installBlocks: (text: string) => string[];

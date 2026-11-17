@@ -60,6 +60,9 @@ export const RUNS: Record<string, string[][]> = {
      wrong flag value is refused before anything is sent. */
   publish: [["publish", "{root}"], ["publish", "{root}", "--game", "abc123", "--controller", "maybe"]],
   skills: [["skills", "list", "{root}"], ["skills", "add", "{fresh}"]],
+  /* Neither touches the home folder the sweep runs in: the opt-out writes only the CLI's own
+     state under its scratch XDG_CONFIG_HOME, and an unknown agent is refused before anything. */
+  setup: [["setup", "--no-skills"], ["setup", "--agent", "nobody"]],
   // Both games at once is refused before any request, so it ends on its own too.
   stats: [["stats", "{root}"], ["stats", gameId, "--game", gameId]],
 };

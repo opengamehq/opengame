@@ -335,7 +335,7 @@ test("the install switch needs no bump, and a change at the same version is refu
   await writeFile(set.lockPath, JSON.stringify(lock));
   const skillIn = async (npmRelease) => (await buildSkills({ ...set, npmRelease })).skills[0].files["SKILL.md"];
   assert.match(await skillIn(shut), /The CLI is not on npm yet\./);
-  assert.match(await skillIn(open), /```bash\nnpm i -g @opengamehq\/cli\n```/);
+  assert.match(await skillIn(open), /```bash\nnpm i -g @opengamehq\/cli\nopengame setup\n```/);
   assert.doesNotMatch(await skillIn(open), /not on npm yet/);
   assert.deepEqual(await relock(set, lock), lock, "relocking either state changes nothing");
 
@@ -377,7 +377,8 @@ test("a publishing build renders the install steps open, and the variable is ref
     const text = await readFile(join(out, name, "SKILL.md"), "utf8");
     assert.equal(text, skills.find((skill) => skill.name === name).files["SKILL.md"]);
     assert.doesNotMatch(text, /not on npm yet/, name);
-    assert.match(text, /```bash\nnpm i (?:-g )?@opengamehq\/(?:cli|sdk)\n```/, name);
+    // The CLI's step has `opengame setup` under the install (npm-release.mjs, installLines).
+    assert.match(text, /```bash\nnpm i (?:-g @opengamehq\/cli\nopengame setup|@opengamehq\/sdk)\n```/, name);
   }
   delete process.env.OPENGAME_RELEASE_VERSION;
   assert.throws(() => loadContext(), /only by scripts\/release\.mjs/);
@@ -468,7 +469,7 @@ test("an install step prints the command only once npm-release.json says the pac
   assert.equal(render("{{install cli}}", { ...context, npmRelease: shut }), "The CLI is not on npm yet. Write to team@opengame.io for a copy.");
   assert.equal(render("{{install sdk}}", { ...context, npmRelease: shut }), "The SDK is not on npm yet. Write to team@opengame.io for a copy.");
   assert.doesNotMatch(render("{{install skills}}", { ...context, npmRelease: shut }), /npx|opengamehq\//);
-  assert.equal(render("{{install cli}}", { ...context, npmRelease: open }), `\`\`\`bash\nnpm i -g ${open.packages.cli}\n\`\`\``);
+  assert.equal(render("{{install cli}}", { ...context, npmRelease: open }), `\`\`\`bash\nnpm i -g ${open.packages.cli}\nopengame setup\n\`\`\``);
   assert.equal(render("{{install sdk}}", { ...context, npmRelease: open }), `\`\`\`bash\nnpm i ${open.packages.sdk}\n\`\`\``);
   assert.equal(render("{{install skills}}", { ...context, npmRelease: open }), "```bash\nnpx skills add opengamehq/opengame\n```", "the public repository, not the npm package");
   assert.throws(() => render("{{install studio}}", context), /cli, cli-agent, sdk, sdk-agent or skills/);

@@ -8,6 +8,7 @@ command checks a game folder, uploads it and gives you a private preview to play
 <!-- install:cli -->
 ```bash
 npm i -g @opengamehq/cli
+opengame setup
 ```
 <!-- /install -->
 
@@ -40,10 +41,11 @@ opengame deploy .
 ```
 
 `init` writes `opengame.json`, the manifest with your game's title and build. It asks
-you one thing, the game's name, and you write the description, choose the genre and
-enter the jam on the deployment page afterwards. Your agent can write the description
-and genre with `opengame details`; entering the jam and publishing are yours. `check` runs the same checks the upload will, on your machine. `deploy` builds,
-checks and uploads a release, then prints its deployment page:
+you one thing, the game's name, and leaves every other field on Auto: review writes the
+description and chooses the genre from the game, and you accept or change them on the
+deployment page. Your agent can set the title, tagline and description with
+`opengame details`. `check` runs the same checks the upload will, on your machine.
+`deploy` builds, checks and uploads a release, then prints its deployment page:
 
 ```
 Uploaded. The checks run on our side, so you can close this terminal.
@@ -54,6 +56,11 @@ Or follow them here with opengame status --watch.
 
 The private preview plays on that page once the checks pass, and the release goes to
 review by itself. Add `--wait` to stay in the terminal until the checks finish.
+
+When review passes, publish the game on that page, where you also enter the jam, or with
+`opengame publish`. `opengame deploy --publish` deploys, waits for review and publishes in
+one command. An update of a game that is already live publishes by itself once it passes
+review.
 
 ## Scripts and agents
 
@@ -76,8 +83,10 @@ A failure prints `"type": "error"` with `ok: false`, a `code` such as `not_launc
 `message` and the process exits with a non-zero code. `opengame help --json`
 lists every command, flag and exit code. `--jsonl` streams progress events.
 
-`opengame skills add .` installs the OpenGame skills for Claude Code, Codex, Cursor or
-OpenCode, so a coding agent can do all of the above for you.
+`opengame setup` installs the OpenGame skills for Claude Code, Codex, Cursor and OpenCode
+in your home folder, so a coding agent can do all of the above for you, and the CLI keeps
+them current as it updates. `opengame setup --no-skills` turns that off.
+`opengame skills add .` installs them into one project instead, to commit with it.
 
 ## Commands
 
@@ -102,7 +111,7 @@ OpenCode, so a coding agent can do all of the above for you.
 | `opengame restore [dir] [options]` | Put a game you unpublished back on the gallery, serving the version it was on, as Put it back does on Your games. Refused for a game we took down, one with an open report or a hold, and one under a copyright notice. Needs a token with read or deploy, and submit; opengame login has all three. |
 | `opengame delete [dir] [options]` | Delete the linked game for good, as Delete for good does on its page: it comes off the gallery, stops being served and cannot be put back. You type its title to confirm. Refused while it is under a legal hold, with a reviewer, or in a jam being scored. Only the opengame login token can do this, not a token made in settings. |
 | `opengame details [dir] [options]` | Print the linked game's title, tagline and description as the website shows them, or change any of them, as the Details tab on its page does. A field you leave out stays as it is. On a published game players see the change at once. Printing needs a token with read or deploy, and saving needs submit too; opengame login has all three. |
-| `opengame achievements [retire <id>] [options]` | List the linked game's achievements, active and retired, or retire one, as the achievements step on the website does. Players keep what they unlocked, and the game can no longer award a retired one. Retiring needs a token with deploy and submit; opengame login has them. |
+| `opengame achievements [retire <id>] [options]` | List the linked game's achievements, active and retired, or retire one. Players keep what they unlocked, and the game can no longer award a retired one. Retiring needs a token with deploy and submit; opengame login has them. |
 | `opengame games [options]` | List your games and their latest deploy. |
 | `opengame link [dir] [options]` | Connect this folder to an existing game. |
 | `opengame pull [dir] [options]` | Bring website metadata into this folder. |
@@ -113,7 +122,8 @@ OpenCode, so a coding agent can do all of the above for you.
 | `opengame logout [options]` | Revoke this device's token and remove it locally. |
 | `opengame limits [options]` | Show bundle limits and your remaining account allowance. |
 | `opengame vendor [dir] [options]` | Create a separate export with dependencies downloaded at their exact versions, rewritten and hashed. |
-| `opengame skills add\|list [dir] [options]` | Install the OpenGame skills for your coding agent. |
+| `opengame setup [options]` | Install the OpenGame skills for your coding agents and keep them updated with the CLI. Other commands also do it on first run and after an update. |
+| `opengame skills add\|list [dir] [options]` | Install the OpenGame skills into one project, to commit them with it. |
 | `opengame upgrade [options]` | Install the current CLI, or print the line that does. |
 | `opengame version [options]` | Print the CLI version. |
 

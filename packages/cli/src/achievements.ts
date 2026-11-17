@@ -54,8 +54,8 @@ type Definition = { achievement_id: string; title: string; description: string |
 
 /**
  * `opengame achievements` lists a game's achievements as the server holds them, active and
- * retired. `opengame achievements retire <id>` retires one, as the achievements step on the
- * website does, through the same route: unlocks already earned are kept, and the game can no
+ * retired. `opengame achievements retire <id>` retires one through the
+ * achievements route: unlocks already earned are kept, and the game can no
  * longer award it. Declaring it again in opengame.json and deploying turns it back on.
  *
  * Retiring changes what players of a live game see, so a person is asked first and an agent

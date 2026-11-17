@@ -2,7 +2,7 @@
 name: opengame-cli
 description: Drive the OpenGame command line tool from an agent. Covers installing it, signing in with the person, every command, JSON and JSONL output, exit codes, findings and how to retry. Use when the person mentions the opengame command, the OpenGame CLI, installing @opengamehq/cli, opengame login, check, dev, deploy, status, submit, releases, rollback, unpublish, restore, delete, details, achievements, handle, jam or token, or a command exited with an error you need to read.
 metadata:
-  version: "1.9.0"
+  version: "1.9.2"
 ---
 
 # Use the OpenGame CLI
@@ -20,6 +20,7 @@ for the tool itself.
 
 ```bash
 npm i -g @opengamehq/cli
+opengame setup
 ```
 
 Once `opengame` is installed, confirm it and read the command reference:
@@ -62,7 +63,7 @@ token in a command argument, a file in the project, a log or a reply.
 
 | Command | What it does |
 | --- | --- |
-| `opengame init [dir]` | Create opengame.json for an existing game. Asks a person only the game's name; the rest is filled in on the deploy's page. |
+| `opengame init [dir]` | Create opengame.json for an existing game. Every field it is not given is `auto`: review writes it from the game, and the creator accepts or changes it on the deploy's page or with `opengame publish`. Asks a person only the game's name. |
 | `opengame check [dir]` | Find local build and asset problems before uploading. |
 | `opengame dev [dir]` | Serve a local export with the game runtime's headers. |
 | `opengame login` | Sign in through the browser. |
@@ -91,7 +92,8 @@ token in a command argument, a file in the project, a log or a reply.
 | `opengame logout` | Revoke this device's token and remove it. |
 | `opengame limits` | Show bundle limits and the account's remaining allowance. |
 | `opengame vendor [dir]` | Make a separate export with dependencies downloaded and pinned. |
-| `opengame skills add or list` | Install the OpenGame skills for a coding agent. |
+| `opengame setup` | Install every OpenGame skill for the coding agents on this machine, and keep them current with the CLI. Other commands do the same on first run and after an update; `--no-skills` stops it for good, `OPENGAME_SKILLS_AUTO=0` for one run, and CI never gets it. |
+| `opengame skills add or list` | Install the OpenGame skills into one project, to commit them with the game. |
 | `opengame upgrade` | Install the current CLI, or print the line that does. |
 | `opengame version` | Print the CLI version. |
 
@@ -150,7 +152,7 @@ back on. Retiring needs `deploy` and `submit`, which `opengame login` gives.
 `opengame jam withdraw --yes --json` takes the linked game's entry out of the jam and frees
 its place; the entry, its build and its certifications are kept. Run it only when the person
 asks. `opengame jam reenter --json` puts the newest withdrawn entry back while the jam is
-open, with the same reference and build. Both need `read` or `deploy`, and `submit`.
+open, with the same reference and build. Both need `submit`, which `opengame login` gives.
 `at_entry_limit` means every place is taken: ask the person which entry to withdraw first.
 `reenter_closed` means the jam is not taking entries; wait for it to open, and do not
 re-enter after it closes. `jam_entry_taken` means a newer entry of the game is already in.
@@ -176,9 +178,9 @@ helps, `retry`, `retryAfterSeconds` and `next`, the command to run next.
 | 4 | `rateLimited` | An allowance is used. Wait `retryAfterSeconds`, then run the same command. |
 | 5 | `server` | Our side or the network; the game is fine. Follow `retry`. |
 | 6 | `upgrade` | This CLI is too old. Run `opengame upgrade --json`. |
+| 7 | `notLaunched` | OpenGame is not open to creators yet, and the error's code is `not_launched`. Run `opengame login`, then the same command again. |
 
-`not_launched` has an exit code of its own, listed by `help --json`. Branch on the
-error's `code` rather than the number wherever you can.
+Branch on the error's `code` rather than the number wherever you can.
 
 ## Act on findings
 

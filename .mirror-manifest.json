@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "5cdc4c4b9d1adeedd46cbd567b92c8e9a4c66786"
+    "commit": "e7fbcff05cf7d1ebca94e924516f321d7b28f39f"
   },
-  "digest": "b3bb0bb89a4de4d86aa5cde56f4aea1f79283e7072fd5675fb6acc4d2731b663",
+  "digest": "09f41267f47bd58a5a03fd3fb47d83215ed2c1fb33e4ddd1dfb2fb73a3cae923",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -171,8 +171,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 2353,
-      "sha256": "aeae3fee53b12b2e0d00dafe785c5e69b5a90dc2d78fb19794a5aa9866b411cd",
+      "bytes": 2368,
+      "sha256": "f9e96200124696458468c009d22d243b5873b460cdee7ffbfbda838b13acfe46",
       "executable": false
     },
     {
@@ -183,8 +183,8 @@
     },
     {
       "path": "api-reference/openapi.json",
-      "bytes": 1434727,
-      "sha256": "1d1dbc083509137e45256ac008bce4db751bc4e4cb4037ba1f69bdf4082ea460",
+      "bytes": 1440470,
+      "sha256": "959788fb3f51d928147bd4541793a6e34518fcb5e9c0c6e7feb02ec093192b01",
       "executable": false
     },
     {
@@ -208,7 +208,7 @@
     {
       "path": "package-lock.json",
       "bytes": 27909,
-      "sha256": "5a00d7e5a8daf9ab996586874dba812e20fe4f4b5cf207719ca641b3f9e20cdd",
+      "sha256": "9ae85232817025360d7032b808353ab7d4fa1196701ca8ca9f6249f347c1f5ae",
       "executable": false
     },
     {
@@ -219,20 +219,20 @@
     },
     {
       "path": "packages/cli/AGENTS.md",
-      "bytes": 24918,
-      "sha256": "2efc16384ef582dd4c56b5cd63b7b28212383a5cffc401529dcd7d6064f109b3",
+      "bytes": 26305,
+      "sha256": "4692a58d195b68d35c3b94b05a4b26d06ffc6b88384e54ee85985e5157df78b8",
       "executable": false
     },
     {
       "path": "packages/cli/CHANGELOG.md",
-      "bytes": 16358,
-      "sha256": "ac49a4223e27f05c760a139a6969d803d363198b0c8e125147459de2dd8cc604",
+      "bytes": 18028,
+      "sha256": "10da315dbd5ebd0c4aebb3cae5c3f161d880b82748c439823572ad881ba98202",
       "executable": false
     },
     {
       "path": "packages/cli/README.md",
-      "bytes": 12126,
-      "sha256": "3e48f5dffa8985fecd91d9af305393aec22b4e4a323d6eba974af304ca57900a",
+      "bytes": 12782,
+      "sha256": "900feb00ceea44a59c1de918602c620fe69cae596028c6470c1704ad4c03d15c",
       "executable": false
     },
     {
@@ -243,8 +243,8 @@
     },
     {
       "path": "packages/cli/package.json",
-      "bytes": 1777,
-      "sha256": "05412b5a1d14dc85e699928bf341a1b18327886e2de433355a07d3a0e282b97e",
+      "bytes": 1800,
+      "sha256": "b467af10b150e08ec419adfb60bdcf349104abf88ad43f3370dea1b023466d0d",
       "executable": false
     },
     {
@@ -255,14 +255,14 @@
     },
     {
       "path": "packages/cli/scripts/node-matrix.mjs",
-      "bytes": 3760,
-      "sha256": "955664ffa50614d3b14d150d90ee759755ed5f33e09c1464e6ed18803f038771",
+      "bytes": 3968,
+      "sha256": "dc69df3214414691565c863dfc4d106e4ca5352c76cf6b5f7a71c505f2de07a4",
       "executable": false
     },
     {
       "path": "packages/cli/src/achievements.ts",
-      "bytes": 7715,
-      "sha256": "cbc90a7060f43bb632ca331c8cac2a6bc3efdc29146b02c9107664a360da946e",
+      "bytes": 7676,
+      "sha256": "5193b01afdac60e881c85d77770e86ceeb3ab0814244ff9f89405c785e24dded",
       "executable": false
     },
     {
@@ -327,8 +327,8 @@
     },
     {
       "path": "packages/cli/src/cli.ts",
-      "bytes": 63383,
-      "sha256": "e2d2bc2220b1d62846eb4d772c4eb71a4f07f9bf94b9fc0bc3439d6717c774d0",
+      "bytes": 65358,
+      "sha256": "7f1afcdf7af5a01fa42148d0450d7a0d1cedfe919d7d366b7f412c4322d9459a",
       "executable": false
     },
     {
@@ -542,9 +542,15 @@
       "executable": false
     },
     {
+      "path": "packages/cli/src/setup.ts",
+      "bytes": 15796,
+      "sha256": "2fa351cef3fd1dcc829ca1d88a57d2a75a20f3b098c4cef40d93ae2834397800",
+      "executable": false
+    },
+    {
       "path": "packages/cli/src/skills.ts",
-      "bytes": 23548,
-      "sha256": "edc30ecb07d3072b7f67b88d669bb79948979cf16518f4b1e1568c36d64a3960",
+      "bytes": 26401,
+      "sha256": "604ebe4ead6de73e52d62bb5fda5d9d89763a6a403a053be82561932b53ebf84",
       "executable": false
     },
     {
@@ -663,8 +669,8 @@
     },
     {
       "path": "packages/cli/tests/agent-shells-sweep.ts",
-      "bytes": 9302,
-      "sha256": "48a1e547c91dfbb908af20d5995a5a8fd3b14417af8e9ca43c61c06b7a71a71d",
+      "bytes": 9563,
+      "sha256": "a6fe7f8d22f65c851d1f8ccdf0bd4ef50bb9ea0aa1a234d20b7a786e9d4955c2",
       "executable": false
     },
     {
@@ -831,6 +837,24 @@
     },
     {
       "path": "packages/cli/tests/fixtures/manifests/0.10.0/init-vite.json",
+      "bytes": 336,
+      "sha256": "2e2ebfeda5564195c7c9bb7315c3a806db03e5824d40cc902c436f8553eb7c10",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.11.0/init-mod.json",
+      "bytes": 295,
+      "sha256": "68082d95a226edb043e6f28b126168b563168ce3279f728e3b81422797fd57ec",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.11.0/init-plain.json",
+      "bytes": 255,
+      "sha256": "7d295b318c2bcd274479e3daa9369233a18ecad329c260d2ab337f4caae95a39",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.11.0/init-vite.json",
       "bytes": 336,
       "sha256": "2e2ebfeda5564195c7c9bb7315c3a806db03e5824d40cc902c436f8553eb7c10",
       "executable": false
@@ -1394,9 +1418,15 @@
       "executable": false
     },
     {
+      "path": "packages/cli/tests/setup.test.ts",
+      "bytes": 15700,
+      "sha256": "1769feae9d35a97eaee55ef92ba9481a8f62aad762cc37c372fb0c63d71711f4",
+      "executable": false
+    },
+    {
       "path": "packages/cli/tests/shell.ts",
-      "bytes": 7592,
-      "sha256": "e9b8c656ea4c82299a41183fe4e3f1fd21369330426543a8869d46880187ce1f",
+      "bytes": 7997,
+      "sha256": "2db05d6119b3da09191896064e5568aea43ad1b7edd51b873cf1e26081e860ce",
       "executable": false
     },
     {
@@ -2079,8 +2109,8 @@
     },
     {
       "path": "packages/sdk/AGENTS.md",
-      "bytes": 21225,
-      "sha256": "fd1aa7f890ca9ecdeef3317ac3b14ab5b5f3489af7b1a5a2ec708fdc65c23197",
+      "bytes": 22855,
+      "sha256": "ab1ddfc3d9eef8985373a2e613464f2cdbedb1fa4f7f9b59fb3893b0ecdcc4ac",
       "executable": false
     },
     {
@@ -2097,8 +2127,8 @@
     },
     {
       "path": "packages/sdk/README.md",
-      "bytes": 31278,
-      "sha256": "a00e6aeb0d38ed902dea30da46abfcbf5a9892a0930e6cbb4ad2223e9f5e8f03",
+      "bytes": 32070,
+      "sha256": "bcc93bfcf982da55142410d6b04826b9bebee24f8d650571e2566e497ff59724",
       "executable": false
     },
     {
@@ -2169,8 +2199,8 @@
     },
     {
       "path": "packages/sdk/src/errors.ts",
-      "bytes": 6391,
-      "sha256": "7f6101b72cbb4f646dc59ac46acba7913b01bfcc88229c072d45e609d201e133",
+      "bytes": 6560,
+      "sha256": "4f5485bfd1228fa5758011b6771199bff555ced97a525626c7e37dc67240ef22",
       "executable": false
     },
     {
@@ -2445,8 +2475,8 @@
     },
     {
       "path": "packages/shared/npm-release.d.mts",
-      "bytes": 1333,
-      "sha256": "8f526fdab1eab75234656d12edddb1df34af9311cb547e97d5c0effeb8a7964e",
+      "bytes": 1465,
+      "sha256": "60f5e39190dbc8786e2cc6746b2a5d2325964ed4d2f852b23c08bc7504d5ab6a",
       "executable": false
     },
     {
@@ -2457,8 +2487,8 @@
     },
     {
       "path": "packages/shared/npm-release.mjs",
-      "bytes": 8769,
-      "sha256": "b12f86f773cc62b85913c9a555d494c688cc1b8bfd95d3d0182e0eb6ae4a5dc2",
+      "bytes": 9776,
+      "sha256": "17439e5191b0f495cdddd2ad148b8b5696063c268371cda9f6ee4886ebc78c6d",
       "executable": false
     },
     {
@@ -2811,14 +2841,14 @@
     },
     {
       "path": "packages/skills/CHANGELOG.md",
-      "bytes": 4541,
-      "sha256": "999eddf92f12165d4a4d75c89116f5342cc2227ba7fefefde1068854f8ff899c",
+      "bytes": 5198,
+      "sha256": "7edefbe1bc970d8b55c6b9fc70b7e4ce6d32476550e5c1410348f791f9ec2200",
       "executable": false
     },
     {
       "path": "packages/skills/README.md",
-      "bytes": 2849,
-      "sha256": "d8be02580ffea059912f48215f18637a6b0e89a620cea5d62f8def9d9d77911b",
+      "bytes": 3104,
+      "sha256": "68b88c2d11ae64c612db629972238f0e53d0864d304635d28ff28d3e29f22c81",
       "executable": false
     },
     {
@@ -2842,7 +2872,7 @@
     {
       "path": "packages/skills/package.json",
       "bytes": 1516,
-      "sha256": "b510ba01a812df223bc2fef2305e428ae4eaa017591f91072dd0b30df721ed0f",
+      "sha256": "44aaa2b5fdaf5c5466809be69d9f10fd4819697aec09c58b37fc989ca0bcc267",
       "executable": false
     },
     {
@@ -2854,7 +2884,7 @@
     {
       "path": "packages/skills/skills.lock.json",
       "bytes": 8793,
-      "sha256": "b92bedbc297bbe7fd6c0f49248378cdbce7d41d417ab513f1f66aa89c15aada3",
+      "sha256": "ae43744e2b38246dee7b7a628746843a2f922443c022724e1beafba7dc2b0bfc",
       "executable": false
     },
     {
@@ -2871,14 +2901,14 @@
     },
     {
       "path": "packages/skills/skills/opengame-all-in-one/CHANGELOG.md",
-      "bytes": 817,
-      "sha256": "1174aeae7bea5e921f965336b1e3804da27b269a5018522a49fd4f9c382b0e8a",
+      "bytes": 1085,
+      "sha256": "c31153e4634949209d2e8db888067818c1c020ec88fcc9b9abeaed49d048ab57",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-all-in-one/SKILL.md",
-      "bytes": 13176,
-      "sha256": "5b968b882fc254975c98714d04b89bd595dd50ac3723a57e7ab3148d4c204900",
+      "bytes": 13205,
+      "sha256": "4589fc2e7422422414d8825165abb1c8aa8c190231000326d29bdf7591851ca2",
       "executable": false
     },
     {
@@ -2997,38 +3027,38 @@
     },
     {
       "path": "packages/skills/skills/opengame-cli/CHANGELOG.md",
-      "bytes": 3029,
-      "sha256": "f2c06f72b455345474d0794b3b7fe59fb1608ac90da7441311b404ab87ed5421",
+      "bytes": 3628,
+      "sha256": "b754a3fe7e7806f82d1eaee0acde8e3c9b01601f543fcdc5d33cae4e686d3201",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-cli/SKILL.md",
-      "bytes": 11413,
-      "sha256": "81bb071ec3a58192b0ae73db3cd8467a7154642e5505399ba351cd2d64177e5f",
+      "bytes": 11926,
+      "sha256": "b0f4065b4236c218048a9f0688123a330e893e8b30576415e2112c9a5cfc5756",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-deploy/CHANGELOG.md",
-      "bytes": 4708,
-      "sha256": "3e61f2b564196dc5c88f8ac34e8b6f3f1669c7754fd96be07841b70a06cf8265",
+      "bytes": 5370,
+      "sha256": "8718259a9cddfaee60936ca8e27abaa9c9596933f2a4dc67baace0a73fe32a8d",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-deploy/SKILL.md",
-      "bytes": 16382,
-      "sha256": "7669a8c2b5d5eb984bd6984383178dbe2f7eaaa07fc3c19f207efd38fa92a64b",
+      "bytes": 17601,
+      "sha256": "2daf318dd9fd91598e1243e9de971488649ab782be44aa1e634b438b9c690bb4",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-deploy/references/json-events.md",
-      "bytes": 5168,
-      "sha256": "35ae0a3c2bbd2829be1d9e81eb07a58438bfc378e90e3cc0d6d327cbd217079c",
+      "bytes": 5080,
+      "sha256": "de9fe8c7ed88ad39731117856492b47c22f57fb76d5b50958613bd24601d9258",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-deploy/references/manifest.md",
-      "bytes": 5001,
-      "sha256": "5cbfb687d63ca2f60479439ee146bf0504334dcc9707c10d1357079c04e300bd",
+      "bytes": 5389,
+      "sha256": "66fffa95f07e73592b4bc1b46c751277b734968fb7c9ac1b181f146251614578",
       "executable": false
     },
     {
@@ -3129,14 +3159,14 @@
     },
     {
       "path": "packages/skills/skills/opengame-jam/CHANGELOG.md",
-      "bytes": 2127,
-      "sha256": "fe036faa1562f8f369c08208e568c8b7d3e81554f41d7651b3b3b8c0ec878b8f",
+      "bytes": 2264,
+      "sha256": "c978815b8438db1cea1e9d7b90aaa76f27a51a1ea38f592fe120352438bb9dba",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-jam/SKILL.md",
-      "bytes": 6973,
-      "sha256": "e8d7cb65cadaf8530d754a3fb8fd6542e99c7e8068f9eec32c3c48f4b7dcccb8",
+      "bytes": 6978,
+      "sha256": "58ba45267c7ddc901fe096b58faf7dbf3234c8cbf485f8d72244738800491bde",
       "executable": false
     },
     {
@@ -3561,14 +3591,14 @@
     },
     {
       "path": "packages/skills/skills/opengame-performance/CHANGELOG.md",
-      "bytes": 799,
-      "sha256": "ac4e07c3b42ca2023c8dff009890aef70f04dea6ab8a053028f1d700a875e91e",
+      "bytes": 961,
+      "sha256": "2f6f111eb6b616dfd2276fb7eb99d7f9d142d154f542251f066d4eccdaf3d0dc",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-performance/SKILL.md",
-      "bytes": 41838,
-      "sha256": "a6cd39db4f7df948fbbff9e7d18760ace9c62a934ab8d9abf7f9806aba9ea7bd",
+      "bytes": 41881,
+      "sha256": "8c22c63f7222a2fedda2ea420757f6b3773dee9804b79a6b7218a4d77079c931",
       "executable": false
     },
     {
@@ -3675,20 +3705,20 @@
     },
     {
       "path": "packages/skills/skills/opengame-router/CHANGELOG.md",
-      "bytes": 1295,
-      "sha256": "079841e6e8aaba6c9670c7de4a1be20654b98017c6f2cb83f651043ad88cafe3",
+      "bytes": 1491,
+      "sha256": "1b2519d874d4efb9d00cab588f94a5e4f51cec9aa0b98cb88bf9d07cc99fa1c4",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-router/SKILL.md",
-      "bytes": 3460,
-      "sha256": "90115727f9ebebcc624388d31d31fdc133fa16d2731a9f081c8b8e70a557cad4",
+      "bytes": 3607,
+      "sha256": "268080d4987332387bf2a6fba2a7bb3ed617335dd49b85ec722679fcc8305cca",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-router/references/process.md",
-      "bytes": 2144,
-      "sha256": "3462bdd5a87f81eee69ffb12ca04519b35404f67c920b182443e81a8904100dd",
+      "bytes": 2422,
+      "sha256": "a6f05ed2280c37bad58480aede468ed1ca8202f78707e5aadc4089d821fa09ee",
       "executable": false
     },
     {
@@ -4161,8 +4191,8 @@
     },
     {
       "path": "packages/skills/tests/build.test.mjs",
-      "bytes": 33666,
-      "sha256": "9f3c73a92ff7fd343a4e084aea7bae5f62047ab29dfccfe012f2f27b2bcba180",
+      "bytes": 33816,
+      "sha256": "2123dc1e81efcc41fb0700bd5cd14e8ac488feb3578b2f64f606b8847ff0a780",
       "executable": false
     },
     {
@@ -4569,14 +4599,14 @@
     },
     {
       "path": "skills/opengame-all-in-one/CHANGELOG.md",
-      "bytes": 817,
-      "sha256": "1174aeae7bea5e921f965336b1e3804da27b269a5018522a49fd4f9c382b0e8a",
+      "bytes": 1085,
+      "sha256": "c31153e4634949209d2e8db888067818c1c020ec88fcc9b9abeaed49d048ab57",
       "executable": false
     },
     {
       "path": "skills/opengame-all-in-one/SKILL.md",
-      "bytes": 13176,
-      "sha256": "5b968b882fc254975c98714d04b89bd595dd50ac3723a57e7ab3148d4c204900",
+      "bytes": 13205,
+      "sha256": "4589fc2e7422422414d8825165abb1c8aa8c190231000326d29bdf7591851ca2",
       "executable": false
     },
     {
@@ -4671,26 +4701,26 @@
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-cli/README.md",
-      "bytes": 11397,
-      "sha256": "17e628b9d557212f3652f82bac331a3e586c47a62c363c17e6ff8ba171ac8ae7",
+      "bytes": 11925,
+      "sha256": "f5adb85d241a320e191d761881e020c0214bc04c0382af2e95ad2e097f82f316",
       "executable": false
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-deploy/README.md",
-      "bytes": 16137,
-      "sha256": "586a392450665fdcd4583e3bf4899e19f552cbb0789801c8a6de10ab53343ded",
+      "bytes": 17371,
+      "sha256": "cd4295f052e1248f72e3d6c97f671b9c4de271cc3e97ae03ab426fe451a482a5",
       "executable": false
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-deploy/references/json-events.md",
-      "bytes": 5168,
-      "sha256": "35ae0a3c2bbd2829be1d9e81eb07a58438bfc378e90e3cc0d6d327cbd217079c",
+      "bytes": 5080,
+      "sha256": "de9fe8c7ed88ad39731117856492b47c22f57fb76d5b50958613bd24601d9258",
       "executable": false
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-deploy/references/manifest.md",
-      "bytes": 5282,
-      "sha256": "be0db9a6060eb5d87faadb38050ee4f45f4acdca0610276510bddd5ab536ccb1",
+      "bytes": 5670,
+      "sha256": "c48230590f39a82b4d2583651e0e06119f397807a79b53bc6ec13ff0ecb268d0",
       "executable": false
     },
     {
@@ -4767,8 +4797,8 @@
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-jam/README.md",
-      "bytes": 6820,
-      "sha256": "261f313e0fe6dff71d2b889e3ef9d509dfd818539c566169fae31f3bf4c809af",
+      "bytes": 6825,
+      "sha256": "8eb297acca68e468819b14e854baceea89bf04a1627244206e741139f3d6cab1",
       "executable": false
     },
     {
@@ -5133,8 +5163,8 @@
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-performance/README.md",
-      "bytes": 41821,
-      "sha256": "b8c2364dfcac6f933ce607905c04e689ab74f3dca66900c79bc57376a12c3401",
+      "bytes": 41864,
+      "sha256": "3c0fcbaa4054ff22a8ff22980c9191640f97b1097e010549b79f00ba9b0432e3",
       "executable": false
     },
     {
@@ -5217,14 +5247,14 @@
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-router/README.md",
-      "bytes": 3429,
-      "sha256": "7305304b485f5c8a2e9226676fc026262354136b090efd62785b8f99aedcceaa",
+      "bytes": 3576,
+      "sha256": "b3426ddbaaaff62db62dc5096c96e5001918a0479184ee35f7281e2ea36f023f",
       "executable": false
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-router/references/process.md",
-      "bytes": 2144,
-      "sha256": "3462bdd5a87f81eee69ffb12ca04519b35404f67c920b182443e81a8904100dd",
+      "bytes": 2422,
+      "sha256": "a6f05ed2280c37bad58480aede468ed1ca8202f78707e5aadc4089d821fa09ee",
       "executable": false
     },
     {
@@ -5745,38 +5775,38 @@
     },
     {
       "path": "skills/opengame-cli/CHANGELOG.md",
-      "bytes": 3029,
-      "sha256": "f2c06f72b455345474d0794b3b7fe59fb1608ac90da7441311b404ab87ed5421",
+      "bytes": 3628,
+      "sha256": "b754a3fe7e7806f82d1eaee0acde8e3c9b01601f543fcdc5d33cae4e686d3201",
       "executable": false
     },
     {
       "path": "skills/opengame-cli/SKILL.md",
-      "bytes": 11414,
-      "sha256": "5f20dd7788bf40a29b6fe10bc229ce4182d26af1c8eb5ccad6a498528c088dca",
+      "bytes": 11942,
+      "sha256": "ef96641849c0f1f50e4f515cd94ef21bd37a712ef14e0a291e3316f2788e75ab",
       "executable": false
     },
     {
       "path": "skills/opengame-deploy/CHANGELOG.md",
-      "bytes": 4708,
-      "sha256": "3e61f2b564196dc5c88f8ac34e8b6f3f1669c7754fd96be07841b70a06cf8265",
+      "bytes": 5370,
+      "sha256": "8718259a9cddfaee60936ca8e27abaa9c9596933f2a4dc67baace0a73fe32a8d",
       "executable": false
     },
     {
       "path": "skills/opengame-deploy/SKILL.md",
-      "bytes": 16154,
-      "sha256": "0ade71f1875ef3cb07356fb9a0af5c0e41d44ca21115db29f4b6fb9a66bd0cb2",
+      "bytes": 17388,
+      "sha256": "a9d85d5db189840ebcf8d519fb3a112c936201ac1ebc29997776042f1ec55607",
       "executable": false
     },
     {
       "path": "skills/opengame-deploy/references/json-events.md",
-      "bytes": 5168,
-      "sha256": "35ae0a3c2bbd2829be1d9e81eb07a58438bfc378e90e3cc0d6d327cbd217079c",
+      "bytes": 5080,
+      "sha256": "de9fe8c7ed88ad39731117856492b47c22f57fb76d5b50958613bd24601d9258",
       "executable": false
     },
     {
       "path": "skills/opengame-deploy/references/manifest.md",
-      "bytes": 5282,
-      "sha256": "be0db9a6060eb5d87faadb38050ee4f45f4acdca0610276510bddd5ab536ccb1",
+      "bytes": 5670,
+      "sha256": "c48230590f39a82b4d2583651e0e06119f397807a79b53bc6ec13ff0ecb268d0",
       "executable": false
     },
     {
@@ -5877,14 +5907,14 @@
     },
     {
       "path": "skills/opengame-jam/CHANGELOG.md",
-      "bytes": 2127,
-      "sha256": "fe036faa1562f8f369c08208e568c8b7d3e81554f41d7651b3b3b8c0ec878b8f",
+      "bytes": 2264,
+      "sha256": "c978815b8438db1cea1e9d7b90aaa76f27a51a1ea38f592fe120352438bb9dba",
       "executable": false
     },
     {
       "path": "skills/opengame-jam/SKILL.md",
-      "bytes": 6837,
-      "sha256": "6ad097549016d3fb9304ca420767513eab7f2e66cb38de50ff33ae274a5b972c",
+      "bytes": 6842,
+      "sha256": "d85112cb9bc43cfe8014ee0a2476c17c88ae8c216db1a16fede726119436105f",
       "executable": false
     },
     {
@@ -6303,14 +6333,14 @@
     },
     {
       "path": "skills/opengame-performance/CHANGELOG.md",
-      "bytes": 799,
-      "sha256": "ac4e07c3b42ca2023c8dff009890aef70f04dea6ab8a053028f1d700a875e91e",
+      "bytes": 961,
+      "sha256": "2f6f111eb6b616dfd2276fb7eb99d7f9d142d154f542251f066d4eccdaf3d0dc",
       "executable": false
     },
     {
       "path": "skills/opengame-performance/SKILL.md",
-      "bytes": 41838,
-      "sha256": "a6cd39db4f7df948fbbff9e7d18760ace9c62a934ab8d9abf7f9806aba9ea7bd",
+      "bytes": 41881,
+      "sha256": "8c22c63f7222a2fedda2ea420757f6b3773dee9804b79a6b7218a4d77079c931",
       "executable": false
     },
     {
@@ -6411,20 +6441,20 @@
     },
     {
       "path": "skills/opengame-router/CHANGELOG.md",
-      "bytes": 1295,
-      "sha256": "079841e6e8aaba6c9670c7de4a1be20654b98017c6f2cb83f651043ad88cafe3",
+      "bytes": 1491,
+      "sha256": "1b2519d874d4efb9d00cab588f94a5e4f51cec9aa0b98cb88bf9d07cc99fa1c4",
       "executable": false
     },
     {
       "path": "skills/opengame-router/SKILL.md",
-      "bytes": 3446,
-      "sha256": "876ad4a9fdbaa6bc32ebbaf10bdb1ec65d103228aeb3b38a4557c2db87feb5b0",
+      "bytes": 3593,
+      "sha256": "86afd8aad697c13b13a37d0503d74693c605f93ec6480e502bf0423fd837ebff",
       "executable": false
     },
     {
       "path": "skills/opengame-router/references/process.md",
-      "bytes": 2144,
-      "sha256": "3462bdd5a87f81eee69ffb12ca04519b35404f67c920b182443e81a8904100dd",
+      "bytes": 2422,
+      "sha256": "a6f05ed2280c37bad58480aede468ed1ca8202f78707e5aadc4089d821fa09ee",
       "executable": false
     },
     {

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.11.0
+
+- `opengame setup` gives your coding agents the OpenGame skills: every skill this CLI carries,
+  in each agent's own folder in your home directory (`~/.claude/skills`, or under
+  `$CLAUDE_CONFIG_DIR`; `~/.agents/skills` for Codex; `~/.cursor/skills`;
+  `~/.config/opencode/skills`), for the agents installed on the machine or the ones `--agent`
+  names. Run it once after installing.
+- Any other command does the same the first time it runs, and again after the CLI is updated,
+  so the skills stay as current as the CLI. A notice says when it happens. Skills you edited,
+  folders the CLI did not write, and skills you removed are left as they are.
+- `opengame check`, `dev` and `deploy` bring older copies from `opengame skills add` in the
+  project's agent folders up to this CLI's, one agent's folder at a time.
+- `opengame setup --no-skills` stops the install and the updates for good, and
+  `OPENGAME_SKILLS_AUTO=0` for one run. In CI they never run.
+- The staging folder an install uses beside an agent's folder must be a real folder, never a
+  link, and is tidied only where an install writes.
+- Carries the skills from `@opengamehq/skills` 1.7.0, which install the CLI with `opengame setup`.
+- `opengame` with no command lists `publish` among the first five, in place of `submit`, which
+  is now only for a release that was not sent to review by itself. `achievements` no longer
+  says the website has a retire control; `opengame achievements retire` is the way.
+- `opengame dev`'s SDK names the radio by its real module in its error hints, and says what a
+  `cancelled` means: the call was stopped, as when the player chose Keep playing on a link.
+
 ## 0.10.0
 
 - `opengame publish` publishes a release that passed review, as Confirm and publish does on

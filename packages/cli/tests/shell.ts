@@ -30,7 +30,11 @@ export const manifest = { title: "Night shift", description: "Survive until dawn
 /** Every variable that makes the CLI think an agent or CI is driving it, so a test can
  * start from a clean slate whatever shell it was launched from (this suite is usually run
  * by an agent, whose own markers would otherwise leak into every case). */
-export const AMBIENT = ["CI", ...AGENT_MARKERS, "CODEX_CI", "GEMINI_CLI", "NO_COLOR", "FORCE_COLOR", "TERM", "OPENGAME_TOKEN", "OPENGAME_API_URL", "OPENGAME_VERCEL_PROTECTION_BYPASS",
+/* CLAUDE_CONFIG_DIR and CODEX_HOME too: `opengame setup` writes into the folders they name, and
+   a test that inherited them installed every skill into the developer's own Claude Code folder
+   (16 Nov 2026). OPENGAME_SKILLS_AUTO is left alone: the package's test script sets it to 0, so
+   no case refreshes the skills of the machine it runs on unless it asks to. */
+export const AMBIENT = ["CI", "CLAUDE_CONFIG_DIR", "CODEX_HOME", ...AGENT_MARKERS, "CODEX_CI", "GEMINI_CLI", "NO_COLOR", "FORCE_COLOR", "TERM", "OPENGAME_TOKEN", "OPENGAME_API_URL", "OPENGAME_VERCEL_PROTECTION_BYPASS",
   "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "NO_PROXY", "no_proxy", "ALL_PROXY", "all_proxy"];
 
 export function cleanEnv(extra: Record<string, string | undefined> = {}): NodeJS.ProcessEnv {

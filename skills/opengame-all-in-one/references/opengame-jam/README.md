@@ -1,4 +1,4 @@
-> Carried from `opengame-jam` 1.1.0. Read it when: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, deploys one exact release, and enters it with the person's own answers, with opengame publish or on the deploy's page. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
+> Carried from `opengame-jam` 1.1.1. Read it when: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, deploys one exact release, and enters it with the person's own answers, with opengame publish or on the deploy's page. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
 
 
 # Enter an OpenGame jam
@@ -105,7 +105,7 @@ its deploy already sent to review: it answers with that submission and a
 ## What only the person can do
 
 Nobody certifies or attests to anything to enter. The person decides whether they are eligible (age, one account), whether they own
-the assets, which track they want, and what their sponsor evidence claims.
+the assets, which track they want, and which account they used at each sponsor.
 
 ## After submitting
 

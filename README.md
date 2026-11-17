@@ -13,6 +13,7 @@ The CLI checks a game and uploads it, and `opengame help` lists its commands.
 <!-- install:cli -->
 ```bash
 npm i -g @opengamehq/cli
+opengame setup
 ```
 <!-- /install -->
 

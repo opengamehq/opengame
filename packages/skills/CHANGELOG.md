@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.0
+
+- Matched to the CLI, the SDK and the API on 17 Nov 2026: `opengame-cli` 1.9.2, `opengame-deploy`
+  1.1.9, `opengame-jam` 1.1.1, `opengame-router` 1.0.9, `opengame-performance` 1.1.2 and
+  `opengame-all-in-one` 1.0.7 describe Auto details, the scopes jam withdraw takes, exit 7,
+  `--json` against `--jsonl`, every review state, and `opengame setup` installing every skill.
+- `opengame-cli` 1.9.1 and `opengame-deploy` 1.1.8: installing the CLI is followed by
+  `opengame setup`, which gives every coding agent on the machine the OpenGame skills in its own
+  home folder, and the CLI keeps them current. `opengame-all-in-one` 1.0.6 carries both.
+
 ## 1.6.0
 
 - `opengame-cli` 1.9.0, `opengame-deploy` 1.1.7, `opengame-jam` 1.1.0 and `opengame-api`

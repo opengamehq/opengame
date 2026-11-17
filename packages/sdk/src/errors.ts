@@ -27,10 +27,10 @@ export const errorCatalogue: readonly ErrorEntry[] = Object.freeze([
   { code: 'invalid_limit', where: 'result', retryable: false, hint: 'A read limit is a positive integer. Values above the maximum are capped.' },
   { code: 'invalid_query', where: 'result', retryable: false, hint: "Sort by score or a sortable column, filter by the board's variants, and page top() with a whole-number offset. The reason names the part." },
   { code: 'invalid_manifest', where: 'result', retryable: false, hint: 'opengame.json has an invalid leaderboards list. The reason names the board and the field; opengame check says the same.' },
-  { code: 'gesture_required', where: 'result', retryable: true, hint: 'Call og.openLink, or an og.radio control that makes sound, directly from a click or key handler. For a link, then confirm the destination on the OpenGame page.' },
-  // og.radio. The page plays the radio and refuses these, and the SDK passes them through.
+  { code: 'gesture_required', where: 'result', retryable: true, hint: 'Call og.openLink, or a radio control that makes sound (radio from @opengamehq/sdk/radio, or OpenGame.radio), directly from a click or key handler. For a link, then confirm the destination on the OpenGame page.' },
+  // The radio (@opengamehq/sdk/radio, or OpenGame.radio). The page plays the radio and refuses these, and the SDK passes them through.
   { code: 'muted', where: 'result', retryable: true, hint: "The player has silenced this game on OpenGame, or another part of the page has the speakers, so the radio stays quiet. Offer Play again once og.audio.onHostMute reports false." },
-  { code: 'not_found', where: 'result', retryable: false, hint: 'No station, genre or song by that id. Use the ids og.radio.stations() and og.radio.tracks() return.' },
+  { code: 'not_found', where: 'result', retryable: false, hint: 'No station, genre or song by that id. Use the ids the radio’s stations() and tracks() return.' },
   { code: 'invalid_request', where: 'result', retryable: false, hint: 'The API could not read the request. Check the arguments against the README.' },
   { code: 'invalid_achievement', where: 'result', retryable: false, hint: 'Use a declared achievement ID with lowercase letters, digits, hyphens or underscores within the shared length limit.' },
   { code: 'achievement_unavailable', where: 'result', retryable: true, hint: 'The achievement service refused the request. Check the published game and retry when it is available.' },
@@ -41,7 +41,7 @@ export const errorCatalogue: readonly ErrorEntry[] = Object.freeze([
   // return and fails on one missing here.
   { code: 'unavailable_in_preview', where: 'result', retryable: false, hint: 'Achievements work in a published game only. A preview answers this every time; unlock and list them after publishing.' },
   { code: 'network', where: 'result', retryable: true, hint: 'The request failed before any service answered. Check the connection, then try again.' },
-  { code: 'cancelled', where: 'result', retryable: true, hint: 'The AbortSignal passed to the call was aborted.' },
+  { code: 'cancelled', where: 'result', retryable: true, hint: 'The call was stopped before it finished: the player chose Keep playing on a link, or the request was given up. Nothing to fix.' },
   { code: 'timeout', where: 'result', retryable: true, hint: 'The page did not answer in time. Try again.' },
   { code: 'session_changed', where: 'both', retryable: true, hint: 'The player signed in, out or switched account. Read the player again.' },
   { code: 'disposed', where: 'both', retryable: false, hint: 'og.dispose() was called on this client.' },

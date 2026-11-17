@@ -13,6 +13,7 @@ Deploy the creator's game to a private preview and give them its link. Review st
 
 ```bash
 npm i -g @opengamehq/cli
+opengame setup
 ```
 
 Once `opengame` is installed, confirm it and read the command reference:
@@ -24,7 +25,9 @@ opengame help --json
 
 `help --json` lists every command, flag, exit code, environment variable and event, with the finding schema. Read it rather than guessing a flag.
 
-Install the OpenGame skills for the agent you run in, from the game folder:
+`opengame setup` installs every OpenGame skill in the home folder of each coding agent it finds (Claude Code, Codex, Cursor and OpenCode), and later commands keep them current. If your session started before that, read `opengame-router/SKILL.md` in the folder it names.
+
+To commit the skills with the game instead:
 
 ```bash
 opengame skills add .
@@ -102,7 +105,7 @@ opengame init . --title "My game" --json
 opengame init . --title "Doom but blue" --kind mod --based-on "Doom" --json
 ```
 
-Do not ask the creator for a description or a genre before deploying. When you know them, pass `--description` (40 characters or more) and `--genre`; when you do not, leave them out. Every field defaults to Auto: review writes the description and the genre from the game, and the creator accepts or changes them on the deploy's page, where they also enter the jam. After the deploy you can set the description yourself with `opengame details --description "..." --json`. If the file already exists, leave `init` alone and edit the file.
+Do not ask the creator for a description or a genre before deploying. When you know them, pass `--description` (40 characters or more) and `--genre`; when you do not, leave them out. Every field defaults to Auto: review writes the description and the genre from the game, and the creator accepts or changes them on the deploy's page, where they also enter the jam. A title or description you pass is offered back with its casing and grammar tidied, and `opengame publish --keep-words` keeps it as written. After the deploy you can set the description yourself with `opengame details --description "..." --json`. If the file already exists, `init` fills in only the fields it leaves blank; edit the file to change the rest.
 
 For a game that already exists on OpenGame, in a new checkout, link the folder first so the deploy does not create a second game:
 
@@ -125,7 +128,7 @@ opengame deploy . --json
 | `data.deploymentUrl` | The deploy's page. Give it to the creator straight away: it shows each check and plays the preview once they pass. |
 | `data.state` | `uploading`, `queued`, `checking`, `ready`, `failed` or `expired`. |
 | `data.done` | `true` once the server has finished. |
-| `data.releaseId` | The release. Keep it for `submit`. |
+| `data.releaseId` | The release. Keep it: `opengame publish --release` takes it. |
 | `data.previewUrl` | The private preview link, once `state` is `ready`. It can be `null` on a ready release the server will not play; the deploy's page says why. |
 | `data.gameOrigin` | The origin the published game runs at, such as `https://k3v9q2m7x4ab.opengame.gg`. Give it to the creator when the game talks to their own servers. `null` when the server sent none, or sent one this CLI cannot read. |
 
@@ -169,16 +172,16 @@ Review starts automatically once a deploy is ready, so you submit no release. Re
 
 When review passes, a game's first release waits to be published. `opengame status --json` shows `data.review.state: "awaiting_details"`, `data.review.next: "opengame publish"` and the deploy's page in `data.review.url`.
 
-- **The creator asked you to publish it.** Run `opengame publish --json`. It confirms the title, description and genre review wrote, publishes, waits until the game is live and prints the address to share in `data.url`. Change what review wrote with `--description`, `--genre` and the other flags in `opengame publish --help`. While a new game goes on OpenGame only as a jam entry, pass the jam's track and the models used with `--track` and `--models`; `opengame jams <slug> --json` lists them.
+- **The creator asked you to publish it.** Run `opengame publish --json`. It confirms the title, description and genre review wrote, publishes, waits until the game is live and prints the address to share in `data.url`. Change what review wrote with `--description`, `--genre` and the other flags in `opengame publish --help`. While a new game or an update goes on OpenGame only as a jam entry, pass the jam's track and the models used with `--track` and `--models`; `opengame jams <slug> --json` lists them.
 - **They did not ask.** Give them `data.review.url`. Signed in, they check the details, enter the jam and publish on that page.
 
 To publish in one step, `opengame deploy --publish --json` stays until review passes, then publishes, and takes the same jam flags.
 
 An update to a game that is already live publishes by itself once it passes review. It keeps the live game's details, including the genre when the deploy left it to Auto, and its jam entry. The token that deployed it has to hold `submit`, as the `opengame login` token does. When the creator asked only for a preview of an update to a live game, deploy with a token made in their settings with `deploy` alone, set as `OPENGAME_TOKEN`, so the release waits for them.
 
-`opengame submit` does not confirm a release that is already in review. The server keeps that submission and prints a `jam_answers_unused` notice: the jam answers you passed were not used. Pass them to `opengame publish` once review passes.
+`opengame submit` does not confirm a release that is already in review. The server keeps that submission, and the CLI prints a `jam_answers_unused` notice: the jam answers you passed were not used. Pass them to `opengame publish` once review passes.
 
-While Game Jam #1 runs, a new game goes on OpenGame only as a jam entry, up to 2 for each account. Mods and decomps publish outside the jam at any time and never enter it. When the jam cannot take a build, for example because the account already has 2 entries, the build is not sent to review, and the deploy's page explains why. [Enter a jam](https://docs.opengame.io/guides/jams) has the rules.
+While Game Jam #1 runs, a new game or an update goes on OpenGame only as a jam entry, up to 2 for each account. Mods and decomps publish outside the jam at any time and never enter it. When the jam cannot take a build, for example because the account already has 2 entries, the build is not sent to review, and the deploy's page explains why. [Enter a jam](https://docs.opengame.io/guides/jams) has the rules.
 
 Follow the release to the end:
 
@@ -189,10 +192,14 @@ opengame status --watch --json
 | `data.review.state` | What to do |
 | --- | --- |
 | `review`, `playtesting`, `waiting` | Review is running. Watch again. |
+| `approved` | Review passed. When `data.review.next` is `opengame publish`, do as for `awaiting_details`; otherwise watch again. |
 | `awaiting_details` | Run `opengame publish --json` when the creator asked you to publish. Otherwise give them `data.review.url`, and watch again once they say they have published. |
 | `needs_certification` | Give the creator `data.review.url`. Watch again once they say they have done it. |
-| `publishing`, `published` | The game is going live. `data.submission.gameUrl` is its page. |
-| `returned` | Read the findings, fix the game and deploy again. The new deploy is reviewed automatically. |
+| `publishing`, `published` | The game is going live. Once it is, `data.submission.live.url` is the address to share. |
+| `returned` | Read the findings and run `data.review.next`. Usually that means fix the game and deploy again, and the new deploy is reviewed automatically. A jam entry returned for a fault on our side gets `opengame submit --release <id>` instead: the game needs no change, and the command names any jam answer it still needs. |
+| `blocked` | Review refused the game. Give the creator `data.review.message`. |
+| `withdrawn` | The creator withdrew this submission. Nothing more happens to it unless they ask you to enter it again. |
+| `superseded` | Another submission took its place, and `data.submission.replacedBy` names it. Run `opengame status --json` again to follow that one. |
 
 ## What a game may do
 
@@ -245,7 +252,11 @@ Play the private preview before you tell the creator the game works.
 
 ## Checking a game locally
 
-- Serve the folder and open it. Scores stay in `localStorage`.
+- Run `opengame dev .` and open the address it prints. Scores stay in `localStorage`.
+  Under any other server, such as Vite's, the SDK has no mock: it resolves with no
+  player and no services.
+- Achievements and the radio answer `unavailable` in the mock; check them in a private
+  preview (radio) or once published (achievements).
 - `?og-dev-player=guest|signed-in|no-handle` sets the pretend player;
   `og.player.requestSignIn()` signs the mock in and fires `onChange`.
 - `og.track` validates locally and prints each batch with `console.debug`.
@@ -281,15 +292,15 @@ Play the private preview before you tell the creator the game works.
 | `invalid_limit` | returned | no | A read limit is a positive integer. Values above the maximum are capped. |
 | `invalid_query` | returned | no | Sort by score or a sortable column, filter by the board's variants, and page top() with a whole-number offset. The reason names the part. |
 | `invalid_manifest` | returned | no | opengame.json has an invalid leaderboards list. The reason names the board and the field; opengame check says the same. |
-| `gesture_required` | returned | yes | Call og.openLink, or an og.radio control that makes sound, directly from a click or key handler. For a link, then confirm the destination on the OpenGame page. |
+| `gesture_required` | returned | yes | Call og.openLink, or a radio control that makes sound (radio from @opengamehq/sdk/radio, or OpenGame.radio), directly from a click or key handler. For a link, then confirm the destination on the OpenGame page. |
 | `muted` | returned | yes | The player has silenced this game on OpenGame, or another part of the page has the speakers, so the radio stays quiet. Offer Play again once og.audio.onHostMute reports false. |
-| `not_found` | returned | no | No station, genre or song by that id. Use the ids og.radio.stations() and og.radio.tracks() return. |
+| `not_found` | returned | no | No station, genre or song by that id. Use the ids the radio’s stations() and tracks() return. |
 | `invalid_request` | returned | no | The API could not read the request. Check the arguments against the README. |
 | `invalid_achievement` | returned | no | Use a declared achievement ID with lowercase letters, digits, hyphens or underscores within the shared length limit. |
 | `achievement_unavailable` | returned | yes | The achievement service refused the request. Check the published game and retry when it is available. |
 | `unavailable_in_preview` | returned | no | Achievements work in a published game only. A preview answers this every time; unlock and list them after publishing. |
 | `network` | returned | yes | The request failed before any service answered. Check the connection, then try again. |
-| `cancelled` | returned | yes | The AbortSignal passed to the call was aborted. |
+| `cancelled` | returned | yes | The call was stopped before it finished: the player chose Keep playing on a link, or the request was given up. Nothing to fix. |
 | `timeout` | returned | yes | The page did not answer in time. Try again. |
 | `session_changed` | both | yes | The player signed in, out or switched account. Read the player again. |
 | `disposed` | both | no | og.dispose() was called on this client. |

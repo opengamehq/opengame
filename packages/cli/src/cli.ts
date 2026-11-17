@@ -26,6 +26,7 @@ import { inspectArchive } from "./archive";
 import { folderArgument, loadManifest, outputFolder, projectFor } from "./files";
 import { CLI_VERSION } from "./version";
 import { skillsCommand } from "./skills";
+import { refreshSkills, setupCommand } from "./setup";
 import { limitsCommand } from "./allowance";
 import { statsCommand } from "./stats";
 import { RANGE_NOT_SUPPORTED, RETIRED_RANGE_OPTIONS } from "./analytics-contract";
@@ -175,7 +176,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of this folder's linked game." },
     { name: "yes", type: "boolean", description: "Withdraw without the question a person is asked. Required for agents and scripts." }, stdin, json],
     examples: ["opengame jam withdraw", "opengame jam reenter --game <id> --json", "opengame jam withdraw --yes --json"] },
-  achievements: { args: "[retire <id>]", description: "List the linked game's achievements, active and retired, or retire one, as the achievements step on the website does. Players keep what they unlocked, and the game can no longer award a retired one. Retiring needs a token with deploy and submit; opengame login has them.", flags: [
+  achievements: { args: "[retire <id>]", description: "List the linked game's achievements, active and retired, or retire one. Players keep what they unlocked, and the game can no longer award a retired one. Retiring needs a token with deploy and submit; opengame login has them.", flags: [
     { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of this folder's linked game." },
     { name: "yes", type: "boolean", description: "Retire without the question a person is asked. Required for agents and scripts." }, stdin, json],
     examples: ["opengame achievements", "opengame achievements retire first-lap --yes --json"] },
@@ -220,7 +221,11 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
       "opengame submit --release <id> --jam <slug> --track rpg --models claude,fal --sponsor fal --evidence-fal \"All prop textures\""] },
   jams: { args: "[slug]", description: "List open jams, or show one jam's tracks and flags.", flags: [stdin, json],
     examples: ["opengame jams", "opengame jams <slug> --json"] },
-  skills: { args: "add|list [dir]", description: "Install the OpenGame skills for your coding agent.", flags: [
+  setup: { description: "Install the OpenGame skills for your coding agents and keep them updated with the CLI. Other commands also do it on first run and after an update.", flags: [
+    { name: "agent", type: "string", values: ["claude", "codex", "cursor", "opencode"], description: "Comma-separated agents to install for. Detected when omitted." },
+    { name: "no-skills", type: "boolean", description: "Stop installing and updating the skills, removing nothing. opengame setup turns it back on." }, json],
+    examples: ["opengame setup", "opengame setup --agent codex,cursor", "opengame setup --no-skills"] },
+  skills: { args: "add|list [dir]", description: "Install the OpenGame skills into one project, to commit them with it.", flags: [
     { name: "agent", type: "string", values: ["claude", "codex", "cursor", "opencode"], description: "Comma-separated agents to install for. Detected from the project when omitted." },
     { name: "dir", type: "string", description: "The project folder, when it is not given as an argument." },
     { name: "skill", type: "string", description: "Install named skills from the catalog, separated by commas." },
@@ -247,11 +252,18 @@ const EXIT_CODES = [
    are answered before this is reached. A docs commit on 3 Nov 2026 (a9fa6ab49) took this
    and the check below out with no word in its message, and every local command then ran
    for strangers with no "not launched" sentence; launch.test.ts is what caught it. */
-const BEFORE_LAUNCH = new Set(["login", "logout", "whoami"]);
+const BEFORE_LAUNCH = new Set(["login", "logout", "whoami", "setup"]);
 /* Commands that work on the creator's own machine and send nothing to OpenGame, so they run
    before launch and say the opening day beside their result (launchNotice). `deploy` and
    every command that asks the server keep the refusal above. */
 const LOCAL_BEFORE_LAUNCH = new Set(["init", "check"]);
+/* The commands that already build or package a project, and so may bring its skills from
+   `opengame skills add` up to date before they run. A command that only reads (status, open,
+   releases) leaves the project's files as they are, so a committed skills folder does not
+   change under a read (code review, 16 Nov 2026). */
+const REFRESHES_PROJECT_SKILLS = new Set(["check", "dev", "deploy"]);
+/** Commands that work on a game's folder, which they find from the one they are given (projectFor). */
+const PROJECT_COMMANDS = new Set(["check", "dev", "deploy", "vendor", "status", "open", "pull", "submit", "deployments", "releases", "rollback", "unpublish", "restore", "details", "jam", "delete", "achievements", "publish"]);
 const ENV = [
   { name: "OPENGAME_API_URL", description: "The OpenGame origin to talk to. Defaults to https://opengame.io. Set it when you were given a different origin." },
   { name: "OPENGAME_TOKEN", description: "A token from settings, for CI and agents. Never pass a token as a flag." },
@@ -263,6 +275,9 @@ const ENV = [
   { name: "COLORTERM", description: "truecolor or 24bit draws the character in full color; anything else uses the 256-color palette." },
   { name: "COLORFGBG", description: "Read to tell a light terminal from a dark one, so the character's outline suits it. Most terminals are taken as dark." },
   { name: "OPENGAME_DEBUG", description: "Set to 1 to print the stack of an unexpected error to stderr." },
+  { name: "OPENGAME_SKILLS_AUTO", description: "0 stops this run updating the skills in your agents' folders, as CI does." },
+  { name: "CLAUDE_CONFIG_DIR", description: "Claude Code's folder, for opengame setup. Defaults to ~/.claude." },
+  { name: "CODEX_HOME", description: "Codex's folder, read to detect it. Defaults to ~/.codex." },
   { name: "NODE_ENV", description: "production makes package installs leave out devDependencies, where build tools such as Vite usually are. Then deploy and --build do not install a project's packages themselves, and the error says why. npm's omit=dev, set as npm_config_omit, counts the same." },
 ];
 /* OPENGAME_TEST_SKIP_LAUNCH_CHECK (launch.ts) is read and deliberately not listed here. It is
@@ -348,12 +363,12 @@ function help(target?: string) {
         ...(spec.examples?.length ? ["", "Examples", ...spec.examples.map(line => `  ${line}`)] : []),
         "", "Use --json for structured output."].join("\n") };
   }
-  const primary = ["deploy", "submit", "status", "open", "login"];
+  const primary = ["deploy", "publish", "status", "open", "login"];
   /* One line each (launch judges, J-opus-G12: deploy's entry ran about ninety words). The
      whole description is the command's own --help, and the JSON help carries every word. */
   const SUMMARY: Record<string, string> = {
     deploy: "Build, check and upload a private preview, then review",
-    submit: "Send a release to review, or enter it in a jam",
+    publish: "Publish a release that passed review",
     status: "Show this folder's latest deploy and its findings",
     open: "Open the game's private page in your browser",
     login: "Sign in through your browser",
@@ -498,10 +513,15 @@ async function main() {
   const buildNote = command === "deploy" ? (flags["no-build"] ? undefined : "deploy runs its build command there first; pass --no-build to upload the folder as it is.")
     : ["check", "dev", "vendor"].includes(command) && flags.build ? "--build runs its build command there first." : undefined;
   // rollback's argument is the release, so its folder is the one it runs in.
-  const root = ["check", "dev", "deploy", "vendor", "status", "open", "pull", "submit", "deployments", "releases", "rollback", "unpublish", "restore", "details", "jam", "delete", "achievements", "publish"].includes(command)
+  const root = PROJECT_COMMANDS.has(command)
     ? await projectFor(resolve(command === "rollback" || command === "jam" || command === "achievements" ? "." : positional[0] ?? "."), output, buildNote) : resolve(positional[0] ?? ".");
   if (command === "token") { tokensCommand(positional[0], flags, output); return; }
   if (command === "skills") { await skillsCommand(positional[0], positional[1], flags, output); return; }
+  if (command === "setup") { await setupCommand(flags, output); return; }
+  /* The skills in the agents' folders, before the command itself (setup.ts): the first run
+     installs them, a run after an update refreshes them, and a command on a project brings
+     that project's older copies up to date. Never fails the command. */
+  if (command !== "upgrade") await refreshSkills(output, REFRESHES_PROJECT_SKILLS.has(command) ? root : null);
   if (command === "upgrade") { await upgradeCommand(flags, output); return; }
   if (command === "login" || command === "logout" || command === "whoami") { await authCommand(command, flags, output); return; }
   if (command === "limits") { await limitsCommand(flags, output); return; }

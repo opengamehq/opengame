@@ -3,7 +3,7 @@
 The game's manifest, committed with its code. `opengame init` writes it; the website
 edits the same fields. The game's id is never in this file: it lives in
 `.opengame/project.json`, which is git-ignored, so a fork never deploys over somebody
-else's game. Jam answers (track, certification) are never stored here either, because
+else's game. Jam answers (track, models, sponsors) are never stored here either, because
 they belong to one entry, not to the game.
 
 ```json
@@ -21,16 +21,16 @@ they belong to one entry, not to the game.
 
 | Field | Rule |
 | --- | --- |
-| `title` | 3 to 40 characters |
-| `tagline` | Optional, up to 140 characters |
-| `description` | 40 to 500 characters. Say what the player does |
-| `genre` | Exactly one slug from the table below |
+| `title` | 3 to 40 characters, or `auto` |
+| `tagline` | Optional, up to 140 characters, or `auto` |
+| `description` | 40 to 500 characters, or `auto`. Say what the player does |
+| `genre` | Exactly one slug from the table below, or `auto` |
 | `kind` | Optional. One of the four kinds below; leaving it out means `game`. `opengame init` always writes it |
 | `basedOn` | The name of the game a `decomp` or a `mod` is made from, up to 60 characters, shown as "Mod of Doom". Required for a `decomp` or a `mod`, and not allowed for a `game` or a `world` |
 | `build.command` | Optional, up to 1,000 characters. Run before checking; may read environment variables but must not contain a secret |
 | `build.output` | The folder holding `index.html` after the build, or `.` |
 | `cover` | Not used. OpenGame makes the cover after approval. A file that still names one passes `check`, and the CLI does not upload it; leave the field out |
-| `controls` | One or more of `keyboard`, `mouse`, `gamepad`, each once |
+| `controls` | One or more of `keyboard`, `mouse`, `gamepad`, each once, or `auto` |
 | `requires` | Optional. `threads: true` for a build that cannot start without them, `renderer` (`webgl`, `webgl2` or `webgpu`), `desktopOnly`, `gamepad`. The game page lists them, and a browser that cannot run threads is told so instead of getting a black frame |
 | `leaderboards` | Up to 25 boards: `key` (lowercase, starts with a letter, up to 48 characters), `order` (`asc` or `desc`), `label` (up to 60 characters), optional `min` and `max` |
 | `achievements` | Up to 100: `id` (lowercase letters, digits, `-` and `_`, up to 48 characters), `title`, optional `description`. A deploy saves them when its preview is ready |
@@ -72,12 +72,17 @@ it plays.
 `opengame init --kind mod --based-on "Doom"` writes both. Without `--kind`, init makes a
 game; it asks a person nothing but the game's name.
 
-A folder with no description of its own gets a placeholder sentence, which the deploy marks
-provisional, and so does a genre init could not read from the game's words. Do not ask the
-creator for either before deploying: the deploy's page asks them, `opengame publish
---description` answers it from here once review passes, and `opengame details
---description` sets the description once the game exists. A game cannot publish
-with the placeholder.
+## Auto
+
+`title`, `tagline`, `description`, `genre` and `controls` take `"auto"`, and a field that is
+blank or left out means the same. `opengame init` writes `"auto"` for every one of them it is
+not given. Review writes an Auto field from the game itself, and the creator accepts or
+changes what it wrote on the deploy's page before anything publishes; the subgenre is always
+review's. Do not ask the creator for a description or a genre before deploying. Once review
+passes, `opengame publish --description` and `--genre` answer from here instead, and
+`opengame details --description` changes the words once the game exists. A title or
+description the creator typed is theirs: review offers a tidied copy on a first publish, and
+`opengame publish --keep-words` keeps theirs.
 
 ## Who owns which value
 

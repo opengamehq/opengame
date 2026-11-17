@@ -1,5 +1,13 @@
 # opengame-cli changelog
 
+## 1.9.2
+
+`opengame jam withdraw` and `reenter` need a token with `submit` alone. The exit table has 7 (`not_launched`). `init` writes Auto for the fields it is not given, and `setup` keeps the skills current until `--no-skills` or `OPENGAME_SKILLS_AUTO=0` stops it. (17 Nov 2026)
+
+## 1.9.1
+
+The install is two lines: `npm i -g @opengamehq/cli`, then `opengame setup`, which installs every OpenGame skill in each coding agent's home folder. Later commands keep them current with the CLI; `opengame setup --no-skills` stops that. `opengame skills add` is for committing the skills with one project.
+
 ## 1.9.0
 
 `opengame publish` publishes a release that passed review from the terminal, with the jam's answers as flags, and `opengame deploy --publish` waits for review and publishes in one command. An update of a live game publishes by itself (16 Nov 2026).

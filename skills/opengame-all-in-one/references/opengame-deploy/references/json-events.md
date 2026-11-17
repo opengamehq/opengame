@@ -1,11 +1,13 @@
 # Reading the CLI's JSON
 
-With `--json` every line of output is one JSON object. Four kinds can appear before the
-last line, and the last line is always a `result` or an `error`.
+With `--jsonl` every line of output is one JSON object. Four kinds can appear before the
+last line, and the last line is always a `result` or an `error`. With `--json`, the default
+in an agent, the command prints only that last object, carrying the same findings and
+notices in its `findings` and `notices` arrays.
 
 | `type` | Meaning | What to do |
 | --- | --- | --- |
-| `progress` | A stage started or moved on: `build`, `check`, `upload`, then the server's own stages for the deploy, `certify` and `review:<state>` for a submit, `approval` for a login | Nothing; it is a heartbeat |
+| `progress` | A stage started or moved on: `install`, `build`, `package`, `check`, `upload`, then the server's own stages for the deploy, `review:<state>` while publish or submit follows review, `approval` for a login | Nothing; it is a heartbeat |
 | `notice` | Something the person should know: excluded files, kept website metadata, a resumed upload, a sign-in URL | Read `code` and `message`; pass sign-in and kept-metadata notices on |
 | `finding` | One problem in the game or one check that could not decide | Fix or report it, by its `fault`, `certainty` and `retry` |
 | `result` | The command finished; `data` holds its answer | Read `data` |
@@ -28,22 +30,21 @@ last line, and the last line is always a `result` or an `error`.
 
 A game whose `index.html` loads `./Game.js` while the file on disk is `game.js`. It runs
 on the creator's Mac, because the Mac's file system ignores case, and is a missing file for every
-player. `opengame check . --json` prints:
+player. `opengame check . --jsonl` prints:
 
 ```json
 {"type":"finding","finding":{"release":null,"check":"case-mismatch","checkVersion":"packaging@1","state":"failed","certainty":"certain","fault":"game","evidence":{"observed":"index.html line 1 asks for Game.js, but the file is game.js.","file":"index.html:1"},"fix":"macOS and Windows do not care about capitalisation. The servers that hand your game to a player do. So this loads on your machine and the file is missing for everybody else. Fix the reference or rename the file so the two match exactly.","verify":"opengame check, then opengame deploy","retry":"after-fix"}}
-{"type":"finding","finding":{"release":null,"check":"platform-engine","checkVersion":"packaging@1","evidence":{"observed":"Browser compatibility needs a playtest."},"state":"inconclusive","certainty":"heuristic","fault":"unknown","fix":"Built with Three.js r170, from window.__THREE__ registration. Static browser exports from any engine, or none, go to review, where a playtest checks that this one runs. Every game must pass the same runtime and safety checks before publication. Nothing has to change now; you can deploy as it is.","verify":"opengame deploy","retry":"never"}}
+{"type":"notice","code":"platform-engine","message":"Browser compatibility needs a playtest. Custom browser export: custom code. Static browser exports from any engine, or none, go to review, where a playtest checks that this one runs. Every game must pass the same runtime and safety checks before publication."}
 {"type":"error","code":"check_failed","message":"This build has blockers. Fix them, then run opengame check again.","exitCode":1,"retry":"after-fix"}
 ```
 
 Reading it:
 
-1. The first finding is `failed`, `certain` and `fault: "game"`, so it is the game's to
+1. The finding is `failed`, `certain` and `fault: "game"`, so it is the game's to
    fix. `evidence.file` says `index.html:1`. Change `./Game.js` to `./game.js` there
    (or rename the file), then run what `verify` says.
-2. The second finding is `inconclusive`, `heuristic` and `fault: "unknown"`, with
-   `retry: "never"`. It does not block anything. Do not add a fake Three.js import to make
-   it go away; the playtest in review checks that the game runs.
+2. The `platform-engine` line is a notice, not a finding. It blocks nothing. Do not add a
+   fake engine import to change it; the playtest in review checks that the game runs.
 3. After the fix, `opengame check . --json` ends in a `result` and exits 0.
 
 ## Findings that are ours
@@ -58,6 +59,6 @@ exists to prevent.
 
 - `deploy`: `operationId`, `state` (`uploading`, `queued`, `checking`, `ready`,
   `failed`, `expired`), `gameId`, `releaseId`, `url`, and `timingsMs` when it finished.
-  Keep `releaseId`: submitting names it.
+  Keep `releaseId`: `opengame publish --release` and `opengame submit --release` name it.
 - `check`: `files`, `bytes`, `excluded` and `findings`.
 - `whoami`: the signed-in handle and the token's scopes.

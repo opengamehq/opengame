@@ -1,5 +1,13 @@
 # opengame-deploy changelog
 
+## 1.1.9
+
+`opengame.json` takes `auto` for the title, tagline, description, genre and controls, which review writes. The JSON reference tells `--json` (one object) from `--jsonl` (one event a line), lists the stages the CLI emits, and shows `platform-engine` as a notice. The procedure says what each review state means, `approved`, `blocked`, `withdrawn` and `superseded` included, and keeps `releaseId` for `opengame publish --release`. (17 Nov 2026)
+
+## 1.1.8
+
+Install runs `opengame setup` after the CLI, which gives every agent on the machine the OpenGame skills and keeps them current. `opengame skills add .` stays for a project that commits its skills.
+
 ## 1.1.7
 
 An agent publishes with `opengame publish` or `opengame deploy --publish` when the creator asks, and otherwise gives them the deploy's page. An update of a live game publishes by itself, keeping its details and jam entry (16 Nov 2026).

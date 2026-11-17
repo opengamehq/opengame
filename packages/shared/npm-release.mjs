@@ -89,6 +89,16 @@ export const SKILLS_DOWNLOAD_URL = `https://opengame.io${SKILLS_DOWNLOAD_PATH}`;
    replaces the link with the registry's version (measured with npm 10 on 5 Nov 2026, on a
    package with a `file:` dependency). So the starter form carries the tag. */
 
+/* The CLI's second line. Installing the CLI gives a person's coding agents the OpenGame skills
+   (16 Nov 2026: installing the CLI should always bring the latest skills), and the CLI
+   does that itself rather than in an npm lifecycle script: `opengame setup` copies the skills
+   it carries into each agent's own folder in the home directory, and any later command
+   refreshes them when the CLI has been updated (packages/cli/src/setup.ts). A postinstall
+   would be skipped under --ignore-scripts and by pnpm, and writes into a person's agent
+   folders from inside `npm install`, which is the behaviour people rightly distrust. So
+   every surface that prints the CLI's install prints this beside it. */
+export const CLI_SETUP_COMMAND = "opengame setup";
+
 /** The command for one of `cli`, `sdk` or `skills`, or null while the switch is shut.
  * `starter` asks for the SDK command a copied starter needs. */
 export function installCommand(name, release, { starter = false } = {}) {
@@ -103,7 +113,12 @@ export function installCommand(name, release, { starter = false } = {}) {
 export function installMarkdown(name, release) {
   if (!Object.hasOwn(INSTALL_CLOSED, name)) throw new Error(`No install step for ${JSON.stringify(name)}; use cli, cli-agent, sdk, sdk-agent or skills.`);
   const command = installCommand(name.replace(/-agent$/, ""), release);
-  return command ? ["```bash", command, "```"].join("\n") : INSTALL_CLOSED[name];
+  return command ? ["```bash", ...installLines(name, command), "```"].join("\n") : INSTALL_CLOSED[name];
+}
+
+/** The lines of an open install step: the command, and for the CLI the setup after it. */
+export function installLines(name, command) {
+  return /^cli(?:-agent)?$/.test(name) ? [command, CLI_SETUP_COMMAND] : [command];
 }
 
 /* A Markdown file that ships as it is (a package README, the public repository's README)

@@ -46,7 +46,9 @@ for (const version of versions) {
   for (const suite of suites) {
     // TAP pinned: from Node 23 the default reporter is spec even into a pipe, and this
     // reads TAP's counts. The flag exists from 18.15.
-    const run = spawnSync(binary, [...loader, "--test", "--test-reporter=tap", suite], { cwd: here, env: { ...process.env, OPENGAME_TEST_NODE: binary }, encoding: "utf8" });
+    // OPENGAME_SKILLS_AUTO=0 as the package's test script sets it: the suites run real
+    // commands, which would otherwise install the skills into this machine's agent folders.
+    const run = spawnSync(binary, [...loader, "--test", "--test-reporter=tap", suite], { cwd: here, env: { ...process.env, OPENGAME_TEST_NODE: binary, OPENGAME_SKILLS_AUTO: "0" }, encoding: "utf8" });
     const counted = /# pass (\d+)/.exec(run.stdout);
     if (!counted) failed.push(`${suite} did not run: ${(run.stderr || run.stdout).trim().split("\n").slice(-3).join(" ")}`);
     pass += Number(counted?.[1] ?? 0); fail += Number(/# fail (\d+)/.exec(run.stdout)?.[1] ?? 0);

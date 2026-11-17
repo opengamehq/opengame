@@ -1,5 +1,9 @@
 # opengame-performance changelog
 
+## 1.1.2
+
+`opengame setup` already installs `opengame-verification`; `opengame skills add . --skill opengame-verification` adds it to one project. (17 Nov 2026)
+
 ## 1.1.1
 
 `landing-pacer.mjs` lets a frame whose promise rejects leave the queue, so two failed submits no longer hold every later frame; `stats()` counts them as `failed`.

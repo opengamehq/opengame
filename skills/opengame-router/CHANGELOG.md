@@ -1,5 +1,9 @@
 # opengame-router changelog
 
+## 1.0.9
+
+`opengame setup` installs every skill; the starting set is what `opengame skills add .` puts in one project. An update of a game that is already live publishes by itself. (17 Nov 2026)
+
 ## 1.0.8
 
 Routes maps to `opengame-maps`, multiplayer to `opengame-multiplayer`, rhythm games to `opengame-rhythm`, trailers and montages to the six video skills, and names `opengame-all-in-one`, which carries every skill as one install.

@@ -9,6 +9,7 @@ Deploy the creator's game to a private preview and give them its link. Review st
 
 ```bash
 npm i -g @opengamehq/cli
+opengame setup
 ```
 
 Once `opengame` is installed, confirm it and read the command reference:
@@ -20,7 +21,9 @@ opengame help --json
 
 `help --json` lists every command, flag, exit code, environment variable and event, with the finding schema. Read it rather than guessing a flag.
 
-Install the OpenGame skills for the agent you run in, from the game folder:
+`opengame setup` installs every OpenGame skill in the home folder of each coding agent it finds (Claude Code, Codex, Cursor and OpenCode), and later commands keep them current. If your session started before that, read `opengame-router/SKILL.md` in the folder it names.
+
+To commit the skills with the game instead:
 
 ```bash
 opengame skills add .
@@ -98,7 +101,7 @@ opengame init . --title "My game" --json
 opengame init . --title "Doom but blue" --kind mod --based-on "Doom" --json
 ```
 
-Do not ask the creator for a description or a genre before deploying. When you know them, pass `--description` (40 characters or more) and `--genre`; when you do not, leave them out. Every field defaults to Auto: review writes the description and the genre from the game, and the creator accepts or changes them on the deploy's page, where they also enter the jam. After the deploy you can set the description yourself with `opengame details --description "..." --json`. If the file already exists, leave `init` alone and edit the file.
+Do not ask the creator for a description or a genre before deploying. When you know them, pass `--description` (40 characters or more) and `--genre`; when you do not, leave them out. Every field defaults to Auto: review writes the description and the genre from the game, and the creator accepts or changes them on the deploy's page, where they also enter the jam. A title or description you pass is offered back with its casing and grammar tidied, and `opengame publish --keep-words` keeps it as written. After the deploy you can set the description yourself with `opengame details --description "..." --json`. If the file already exists, `init` fills in only the fields it leaves blank; edit the file to change the rest.
 
 For a game that already exists on OpenGame, in a new checkout, link the folder first so the deploy does not create a second game:
 
@@ -121,7 +124,7 @@ opengame deploy . --json
 | `data.deploymentUrl` | The deploy's page. Give it to the creator straight away: it shows each check and plays the preview once they pass. |
 | `data.state` | `uploading`, `queued`, `checking`, `ready`, `failed` or `expired`. |
 | `data.done` | `true` once the server has finished. |
-| `data.releaseId` | The release. Keep it for `submit`. |
+| `data.releaseId` | The release. Keep it: `opengame publish --release` takes it. |
 | `data.previewUrl` | The private preview link, once `state` is `ready`. It can be `null` on a ready release the server will not play; the deploy's page says why. |
 | `data.gameOrigin` | The origin the published game runs at, such as `https://k3v9q2m7x4ab.opengame.gg`. Give it to the creator when the game talks to their own servers. `null` when the server sent none, or sent one this CLI cannot read. |
 
@@ -165,16 +168,16 @@ Review starts automatically once a deploy is ready, so you submit no release. Re
 
 When review passes, a game's first release waits to be published. `opengame status --json` shows `data.review.state: "awaiting_details"`, `data.review.next: "opengame publish"` and the deploy's page in `data.review.url`.
 
-- **The creator asked you to publish it.** Run `opengame publish --json`. It confirms the title, description and genre review wrote, publishes, waits until the game is live and prints the address to share in `data.url`. Change what review wrote with `--description`, `--genre` and the other flags in `opengame publish --help`. While a new game goes on OpenGame only as a jam entry, pass the jam's track and the models used with `--track` and `--models`; `opengame jams <slug> --json` lists them.
+- **The creator asked you to publish it.** Run `opengame publish --json`. It confirms the title, description and genre review wrote, publishes, waits until the game is live and prints the address to share in `data.url`. Change what review wrote with `--description`, `--genre` and the other flags in `opengame publish --help`. While a new game or an update goes on OpenGame only as a jam entry, pass the jam's track and the models used with `--track` and `--models`; `opengame jams <slug> --json` lists them.
 - **They did not ask.** Give them `data.review.url`. Signed in, they check the details, enter the jam and publish on that page.
 
 To publish in one step, `opengame deploy --publish --json` stays until review passes, then publishes, and takes the same jam flags.
 
 An update to a game that is already live publishes by itself once it passes review. It keeps the live game's details, including the genre when the deploy left it to Auto, and its jam entry. The token that deployed it has to hold `submit`, as the `opengame login` token does. When the creator asked only for a preview of an update to a live game, deploy with a token made in their settings with `deploy` alone, set as `OPENGAME_TOKEN`, so the release waits for them.
 
-`opengame submit` does not confirm a release that is already in review. The server keeps that submission and prints a `jam_answers_unused` notice: the jam answers you passed were not used. Pass them to `opengame publish` once review passes.
+`opengame submit` does not confirm a release that is already in review. The server keeps that submission, and the CLI prints a `jam_answers_unused` notice: the jam answers you passed were not used. Pass them to `opengame publish` once review passes.
 
-While Game Jam #1 runs, a new game goes on OpenGame only as a jam entry, up to 2 for each account. Mods and decomps publish outside the jam at any time and never enter it. When the jam cannot take a build, for example because the account already has 2 entries, the build is not sent to review, and the deploy's page explains why. [Enter a jam](https://docs.opengame.io/guides/jams) has the rules.
+While Game Jam #1 runs, a new game or an update goes on OpenGame only as a jam entry, up to 2 for each account. Mods and decomps publish outside the jam at any time and never enter it. When the jam cannot take a build, for example because the account already has 2 entries, the build is not sent to review, and the deploy's page explains why. [Enter a jam](https://docs.opengame.io/guides/jams) has the rules.
 
 Follow the release to the end:
 
@@ -185,10 +188,14 @@ opengame status --watch --json
 | `data.review.state` | What to do |
 | --- | --- |
 | `review`, `playtesting`, `waiting` | Review is running. Watch again. |
+| `approved` | Review passed. When `data.review.next` is `opengame publish`, do as for `awaiting_details`; otherwise watch again. |
 | `awaiting_details` | Run `opengame publish --json` when the creator asked you to publish. Otherwise give them `data.review.url`, and watch again once they say they have published. |
 | `needs_certification` | Give the creator `data.review.url`. Watch again once they say they have done it. |
-| `publishing`, `published` | The game is going live. `data.submission.gameUrl` is its page. |
-| `returned` | Read the findings, fix the game and deploy again. The new deploy is reviewed automatically. |
+| `publishing`, `published` | The game is going live. Once it is, `data.submission.live.url` is the address to share. |
+| `returned` | Read the findings and run `data.review.next`. Usually that means fix the game and deploy again, and the new deploy is reviewed automatically. A jam entry returned for a fault on our side gets `opengame submit --release <id>` instead: the game needs no change, and the command names any jam answer it still needs. |
+| `blocked` | Review refused the game. Give the creator `data.review.message`. |
+| `withdrawn` | The creator withdrew this submission. Nothing more happens to it unless they ask you to enter it again. |
+| `superseded` | Another submission took its place, and `data.submission.replacedBy` names it. Run `opengame status --json` again to follow that one. |
 
 ## What a game may do
 
@@ -246,7 +253,7 @@ Play the private preview before you tell the creator the game works.
 | `opengame restore [dir] [options]` | Put a game you unpublished back on the gallery, serving the version it was on, as Put it back does on Your games. Refused for a game we took down, one with an open report or a hold, and one under a copyright notice. Needs a token with read or deploy, and submit; opengame login has all three. |
 | `opengame delete [dir] [options]` | Delete the linked game for good, as Delete for good does on its page: it comes off the gallery, stops being served and cannot be put back. You type its title to confirm. Refused while it is under a legal hold, with a reviewer, or in a jam being scored. Only the opengame login token can do this, not a token made in settings. |
 | `opengame details [dir] [options]` | Print the linked game's title, tagline and description as the website shows them, or change any of them, as the Details tab on its page does. A field you leave out stays as it is. On a published game players see the change at once. Printing needs a token with read or deploy, and saving needs submit too; opengame login has all three. |
-| `opengame achievements [retire <id>] [options]` | List the linked game's achievements, active and retired, or retire one, as the achievements step on the website does. Players keep what they unlocked, and the game can no longer award a retired one. Retiring needs a token with deploy and submit; opengame login has them. |
+| `opengame achievements [retire <id>] [options]` | List the linked game's achievements, active and retired, or retire one. Players keep what they unlocked, and the game can no longer award a retired one. Retiring needs a token with deploy and submit; opengame login has them. |
 | `opengame games [options]` | List your games and their latest deploy. |
 | `opengame link [dir] [options]` | Connect this folder to an existing game. |
 | `opengame pull [dir] [options]` | Bring website metadata into this folder. |
@@ -257,7 +264,8 @@ Play the private preview before you tell the creator the game works.
 | `opengame logout [options]` | Revoke this device's token and remove it locally. |
 | `opengame limits [options]` | Show bundle limits and your remaining account allowance. |
 | `opengame vendor [dir] [options]` | Create a separate export with dependencies downloaded at their exact versions, rewritten and hashed. |
-| `opengame skills add\|list [dir] [options]` | Install the OpenGame skills for your coding agent. |
+| `opengame setup [options]` | Install the OpenGame skills for your coding agents and keep them updated with the CLI. Other commands also do it on first run and after an update. |
+| `opengame skills add\|list [dir] [options]` | Install the OpenGame skills into one project, to commit them with it. |
 | `opengame upgrade [options]` | Install the current CLI, or print the line that does. |
 | `opengame version [options]` | Print the CLI version. |
 

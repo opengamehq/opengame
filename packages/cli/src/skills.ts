@@ -32,17 +32,17 @@ export const AGENT_DIRS = {
   opencode: ".opencode/skills",
 } as const;
 export type Agent = keyof typeof AGENT_DIRS;
-const AGENT_NAMES: Record<Agent, string> = { claude: "Claude Code", codex: "Codex", cursor: "Cursor", opencode: "OpenCode" };
+export const AGENT_NAMES: Record<Agent, string> = { claude: "Claude Code", codex: "Codex", cursor: "Cursor", opencode: "OpenCode" };
 const MARKER = ".opengame-skill.json";
 const NAME = /^opengame-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const FILE = /^(?:SKILL\.md|(?:references|helpers)\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*)$/;
 
 type BundledFile = { path: string; sha256: string };
-type BundledSkill = { name: string; family: "platform" | "craft" | "video" | "bundle"; default: boolean; description: string; files: BundledFile[]; digest: string };
-type Bundle = { root: string; skills: BundledSkill[] };
+export type BundledSkill = { name: string; family: "platform" | "craft" | "video" | "bundle"; default: boolean; description: string; files: BundledFile[]; digest: string };
+export type Bundle = { root: string; skills: BundledSkill[] };
 type Marker = { name: string; digest: string; files: BundledFile[]; rule?: BundledFile };
-type InstallState = "installed" | "updated" | "unchanged" | "replaced" | "kept";
-type Mode = "refuse" | "replace" | "keep";
+export type InstallState = "installed" | "updated" | "unchanged" | "replaced" | "kept";
+export type Mode = "refuse" | "replace" | "keep";
 
 const sha256 = (bytes: string | Buffer) => createHash("sha256").update(bytes).digest("hex");
 const byPath = (a: BundledFile, b: BundledFile) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
@@ -109,15 +109,16 @@ function splitSkill(text: string): { description: string; body: string } {
 
 /**
  * The files one agent gets for one skill. Claude Code, Codex and OpenCode read the
- * SKILL.md folder as it is. Cursor reads rules from `.cursor/rules/*.mdc`, so the same
+ * SKILL.md folder as it is, and so does Cursor in its home folder (~/.cursor/skills, which
+ * `opengame setup` writes). In a project Cursor reads rules from `.cursor/rules/*.mdc`, so the same
  * body becomes `<name>.mdc` beside the folder, requested by the agent from its
  * description rather than always applied, with its links pointed into the folder that
  * holds the references and helpers.
  */
-async function filesFor(agent: Agent, skill: BundledSkill, bundle: Bundle): Promise<{ files: Map<string, Buffer>; rule?: Buffer }> {
+async function filesFor(layout: Layout, skill: BundledSkill, bundle: Bundle): Promise<{ files: Map<string, Buffer>; rule?: Buffer }> {
   const files = new Map<string, Buffer>();
   for (const file of skill.files) files.set(file.path, await readFile(join(bundle.root, skill.name, file.path)));
-  if (agent !== "cursor") return { files };
+  if (layout !== "rule") return { files };
   const { description, body } = splitSkill(files.get("SKILL.md")!.toString("utf8"));
   files.delete("SKILL.md");
   const linked = body
@@ -135,6 +136,11 @@ async function listTree(root: string, dir = root): Promise<string[]> {
   }
   return out;
 }
+
+/** How one agent reads a skill: a SKILL.md folder, or Cursor's project rule beside one. */
+export type Layout = "folder" | "rule";
+/** A folder of skill folders for one agent: a project's `.claude/skills`, or `~/.claude/skills`. */
+export type Target = { agent: Agent; root: string; layout: Layout };
 
 type Plan = { agent: Agent; skill: string; target: string; files: Map<string, Buffer>; rule?: { path: string; bytes: Buffer };
   marker: Marker; state: InstallState | "conflict"; why?: string; shared?: boolean };
@@ -169,9 +175,9 @@ async function holds(target: string, onDisk: string[], files: BundledFile[]): Pr
 const withRule = (files: BundledFile[], rule?: BundledFile) => rule ? [...files, { ...rule, path: `../${rule.path}` }] : files;
 
 /** Decides what would happen to one target without changing anything. */
-async function plan(agent: Agent, skill: BundledSkill, bundle: Bundle, project: string, mode: Mode): Promise<Plan> {
-  const target = join(project, AGENT_DIRS[agent], skill.name);
-  const { files, rule } = await filesFor(agent, skill, bundle);
+async function plan({ agent, root, layout }: Target, skill: BundledSkill, bundle: Bundle, mode: Mode): Promise<Plan> {
+  const target = join(root, skill.name);
+  const { files, rule } = await filesFor(layout, skill, bundle);
   const entries = [...files].map(([path, bytes]) => ({ path, sha256: sha256(bytes) }));
   const ruleEntry = rule ? { path: `${skill.name}.mdc`, sha256: sha256(rule) } : undefined;
   const marker: Marker = { name: skill.name, digest: digestOf(withRule(entries, ruleEntry)), files: entries, ...(ruleEntry ? { rule: ruleEntry } : {}) };
@@ -214,8 +220,23 @@ async function stagingRoot(parent: string): Promise<string> {
   await mkdir(parent, { recursive: true });
   const root = join(dirname(await realpath(parent)), ".opengame-staging");
   await mkdir(root, { recursive: true });
+  if (!await ownStaging(root)) throw new CliError("skills_conflict", `Nothing was installed. ${root} is not a folder of its own (a link or a file); remove it and run the command again.`);
   return root;
 }
+
+/**
+ * Whether the staging folder is a real folder, not a link. A project can carry anything beside
+ * its agent folders, and the refresh before check and dev (setup.ts) reaches this without the
+ * person asking for an install, so a `.opengame-staging` that is a link to somewhere else would
+ * have had the sweep below delete matching names there (security review, 16 Nov 2026).
+ */
+async function ownStaging(root: string): Promise<boolean> {
+  try { const info = await lstat(root); return info.isDirectory() && !info.isSymbolicLink(); } catch { return false; }
+}
+
+/* What this file stages, and nothing else: `<skill>-new-<pid>`, `<skill>-old-<pid>` and the
+   Cursor rule's `<skill>.mdc-new-<pid>`, for a skill name the bundle allows. */
+const STAGED = /^opengame-[a-z0-9]+(?:-[a-z0-9]+)*(?:\.mdc)?-(?:new|old)-(\d+)$/;
 
 function alive(pid: number): boolean {
   if (pid === process.pid) return true;
@@ -232,9 +253,10 @@ async function sweep(parent: string): Promise<void> {
   } catch { /* no folder yet */ }
   let root: string;
   try { root = join(dirname(await realpath(parent)), ".opengame-staging"); } catch { return; }
+  if (!await ownStaging(root)) return;
   try {
     for (const name of await readdir(root)) {
-      if (stale(name, /-(?:new|old)-(\d+)$/)) await rm(join(root, name), { recursive: true, force: true });
+      if (stale(name, STAGED)) await rm(join(root, name), { recursive: true, force: true });
     }
     await rmdir(root);
   } catch { /* absent, or another run is using it */ }
@@ -273,6 +295,48 @@ async function apply(step: Plan): Promise<void> {
   }
 }
 
+export type InstalledStep = { agent: Agent; name: string; target: string; state: InstallState; why?: string };
+
+/**
+ * Plans every target and skill, refuses before writing anything if any conflicts, then writes.
+ * The one install path, for a project (`installSkills`) and for an agent's home folder
+ * (`opengame setup`, setup.ts), so both get the conflict rules, the staging beside the folder
+ * and the shared-folder handling above.
+ */
+export async function installInto(targets: Target[], selected: BundledSkill[], bundle: Bundle, mode: Mode,
+  describe: (step: { target: string; why?: string }) => string = (step) => `${step.target} ${step.why}`): Promise<InstalledStep[]> {
+  const steps: Plan[] = [];
+  for (const target of targets) for (const skill of selected) steps.push(await plan(target, skill, bundle, mode));
+  // Two agents whose folders are one folder through a link (a common setup is
+  // .claude/skills pointing at .agents/skills) share one install, written once.
+  const written = new Map<string, Plan>();
+  for (const step of steps) {
+    let parent = dirname(step.target);
+    try { parent = await realpath(parent); } catch { /* not created yet */ }
+    const key = join(parent, step.skill);
+    const first = written.get(key);
+    if (first) { step.state = first.state; step.why = first.why; step.shared = true; }
+    else written.set(key, step);
+  }
+  const conflicts = steps.filter((step) => step.state === "conflict" && !step.shared);
+  if (conflicts.length) {
+    throw new CliError("skills_conflict", `Nothing was installed. ${conflicts.map(describe).join(". ")}. ` +
+      "Run again with --keep-edited to install everything else and leave these as they are, or with --replace to overwrite them, which loses the changes in them.");
+  }
+  // Only the folders this run writes into: a run that changes nothing has nothing to tidy.
+  const writes = steps.filter((step) => !step.shared && step.state !== "unchanged" && step.state !== "kept");
+  for (const parent of new Set(writes.map((step) => dirname(step.target)))) await sweep(parent);
+  for (const step of steps) if (!step.shared) await apply(step);
+  return steps.map((step) => ({ agent: step.agent, name: step.skill, target: step.target, state: step.state as InstallState, ...(step.state === "kept" ? { why: step.why } : {}) }));
+}
+
+/** How many steps ended in each state. */
+export function countSteps(steps: { state: InstallState }[]) {
+  const counts: Record<InstallState, number> = { installed: 0, updated: 0, unchanged: 0, replaced: 0, kept: 0 };
+  for (const step of steps) counts[step.state]++;
+  return counts;
+}
+
 export type InstallOptions = { project: string; agent?: string; replace?: boolean; keepEdited?: boolean; bundleDir?: string; env?: NodeJS.ProcessEnv; skill?: string; all?: boolean };
 
 /** Installs the starting set or selected bundled skills for the chosen agents. Throws before writing if any target conflicts. */
@@ -294,31 +358,11 @@ export async function installSkills(options: InstallOptions) {
   const selected = bundle.skills.filter(skill => names ? names.includes(skill.name) : options.all ? skill.family !== "bundle" : skill.default);
   if (!selected.length) throw broken("no starting skills");
   const { agents, reason } = await chooseAgents(options.agent, project, options.env);
-  const steps: Plan[] = [];
-  for (const agent of agents) for (const skill of selected) steps.push(await plan(agent, skill, bundle, project, mode));
-  // Two agents whose folders are one folder through a link (a common setup is
-  // .claude/skills pointing at .agents/skills) share one install, written once.
-  const written = new Map<string, Plan>();
-  for (const step of steps) {
-    let parent = dirname(step.target);
-    try { parent = await realpath(parent); } catch { /* not created yet */ }
-    const key = join(parent, step.skill);
-    const first = written.get(key);
-    if (first) { step.state = first.state; step.why = first.why; step.shared = true; }
-    else written.set(key, step);
-  }
-  const conflicts = steps.filter((step) => step.state === "conflict" && !step.shared);
-  if (conflicts.length) {
-    const lines = conflicts.map((step) => `${relative(project, step.target)} ${step.why}`);
-    throw new CliError("skills_conflict", `Nothing was installed. ${lines.join(". ")}. ` +
-      "Run again with --keep-edited to install everything else and leave these as they are, or with --replace to overwrite them, which loses the changes in them.");
-  }
-  for (const parent of new Set(steps.filter((step) => !step.shared).map((step) => dirname(step.target)))) await sweep(parent);
-  for (const step of steps) if (!step.shared) await apply(step);
-  const counts = { installed: 0, updated: 0, unchanged: 0, replaced: 0, kept: 0 };
-  for (const step of steps) counts[step.state as InstallState]++;
+  const targets = agents.map((agent): Target => ({ agent, root: join(project, AGENT_DIRS[agent]), layout: agent === "cursor" ? "rule" : "folder" }));
+  const steps = await installInto(targets, selected, bundle, mode, (step) => `${relative(project, step.target)} ${step.why}`);
+  const counts = countSteps(steps);
   return { project, agents, reason, counts,
-    skills: steps.map((step) => ({ agent: step.agent, name: step.skill, path: relative(project, step.target), state: step.state as InstallState,
+    skills: steps.map((step) => ({ agent: step.agent, name: step.name, path: relative(project, step.target), state: step.state,
       ...(step.state === "kept" ? { why: step.why } : {}) })) };
 }
 

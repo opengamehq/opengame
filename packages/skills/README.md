@@ -12,7 +12,10 @@ npx skills add opengamehq/opengame
 ```
 <!-- /install -->
 
-Through the CLI, `opengame skills add .` installs the starting set for the agent you use,
+Through the CLI, `opengame setup` installs every skill (all but `opengame-all-in-one`) into
+each coding agent's own skills folder and keeps them current as the CLI updates;
+`opengame setup --no-skills` stops that. To commit skills with one project instead,
+`opengame skills add .` installs the starting set for the agent you use,
 `opengame skills add . --all` installs every skill once, each in its own folder (not
 `opengame-all-in-one`, which would repeat them), and
 `opengame skills add . --skill opengame-all-in-one` installs all of them as one.
@@ -22,6 +25,7 @@ Through the CLI, `opengame skills add .` installs the starting set for the agent
 <!-- install:cli -->
 ```bash
 npm i -g @opengamehq/cli
+opengame setup
 ```
 <!-- /install -->
 

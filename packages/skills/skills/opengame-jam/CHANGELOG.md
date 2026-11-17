@@ -1,5 +1,9 @@
 # opengame-jam changelog
 
+## 1.1.1
+
+Ask for the account email the person used at each sponsor, which `--sponsor-email` takes, not sponsor evidence. (17 Nov 2026)
+
 ## 1.1.0
 
 The entry is made with `opengame publish --track ... --models ...` when the person asks, or on the deploy's page. Nobody certifies anything to enter (16 Nov 2026).

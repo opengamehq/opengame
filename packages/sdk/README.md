@@ -235,16 +235,18 @@ each field can be):
 ]
 ```
 
-`opengame check` validates them. When a deploy's private preview is ready, `opengame
-deploy` saves each one through `PUT /api/v1/games/{id}/achievements`, the route you can
-also call yourself with a Deploy token. `opengame status` retries saves that did not
-finish. Declared achievements are created or updated with their title, description
-and `active: true`. Removing an achievement from `opengame.json` does not switch it
-off. To retire one, send `PUT /api/v1/games/{id}/achievements` with
-`{"achievementId":"first_win","title":"First win","description":"Win a round.","active":false}`.
-Unlocks are never deleted.
+`opengame check` validates them. Once a deploy's private preview is ready, `opengame
+deploy --wait`, or the next `opengame status` in the folder, saves each one through
+`PUT /api/v1/games/{id}/achievements`; the deploy's page saves them too. Declared
+achievements are created or updated with their title, description and `active: true`.
+Removing an achievement from `opengame.json` does not switch it off. To retire one, run
+`opengame achievements retire <id>` and take it out of `opengame.json` too, since a deploy
+that still declares it turns it back on. Retiring needs a token with `deploy` and `submit`,
+which `opengame login` has; a token with `deploy` alone saves only what a deploy declared. Unlocks are never
+deleted.
 Unlocks are refused in a private preview, so a declared achievement unlocks once the
-release is published.
+release is published. The local mock has no achievements: `list` and `unlock` return
+`unavailable` there.
 
 ## External links
 
@@ -442,9 +444,11 @@ draws an OG copies `avatar.js` the same way and imports `watchAvatar` from it.
 
 ## Injected global and native engines
 
-`dist/opengame-global.js` is a self-contained classic script with the SDK. The platform
-serves it at `/_og/sdk.js`, selected by the release's SDK major. Load it before game
-code. It exposes the core as `OpenGame`, its `OpenGame.og` alias, and `OpenGame.bridge`.
+`dist/opengame-global.js` is a self-contained classic script with the SDK. OpenGame adds
+it at `/_og/sdk.js` only to a release on a runtime contract that takes it, which threaded
+builds are (`sdkInjection` in `limits.json` names the contracts), and serves the SDK build the game host currently carries rather than the one
+the release was made with; every other build ships its own copy. Load it
+before game code. It exposes the core as `OpenGame`, its `OpenGame.og` alias, and `OpenGame.bridge`.
 `OpenGame === OpenGame.og`; importing `{ og }` from the npm package after injection
 returns that same client. Loading the full script again keeps the same client and
 bridge. Importing `{ bridge }` from `@opengamehq/sdk/bridge` reuses it. Reuse is selected
@@ -455,8 +459,8 @@ configurable; `OpenGame` stays extensible. Load injection first and read the liv
 rather than retaining a legacy client captured before injection.
 
 Native packages call the bridge below, with no handshake, credentials, transport or
-local mock of their own. With `sdk.inject: false`, copy this same
-`opengame-global.js` into the export and load it from the game's origin, not from a
+local mock of their own. A build OpenGame does not add the script to copies this same
+`opengame-global.js` into the export and loads it from the game's origin, not from a
 CDN. `ready()` reports `isolated: boolean` on the core's ready message; it
 does not change isolation headers or assert engine support.
 
@@ -503,6 +507,8 @@ limit before parsing.
 | `board.me`, `board.around` | `{ key, sort?, filter? }` | Score entry/null, or page |
 | `achievements.unlock` | `{ id }` | Unlock receipt, the same as `og.achievements.unlock(id)` |
 | `achievements.list` | `{}` | The player's achievements, the same as `og.achievements.list()` |
+| `invite.code` | `{}` | The code the player opened the game with, or null, the same as `og.invite.code` |
+| `invite.link` | `{ code }` | The game's page with `?join=CODE`, or null, the same as `og.invite.link(code)` |
 
 `env()` and `player()` return JSON strings synchronously.
 
@@ -524,15 +530,15 @@ Core, events and leaderboards return `{ ok: false, error, reason? }` instead of 
 | `invalid_limit` | returned | no | A read limit is a positive integer. Values above the maximum are capped. |
 | `invalid_query` | returned | no | Sort by score or a sortable column, filter by the board's variants, and page top() with a whole-number offset. The reason names the part. |
 | `invalid_manifest` | returned | no | opengame.json has an invalid leaderboards list. The reason names the board and the field; opengame check says the same. |
-| `gesture_required` | returned | yes | Call og.openLink, or an og.radio control that makes sound, directly from a click or key handler. For a link, then confirm the destination on the OpenGame page. |
+| `gesture_required` | returned | yes | Call og.openLink, or a radio control that makes sound (radio from @opengamehq/sdk/radio, or OpenGame.radio), directly from a click or key handler. For a link, then confirm the destination on the OpenGame page. |
 | `muted` | returned | yes | The player has silenced this game on OpenGame, or another part of the page has the speakers, so the radio stays quiet. Offer Play again once og.audio.onHostMute reports false. |
-| `not_found` | returned | no | No station, genre or song by that id. Use the ids og.radio.stations() and og.radio.tracks() return. |
+| `not_found` | returned | no | No station, genre or song by that id. Use the ids the radio’s stations() and tracks() return. |
 | `invalid_request` | returned | no | The API could not read the request. Check the arguments against the README. |
 | `invalid_achievement` | returned | no | Use a declared achievement ID with lowercase letters, digits, hyphens or underscores within the shared length limit. |
 | `achievement_unavailable` | returned | yes | The achievement service refused the request. Check the published game and retry when it is available. |
 | `unavailable_in_preview` | returned | no | Achievements work in a published game only. A preview answers this every time; unlock and list them after publishing. |
 | `network` | returned | yes | The request failed before any service answered. Check the connection, then try again. |
-| `cancelled` | returned | yes | The AbortSignal passed to the call was aborted. |
+| `cancelled` | returned | yes | The call was stopped before it finished: the player chose Keep playing on a link, or the request was given up. Nothing to fix. |
 | `timeout` | returned | yes | The page did not answer in time. Try again. |
 | `session_changed` | both | yes | The player signed in, out or switched account. Read the player again. |
 | `disposed` | both | no | og.dispose() was called on this client. |

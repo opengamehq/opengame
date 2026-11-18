@@ -320,7 +320,8 @@ test("jams lists the open jams and prints one jam's flags", async () => {
     assert.match(text, /Early jam \(early-jam\)  Opens 18 November 2099, 4:00 am PT/);
     assert.match(text, /Late jam \(late-jam\)  Past its deadline/);
     const one = await api.execute(cwd, "jams", "fixture-jam");
-    assert.match(one.events.at(-1).data.message, /--evidence-fal/);
+    // Entered at publish since 16 Nov 2026, which takes a sponsor's account email, not evidence.
+    assert.match(one.events.at(-1).data.message, /--sponsor-email fal=you@example\.com/);
     assert.equal(one.events.at(-1).data.form.track.options.length, 2);
     const missing = await api.execute(cwd, "jams", "no-such-jam");
     assert.equal(missing.code, 2);

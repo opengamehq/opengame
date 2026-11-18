@@ -240,7 +240,7 @@ test("a question takes the terminal from the face, and the next stage brings it 
     releaseTerminal();
     assert.ok(screen.slice(before).includes("\x1b[?25h"), "the cursor is still hidden for the question");
     const after = screen.length;
-    output.emit({ type: "progress", stage: "certify", message: "Waiting for you to certify in the browser" });
+    output.emit({ type: "progress", stage: "certify", message: "Waiting for you to confirm the details in the browser" });
     assert.ok(screen.slice(after).includes("\x1b[?25l"), "the face did not come back");
     output.stop();
   } finally { Object.defineProperty(process.stdout, "columns", { value: columns, configurable: true }); }

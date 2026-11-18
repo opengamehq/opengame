@@ -162,6 +162,13 @@ export interface ReviewPolicy {
    * from 20261113170000 until 20261113300000, which waits for a stored verdict however long it
    * takes and reads this no more; still carried so a recorded recommendation names it. */
   codeReviewWaitSeconds?: number;
+  /** limits.json, platform.review.boot.waitSeconds: how long, from the release being ready, the
+   * publication decision waits for the GPU playtest's boot receipt (20261118140000). Without it
+   * the decision waits only while a playtest is queued or running. */
+  bootWaitSeconds?: number;
+  /** limits.json, platform.review.boot.errorCharsMax: how much of the error a game threw before
+   * its first frame the does_not_boot refusal quotes back (20261118140000). */
+  bootErrorCharsMax?: number;
   launchPolicy?: {
     version: string;
     runtimeAttestationVerified: boolean;

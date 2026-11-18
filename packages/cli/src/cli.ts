@@ -225,7 +225,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "evidence-<sponsor>", type: "string", description: "What that sponsor's model did in the game, one flag per sponsor, for example --evidence-fal." },
     { name: "yes", type: "boolean", description: "Skip the confirmation a person is asked for." },
     { name: "idempotency-key", type: "string", description: "Retry key. Reuse it to check on one submission; a new one starts another." },
-    { name: "no-wait", type: "boolean", description: "Return once submitted, without waiting for certification in the browser." },
+    { name: "no-wait", type: "boolean", description: "Return once sent, without waiting for you to confirm the details in the browser." },
     noBrowser, stdin, json],
     examples: ["opengame submit", "opengame submit --release <id> --no-jam --json", "opengame submit --release <id> --qa --json",
       "opengame submit --release <id> --jam <slug> --track rpg --models claude,fal --sponsor fal --evidence-fal \"All prop textures\""] },

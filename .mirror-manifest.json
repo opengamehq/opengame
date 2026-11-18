@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "8ab4686ccad93656f79ac0dd2190e1662f332d82"
+    "commit": "765f13253fb349f3a7a0a54b91baf457ac9a2f22"
   },
-  "digest": "b9ae10e9a4a5aed2cce79a383f66d9180895bbcf639e2d522986eafb74d35a30",
+  "digest": "0af98a6b6bb6ae94858342ca2f599390870748319c6d706d2f6ce14e3561f859",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -177,8 +177,8 @@
     },
     {
       "path": "api-reference/openapi.json",
-      "bytes": 1443934,
-      "sha256": "3a5c0e98e3792b15f31c8c7ffd4fbe08b9984b0e0a0a1ce52cecff9475ca660a",
+      "bytes": 1444255,
+      "sha256": "dbb13573d60ee46144cb5769757c9586e42e08272924ff5aa14956801484d186",
       "executable": false
     },
     {
@@ -202,7 +202,7 @@
     {
       "path": "package-lock.json",
       "bytes": 27909,
-      "sha256": "b568c77b46b37c5db469c8e99b8989c149044b37af0921604867f1d89308a97a",
+      "sha256": "a36526efcc05bc22887d160820840429c7755e37e34773b61a52824ccc690cfb",
       "executable": false
     },
     {
@@ -219,8 +219,8 @@
     },
     {
       "path": "packages/cli/CHANGELOG.md",
-      "bytes": 23121,
-      "sha256": "c1e7a389f155a442458777c264a9a08071e8849e05cc687de531fc98da1df0fa",
+      "bytes": 23959,
+      "sha256": "f8c11a6cac4f7423d6ef1dd93e042f26ac5a566a48e36805520eef1f83bf98d2",
       "executable": false
     },
     {
@@ -238,7 +238,7 @@
     {
       "path": "packages/cli/package.json",
       "bytes": 1821,
-      "sha256": "194035f953ee8409bfc082e2877dc577e3a75ebf7be1eda8a75338381a42d345",
+      "sha256": "45858036938185d195846c6d242868b209d0af4ba1bdfe7bde9b466a29585e7e",
       "executable": false
     },
     {
@@ -321,8 +321,8 @@
     },
     {
       "path": "packages/cli/src/cli.ts",
-      "bytes": 67340,
-      "sha256": "ddaf01a4a3adc589d1e8917a6e8fa38afcee893c406dc682079dd7ca6825a20c",
+      "bytes": 67348,
+      "sha256": "3f3031ecf86b281d3c8db6578b57d82c2577eaa3264d5dbeb3e42280e00c4a10",
       "executable": false
     },
     {
@@ -423,8 +423,8 @@
     },
     {
       "path": "packages/cli/src/jams.ts",
-      "bytes": 4442,
-      "sha256": "0a94578c4adaae40b38df8d71023bf452dd2672fa58b2fe8c74481cd5cb19832",
+      "bytes": 4760,
+      "sha256": "c85aee10571846509599d808b2ed2a39d92d9fd9a545192b07ce225c99b927c4",
       "executable": false
     },
     {
@@ -495,8 +495,8 @@
     },
     {
       "path": "packages/cli/src/publish.ts",
-      "bytes": 13307,
-      "sha256": "f9ba701c6791a97a207d365d5a1e3be3a03943de48f8c003e3d1b6780c634627",
+      "bytes": 22581,
+      "sha256": "f09af8789c6a1eb46cd1dcd3f1a4122576317f3c0a0633ac57ac928dee4a01e2",
       "executable": false
     },
     {
@@ -573,8 +573,8 @@
     },
     {
       "path": "packages/cli/src/submit.ts",
-      "bytes": 30825,
-      "sha256": "d2ed65c5fdefef02b03d520cbb57da2b90f8890ad90dea172bf78bdee9843bc3",
+      "bytes": 30861,
+      "sha256": "17948fae922961823276ed956087b4787cea685f5489913ede05a089cfbac049",
       "executable": false
     },
     {
@@ -945,6 +945,42 @@
     },
     {
       "path": "packages/cli/tests/fixtures/manifests/0.13.1/init-vite.json",
+      "bytes": 357,
+      "sha256": "a399eb39131d09916d1a7806c2f2b3e6279bb2fc864da5bc117f8a3bf0293e07",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.2/init-mod.json",
+      "bytes": 316,
+      "sha256": "9cf0b6bb4f5acbcc94b449d34be8a66a3810275c0452ddedb01e31618731acd1",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.2/init-plain.json",
+      "bytes": 276,
+      "sha256": "a5ae52e22a699b3e24fcf3cc7970abd37d6ead679614758edb2637e13330007d",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.2/init-players-online.json",
+      "bytes": 325,
+      "sha256": "3b30b6254358cd2c1a9c38a57877f2acb1f3465a14e4100def34ea5c2e5fd915",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.2/init-players-private.json",
+      "bytes": 325,
+      "sha256": "28c23ed40ab8462e9c97b393c8e988d55dcf360982c11b28607a3524a88d332a",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.2/init-players-single.json",
+      "bytes": 296,
+      "sha256": "38a5ba552064e5ad3f6ae1a7fcd082a9c0602c50cebc9220cc0e1dc4e717ff53",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.2/init-vite.json",
       "bytes": 357,
       "sha256": "a399eb39131d09916d1a7806c2f2b3e6279bb2fc864da5bc117f8a3bf0293e07",
       "executable": false
@@ -1401,8 +1437,8 @@
     },
     {
       "path": "packages/cli/tests/mascot.test.ts",
-      "bytes": 15410,
-      "sha256": "b5429c5d64c44fa3f1fb5594fa79cc026ed914635acef4a935ed220f3efd5b17",
+      "bytes": 15422,
+      "sha256": "f5f4a668ba915a65f0b5888ccadfd6cc95857a329d3513dd709b24527bd2b960",
       "executable": false
     },
     {
@@ -1457,6 +1493,12 @@
       "path": "packages/cli/tests/publish-flags.test.ts",
       "bytes": 1337,
       "sha256": "6b733c929f20b5db1cc11b804680098264264e85e676366f8053197cf4d4af23",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/publish-state.test.ts",
+      "bytes": 13834,
+      "sha256": "8ca98c937c8db2df0c9989007cf8147f34b1fe8588f106439244d325a513cbf4",
       "executable": false
     },
     {
@@ -1587,8 +1629,8 @@
     },
     {
       "path": "packages/cli/tests/submit.test.ts",
-      "bytes": 50822,
-      "sha256": "3043a262cfd7d9570d743dc8ba17cc1145456c6bc0ac3ec278450a53f18e1da2",
+      "bytes": 50942,
+      "sha256": "f169e148975e8d76d0177a4f75a89c060d04d55b8ccb024d4a7759a717e0abb9",
       "executable": false
     },
     {
@@ -2037,8 +2079,8 @@
     },
     {
       "path": "packages/protocol/src/catalog.ts",
-      "bytes": 16827,
-      "sha256": "62f7f54935fcc4a68f31ca94e813693f1bc5b1017c3d0f0738930bf1386b04bb",
+      "bytes": 17163,
+      "sha256": "c17f457cc5933c42d054b63ef8c33cf5c36e76a1fbc9142e18ec623edb1537a2",
       "executable": false
     },
     {
@@ -2121,8 +2163,8 @@
     },
     {
       "path": "packages/protocol/src/review.ts",
-      "bytes": 57778,
-      "sha256": "ac0c639c5fb3c7fe1cd074c2a209759e96606c0fb2782feac885b8078b2958b1",
+      "bytes": 58278,
+      "sha256": "fc6f1bd96ede5d005a65044a0839c761611ff336c2f0dbbac98859b51c61bc29",
       "executable": false
     },
     {

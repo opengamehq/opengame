@@ -7,8 +7,11 @@ type Flags = Record<string, string | boolean>;
 
 /**
  * `opengame jams` lists the jams, their tracks and the rules link. `opengame jams <slug>`
- * prints that jam's form: every flag `opengame submit` takes for it and the values each
- * accepts, which is what an agent needs to submit without a person at the keyboard.
+ * prints that jam's form: every flag `opengame publish` takes for it and the values each
+ * accepts, which is what an agent needs to enter a game without a person at the keyboard.
+ * A deploy goes to review by itself, and the jam is entered when the release that passed is
+ * published (16 Nov 2026), so the form ends on publish, not on submit, which this printed
+ * until the creator walkthrough of 18 Nov 2026 found it.
  */
 export async function jamsCommand(slug: string | undefined, flags: Flags, output: Output) {
   const api = new Api();
@@ -27,7 +30,7 @@ export async function jamsCommand(slug: string | undefined, flags: Flags, output
         `  Genre tracks    ${jam.tracks.filter(t => t.kind === "theme").map(t => t.key).join(", ") || "none"}`,
         ...(jam.tracks.some(t => t.kind === "sponsor") ? [`  Sponsor tracks  ${jam.tracks.filter(t => t.kind === "sponsor").map(t => t.key).join(", ")}`] : []),
         `  Rules           ${jam.rulesUrl}`,
-      ]) : ["There are no jams right now. opengame submit sends a release to the marketplace."];
+      ]) : ["There are no jams right now. A deploy goes to review by itself, and opengame publish puts it live once it passes."];
       output.emit({ type: "result", command: "jams", data: { jams, message: lines.map(terminalText).join("\n") } });
       return;
     }
@@ -44,9 +47,10 @@ export async function jamsCommand(slug: string | undefined, flags: Flags, output
       "",
       `${form.track.flag} (one, required)`, ...form.track.options.map(o => `  ${o.value.padEnd(24)} ${o.label}`),
       "", `${form.models.flag} (comma separated, at least ${form.models.min})`, ...form.models.options.map(o => `  ${o.value.padEnd(24)} ${o.label}${o.provider && o.provider !== o.label ? `, ${o.provider}` : ""}`),
-      "", `${form.sponsors.flag} (comma separated, optional; each needs a model from its sponsor)`,
-      ...form.sponsors.options.map(o => `  ${o.value.padEnd(24)} ${o.label}. ${form.evidence.flagPrefix}${o.value} "${o.evidenceLabel ?? form.evidence.label}"`),
-      "", `opengame submit --release <id> --jam ${form.jam.slug} --track <key> --models <keys>`,
+      "", `${form.sponsors.flag} (comma separated, optional; each needs a model from its sponsor, and --sponsor-email with your account there)`,
+      ...form.sponsors.options.map(o => `  ${o.value.padEnd(24)} ${o.label}. --sponsor-email ${o.value}=you@example.com`),
+      "", "Deploy the game, and once it passes review enter it with:",
+      "opengame publish --track <key> --models <keys>",
     ];
     output.emit({ type: "result", command: "jams", data: { form, message: lines.map(terminalText).join("\n") } });
   } finally { await api.close(); }

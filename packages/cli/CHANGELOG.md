@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.13.2
+
+- `opengame publish` says where the game's newest release stands. While an update is still
+  being checked it says so, names the version that stays live until then, and exits 5
+  (`review_pending`) rather than repeating the earlier release's "published". With `--wait`
+  it follows the update through its checks and into review, whichever it has reached. Once a game is live, an update that passes review goes live by
+  itself, and publish says that and points at `opengame status --watch`.
+- A release that is already live reads "already live as version N", and a publish that puts
+  one live names its version, when the server sends it.
+- `opengame jams` points at `opengame publish --track ... --models ...` and
+  `--sponsor-email`, and no help text or notice says "certify" any more: the step is
+  confirming the details.
+
 ## 0.13.1
 
 - `check` and `deploy` say how long the files an engine downloads before its first frame

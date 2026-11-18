@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { GENRE_SLUGS, LIMITS } from "@opengame/shared";
-import { EXIT, SUBMISSION_OPEN, submissionSchema, type Submission } from "@opengame/protocol";
+import { EXIT, SUBMISSION_OPEN, deploymentPath, submissionSchema, type CreatorGame, type OperationSummary, type Submission } from "@opengame/protocol";
 import { trustedBrowserUrl } from "./browser";
 import { activeToken } from "./credentials";
 import { linkedGameId, readGame, refuseRemoved } from "./games";
@@ -91,24 +91,132 @@ export async function publishCommand(root: string, flags: Flags, output: Output)
   } finally { await api.close(); }
 }
 
-/** The result `publish` prints, and `deploy --publish` adds its deploy's fields to. */
-export interface Published { submission: Submission; done: boolean; url: string; live: Submission["live"]; next: string | null; message: string }
+/** The result `publish` prints, and `deploy --publish` adds its deploy's fields to. `version`
+ * is the number players see for the live release, when the server says it. `already` is a
+ * release that was live before this command ran, so nothing was published by it. */
+export interface Published { submission: Submission; done: boolean; url: string; live: Submission["live"]; next: string | null; message: string;
+  version: number | null; already: boolean }
+
+/** A deploy still on its way to review: uploading, queued or being checked. */
+const IN_FLIGHT: readonly OperationSummary["state"][] = ["uploading", "queued", "checking"];
+
+/**
+ * The game's newest deploy, when it is newer than the review the game reports. The game read
+ * names its newest standing review, and an update still being checked has none yet, so the
+ * review it names is the version before: on 18 Nov 2026 `opengame publish` run during a
+ * queued update answered "SUB-1455: published", the first version's result, which reads as
+ * the update being live. A deploy that failed or expired is not on its way anywhere.
+ */
+function newerDeploy(game: CreatorGame): OperationSummary | null {
+  const operation = game.latestOperation;
+  if (!operation || operation.state === "failed" || operation.state === "expired") return null;
+  if (IN_FLIGHT.includes(operation.state)) return operation;
+  return operation.releaseId && operation.releaseId !== game.submission?.releaseId ? operation : null;
+}
+
+/** " Version 3 stays live until then." when the game is live, with its number when the server
+ * says it; nothing for a game that is not live. `tail` ends the sentence. */
+function liveNow(game: CreatorGame, tail = " until then"): string {
+  const live = game.publication;
+  if (live?.state !== "published") return "";
+  return `${live.version ? ` Version ${live.version}` : " The version players have now"} stays live${tail}.`;
+}
+
+/**
+ * What to say while the newest deploy is not reviewed yet, and the command that moves it on.
+ * An update of a live game goes live by itself once review passes (one-flow.ts), so only a
+ * first publish is told to wait on publish.
+ */
+function stillComing(game: CreatorGame, operation: OperationSummary, line: string): CliError {
+  const updating = game.publication?.state === "published";
+  const then = updating ? " It goes live by itself once it passes review. Run opengame status --watch to follow it."
+    : " Run opengame publish --wait to publish it the moment it passes review.";
+  return new CliError("review_pending", `${line}${liveNow(game)}${then}`, 5,
+    { retry: "later", next: updating ? "opengame status --watch" : "opengame publish --wait" });
+}
+
+const short = (id: string | null | undefined) => id ? `Release ${id.slice(0, 8)}` : "Your newest deploy";
 
 /**
  * Publishes the game's newest release waiting on its creator, and follows it until it is live.
  * `release` is the one meant, when the caller knows it (deploy --publish, --release); the game's
  * newest review is read until it is that release's, since the deploy that made it sends it to
- * review a moment after it is ready. `wait` follows a review still running.
+ * review a moment after it is ready. `wait` follows a review still running. With no release
+ * named, a deploy newer than the game's review is the one meant: still being checked, it is
+ * said as such (or followed, with `wait`), and never answered with the review before it.
  */
 export async function publishGame(api: Api, token: string, gameId: string, options: { release: string | null; answers: PublishAnswers; wait: boolean; output: Output; page?: string }): Promise<Published> {
-  const { release, answers, wait, output } = options;
+  const { answers, wait, output } = options;
+  let { release, page } = options;
+  const named = release !== null;
   const reviewDeadline = Date.now() + LIMITS.platform.review.decisionDeadlineSeconds * 2000;
+  /* With no release named: a deploy that passed its checks and has no review yet, which the
+     review clock sends to review within the minute, and the newest deploy when it failed. Each
+     is said beside a release that is already live, so "nothing new" never hides either. */
+  let unreviewed: OperationSummary | null = null;
+  let failed: OperationSummary | null = null;
+  let known: CreatorGame | null = null;
+  if (release === null) {
+    let game = await readGame(api, token, gameId);
+    refuseRemoved(game);
+    let newer = newerDeploy(game);
+    const followed = Boolean(newer && IN_FLIGHT.includes(newer.state));
+    if (newer && IN_FLIGHT.includes(newer.state)) {
+      const line = `${short(newer.releaseId)} is still being checked, so it has not gone to review yet.`;
+      if (!wait) throw stillComing(game, newer, line);
+      await output.face();
+      output.emit({ type: "progress", stage: "deploy:checking", message: "Waiting for your newest deploy's checks." });
+      const deadline = Math.min(reviewDeadline, Date.now() + LIMITS.platform.operations.watchTimeoutMs);
+      while (newer && IN_FLIGHT.includes(newer.state) && Date.now() < deadline) {
+        await sleep(LIMITS.platform.operations.pollIntervalMs);
+        game = await readGame(api, token, gameId);
+        refuseRemoved(game);
+        newer = newerDeploy(game);
+      }
+      if (newer && IN_FLIGHT.includes(newer.state)) throw stillComing(game, newer, `${short(newer.releaseId)} is still being checked after ${Math.round(LIMITS.platform.operations.watchTimeoutMs / 60_000)} minutes, so it has not gone to review yet.`);
+      const latest = game.latestOperation;
+      if (latest && (latest.state === "failed" || latest.state === "expired")) {
+        throw new CliError("nothing_to_publish", `${short(latest.releaseId)}, your newest deploy, did not pass its checks, so nothing was published.${liveNow(game, "")} Run opengame status to read why.`, EXIT.input, { next: "opengame status" });
+      }
+    }
+    /* Followed here, so the release is the one meant: its review is read until it arrives.
+       Found ready without waiting, it is only said, so a ready release that never goes to
+       review (a QA build, one the jam cannot take) cannot hold up an older one waiting on
+       its creator, which publish has always published. */
+    const latest = game.latestOperation;
+    /* The deploy followed is the newest one, even once its review is the game's and so no
+       longer "newer" than it: an update can pass review and go live while it is watched. */
+    const followedTo = followed ? newer ?? (latest?.releaseId && latest.state === "ready" ? latest : null) : null;
+    if (followedTo?.releaseId) { release = followedTo.releaseId; page ??= api.origin + deploymentPath(followedTo.id); }
+    else if (newer?.releaseId) unreviewed = newer;
+    if (latest && (latest.state === "failed" || latest.state === "expired")) failed = latest;
+    known = game;
+  }
   /* A ready deploy goes to review within the minute (the review clock submits any a reader did
      not), so a named release with no review two minutes on is one that will not get one: a QA
      game, a build the jam cannot take. Its deploy's page says why. */
-  let current = await newestReview(api, token, gameId, release, Date.now() + Math.min(wait ? 120_000 : LIMITS.platform.operations.pollIntervalMs * 15, reviewDeadline - Date.now()), output, options.page);
+  let current = await newestReview(api, token, gameId, release, Date.now() + Math.min(wait ? 120_000 : LIMITS.platform.operations.pollIntervalMs * 15, reviewDeadline - Date.now()), output, page);
+  // Live before this command ran. Never for a named release: deploy --publish names its own,
+  // and an update of a live game can go live by itself before the first read here.
+  /* Not for a release this command followed, either: one it waited on through its checks can
+     reach published before the first read here (Greptile on opengamehq/opengame#21). */
+  let already = !named && release === null && current.state === "published";
+  if (already && unreviewed?.releaseId && unreviewed.releaseId !== current.releaseId) {
+    if (!wait) {
+      throw new CliError("review_pending", `${short(unreviewed.releaseId)} passed its checks and goes to review within a minute.${known ? liveNow(known) : ""} It goes live by itself once it passes review. Run opengame status --watch to follow it.`, 5,
+        { retry: "later", next: "opengame status --watch" });
+    }
+    /* --wait follows it, as it follows an update still being checked: the release is the one
+       meant now, and its review is read until it arrives (Greptile on opengamehq/opengame#21).
+       Only here, past a live release, so an older release waiting on its creator is still the
+       one a bare publish takes. */
+    release = unreviewed.releaseId;
+    page ??= api.origin + deploymentPath(unreviewed.id);
+    current = await newestReview(api, token, gameId, release, Date.now() + Math.min(120_000, reviewDeadline - Date.now()), output, page);
+    already = false;
+  }
   if ((SUBMISSION_OPEN as readonly string[]).includes(current.state) && current.state !== "awaiting_details" && current.state !== "publishing") {
-    if (!wait) throw new CliError("review_pending", `${terminalText(reviewLine(current))} Run opengame publish --wait to publish it the moment it passes.`, 5, { retry: "later", next: "opengame publish --wait" });
+    if (!wait) throw await pending(api, token, gameId, current);
     current = await followReview(api, token, current, output, reviewDeadline);
   }
   if (current.state === "awaiting_details") {
@@ -124,7 +232,31 @@ export async function publishGame(api: Api, token: string, gameId: string, optio
   }
   // Publishing copies the reviewed files to where players get them: seconds, usually.
   if (current.state === "publishing") current = await followReview(api, token, current, output, Date.now() + LIMITS.platform.operations.watchTimeoutMs);
-  return outcome(current, output);
+  if ((SUBMISSION_OPEN as readonly string[]).includes(current.state) && current.state !== "publishing") throw await pending(api, token, gameId, current);
+  const result = outcome(current, output, current.state === "published" ? await liveVersion(api, token, gameId, current.releaseId) : null, already);
+  if (already && failed) result.message += ` Your newest deploy${failed.releaseId ? `, release ${failed.releaseId.slice(0, 8)},` : ""} did not pass its checks: run opengame status to read why.`;
+  return result;
+}
+
+/** A review still running, said with the version that stays live meanwhile and the command
+ * that moves it on: an update of a live game publishes by itself once it passes. */
+async function pending(api: Api, token: string, gameId: string, current: Submission): Promise<CliError> {
+  const game = await readGame(api, token, gameId).catch(() => null);
+  const line = terminalText(reviewLine(current));
+  if (game && game.publication?.state === "published" && game.publication.releaseId !== current.releaseId) {
+    return new CliError("review_pending", `${line}${liveNow(game)} It goes live by itself once it passes review. Run opengame status --watch to follow it.`, 5,
+      { retry: "later", next: "opengame status --watch" });
+  }
+  return new CliError("review_pending", `${line} Run opengame publish --wait to publish it the moment it passes.`, 5, { retry: "later", next: "opengame publish --wait" });
+}
+
+/** The number players see for `releaseId` once it is the live one, or null when the server
+ * does not say (an older one) or the read fails: the publish happened either way. */
+async function liveVersion(api: Api, token: string, gameId: string, releaseId: string): Promise<number | null> {
+  try {
+    const live = (await readGame(api, token, gameId)).publication;
+    return live?.state === "published" && live.releaseId === releaseId ? live.version ?? null : null;
+  } catch { return null; }
 }
 
 /** The game's newest review, once it is `release`'s when that is named, read until `deadline`.
@@ -139,7 +271,7 @@ async function newestReview(api: Api, token: string, gameId: string, release: st
     if (review && (!release || review.releaseId === release)) return review;
     if (Date.now() >= deadline) {
       if (review === undefined) throw new CliError("temporarily_unavailable", "OpenGame could not read this game's review just now. Run the same command again.", 5, { retry: "later" });
-      if (release && page) throw new CliError("release_not_waiting", `Release ${release.slice(0, 8)} has not gone to review. Its deploy's page says why: ${page}`, EXIT.input, { next: "opengame status" });
+      if (release && page) throw new CliError("release_not_waiting", `Release ${release.slice(0, 8)} has not gone to review.${liveNow(game, "")} Its deploy's page says why: ${page}`, EXIT.input, { next: "opengame status" });
       if (!review) throw new CliError("nothing_to_publish", "This game has no release in review or waiting to publish. Run opengame deploy to upload one; it goes to review by itself.", EXIT.input, { next: "opengame deploy" });
       throw new CliError("release_not_waiting", `Release ${release!.slice(0, 8)} is not this game's newest review, which is release ${review.releaseId.slice(0, 8)} (${terminalText(reviewLine(review))}). Run opengame publish without --release to publish that one.`, EXIT.input, { next: "opengame publish" });
     }
@@ -155,25 +287,26 @@ function parse(value: unknown, origin: string): Submission {
   return parsed.data;
 }
 
-/** Where the publication stands, as one result: live with its address, still publishing, or
- * the reason it is not going live, as an error with the command that moves it on. */
-function outcome(current: Submission, output: Output): Published {
+/** Where the publication stands, as one result: live with its address and version number,
+ * still publishing, or the reason it is not going live, as an error with the command that
+ * moves it on. A release live before the command ran is said as already live. */
+function outcome(current: Submission, output: Output, version: number | null, already: boolean): Published {
   if (current.state === "published") {
     const url = current.live?.url ?? current.gameUrl;
-    return { submission: current, done: true, url, live: current.live, next: null,
-      message: `${current.ref}: published. ${current.live?.listed === false ? "It is live, unlisted. " : ""}Share ${url}` };
+    const which = `${version ? `version ${version}, ` : ""}release ${current.releaseId.slice(0, 8)}`;
+    const unlisted = current.live?.listed === false ? " It is unlisted: playable by its link, on no gallery." : "";
+    return { submission: current, done: true, url, live: current.live, next: null, version, already,
+      message: already ? `${current.ref}: already live as ${which}. Nothing new to publish.${unlisted} Share ${url}`
+        : `${current.ref}: published. ${which[0]!.toUpperCase()}${which.slice(1)} is live.${unlisted} Share ${url}` };
   }
   if (current.state === "publishing") {
-    return { submission: current, done: false, url: current.gameUrl, live: null, next: "opengame status --watch",
-      message: `${current.ref}: still publishing. Run opengame status --watch to follow it, or open ${current.gameUrl}` };
+    return { submission: current, done: false, url: current.gameUrl, live: null, next: "opengame status --watch", version: null, already: false,
+      message: `${current.ref}: still publishing release ${current.releaseId.slice(0, 8)}. Run opengame status --watch to follow it, or open ${current.gameUrl}` };
   }
   if (current.state === "returned" || current.state === "blocked") {
     const lines = emitReview(current, output);
     throw new CliError(current.state === "returned" ? "release_returned" : "release_blocked", [`${terminalText(reviewLine(current))} Nothing was published.`, ...lines].join("\n"), EXIT.check,
       { retry: "after-fix", next: current.state === "returned" ? "opengame deploy" : "opengame status" });
-  }
-  if ((SUBMISSION_OPEN as readonly string[]).includes(current.state)) {
-    throw new CliError("review_pending", `${terminalText(reviewLine(current))} Run opengame publish --wait to publish it the moment it passes.`, 5, { retry: "later", next: "opengame publish --wait" });
   }
   throw new CliError("nothing_to_publish", `${terminalText(reviewLine(current))} Nothing was published.`, EXIT.input, { next: "opengame status" });
 }

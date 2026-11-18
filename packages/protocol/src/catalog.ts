@@ -68,6 +68,10 @@ export const publicationSchema = z.object({
   url: z.url(),
   /** False while platform games are unlisted: playable by link, on no gallery. */
   listed: z.boolean(),
+  /** The version number players see for the live release (`shownGameVersion`), once it is
+   * published. Null while it is publishing, or when the number could not be read. Additive:
+   * older servers omit it, and `opengame publish` then names the release without one. */
+  version: z.number().int().positive().nullable().optional(),
 });
 export type Publication = z.infer<typeof publicationSchema>;
 

@@ -150,7 +150,7 @@ export async function submitCommand(root: string, flags: Flags, output: Output) 
       const certifyUrl = trustedBrowserUrl(result.certifyUrl, api.origin);
       // A notice, not a stage: a person's terminal settles a stage with a tick, and
       // this one was ticked off as done the moment it was printed.
-      output.emit({ type: "notice", code: "certify_required", url: certifyUrl, message: `One step only you can do: certify at ${certifyUrl}` });
+      output.emit({ type: "notice", code: "certify_required", url: certifyUrl, message: `One step only you can do: confirm the details at ${certifyUrl}` });
       if (!flags["no-browser"]) openBrowser(certifyUrl, true, api.origin);
       if (!flags["no-wait"]) result = await waitForCertification(api, token, result, release, output);
     }
@@ -375,7 +375,7 @@ async function waitForCertification(api: Api, token: string, initial: Submission
   const deadline = Date.now() + LIMITS.platform.operations.watchTimeoutMs;
   let current = initial;
   await output.face();
-  output.emit({ type: "progress", stage: "certify", message: "Waiting for you to certify in the browser" });
+  output.emit({ type: "progress", stage: "certify", message: "Waiting for you to confirm the details in the browser" });
   while (current.state === "needs_certification" && Date.now() < deadline) {
     await sleep(LIMITS.platform.operations.pollIntervalMs);
     // Renewed from the certify page after the wording changed: keep waiting on the new one.
@@ -386,7 +386,7 @@ async function waitForCertification(api: Api, token: string, initial: Submission
 
 function report(result: Submission, output: Output) {
   const next = result.state === "playtesting" ? " It is decided when the playtest finishes; your game page follows each step."
-    : result.state === "needs_certification" && result.certifyUrl ? ` Certify at ${result.certifyUrl}, then run this command again to follow it.`
+    : result.state === "needs_certification" && result.certifyUrl ? ` Confirm the details at ${result.certifyUrl}, then run this command again to follow it.`
     : result.state === "superseded" && result.replacedBy ? ` ${result.replacedBy.ref}, release ${result.replacedBy.releaseId.slice(0, 8)}, is in review instead. To send this release again anyway, run with a new --idempotency-key.`
     : result.state === "withdrawn" ? " If you withdrew it, run this command again to submit it again. A game that is off the gallery has to be back on it before a release can go live." : "";
   const lines = emitReview(result, output);

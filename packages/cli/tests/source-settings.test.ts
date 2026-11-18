@@ -39,17 +39,17 @@ test("Godot settings are attributed only to the preset matching this manifest ou
   assert.ok(result.observed.every(row => row.field.startsWith("preset.1.")));
 }));
 
-test("Godot PWA gets actionable advice and enabled threads remain a note", async () => fixture(async root => {
+test("Godot PWA is observed without advice and enabled threads remain a note", async () => fixture(async root => {
   await put(root, "project.godot", "config_version=5\n");
   await put(root, "export_presets.cfg", godot4("progressive_web_app/enabled=true\nvariant/thread_support=true\nvariant/extensions_support=true"));
   const result = await sourceSettingsDiagnostics(root, manifest());
-  assert.deepEqual(result.diagnostics.map(row => [row.code, row.severity]), [["source-godot-pwa", "warning"], ["source-godot-threads", "note"]]);
-  assert.match(result.diagnostics[0]!.fix, /Turn off Progressive Web App/);
+  // A game may keep its service worker since 17 Nov 2026, so PWA output is no warning.
+  assert.deepEqual(result.diagnostics.map(row => [row.code, row.severity]), [["source-godot-threads", "note"]]);
   // 2027-04, where a threaded release frozen on 2027-03 (current since 26 Oct 2026) is
   // sealed. Eval is allowed there, so the sentence that said otherwise went.
-  assert.match(result.diagnostics[1]!.message, /supports threaded exports: .* onto contract 2027-04 automatically, which adds cross-origin isolation\.$/);
-  assert.match(result.diagnostics[1]!.fix, /opengame dev \. --contract 2027-04/);
-  assert.doesNotMatch(result.diagnostics[1]!.message, /experimental|not yet tested/);
+  assert.match(result.diagnostics[0]!.message, /supports threaded exports: .* onto contract 2027-04 automatically, which adds cross-origin isolation\.$/);
+  assert.match(result.diagnostics[0]!.fix, /opengame dev \. --contract 2027-04/);
+  assert.doesNotMatch(result.diagnostics[0]!.message, /experimental|not yet tested/);
   assert.ok(result.diagnostics.every(row => row.path === "export_presets.cfg" && row.verify && row.value === true));
 }));
 
@@ -85,10 +85,10 @@ test("absent, malformed, duplicate and unmeasured Godot fields never become bloc
 
 test("source reader handles BOM and CRLF and refuses settings symlinked outside the project", async () => fixture(async root => {
   await put(root, "project.godot", "config_version=5\n");
-  await put(root, "export_presets.cfg", "\ufeff" + godot4("progressive_web_app/enabled=true\nvariant/thread_support=false").replaceAll("\n", "\r\n"));
-  assert.equal((await sourceSettingsDiagnostics(root, manifest())).diagnostics[0]?.code, "source-godot-pwa");
+  await put(root, "export_presets.cfg", "\ufeff" + godot4("progressive_web_app/enabled=false\nvariant/thread_support=true").replaceAll("\n", "\r\n"));
+  assert.equal((await sourceSettingsDiagnostics(root, manifest())).diagnostics[0]?.code, "source-godot-threads");
   await fixture(async outside => {
-    await put(outside, "settings.cfg", godot4("progressive_web_app/enabled=true"));
+    await put(outside, "settings.cfg", godot4("progressive_web_app/enabled=false\nvariant/thread_support=true"));
     await rm(join(root, "export_presets.cfg"));
     await symlink(join(outside, "settings.cfg"), join(root, "export_presets.cfg"));
     const result = await sourceSettingsDiagnostics(root, manifest());
@@ -145,13 +145,13 @@ test("export-only and malformed Flutter projects have no invented setting failur
 test("bundled check emits source advice before a failing build and includes structured settings on success", async () => fixture(async root => {
   const binary = fileURLToPath(new URL("../dist/cli.mjs", import.meta.url));
   await put(root, "project.godot", "config_version=5\n");
-  await put(root, "export_presets.cfg", godot4("progressive_web_app/enabled=true\nvariant/thread_support=false"));
+  await put(root, "export_presets.cfg", godot4("progressive_web_app/enabled=false\nvariant/thread_support=true"));
   await put(root, "dist/index.html", "<!doctype html><title>Source settings</title>");
   await put(root, "opengame.json", JSON.stringify(manifest("dist", 'node -e "process.exit(7)"')));
   const failed = spawnSync(process.execPath, [binary, "check", root, "--build", "--jsonl"], { encoding: "utf8" });
   assert.notEqual(failed.status, 0, failed.stdout + failed.stderr);
   const events = failed.stdout.trim().split("\n").map(line => JSON.parse(line));
-  const sourceIndex = events.findIndex(row => row.type === "notice" && row.code === "source-godot-pwa");
+  const sourceIndex = events.findIndex(row => row.type === "notice" && row.code === "source-godot-threads");
   const errorIndex = events.findIndex(row => row.type === "error");
   assert.ok(sourceIndex >= 0 && errorIndex > sourceIndex, failed.stdout);
   await put(root, "opengame.json", JSON.stringify(manifest()));
@@ -159,7 +159,7 @@ test("bundled check emits source advice before a failing build and includes stru
   assert.equal(success.status, 0, success.stdout + success.stderr);
   const result = JSON.parse(success.stdout);
   assert.equal(result.data.sourceSettings.engine, "godot");
-  assert.equal(result.data.sourceSettings.diagnostics[0].severity, "warning");
+  assert.equal(result.data.sourceSettings.diagnostics[0].severity, "note");
   assert.equal(result.data.ok, true);
 }));
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.3
+
+- `opengame-deploy` 1.1.13 and `opengame-all-in-one` 1.0.11: multiplayer works from any engine,
+  through servers the creator runs over `wss:`, WebTransport or `https:`, or WebRTC between
+  players, and a creator's server cannot verify `og.player.id`.
+- `opengame-deploy` 1.1.13 and `opengame-all-in-one` 1.0.11, also in this release: a game may
+  keep a service worker on its own address; a takedown removes it and a new version replaces it.
+- `opengame-jam` 1.1.2 and `opengame-all-in-one` 1.0.12, also in this release: the rules page's
+  five judging criteria, with none weighted above another.
+
 ## 1.7.2
 
 - `opengame-deploy` 1.1.12 and `opengame-all-in-one` 1.0.10: `opengame.json` says how the game

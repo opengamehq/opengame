@@ -1,3 +1,4 @@
+import * as zlib from 'node:zlib';
 import { gunzipSync, inflateRawSync } from 'node:zlib';
 
 export function safePath(value, maxBytes) {
@@ -79,14 +80,31 @@ export function readTarGzip(archive, bounds, accounting) {
   throw new Error('Missing tar terminator');
 }
 
-function crc32(data) {
-  let crc = 0xffffffff;
-  for (const byte of data) {
-    crc ^= byte;
-    for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+/* ZIP's CRC-32 of a member, which readZip compares with the one its headers declare. It was
+   worked a bit at a time, eight steps a byte, and that was 3.2 s of the CLI build's 7 s on a
+   four-core worker (18 Nov 2026): the build's runtime catalogue reads every pinned archive
+   through here, and every gate part runs that build before its first suite, as does each CLI
+   row's pretest. So it is zlib's own where Node has one (22.2 and 20.15 on), and otherwise a
+   byte at a time from a table, because the bundles built from this file run on Node 18 too
+   (packages/cli builds for node18), which has no zlib.crc32. Both are the same function as the
+   bit-at-a-time loop, and engine-runtimes.test.mjs holds all three to each other and to the
+   standard check value. The namespace import is deliberate: a named import of crc32 would fail
+   to load on Node 18. */
+let crcTable = null;
+export function crc32Table(data) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let bit = 0; bit < 8; bit++) c = (c >>> 1) ^ ((c & 1) ? 0xedb88320 : 0);
+      crcTable[n] = c >>> 0;
+    }
   }
+  let crc = 0xffffffff;
+  for (let i = 0; i < data.length; i++) crc = crcTable[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
   return (crc ^ 0xffffffff) >>> 0;
 }
+export const crc32 = typeof zlib.crc32 === 'function' ? data => zlib.crc32(data) >>> 0 : crc32Table;
 
 export function readZip(archive, bounds, accounting) {
   if (archive.length > bounds.downloadBytesMax) throw new Error('Runtime archive size limit');

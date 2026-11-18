@@ -135,6 +135,15 @@ export async function sendFiles(api: Api, token: string, operation: string, file
   const fail = (error: unknown) => { failed = true; firstFailure ??= { error }; };
   const stopIfFailed = () => { if (firstFailure) throw firstFailure.error; };
   const counted = new Set<string>(), inFlight = new Map<string, number>();
+  /* Bytes this run put on the wire: PUT progress, retries included, and each pack's body once
+     it lands. The rate is read from these alone. Read from the verified count, as it was until
+     18 Nov 2026, a resumed run's first page and every verification answer arrived as one jump,
+     so a run picking up an upload said "at 402 MiB/s, about 2 s left" over a 6 MB/s link. */
+  let moved = 0;
+  const progressed = (key: string, sent: number) => {
+    moved += Math.max(0, sent - (inFlight.get(key) ?? 0));
+    inFlight.set(key, sent); report();
+  };
   let shown = -1, shownAt = 0;
   const report = (force = false) => {
     const sent = doneBytes + [...inFlight.values()].reduce((sum, value) => sum + value, 0);
@@ -142,7 +151,7 @@ export async function sendFiles(api: Api, token: string, operation: string, file
     const now = Date.now();
     if (!force && (output.json ? percent === shown || percent % 10 !== 0 : percent === shown && now - shownAt < 1000)) return;
     shown = percent; shownAt = now;
-    output.emit({ type: "progress", stage: "upload", operation, message: `${meter.words(Math.min(sent, total), total, sent)}; ${doneFiles} of ${files.length} files verified`,
+    output.emit({ type: "progress", stage: "upload", operation, message: `${meter.words(Math.min(sent, total), total, moved)}; ${doneFiles} of ${files.length} files verified`,
       bytes: Math.min(sent, total), total, files: doneFiles, totalFiles: files.length, elapsedMs: now - started });
   };
   /** A hash verified, by this run or found so already; counted once whichever confirms it first. */
@@ -183,7 +192,7 @@ export async function sendFiles(api: Api, token: string, operation: string, file
   const attempt = async (key: string, put: (progress: (sent: number) => void) => Promise<void>, renew: () => Promise<boolean>) => {
     for (let tries = 1; ; tries++) {
       try {
-        await put(sent => { inFlight.set(key, sent); report(); });
+        await put(sent => progressed(key, sent));
         return;
       } catch (error) {
         if (!(error instanceof UploadInterrupted) || failed) throw error;
@@ -330,6 +339,7 @@ export async function sendFiles(api: Api, token: string, operation: string, file
       if (!listed || listed.some(row => typeof row?.sha256 !== "string" || !items.some(item => item.sha256 === row.sha256) || row.verified !== true)) {
         throw new CliError("invalid_response", "The server did not confirm the uploaded files. Retry the saved deploy.", 5);
       }
+      moved += body.byteLength;
       // Those left out of the answer were verified before this pack; every one of them is verified now.
       for (const item of items) count(item.sha256);
     }));

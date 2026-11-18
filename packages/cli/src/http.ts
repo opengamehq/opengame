@@ -1,6 +1,6 @@
 import { gzipSync } from "node:zlib";
 import { ReadableStream } from "node:stream/web";
-import { EXIT, errorExit, errorSentence, isPlatformAuthErrorCode, platformAuthError, type PlatformAuthErrorCode } from "@opengame/protocol";
+import { CLIENT_USAGE_HEADERS, EXIT, errorExit, errorSentence, isPlatformAuthErrorCode, platformAuthError, type PlatformAuthErrorCode } from "@opengame/protocol";
 import { EnvHttpProxyAgent, fetch } from "undici";
 import { LIMITS } from "@opengame/shared";
 import { CliError, terminalText } from "./output";
@@ -165,6 +165,23 @@ export function encodeJsonBody(value: unknown, gzip?: GzipBody): { body: string 
   return { body: compressed, encoding: "gzip" };
 }
 
+/**
+ * What this process says about itself on every API request: which tool it is and, for a
+ * command that acts on the person's account, that command's name (packages/protocol
+ * client-usage.ts has the vocabulary and the reasons). The server counts requests per
+ * token, tool, version and command per day, and nothing else: no argument, path, game or
+ * flag value is ever in these headers, because the entrypoint passes a name from a fixed
+ * list or nothing.
+ *
+ * Set once, by the entrypoint, before the first request. A command that runs on the
+ * machine alone leaves the command out.
+ */
+let usage: Record<string, string> = { [CLIENT_USAGE_HEADERS.client]: "cli" };
+export function setClientUsage(command: string | null, client: "cli" | "mcp" = "cli", version?: string): void {
+  usage = { [CLIENT_USAGE_HEADERS.client]: client, ...(command ? { [CLIENT_USAGE_HEADERS.command]: command } : {}),
+    ...(version ? { [CLIENT_USAGE_HEADERS.version]: version } : {}) };
+}
+
 export class Api {
   private readonly dispatcher = new EnvHttpProxyAgent();
   /** Where the token in use came from, so a 401 names the right remedy. */
@@ -186,7 +203,7 @@ export class Api {
     const timeout = AbortSignal.timeout(Math.max(LIMITS.platform.http.timeoutMs, options.timeoutMs ?? 0));
     return await fetch(this.origin + path, { method: options.method ?? (options.body === undefined && !options.bytes ? "GET" : "POST"),
         dispatcher: this.dispatcher, redirect: "error", signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
-        headers: { accept: "application/json", "x-opengame-cli-version": CLI_VERSION, ...this.bypass, ...options.headers,
+        headers: { accept: "application/json", "x-opengame-cli-version": CLI_VERSION, ...usage, ...this.bypass, ...options.headers,
           ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
           ...(options.idempotencyKey ? { "idempotency-key": options.idempotencyKey } : {}),
           ...(encoded ? { "content-type": encoded.contentType } : {}), ...(encoded?.encoding ? { "content-encoding": encoded.encoding } : {}) },

@@ -11,7 +11,7 @@ export * from "./game-words";
 export * from "./submission-maintenance";
 export { parseInventory, validInventoryChunks, validInventoryPointer } from "./serving-inventory";
 export type { InventoryChunk, InventoryFile, ServingInventory, ServingInventoryPointer } from "./serving-inventory";
-export { ANALYTICS_KINDS, ANALYTICS_WINDOW_KINDS, REMOVED_ANALYTICS_FILTERS, analyticsExtensionRows } from "./analytics";
+export { ANALYTICS_KINDS, ANALYTICS_WINDOW_KINDS, PACKAGE_VERSION_PATTERN, REMOVED_ANALYTICS_FILTERS, analyticsExtensionRows } from "./analytics";
 export type {
   AnalyticsKind, AnalyticsEvent, AnalyticsQuery, AnalyticsSummary,
   AnalyticsBreakdown, AnalyticsDaily, AnalyticsCustomEvent, AnalyticsSignalCoverage,

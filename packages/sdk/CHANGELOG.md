@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.1
+
+- `sdk_ready` now includes the SDK's version, and the first time a page session uses one of
+  fourteen features (custom events, score submits and reads, `player.stats()`, achievement
+  unlocks and lists, invite links, `openLink`, fullscreen, sign-in, the avatar, `onPause`,
+  host mute and the radio), the SDK sends one `sdk_feature` event naming it. Only with a
+  session that grants analytics, once the game has called `ready`; never in the local mock.
+  The events go the way every SDK event does and name nothing new about the player. They
+  are not in a creator's reports. The core is about 440 bytes gzip larger.
+- `sdk_feature` is the SDK's own name: `og.track('sdk_feature')` from a game returns
+  `invalid_event`, since the SDK's notes do not count against a game's event limits.
+
 ## 0.5.0
 
 - `og.invite.link(code)` is the game's page on opengame.io with `?join=CODE`, and

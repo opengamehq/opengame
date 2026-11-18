@@ -388,6 +388,34 @@ test("after a failure nothing is still sending once the command has stopped, who
   }
 });
 
+// 18 Nov 2026: a resumed run counted the files an earlier run had verified, in one jump, and
+// the meter read the jump as speed ("at 402 MiB/s, about 2 s left" over a 6 MB/s link). The
+// pack is held a little over a second, the meter's shortest window, so the jump and the pack
+// that follows it fall in one window, on the real clock.
+test("a resumed run's rate is what it sends, never what earlier runs left verified", async () => {
+  const entries: [string, Uint8Array][] = Array.from({ length: 200 }, (_, index) => [`f/${String(index).padStart(3, "0")}.bin`, new Uint8Array(randomBytes(64 * 1024))]);
+  const archive = canonicalArchive(entries)!;
+  const tree = new Map(entries);
+  const fake = fakeServer(archive.files);
+  for (const file of archive.files.slice(0, 190)) fake.verified.add(file.sha256);
+  const json = fake.api.json.bind(fake.api);
+  (fake.api as unknown as { json: typeof json }).json = async (path, init) => {
+    if (String(path).endsWith("/files/pack")) await new Promise(resolve => setTimeout(resolve, 1100));
+    return json(path, init);
+  };
+  const events: { type: string; message?: string }[] = [];
+  await sendFiles(fake.api, "token", "operation", archive.files, (await json("/x?cursor=0", { headers: TRANSPORT_HEADERS })).files,
+    new Output("jsonl", line => events.push(JSON.parse(line))), {
+    route: "files", packs: true, read: async (file, offset, length) => tree.get(file.path)!.subarray(offset, offset + length) });
+  const perSecond = events.flatMap(event => {
+    const match = /at ([\d.]+) (bytes|KiB|MiB|GiB)\/s/.exec(event.message ?? "");
+    return match ? [Number(match[1]) * { bytes: 1, KiB: 1024, MiB: 1024 ** 2, GiB: 1024 ** 3 }[match[2] as "bytes"]] : [];
+  });
+  // Ten 64 KiB files went up in about 1.1 s; 190 (12 MiB) were already there.
+  assert.ok(perSecond.length > 0, "the run named a rate");
+  assert.ok(perSecond.every(rate => rate < 1024 * 1024), `rates: ${perSecond.join(", ")}`);
+});
+
 test("read-ahead takes no more than READ_AHEAD_BYTES_MAX of a page, and the rest are read one at a time", async () => {
   const size = 1024 * 1024;
   const { files, read, byPath } = smallFiles(UPLOAD.pageFilesMax + 20, size);

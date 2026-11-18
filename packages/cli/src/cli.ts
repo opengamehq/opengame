@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { z } from "zod";
 import { ANALYTICS_WINDOW_KINDS, DEFAULT_GAME_KIND, GAME_KIND_SLUGS, LIMITS, REMOVED_ANALYTICS_FILTERS } from "@opengame/shared";
-import { ANALYTICS_FILTERS_REMOVED, CREATOR_TOKEN_PATTERN, EXIT, repairFindingSchema } from "@opengame/protocol";
+import { ANALYTICS_FILTERS_REMOVED, CREATOR_TOKEN_PATTERN, EXIT, cliUsageCommand, repairFindingSchema } from "@opengame/protocol";
 import { tokensCommand } from "./tokens";
 import { pullCommand } from "./pull";
 import { gamesCommand } from "./games";
@@ -25,6 +25,7 @@ import { AUTO_HELP } from "./auto";
 import { inspectArchive } from "./archive";
 import { folderArgument, loadManifest, projectFor } from "./files";
 import { CLI_VERSION } from "./version";
+import { setClientUsage } from "./http";
 import { skillsCommand } from "./skills";
 import { refreshSkills, setupCommand } from "./setup";
 import { limitsCommand } from "./allowance";
@@ -274,6 +275,7 @@ const REFRESHES_PROJECT_SKILLS = new Set(["check", "dev", "deploy"]);
 /** Commands that work on a game's folder, which they find from the one they are given (projectFor). */
 const PROJECT_COMMANDS = new Set(["check", "dev", "deploy", "vendor", "status", "open", "pull", "submit", "deployments", "releases", "rollback", "unpublish", "restore", "details", "jam", "delete", "achievements", "publish"]);
 const ENV = [
+  { name: "OPENGAME_UPLOAD_RESUME_ROUNDS", description: "How many more times deploy tries a dropped upload, after waits of 5, 15, 30 and 60 s, before it exits with the command that resumes it. Defaults to 4; 0 exits at the first drop." },
   { name: "OPENGAME_API_URL", description: "The OpenGame origin to talk to. Defaults to https://opengame.io. Set it when you were given a different origin." },
   { name: "OPENGAME_TOKEN", description: "A token from settings, for CI and agents. Never pass a token as a flag." },
   { name: "OPENGAME_CREDENTIAL_STORE", description: "Set to file to store the login in ~/.config/opengame/auth.json instead of the macOS Keychain." },
@@ -509,6 +511,11 @@ async function main() {
     const opens = await launchNotice(Boolean(flags["token-stdin"]));
     if (opens) output.emit({ type: "notice", code: "not_launched", message: `${opens} You can set up and check your game on this machine now; deploying it opens then.` });
   } else if (!BEFORE_LAUNCH.has(command)) launch = await requireLaunched(Boolean(flags["token-stdin"]));
+  /* The command's name, from a fixed list, on every request it makes from here; none for a
+     command that runs on this machine alone (packages/protocol/src/client-usage.ts). Set after
+     the launch check above, which every command makes first, so that request is not counted
+     as one of the command's own. */
+  setClientUsage(cliUsageCommand(command, positional[0], Boolean(flags["dry-run"])));
   const takesFolder = Boolean(commands[command]!.args?.includes("dir"));
   // token takes create|list|revoke and jams a slug: one argument each, like a folder.
   // skills takes its action first, then the folder.

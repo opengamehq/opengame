@@ -3,6 +3,7 @@ import { archivePartBytes, archivePartsSchema, archivePartUploadSchema, type Arc
 import { LIMITS } from "@opengame/shared";
 import { Api, UploadInterrupted } from "./http";
 import { retryShortly } from "./incremental";
+import { Meter } from "./transport";
 import { CliError, type Output } from "./output";
 
 /**
@@ -41,14 +42,19 @@ export async function uploadArchiveParts(api: Api, token: string, operation: str
     const queue = Array.from({ length: parts.partCount }, (_, index) => index + 1).filter(part => !done.has(part));
     const inFlight = new Map<number, number>();
     let landed = parts.uploadedParts.reduce((sum, part) => sum + archivePartBytes(parts.byteSize, parts.partBytes, part), 0);
-    let shown = -1;
+    let shown = -1, shownAt = 0;
+    /* Rate and time left, as the file upload says them (transport.ts, Meter), and a repaint at
+       least once a second: at 1 MB/s a percent of a 4 GiB archive is 43 s, and until 18 Nov
+       2026 this line said "Sending archive: N of M bytes" in raw bytes and stood still that long. */
+    const meter = new Meter();
     const report = () => {
       const sent = landed + [...inFlight.values()].reduce((sum, value) => sum + value, 0);
       const percent = Math.floor(sent / parts.byteSize * 100);
-      if (percent === shown || (percent % 10 !== 0 && output.json)) return;
-      shown = percent;
-      output.emit({ type: "progress", stage: "upload", operation, message: `Sending archive: ${sent} of ${parts.byteSize} bytes`,
-        bytes: sent, total: parts.byteSize, elapsedMs: Date.now() - startedAt });
+      const now = Date.now();
+      if (output.json ? percent === shown || percent % 10 !== 0 : percent === shown && now - shownAt < 1000) return;
+      shown = percent; shownAt = now;
+      output.emit({ type: "progress", stage: "upload", operation, message: meter.words(Math.min(sent, parts.byteSize), parts.byteSize, sent),
+        bytes: sent, total: parts.byteSize, elapsedMs: now - startedAt });
     };
     report();
     let next = 0, failed = false, left = false;

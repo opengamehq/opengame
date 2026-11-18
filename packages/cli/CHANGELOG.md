@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.13.1
+
+- `check` and `deploy` say how long the files an engine downloads before its first frame
+  take on a 50 Mbps line, when that is 3 s or more: its `.wasm`, Unity's `.data` and
+  framework, Godot's `.pck` and Emscripten's `.data`, each counted as the copy OpenGame sends.
+  The note names the largest files and the export settings to change in Unity, Godot, Unreal
+  or Emscripten. It shipped in 0.13.0 without a line here.
+- A Unity `.data` uploaded through the asset plan now counts toward that note. It is still
+  downloaded before the first frame, and the CLI's check left it out.
+- `opengame deploy` picks a dropped upload up again in the same run. When the connection
+  drops and a file or part runs out of tries, it waits 5, 15, 30 and then 60 s and resumes,
+  keeping everything already sent, and says so each time. It used to exit and ask you to run
+  it again. `OPENGAME_UPLOAD_RESUME_ROUNDS=0` stops at the first drop, for a job that would
+  rather fail fast.
+- Sending an archive says its rate and the time left ("Sending 1.2 GB of 4.0 GB at 12 MB/s,
+  about 4 min left"), as sending files already did, and the line moves at least once a second.
+
+- Every request to the OpenGame API now names the CLI (`x-opengame-client: cli`) and the
+  command that made it (`x-opengame-cli-command`, such as `deploy` or
+  `achievements:retire`), beside the version it already sent. Never an argument, a path, a
+  game or a flag's value. OpenGame counts requests per token, version and command per day to
+  learn which commands people use. `init`, `check`, `dev`, `vendor`, `setup`, `skills`,
+  `token` and `deploy --dry-run` send no command name, and no command makes a request it did
+  not make before.
+- `opengame dev` serves SDK 0.5.1, which tells OpenGame its version and which of its
+  features a game uses.
+- While an upload goes up, its rate and time left are read from what this run sends. Picking
+  an upload back up used to count the files already there as speed, and could say
+  "at 402 MiB/s, about 2 s left" over a slow line.
+- A Godot export with Progressive Web App output is no longer warned about: a game's service
+  worker now runs on its own address on OpenGame. `opengame dev` still runs none and says so;
+  check caching on a private preview.
+
 ## 0.13.0
 
 - `opengame.json` says how the game is played with `players`: `"single"`, or

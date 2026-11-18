@@ -8,7 +8,11 @@ import { sha256Hex } from "./sha256";
  * launchAt and nothing new deploys after 19 Dec 2026 12:00 am PT. Since 11 Nov 2026 launchAt
  * is 18 Nov 2026 12:00 am PT, the jam's kickoff (the owner: "lets just have everything go live and
  * be unveiled on November 18th 12am PT automatically"). The 17th is gone: the site, sign-in,
- * the CLI, uploads, the blog and the jam open at one instant. Web, the
+ * the CLI, uploads, the blog and the jam open at one instant. On 17 Nov 2026 the owner moved
+ * that instant three hours earlier, to 9:00 pm PT on the 17th, which is 12:00 am ET on the
+ * 18th ("go live at 9pm PT / 12am EST tonight"): 2026-11-18T05:00:00Z. The copy still names
+ * "18 November", the day in Eastern time, UTC and Europe; a sentence that states the hour
+ * names both zones. Web, the
  * API, the CLI, the pipeline and the Workers all read these two instants, from launch.json
  * when they are not TypeScript, so no surface can open a minute before another. The
  * database cannot read a file, so it carries the same two instants in
@@ -42,7 +46,8 @@ export const COMMITTED_LAUNCH_AT = new Date(launch.launchAt);
 export const COMMITTED_ENTRIES_CLOSE_AT = new Date(launch.entriesCloseAt);
 /**
  * When the launch jam takes its first entry, and when the creator platform opens to
- * everybody: 18 Nov 2026 12:00 am PT, the same instant as launchAt.
+ * everybody: 17 Nov 2026 9:00 pm PT (18 Nov 12:00 am ET) since 17 Nov 2026, the same
+ * instant as launchAt.
  *
  * It was a day after launchAt from 5 to 11 Nov 2026 (the site on the 17th, the CLI, uploads
  * and entries on the 18th). The owner, on 11 Nov 2026, made them one instant, so the two keys in
@@ -219,10 +224,14 @@ export function jamOpensAt(heldUntil: Date | null = null, clock: LaunchClock = l
   return opens.getTime() > kickoff.getTime() ? opens : kickoff;
 }
 
-const PACIFIC_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "America/Los_Angeles" });
+/* The opening's day, in Eastern time since 17 Nov 2026. The opening is 9:00 pm PT on the 17th
+   and LAUNCH_COPY calls it "18 November", its day in Eastern time, UTC and Europe. Read in
+   Pacific, an owner hold of an hour named the 17th, a day earlier than the unheld copy. For a
+   hold that lands at midnight Pacific or later the two zones name the same day. */
+const OPENING_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "America/New_York" });
 
 /**
- * The day the site opens, as a sentence says it: LAUNCH_COPY, or the held day in Pacific time
+ * The day the site opens, as a sentence says it: LAUNCH_COPY, or the held day in Eastern time
  * while an owner hold pushes the opening later. For copy shown before launch ("OpenGame
  * opens on 18 November"), which would otherwise name a day that has passed during a long
  * hold.
@@ -230,19 +239,19 @@ const PACIFIC_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "l
 export function opensAtCopy(heldUntil: Date | null = null, clock: LaunchClock = launchClock()): string {
   const opens = opensAt(heldUntil, clock);
   if (opens.getTime() === COMMITTED_LAUNCH_AT.getTime()) return LAUNCH_COPY;
-  return PACIFIC_DAY.format(opens);
+  return OPENING_DAY.format(opens);
 }
 
 /**
- * The kickoff as a sentence says it: KICKOFF_COPY, or the held day in Pacific time while an
+ * The kickoff as a sentence says it: KICKOFF_COPY, or the held day in Eastern time while an
  * owner hold pushes the site's opening past the kickoff. For every sentence that says when
  * the CLI, uploads or entries open, so none of them names a day that has passed during a
- * long hold. On a rehearsal the moment is the rehearsed opening, named in Pacific time.
+ * long hold. On a rehearsal the moment is the rehearsed opening, named in Eastern time.
  */
 export function jamOpensAtCopy(heldUntil: Date | null = null, clock: LaunchClock = launchClock()): string {
   const opens = jamOpensAt(heldUntil, clock);
   if (opens.getTime() === COMMITTED_JAM_KICKOFF_AT.getTime()) return KICKOFF_COPY;
-  return PACIFIC_DAY.format(opens);
+  return OPENING_DAY.format(opens);
 }
 
 /** Launched once the clock passes launchAt, unless an owner hold pushes it later. */

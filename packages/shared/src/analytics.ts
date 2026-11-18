@@ -1,7 +1,22 @@
 /** The trusted collector fills identity fields after validating the session. Game code
  * supplies event IDs, time and allowlisted properties; it never supplies ownership. */
-export const ANALYTICS_KINDS = ["play", "session_start", "session_checkpoint", "session_end", "heartbeat", "impression", "page_view", "custom", "ready", "error", "performance", "attention", "score", "achievement", "share", "remix"] as const;
+export const ANALYTICS_KINDS = ["play", "session_start", "session_checkpoint", "session_end", "heartbeat", "impression", "page_view", "custom", "ready", "error", "performance", "attention", "score", "achievement", "share", "remix", "feature"] as const;
 export type AnalyticsKind = typeof ANALYTICS_KINDS[number];
+
+/**
+ * The SDK features a game can use, each recorded once a page session as an `sdk_feature`
+ * event of kind `feature` the first time the game uses it (packages/sdk/src/index.ts), so
+ * the platform can say which parts of the SDK games actually call. og-api refuses any other name and the
+ * collector refuses the event on any other kind, so a game cannot put free text here.
+ * Creators' reports read their own kinds by name and never this one.
+ */
+export const SDK_FEATURES = ["track", "score_submit", "score_read", "player_stats", "achievement_unlock", "achievement_list",
+  "invite", "open_link", "fullscreen", "sign_in", "avatar", "pause", "mute", "radio"] as const;
+export type SdkFeature = typeof SDK_FEATURES[number];
+/** A published package's version as OpenGame keeps it: x.y.z and a short pre-release. The
+ * SDK's on `sdk_ready`, and the CLI's and the MCP server's in platform_client_usage_daily,
+ * whose check constraint spells the same pattern in SQL. */
+export const PACKAGE_VERSION_PATTERN = /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[0-9A-Za-z.]{1,24})?$/;
 export type AnalyticsEvent = {
   schemaVersion: 1;
   eventId: string;

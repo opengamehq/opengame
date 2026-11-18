@@ -32,6 +32,7 @@ export * from "./archive-parts";
 export * from "./deploy-source";
 
 export * from "./bootstrap";
+export * from "./client-usage";
 
 export { studioExperimentSchema, studioExperimentRefusals, type StudioExperimentRefusal } from "./experiments";
 

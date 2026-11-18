@@ -328,7 +328,9 @@ export async function startDevServer(options: { snapshot: Map<string, Uint8Array
        the game's, so they stay quiet. */
     if (path === LIMITS.bundle.entryPoint && gameQuery(request.url ?? "")) options.onQueryString?.();
     if (!isBundlePath(path) || /[%\\\x00-\x1f]/.test(path)) return reply(400, "Invalid path");
-    if (request.headers["service-worker"] === "script") return reply(403, "Service workers are not served by the game runtime.");
+    // A published game or a private preview runs its worker under og-games' host script
+    // (infra/worker/src/service-worker.ts); this local server has no copy of it, so it runs none.
+    if (request.headers["service-worker"] === "script") return reply(403, "opengame dev does not run service workers. Check caching on a private preview.");
     const send = (bytes: Uint8Array) => {
       const type = resolveContentType(path);
       response.setHeader("Content-Type", type.contentType);

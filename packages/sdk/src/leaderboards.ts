@@ -121,7 +121,9 @@ export class Leaderboards {
   private manifest: Promise<Result<Shape[]>> | null = null;
   private readonly requests = new Set<AbortController>();
   constructor(private readonly context: () => LeaderboardContext,
-    private readonly initialize: () => Promise<unknown>) {}
+    private readonly initialize: () => Promise<unknown>,
+    /** The client's feature count (index.ts `feature`). */
+    private readonly note: (name: 'score_submit' | 'score_read' | 'player_stats') => void = () => {}) {}
   isHostedOrigin(hostname = this.context().win?.location.hostname): boolean {
     const suffix = new URL(__SDK_CONFIG__.leaderboards.apiOrigin).hostname.replace(/^api\./, '');
     return hostname === suffix || Boolean(hostname?.endsWith(`.${suffix}`));
@@ -142,6 +144,7 @@ export class Leaderboards {
    * local mock answers from this browser's scores; it keeps no career rows, so a career board
    * reads null there until the game is hosted. */
   async stats(): Promise<Result<PlayerStats>> {
+    this.note('player_stats');
     await this.initialize();
     const state = this.context(), generation = this.generation;
     if (state.disposed || !state.win || !state.enabled) return fail('unavailable', state.disposed ? 'disposed' : 'leaderboards_unavailable');
@@ -322,6 +325,7 @@ export class Leaderboards {
       columns: Object.freeze(columns), variants: Object.freeze(variants) }) as LeaderboardShape;
   }
   private async read(key: string, view: View, options: Query = {}): Promise<Result<LeaderboardPage>> {
+    this.note('score_read');
     const requested = options.limit, offset = options.offset ?? 0, filter = options.filter ?? {};
     if (requested !== undefined && (!Number.isSafeInteger(requested) || requested<1)) return fail('invalid_limit', 'Use a positive integer limit.');
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > __SDK_CONFIG__.leaderboards.offsetMax || (offset && view !== 'top')) {
@@ -387,6 +391,7 @@ export class Leaderboards {
       total: typeof data.total === 'number' ? data.total : null, offset, sort, filter: echoed, shape } };
   }
   private async submit(key: string, run: LeaderboardRun): Promise<Result<ScoreReceipt>> {
+    this.note('score_submit');
     const { value } = run;
     if (!finite(value)) return fail('invalid_score', 'Use a finite number.');
     const meta = validateScoreMeta(run.meta, __SDK_CONFIG__.leaderboards.metaPolicy);

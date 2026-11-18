@@ -121,3 +121,64 @@ test("with the variable left set and no OPENGAME_API_URL, the CLI stops before i
     assert.ok(!run.stdout.includes(SECRET) && !run.stderr.includes(SECRET), "the secret was printed");
   } finally { await home.remove(); }
 });
+
+/* The usage headers (src/http.ts setClientUsage, packages/protocol/src/client-usage.ts): the
+   CLI names itself and the command on every API request, and never an argument. Run through
+   the built CLI against a local API, so what is checked is what goes on the wire. */
+test("every API request names the client and the command, and never an argument", async () => {
+  const api = await fakeApi((req, res) => {
+    if (req.url === "/api/v1/status") reply(res, 200, { launched: true });
+    else if (req.url === "/api/v1/auth/me") reply(res, 200, { handle: "tester", ogNumber: 7, avatar: { seed: 0, palette: "paper" } });
+  });
+  const home = await tempDir("og-usage-");
+  try {
+    const env = cleanEnv({ OPENGAME_API_URL: api.origin, OPENGAME_TOKEN: token, XDG_CONFIG_HOME: home.dir, NO_PROXY: "127.0.0.1", no_proxy: "127.0.0.1" });
+    const runs: [string[], string][] = [
+      [["whoami", "--json"], "whoami"],
+      [["jams", "secret-jam-slug", "--json"], "jams"],
+      [["achievements", "retire", "first-lap-secret", "--game", "11111111-1111-4111-8111-111111111111", "--yes", "--json"], "achievements:retire"],
+    ];
+    for (const [args, command] of runs) {
+      const before = api.seen.length;
+      const run = await spawnCli(args, { env, cwd: home.dir });
+      const sent = api.seen.slice(before).filter(request => request.url.startsWith("/api/v1/") && request.url !== "/api/v1/status");
+      assert.ok(sent.length > 0, `${args[0]} made no API request: ${run.stdout}${run.stderr}`);
+      // The launch check every command makes first is not one of the command's own requests.
+      for (const check of api.seen.slice(before).filter(request => request.url === "/api/v1/status")) assert.equal(check.headers["x-opengame-cli-command"], undefined);
+      for (const request of sent) {
+        assert.equal(request.headers["x-opengame-client"], "cli", request.url);
+        assert.equal(request.headers["x-opengame-cli-command"], command, request.url);
+        assert.equal(request.headers["x-opengame-client-version"], undefined, "the CLI's version is x-opengame-cli-version");
+        const headers = JSON.stringify(request.headers);
+        for (const argument of args.slice(1)) if (!argument.startsWith("--") && argument !== "retire") assert.ok(!headers.includes(argument), `${argument} reached a header`);
+      }
+    }
+  } finally { await api.close(); await home.remove(); }
+});
+
+test("a command that runs on this machine sends no command name, and asks nothing new", async () => {
+  const api = await fakeApi((req, res) => { if (req.url === "/api/v1/status") reply(res, 200, { launched: true }); });
+  const home = await tempDir("og-usage-local-");
+  try {
+    // The launch notice is the one request init and check make, and they made it before 0.13.0.
+    const env = cleanEnv({ OPENGAME_API_URL: api.origin, OPENGAME_TOKEN: token, XDG_CONFIG_HOME: home.dir, OPENGAME_TEST_SKIP_LAUNCH_CHECK: undefined, NO_PROXY: "127.0.0.1", no_proxy: "127.0.0.1" });
+    for (const args of [["check", home.dir, "--json"], ["init", home.dir, "--json"]]) {
+      const before = api.seen.length;
+      await spawnCli(args, { env, cwd: home.dir });
+      const sent = api.seen.slice(before);
+      assert.deepEqual(sent.map(request => request.url), ["/api/v1/status"], args[0]);
+      assert.equal(sent[0]!.headers["x-opengame-client"], "cli");
+      assert.equal(sent[0]!.headers["x-opengame-cli-command"], undefined, `${args[0]} named itself`);
+    }
+  } finally { await api.close(); await home.remove(); }
+});
+
+test("every command the CLI has is either named on the wire or listed as local", async () => {
+  const { CLI_USAGE_COMMANDS, CLI_LOCAL_COMMANDS } = await import("@opengame/protocol");
+  const help = (JSON.parse((await spawnCli(["help", "--json"])).stdout) as { data: { commands: Record<string, unknown> } }).data;
+  const named = new Set(CLI_USAGE_COMMANDS.map(command => command.split(":")[0]));
+  for (const command of Object.keys(help.commands)) {
+    assert.ok(named.has(command) || (CLI_LOCAL_COMMANDS as readonly string[]).includes(command),
+      `${command} is in neither list in packages/protocol/src/client-usage.ts, so the server would count it as other`);
+  }
+});

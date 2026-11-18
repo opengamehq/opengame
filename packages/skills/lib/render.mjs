@@ -43,20 +43,30 @@ function retiredChecks() {
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-/* The launch clock is set in Pacific time (12:00 am PT on the day), so the day a skill names
-   is the Pacific calendar day of the instant, which is also the UTC day for every instant
-   launch.json has held. */
-export function pacificDate(iso) {
+/* The day a skill names for a launch-clock instant, as a calendar day in one zone. The clock
+   was set in Pacific time (12:00 am PT on the day) until 17 Nov 2026, when launchAt moved to
+   9:00 pm PT on the 17th, 12:00 am ET on the 18th. launch.json's copy calls that "18 November",
+   its Eastern day, so `{{launch opens}}` reads the Eastern day (`openingDate`), which is also
+   the Pacific day of any instant at midnight Pacific. */
+function zonedDate(iso, timeZone) {
   const instant = new Date(iso);
   if (Number.isNaN(instant.getTime())) throw new Error(`launch.json has ${JSON.stringify(iso)}, which is not an instant`);
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", year: "numeric", month: "numeric", day: "numeric" })
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "numeric", day: "numeric" })
     .formatToParts(instant).map(({ type, value }) => [type, value]));
   return `${Number(parts.day)} ${MONTHS[Number(parts.month) - 1]} ${parts.year}`;
 }
 
+export function pacificDate(iso) {
+  return zonedDate(iso, "America/Los_Angeles");
+}
+
+export function openingDate(iso) {
+  return zonedDate(iso, "America/New_York");
+}
+
 /** The launch text a skill may name, by the word after `{{launch ...}}`. */
 export function launchText(launch, name) {
-  if (name === "opens") return pacificDate(launch.launchAt);
+  if (name === "opens") return openingDate(launch.launchAt);
   if (name === "kickoff") return launch.kickoffCopy;
   if (name === "close") return launch.closeCopy;
   throw new Error(`no launch value "${name}"; use opens, kickoff or close`);

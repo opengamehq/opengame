@@ -33,65 +33,16 @@ function calls(text: string): Set<string> {
   const found = new Set<string>();
   const root = parseScript(text);
   if (!root) return found;
-  // Each node carries whether it sits inside `if (<x>.config.serviceWorker ...)`.
-  const pending: [ScriptNode, boolean][] = [[root, false]];
+  const pending: ScriptNode[] = [root];
   while (pending.length) {
-    const [node, guarded] = pending.pop()!;
-    if (node.type === "CallExpression") {
-      const name = callName(node.callee);
-      /* Godot's loader carries `navigator.serviceWorker.register(this.config.serviceWorker)`
-         (4.x, in installServiceWorker) and `register(me.config.serviceWorker)` (3.x, after
-         callMain), each inside `if (<x>.config.serviceWorker && ...)`. Only that exact
-         shape is set aside here; a register call anywhere else, with any argument, keeps
-         its ordinary name. engineFindings decides what the guarded one means. */
-      const argument = (node.arguments as ScriptNode[] | undefined)?.[0];
-      found.add(guarded && SW_REGISTER.test(name) && CONFIG_SW.test(callName(argument)) ? CONFIG_SW_REGISTER : name);
-    }
-    const guards = node.type === "IfStatement" && mentions(node.test as ScriptNode, CONFIG_SW);
-    for (const [key, value] of Object.entries(node)) {
-      const inner = guarded || (guards && key === "consequent");
-      if (Array.isArray(value)) pending.push(...value.filter((v): v is ScriptNode => Boolean(v && typeof v === "object" && "type" in v)).map((v): [ScriptNode, boolean] => [v, inner]));
-      else if (value && typeof value === "object" && "type" in value) pending.push([value as ScriptNode, inner]);
-    }
-  }
-  return found;
-}
-
-/** Whether any member expression under `node` reads as `pattern`. */
-function mentions(node: ScriptNode | undefined, pattern: RegExp): boolean {
-  const pending = node ? [node] : [];
-  while (pending.length) {
-    const next = pending.pop()!;
-    if (next.type === "MemberExpression" && pattern.test(callName(next))) return true;
-    for (const value of Object.values(next)) {
+    const node = pending.pop()!;
+    if (node.type === "CallExpression") found.add(callName(node.callee));
+    for (const value of Object.values(node)) {
       if (Array.isArray(value)) pending.push(...value.filter((v): v is ScriptNode => Boolean(v && typeof v === "object" && "type" in v)));
       else if (value && typeof value === "object" && "type" in value) pending.push(value as ScriptNode);
     }
   }
-  return false;
-}
-
-const SW_REGISTER = /^(?:(?:window|globalThis|self)\.)?navigator\.serviceWorker\.register$/;
-const CONFIG_SW = /(?:^|\.)config\.serviceWorker$/;
-const CONFIG_SW_REGISTER = "navigator.serviceWorker.register(config.serviceWorker)";
-
-/* Where a bundle gives `serviceWorker` a value. Godot itself writes two, both empty or
-   copied: the EngineConfig default `serviceWorker: ''` and
-   `this.serviceWorker = parse('serviceWorker', this.serviceWorker)`. Anything else, a PWA
-   export's `"serviceWorker":"index.service.worker.js"` or a game's own
-   `{...GODOT_CONFIG, serviceWorker: "x.js"}`, arms Godot's guarded register with a worker
-   of any name. A key assembled at runtime from pieces is not visible to this, which is
-   why it is advice: the games origin refuses service-worker scripts either way. */
-function namedWorker(sources: EngineSource[]): string | undefined {
-  for (const source of sources) {
-    for (const match of source.text.matchAll(/\bserviceWorker\b\s*["']?\s*\]?\s*(?::|=(?!=))/g)) {
-      const rest = source.text.slice(match.index, match.index + 80);
-      if (/^serviceWorker["']?\s*:\s*(["'])\1/.test(rest)) continue;
-      if (/^serviceWorker\s*=\s*parse\(\s*["']serviceWorker["']\s*,\s*this\.serviceWorker\s*\)/.test(rest)) continue;
-      return source.path;
-    }
-  }
-  return undefined;
+  return found;
 }
 
 /** Observe explicit thread use, not a SharedArrayBuffer feature-detection check.
@@ -176,21 +127,6 @@ export function engineFindings(paths: string[], sources: EngineSource[], report:
       for (const call of calls(source.text)) if (!scriptCalls.has(call)) scriptCalls.set(call, source.path);
     }
   }
-  /* A worker counts when one ships or when something registers one, whatever its file is
-     called. Godot's own guarded register(config.serviceWorker) is set aside only in a
-     Godot export whose config never names a worker; once something does, that register
-     call is a registration like any other, and the notice points at whatever named it. */
-  const register = [...scriptCalls].find(([call]) => SW_REGISTER.test(call))?.[1];
-  const guarded = scriptCalls.get(CONFIG_SW_REGISTER);
-  const armed = guarded === undefined ? undefined : !ids.has("godot") ? guarded : namedWorker(sources);
-  const serviceWorker = paths.find(path => /(?:^|\/)(?:sw\.js|service-worker\.js|[^/]+\.service\.worker\.js)$/.test(path)) ?? register ?? armed;
-  /* Unreal 5.9 stages sw.js in every Wasm export as a data cache (and as the isolation fallback
-     for hosts without headers). Its loader carries on uncached when registration fails, and
-     og-games sends the isolation headers itself, so there is nothing to turn off. Measured by
-     playing a real export from a local og-games on 17 Nov 2026. */
-  if (serviceWorker) add("engine-service-worker", "note", "This export includes a service worker.", ids.has("unreal")
-    ? "Unreal's sw.js is the page's optional data cache. Game origins refuse service-worker scripts, so the loader reads each file over the network instead, and OpenGame sends the isolation headers it would otherwise add. Nothing to change in the build."
-    : "Game origins refuse service-worker scripts. Disable offline or PWA export features and verify the game starts without its install step.", serviceWorker);
   if ([...scriptCalls.keys()].some(call => /^(?:(?:window|globalThis)\.)?(?:alert|confirm|prompt)$/.test(call))) add("engine-modal-dialog", "note",
     "This export calls a browser modal dialog.", "The game frame does not allow modal dialogs. Replace alert, confirm, prompt or GameMaker show_message with an in-game panel.");
   if (ids.has("unity")) {
@@ -243,11 +179,10 @@ export function engineFindings(paths: string[], sources: EngineSource[], report:
   if (ids.has("renpy")) add("renpy-needs-eval", "note", "This Ren'Py web export runs JavaScript through eval().",
     "OpenGame allows eval(), so nothing has to change. The playtest checks that the game starts.",
     hit(/\b_emscripten_run_script/)?.path);
-  if (ids.has("godot")) {
-    const pwa = paths.find(path => /\.service\.worker\.js$/i.test(path)) ?? hit(/\bserviceWorker\s*["']?\s*:\s*(?:true|["'][^"']+\.js["'])/)?.path;
-    if (pwa) add("godot-pwa", "warning", "This Godot export enables Progressive Web App support.",
-      "Turn off Progressive Web App in the export preset. Game origins refuse service workers, and the PWA install step can prevent the game from starting.", pwa);
-  }
+  /* No finding for a service worker, a PWA export or a register() call since 17 Nov 2026:
+     a game may keep a worker on its own address, and og-games hosts it under rules of its
+     own (infra/worker/src/service-worker.ts). Until then a shipped sw.js, a register() call
+     and a Godot PWA export were each a note or a warning saying the worker would be refused. */
   if (ids.has("cocos")) {
     const desktop = paths.find(path => /(?:^|\/)web-desktop\//i.test(path)) ?? hit(/#GameDiv\s*\{[^}]*\b(?:width|height)\s*:\s*\d+px/i)?.path;
     if (desktop) add("cocos-web-desktop", "warning", "This Cocos export uses a desktop-sized container.",
@@ -339,10 +274,15 @@ export async function engineArchiveShapeFindings(files: PreflightFile[], engineI
    whole on the first read was tried on 17 Nov 2026 and made the level later, #1758), and so is
    anything a game streams after it starts, which this cannot see.
 
-   Each file is counted once, as the copy og-games sends: a stored .br or .gz twin at its size,
-   the smaller where there are both; a plain .wasm at what og-games' in-transit Brotli leaves of
+   Each file is counted once, as the copy og-games sends: a stored .br twin at its size, else a
+   stored .gz one, which is the order og-games chooses them in for a browser that takes both
+   (inventory-delivery.ts, chooseEncoding), whichever is smaller; a plain .wasm at what og-games' in-transit Brotli leaves of
    one; any other plain file whole. og-games compresses a plain .pck or .data on the way too, by
-   an amount that depends on what is in it, so when one is counted the note says "up to". */
+   an amount that depends on what is in it, so when one is counted the note says "up to".
+
+   It cannot tell a startup pack from a level a game loads later by name, so it says what the
+   engine files come to and asks the creator to check that only the first screen's are loaded
+   before the game starts, rather than claiming a player waits for all of them. */
 const BOOT_FILE = /\.(?:wasm|data|pck)$|\.framework\.js$/i;
 const BOOT_ADVICE: Partial<Record<string, string>> = {
   unity: "In Unity: Brotli with Decompression Fallback off, Code Optimization set to Disk Size with LTO, Strip Engine Code on and Managed Stripping Level High. Load what the first scene does not need with Addressables.",
@@ -358,12 +298,13 @@ export function bootDownloadFindings(files: readonly { path: string; size: numbe
      allowlist named them. No numbers, no note. */
   if (![bootDownloadMbps, bootDownloadNoteSeconds, wasmTransitRatio].every(value => typeof value === "number" && value > 0)) return [];
   /* The copy sent for each plain path: the smallest stored twin, else the plain file. */
-  const sent = new Map<string, { path: string; size: number; stored: boolean }>();
+  const sent = new Map<string, { path: string; size: number; stored: boolean; rank: number }>();
   for (const file of files) {
-    const plain = compressedBrowserAsset(file.path)?.path ?? file.path;
-    const stored = plain !== file.path;
+    const asset = compressedBrowserAsset(file.path);
+    const plain = asset?.path ?? file.path;
+    const rank = asset === null ? 0 : asset.encoding === "gz" ? 1 : 2;
     const held = sent.get(plain);
-    if (!held || (stored && (!held.stored || file.size < held.size))) sent.set(plain, { path: file.path, size: file.size, stored });
+    if (!held || rank > held.rank) sent.set(plain, { path: file.path, size: file.size, stored: asset !== null, rank });
   }
   const boot = [...sent].flatMap(([plain, file]) => {
     if (!BOOT_FILE.test(plain)) return [];
@@ -379,7 +320,7 @@ export function bootDownloadFindings(files: readonly { path: string; size: numbe
   const largest = boot.slice(0, 3).map(file => `${file.path} (${file.ceiling ? "up to about" : "about"} ${formatBytes(file.wire)})`).join(", ");
   return [{
     code: "boot-download", severity: "note", path: boot[0]?.path,
-    title: `Players download ${about} ${formatBytes(wire)} before this game can start: ${about} ${Math.round(seconds)} s on a ${bootDownloadMbps} Mbps connection.`,
-    detail: `Largest: ${largest}. Every player waits for these on their first visit; a repeat visit reads them from the browser's cache. ${engine ? BOOT_ADVICE[engine] : "Load what the first screen does not need after the game starts."}`,
+    title: `This build's engine files come to ${about} ${formatBytes(wire)} on the wire: ${about} ${Math.round(seconds)} s on a ${bootDownloadMbps} Mbps connection if they all load before the game starts.`,
+    detail: `Largest: ${largest}. Whatever of these loads before the first frame, every player waits for on their first visit; a repeat visit reads it from the browser's cache. If some of them are levels the game loads later, they do not count. ${engine ? BOOT_ADVICE[engine] : "Load what the first screen does not need after the game starts."}`,
   }];
 }

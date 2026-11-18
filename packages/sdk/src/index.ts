@@ -65,6 +65,16 @@ function eventId(): string {
   const time = Date.now().toString(16).padStart(12, '0');
   return `${time.slice(0, 8)}-${time.slice(8)}-7${random.slice(0, 3)}-${(8 + (bytes[9]! & 3)).toString(16)}${random.slice(3, 6)}-${random.slice(6, 18)}`;
 }
+/** SDK_FEATURES in packages/shared/src/analytics.ts, which og-api and the collector hold the
+ * event to; a local copy so the published types name no workspace package (tests/analytics.test.mjs
+ * keeps the two equal). */
+type Feature = 'track' | 'score_submit' | 'score_read' | 'player_stats' | 'achievement_unlock' | 'achievement_list'
+  | 'invite' | 'open_link' | 'fullscreen' | 'sign_in' | 'avatar' | 'pause' | 'mute' | 'radio';
+/* How many names Feature has. `feature()` is private only to TypeScript, and a game can call it
+   with any string; each new one would be a note outside the game's event budget, so a page
+   notes at most this many (review of the fix for Greptile on opengamehq/opengame#20). og-api
+   refuses a name not in SDK_FEATURES, so a made-up one goes no further. */
+const FEATURE_COUNT = 14;
 type QueuedEvent = { token: string | null; eventId: string; occurredAt: string; name: string; props: Record<string, string | number | boolean> };
 
 /** A local parent is trusted only by a local game. A published game must never
@@ -149,7 +159,7 @@ class Client {
   postToParent(message: Record<string, unknown>): Result { return this.send(message); }
   private readonly parentListeners = new Set<(data: Record<string, unknown>) => void>();
   private readonly boards = new Leaderboards(() => ({ win: this.win, local: this.localMode,
-    token: this.sessionToken, enabled: this.capabilities.includes("leaderboards"), preview: this.env.preview, disposed: this.disposed }), () => this.init());
+    token: this.sessionToken, enabled: this.capabilities.includes("leaderboards"), preview: this.env.preview, disposed: this.disposed }), () => this.init(), name => this.feature(name));
   private parentOrigin: string | null = null;
   private initialization: Promise<Environment> | null = null;
   private settle: ((env: Environment) => void) | null = null;
@@ -184,7 +194,7 @@ class Client {
   private readonly fullscreenListeners = new Set<Listener<boolean>>();
   private cancelLink: ((error: string) => void) | null = null;
   readonly achievements = new Achievements(
-    () => ({ token: this.sessionToken, preview: this.env.preview, disposed: this.disposed, generation: this.sessionGeneration }));
+    () => ({ token: this.sessionToken, preview: this.env.preview, disposed: this.disposed, generation: this.sessionGeneration }), name => this.feature(name));
   private events: QueuedEvent[] = [];
   private flushing = false;
   private eventsRecorded = 0;
@@ -200,19 +210,21 @@ class Client {
     get handle() { return client.playerValue.handle; },
     get ogNumber() { return client.playerValue.ogNumber; },
     get signedIn() { return client.playerValue.signedIn; },
-    get avatar() { return client.playerValue.avatar ?? null; },
+    get avatar() { client.feature('avatar'); return client.playerValue.avatar ?? null; },
     onChange: (listener: Listener<Player>) => subscribe(this.playerListeners, listener, this.playerValue),
     /** The player's entry on each board the game declares, in one request: a career board's
      * running totals (XP, lifetime totals) as well as their best runs. Fails like a board read. */
     stats: (): Promise<Result<PlayerStats>> => this.boards.stats(),
     /* No credential() here, deliberately. There was one, documented as something to
-       verify on the game's own server, and a published game cannot reach a server of
-       its own: connect-src on opengame.gg names this platform's API and broker only,
-       and the plan refuses games that need one. It also handed game code the bearer
-       token for this game's scores. The Ed25519 key set stays, for the Workers. When
-       creator server keys and an egress path exist, this comes back with them, and
-       with a verifier that checks gid, exp and preview. */
+       verify on the game's own server. Since runtime contract 2027-03 a game can reach
+       a server of its own, but that server still has nothing to verify against: the
+       published Ed25519 key set is empty, so tokens are the HMAC form only our Workers
+       can check, and the multiplayer guide tells creators to issue their own token. It
+       also handed game code the bearer token for this game's scores. When creator
+       server keys exist, this comes back with them, and with a verifier that checks
+       gid, exp and preview. */
     requestSignIn: (): Result => {
+      this.feature('sign_in');
       if (!this.capabilities.includes('identity')) return { ok: false, error: 'unavailable' };
       if (!this.localMode) return this.send({ type: 'sign-in' });
       // The local mock signs in at once, so onChange can be exercised offline.
@@ -222,22 +234,22 @@ class Client {
   }; })();
   readonly audio = (() => { const client = this; return {
     get muted() { return client.muted; },
-    onHostMute: (listener: Listener<boolean>) => subscribe(this.muteListeners, listener, this.muted),
+    onHostMute: (listener: Listener<boolean>) => (this.feature('mute'), subscribe(this.muteListeners, listener, this.muted)),
   }; })();
   readonly fullscreen = (() => { const client = this; return {
     get active() { return client.full; },
-    request: (): Result => this.send({ type: 'fullscreen' }),
+    request: (): Result => (this.feature('fullscreen'), this.send({ type: 'fullscreen' })),
     onChange: (listener: Listener<boolean>) => subscribe(this.fullscreenListeners, listener, this.full),
   }; })();
-  onPause(listener: Listener<boolean>) { return subscribe(this.pauseListeners, listener, this.paused); }
+  onPause(listener: Listener<boolean>) { this.feature('pause'); return subscribe(this.pauseListeners, listener, this.paused); }
   /** Invite links for a game with online play. `code` is the code in the `?join=` of
    * the invite this player opened, or null. `link(code)` is this game's page on OpenGame
    * with `?join=code`; opening it starts this game with that code. Null before `init`
    * finishes, outside OpenGame, and for a code the page would change (4 to 12 capitals
    * and digits, or 22 of A-Z a-z 0-9 _ -, pass as written). */
   readonly invite = (() => { const client = this; return {
-    get code() { return client.joinCode; },
-    link: (code: string): string | null => joinLink(client.localMode ? client.localInvitePage() : client.invitePage, code),
+    get code() { client.feature('invite'); return client.joinCode; },
+    link: (code: string): string | null => (client.feature('invite'), joinLink(client.localMode ? client.localInvitePage() : client.invitePage, code)),
   }; })();
   private invitePage: string | null = null;
   private joinCode: string | null = null;
@@ -245,6 +257,7 @@ class Client {
   /** Call directly from a click or key handler. The parent displays the destination;
    * the player then chooses Open site or Keep playing in the parent's own dialog. */
   openLink(url: string): Promise<Result> {
+    this.feature('open_link');
     if (this.disposed) return Promise.resolve({ ok: false, error: 'disposed' });
     if (!this.capabilities.includes('external-links') || !this.parentOrigin) return Promise.resolve({ ok: false, error: 'unavailable' });
     const href = externalGameLink(url, __SDK_CONFIG__.externalLinkUrlCharsMax, [this.parentOrigin, this.win?.location.origin ?? '']);
@@ -530,8 +543,27 @@ class Client {
   private reportReady = () => {
     if (this.readySent && !this.readyReported && (this.localMode || this.sessionToken) && this.capabilities.includes('analytics') && this.track('sdk_ready', { duration_ms: this.readyElapsed }).ok) this.readyReported = true;
     this.reportAttention();
+    this.features();
     this.health?.resume();
   };
+  /**
+   * @internal The game used `name` (SDK_FEATURES), recorded once a page session as an
+   * `sdk_feature` event, so the platform can see which parts of the SDK games call. Only
+   * with a session that grants analytics, once the game has reported ready as sdk_ready is,
+   * and never in the local mock; a feature used before then waits for it.
+   */
+  feature(name: Feature) { if (!this.hushed && (this.used.has(name) || this.used.size < FEATURE_COUNT)) { this.used.add(name); this.features(); } }
+  /** @internal The injected bridge's own subscriptions, which are not the game's use. */
+  hush(subscribe: () => void) { this.hushed = true; try { subscribe(); } finally { this.hushed = false; } }
+  private hushed = false;
+  private used = new Set<Feature>();
+  private noted = new Set<Feature>();
+  private features() {
+    if (this.localMode) return;
+    // A session without analytics drops what waited for one, as it drops startup events.
+    if (this.sessionToken && !this.capabilities.includes('analytics')) this.used.clear();
+    else if (this.sessionToken && this.readySent) for (const name of this.used) if (!this.noted.has(name) && this.record('sdk_feature', { feature: name }, true).ok) this.noted.add(name);
+  }
   private reportAttention = () => {
     if (!this.readySent || !this.sessionToken || this.paused || this.held || !this.capabilities.includes('analytics')) return false;
     if (!this.attentionReported && this.track('attention_coverage', { result: 'sdk_v1' }).ok) this.attentionReported = true;
@@ -552,6 +584,13 @@ class Client {
    * not stored by the server. Batches go to the events API with the game's session;
    * in the local mock, validated events are printed with `console.debug` at flush. */
   track(name: string, props: Record<string, unknown> = {}): Result {
+    // The SDK's own feature note spends none of the game's event budget, so a game may not
+    // send one: called in a loop it would grow the queue past every limit (Greptile on
+    // opengamehq/opengame#20). The note goes through record() from features() alone.
+    if (name === 'sdk_feature') return { ok: false, error: 'invalid_event' };
+    return this.record(name, props, false);
+  }
+  private record(name: string, props: Record<string, unknown>, internal: boolean): Result {
     const startup = this.startupOpen && this.initialization && !this.sessionToken;
     // A session from the early handshake is not a grant to record: events start at init.
     if (this.disposed || !this.initialization || (!this.localMode && !startup && (!this.sessionToken || !this.capabilities.includes('analytics')))) return { ok: false, error: 'unavailable' };
@@ -561,18 +600,26 @@ class Client {
       if (clean.result !== 'sdk_v1') return { ok: false, error: 'invalid_event' };
       clean = { result: 'sdk_v1' };
     }
+    // The two the SDK sends about itself carry what the shared sanitizer would drop; og-api
+    // keeps each only on its own event. Anything else a game names is its own event.
+    if (name === 'sdk_feature') clean = { feature: String(props.feature) };
+    else if (name === 'sdk_ready') clean.sdk_version = __SDK_CONFIG__.version;
+    else if (!/^(runtime_|first_input|attention_)/.test(name)) this.feature('track');
     // Do not bypass the shared sanitizer while its numeric policy is pending.
     if (name === 'runtime_performance' && (typeof clean.fps !== 'number' || typeof clean.sample_rate !== 'number')) return { ok: false, error: 'invalid_event' };
     if (new TextEncoder().encode(JSON.stringify({ name, props: clean })).byteLength > __SDK_CONFIG__.eventBytesMax) return { ok: false, error: 'invalid_event' };
     const now = Date.now();
     this.eventTimes = this.eventTimes.filter(time => time > now - __SDK_CONFIG__.rateWindowMs);
-    if (this.eventTimes.length >= __SDK_CONFIG__.eventsPerMinute || this.eventsRecorded >= __SDK_CONFIG__.eventsMax) return { ok: false, error: 'rate_limited' };
+    // A feature note, at most one per feature a page, never spends the game's own budget.
+    const own = !(internal && name === 'sdk_feature');
+    if (own && (this.eventTimes.length >= __SDK_CONFIG__.eventsPerMinute || this.eventsRecorded >= __SDK_CONFIG__.eventsMax)) return { ok: false, error: 'rate_limited' };
     let id: string;
     try { id = eventId(); } catch { return { ok: false, error: 'unavailable' }; }
     const event = { name, props: clean, token: this.sessionToken, eventId: id, occurredAt: new Date(now).toISOString() };
     const { token: _token, ...wire } = event;
     if (new TextEncoder().encode(JSON.stringify({ events: [wire] })).byteLength > __SDK_CONFIG__.batchBytesMax) return { ok: false, error: 'invalid_event' };
-    this.eventTimes.push(now); this.eventsRecorded++; this.events.push(event);
+    if (own) { this.eventTimes.push(now); this.eventsRecorded++; }
+    this.events.push(event);
     if (!this.batchTimer) this.batchTimer = setInterval(this.flush, __SDK_CONFIG__.eventBatchMs);
     return { ok: true, value: undefined };
   }

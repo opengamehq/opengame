@@ -4,68 +4,17 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execFile, execFileSync, spawn } from "node:child_process";
-import { promisify } from "node:util";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { LIMITS } from "@opengame/shared";
-import { receiptFindings, type GameManifest, type RepairFinding } from "@opengame/protocol";
+import { receiptFindings, type RepairFinding } from "@opengame/protocol";
 import { Output } from "../src/output";
 import { build } from "../src/deploy";
 import { withProject } from "../src/project";
-import { replyBootstrap, startupInformation } from "./bootstrap-fixture";
+import { startupInformation } from "./bootstrap-fixture";
+// The harness and fixtures are shared with the other repair-*.test.ts files; repair-harness.ts says why.
+import { run, binary, manifest, token, gameId, id, harness, lines, op, json, finding } from "./repair-harness";
 
-const run = promisify(execFile);
-const binary = fileURLToPath(new URL("../dist/cli.mjs", import.meta.url));
-const manifest: GameManifest = { title: "Night shift", description: "Survive until dawn with a light and a dwindling battery.", genre: "shooter-survival", controls: ["keyboard"] };
-const token = "ogt_" + "a".repeat(16) + "_" + "b".repeat(43);
-const gameId = "44444444-4444-4444-8444-444444444444";
-const id = (n: number) => `11111111-1111-4111-8111-${String(n).padStart(12, "0")}`;
-type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => boolean | void;
-
-/** A local API that answers like the real routes: their codes, their messages,
- * Retry-After where the server sends it. Unhandled paths are a test failure. */
-async function harness(handler: Handler) {
-  const seen: { method: string; url: string; body: string; key?: string }[] = [];
-  const server = createServer(async (req, res) => {
-    let body = ""; for await (const chunk of req) body += chunk;
-    seen.push({ method: req.method!, url: req.url!, body, key: req.headers["idempotency-key"] as string | undefined });
-    res.setHeader("content-type", "application/json");
-    if (handler(req, res, body) !== false && res.writableEnded) return;
-    if (replyBootstrap(req, res, token)) return;
-    if (req.url === "/api/v1/limits") { res.end(JSON.stringify(startupInformation())); return; }
-    res.statusCode = 599; res.end(JSON.stringify({ error: "unhandled", message: `unhandled ${req.method} ${req.url}` }));
-  });
-  server.listen(0, "127.0.0.1"); await once(server, "listening");
-  const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-  const root = await mkdtemp(join(tmpdir(), "og-repair-"));
-  const config = await mkdtemp(join(tmpdir(), "og-repair-config-"));
-  await writeFile(join(root, "opengame.json"), JSON.stringify(manifest));
-  await writeFile(join(root, "index.html"), "<!doctype html><title>Night shift</title>");
-  const env: NodeJS.ProcessEnv = { ...process.env, OPENGAME_API_URL: origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1",
-    XDG_CONFIG_HOME: config, OPENGAME_CREDENTIAL_STORE: "file" };
-  // These pin what a deploy says about its outcome, which a plain deploy no longer stays
-  // for since 28 Oct 2026, so a deploy here waits unless the test chose otherwise.
-  const cli = async (...args: string[]) => {
-    const wait = args[0] === "deploy" && !args.some(arg => ["--wait", "--no-wait", "--timeout", "--dry-run"].includes(arg)) ? ["--wait"] : [];
-    try { const result = await run(process.execPath, [binary, ...args, ...wait, "--jsonl"], { env }); return { code: 0, events: lines(result.stdout) }; }
-    catch (error) { const e = error as { code: number; stdout: string }; return { code: e.code, events: lines(e.stdout) }; }
-  };
-  const close = async () => {
-    server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve()));
-    await rm(root, { recursive: true, force: true }); await rm(config, { recursive: true, force: true });
-  };
-  return { origin, root, env, seen, cli, close };
-}
-const lines = (text: string) => text.trim().split("\n").filter(Boolean).map(line => JSON.parse(line));
-const op = (n: number, state: string, extra: Record<string, unknown> = {}) => ({ id: id(n), state, gameId: state === "uploading" ? null : gameId,
-  releaseId: state === "ready" ? id(90 + n) : null, error: null, ...extra });
-const json = (res: ServerResponse, status: number, value: unknown, headers: Record<string, string> = {}) => {
-  res.statusCode = status; for (const [k, v] of Object.entries(headers)) res.setHeader(k, v); res.end(JSON.stringify(value));
-};
-const finding = (over: Partial<RepairFinding> = {}): RepairFinding => ({ release: id(91), check: "secrets", checkVersion: "1", state: "failed",
-  certainty: "certain", fault: "game", evidence: { observed: "src/keys.js line 3 contains what looks like an AWS key.", file: "src/keys.js:3" },
-  fix: "Delete it, then rotate it.", verify: "opengame check, then opengame deploy", retry: "after-fix", ...over });
 
 test("a refused deploy streams its findings and exits 1 with the first one attached", async () => {
   const h = await harness((req, res) => {
@@ -195,106 +144,6 @@ test("a watch rides out a few failed reads of a deploy that is still running", a
     assert.equal(events.at(-1).data.state, "ready");
     assert.equal(reads, 3);
   } finally { await h.close(); }
-});
-
-test("login in a folder that is already signed in succeeds without a new code", async () => {
-  const deviceCode = "d".repeat(43);
-  const h = await harness((req, res) => {
-    if (req.url === "/api/v1/auth/device") return json(res, 200, { device_code: deviceCode, user_code: "BCDF-GHJK", verification_uri: `${h.origin}/cli`, expires_in: 600, interval: 5 });
-    if (req.url === "/api/v1/auth/token") return json(res, 200, { access_token: token });
-    if (req.url === "/api/v1/auth/me") return json(res, 200, { handle: "rishi", ogNumber: 7, avatar: { seed: 1, palette: "ember" }, credential: { origin: "device" } });
-  });
-  delete h.env.OPENGAME_TOKEN;
-  try {
-    // Pending is exit 3, not yet signed in; --continue finishes it.
-    assert.equal((await h.cli("login", "--no-wait")).code, 3);
-    assert.equal((await h.cli("login", "--continue")).code, 0);
-    const again = await h.cli("login", "--no-wait");
-    assert.equal(again.code, 0, JSON.stringify(again.events));
-    assert.deepEqual([again.events.at(-1).data.signedIn, again.events.at(-1).data.handle, again.events.at(-1).data.next], [true, "rishi", null]);
-    assert.equal(h.seen.filter(request => request.url === "/api/v1/auth/device").length, 1);
-    assert.ok(!h.seen.some(request => request.url === "/api/v1/auth/logout"));
-  } finally { await h.close(); }
-});
-
-// preview-serving made a removed tester a 403 not_member, and repair-loop's stale-login
-// check only replaced a login on a 401, so the saved login blocked every new one.
-test("a saved login for an account removed from the platform is replaced, not a dead end", async () => {
-  const deviceCode = "d".repeat(43);
-  let removed = false;
-  const h = await harness((req, res) => {
-    if (req.url === "/api/v1/auth/device") return json(res, 200, { device_code: deviceCode, user_code: "BCDF-GHJK", verification_uri: `${h.origin}/cli`, expires_in: 600, interval: 5 });
-    if (req.url === "/api/v1/auth/token") return json(res, 200, { access_token: token });
-    if (req.url === "/api/v1/auth/me") return removed
-      ? json(res, 403, { error: "not_member", message: "This account does not have internal platform access." })
-      : json(res, 200, { handle: "rishi", ogNumber: 7, avatar: { seed: 1, palette: "ember" }, credential: { origin: "device" } });
-  });
-  delete h.env.OPENGAME_TOKEN;
-  try {
-    assert.equal((await h.cli("login", "--no-wait")).code, 3);
-    assert.equal((await h.cli("login", "--continue")).code, 0);
-    removed = true;
-    const again = await h.cli("login", "--no-wait");
-    assert.equal(again.code, 3, JSON.stringify(again.events));
-    assert.ok(again.events.some(event => event.type === "notice" && event.code === "stale_login"));
-    assert.deepEqual([again.events.at(-1).code, again.events.at(-1).next], ["login_pending", "opengame login --continue"]);
-    assert.equal(h.seen.filter(request => request.url === "/api/v1/auth/device").length, 2);
-  } finally { await h.close(); }
-});
-
-// A suspended or deleted account used to reach the CLI as whatever the server guessed;
-// it now has its own code, and a saved login for one is as stale as a removed tester's.
-// So is one the moderators banned (account_banned), which since 20261029180000 is a
-// non-member and so is refused even a read.
-for (const [error, message, said] of [
-  ["account_inactive", "This account is suspended or deleted, so it cannot use the platform.", /suspended or deleted/],
-  ["account_banned", "OpenGame's moderators have banned this account.", /moderators have banned/],
-  // /api/v1/auth/me asks the launch switch before membership, so not_launched arrives
-  // here instead of not_member. login is allowed before launch; the saved account is not.
-  ["not_launched", "OpenGame opens for creators on 18 November.", /not let in yet/],
-] as const) test(`a saved login for an account refused as ${error} is replaced, and says why`, async () => {
-  const deviceCode = "d".repeat(43);
-  let closed = false;
-  const h = await harness((req, res) => {
-    if (req.url === "/api/v1/auth/device") return json(res, 200, { device_code: deviceCode, user_code: "BCDF-GHJK", verification_uri: `${h.origin}/cli`, expires_in: 600, interval: 5 });
-    if (req.url === "/api/v1/auth/token") return json(res, 200, { access_token: token });
-    if (req.url === "/api/v1/auth/me") return closed
-      ? json(res, 403, { error, message })
-      : json(res, 200, { handle: "rishi", ogNumber: 7, avatar: { seed: 1, palette: "ember" }, credential: { origin: "device" } });
-  });
-  delete h.env.OPENGAME_TOKEN;
-  try {
-    assert.equal((await h.cli("login", "--no-wait")).code, 3);
-    assert.equal((await h.cli("login", "--continue")).code, 0);
-    closed = true;
-    const again = await h.cli("login", "--no-wait");
-    assert.equal(again.code, 3, JSON.stringify(again.events));
-    assert.equal(again.events.at(-1).code, "login_pending");
-    const notice = again.events.find(event => event.type === "notice" && event.code === "stale_login");
-    assert.match(notice?.message ?? "", said);
-    assert.equal(h.seen.filter(request => request.url === "/api/v1/auth/device").length, 2);
-  } finally { await h.close(); }
-});
-
-// An approval collected after its account stopped being a member is refused with the
-// reason; only a bare access_denied is somebody pressing Deny in the browser.
-test("a login refused because the approving account closed says so, not that it was denied", async () => {
-  const deviceCode = "d".repeat(43);
-  for (const [reason, said] of [["account_inactive", /suspended or deleted/], ["account_banned", /moderators have banned the account that approved/], ["not_member", /no longer has platform access/], ["handle_required", /has no handle\. Claim one on OpenGame/], [null, /denied in the browser/]] as const) {
-    const h = await harness((req, res) => {
-      if (req.url === "/api/v1/auth/device") return json(res, 200, { device_code: deviceCode, user_code: "BCDF-GHJK", verification_uri: `${h.origin}/cli`, expires_in: 600, interval: 5 });
-      if (req.url === "/api/v1/auth/token") return json(res, 400, { error: "access_denied", ...(reason ? { reason } : {}) });
-    });
-    delete h.env.OPENGAME_TOKEN;
-    try {
-      assert.equal((await h.cli("login", "--no-wait")).code, 3);
-      const refused = await h.cli("login", "--continue");
-      assert.equal(refused.code, 3, JSON.stringify(refused.events));
-      const error = refused.events.find(event => event.type === "error");
-      assert.equal(error?.code, "access_denied");
-      assert.match(error?.message ?? "", said);
-    } finally { await h.close(); }
-  }
 });
 
 test("a ready deploy prints the playable private preview", async () => {
@@ -574,51 +423,6 @@ test("status reads beside a deploy that holds the folder", async () => {
   } finally { await h.close(); }
 });
 
-test("logout never revokes a token the environment supplies unless asked", async () => {
-  const h = await harness((req, res) => {
-    if (req.url === "/api/v1/auth/logout") return json(res, 200, { revoked: true });
-  });
-  try {
-    const refused = await h.cli("logout");
-    assert.equal(refused.code, 2);
-    assert.equal(refused.events.at(-1).code, "environment_token");
-    assert.ok(!h.seen.some(request => request.url === "/api/v1/auth/logout"));
-    const login = await h.cli("login");
-    assert.match(login.events.at(-1).message, /Unset OPENGAME_TOKEN/);
-    assert.doesNotMatch(login.events.at(-1).message, /logout/);
-    const revoked = await h.cli("logout", "--revoke");
-    assert.equal(revoked.code, 0);
-    assert.ok(h.seen.some(request => request.url === "/api/v1/auth/logout"));
-  } finally { await h.close(); }
-});
-
-test("an agent can start a login, show the code, and finish it with a second command", async () => {
-  let approved = false;
-  const deviceCode = "d".repeat(43);
-  const h = await harness((req, res) => {
-    if (req.url === "/api/v1/auth/device") return json(res, 200, { device_code: deviceCode, user_code: "BCDF-GHJK", verification_uri: `${h.origin}/cli`, expires_in: 600, interval: 5 });
-    if (req.url === "/api/v1/auth/token") return approved ? json(res, 200, { access_token: token }) : json(res, 400, { error: "authorization_pending" });
-    if (req.url === "/api/v1/auth/me") return json(res, 200, { handle: "rishi", ogNumber: 7, avatar: { seed: 1, palette: "ember" }, credential: { origin: "device" } });
-  });
-  delete h.env.OPENGAME_TOKEN;
-  try {
-    const started = await h.cli("login", "--no-wait");
-    // Not signed in yet: exit 3, so a script's `login && deploy` stops here.
-    assert.equal(started.code, 3);
-    assert.deepEqual([started.events[0].type, started.events[0].userCode, started.events[0].url], ["notice", "BCDF-GHJK", `${h.origin}/cli?code=BCDF-GHJK`]);
-    assert.deepEqual([started.events.at(-1).code, started.events.at(-1).next], ["login_pending", "opengame login --continue"]);
-    // A second start reuses the waiting code rather than minting another.
-    await h.cli("login", "--no-wait");
-    assert.equal(h.seen.filter(request => request.url === "/api/v1/auth/device").length, 1);
-    approved = true;
-    const finished = await h.cli("login", "--continue");
-    assert.equal(finished.code, 0, JSON.stringify(finished.events));
-    assert.equal(finished.events.at(-1).data.handle, "rishi");
-    const again = await h.cli("login", "--continue");
-    assert.equal(again.events.at(-1).code, "no_pending_login");
-  } finally { await h.close(); }
-});
-
 test("a failed build in JSON mode reports what the build printed", async () => {
   const h = await harness(() => {});
   try {
@@ -806,88 +610,6 @@ test("failed build instructions and captured diagnostics redact every known or a
     for (const value of [opaque, key, "synthetic-bearer-value", "synthetic-json-value"]) assert.ok(!transcript.includes(value), "a synthetic credential entered the diagnostic");
     assert.match(failed.finding.evidence.observed, /useful build failure/);
     assert.match(failed.finding.verify, /then opengame deploy/);
-  } finally { await rm(dir, { recursive: true, force: true }); }
-});
-
-/* `npm install && npm run dev` as a build command is the shape: the shell stays the parent
-   and what it started runs for ever with the output pipe open. Before this, a timeout killed
-   the shell alone and --json waited on the pipe after the limit for as long as the
-   grandchild lived. POSIX only: Windows stops the tree with taskkill, which is not run here. */
-test("a build past its time limit is stopped with everything it started, and --json does not wait on the pipe", { timeout: 30_000, skip: process.platform === "win32" }, async () => {
-  const dir = await mkdtemp(join(tmpdir(), "og-build-timeout-"));
-  try {
-    const marker = join(dir, "grandchild.pid");
-    const started = Date.now();
-    const failed = await build(`node -e 'require("fs").writeFileSync(process.argv[1], String(process.pid)); setInterval(() => {}, 1000)' ${marker}; true`,
-      dir, new Output(true, () => {}, () => {}), 1500).catch((error: unknown) => error as { code: string; finding: RepairFinding });
-    assert.equal(failed.code, "build_timeout");
-    assert.match(failed.finding.evidence.observed, /ran for 1 minutes? without finishing/);
-    assert.ok(Date.now() - started < 12_000, `took ${Date.now() - started} ms`);
-    const pid = Number(await readFile(marker, "utf8"));
-    const alive = () => { try { process.kill(pid, 0); return true; } catch { return false; } };
-    for (let i = 0; i < 50 && alive(); i++) await new Promise(resolve => setTimeout(resolve, 100));
-    if (alive()) { process.kill(pid, "SIGKILL"); assert.fail("the build's own child outlived the time limit"); }
-  } finally { await rm(dir, { recursive: true, force: true }); }
-});
-
-const quiet = () => new Output(true, () => {}, () => {});
-const pidFrom = async (file: string) => Number(await readFile(file, "utf8"));
-const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
-async function gone(pid: number, ms: number) {
-  for (let waited = 0; waited < ms && alive(pid); waited += 100) await new Promise(resolve => setTimeout(resolve, 100));
-  if (alive(pid)) { process.kill(pid, "SIGKILL"); return false; }
-  return true;
-}
-const holder = (marker: string, ignoreTerm = false) =>
-  `node -e '${ignoreTerm ? 'process.on("SIGTERM", () => {}); ' : ""}require("fs").writeFileSync(process.argv[1], String(process.pid)); setInterval(() => {}, 1000)' ${marker}`;
-
-test("a build child that ignores SIGTERM is killed after the grace, although the shell went at once", { timeout: 30_000, skip: process.platform === "win32" }, async () => {
-  const dir = await mkdtemp(join(tmpdir(), "og-build-kill-"));
-  try {
-    const marker = join(dir, "pid");
-    const failed = await build(`${holder(marker, true)}; true`, dir, quiet(), 1500).catch((error: unknown) => error as { code: string });
-    assert.equal(failed.code, "build_timeout");
-    assert.ok(await gone(await pidFrom(marker), 3000), "SIGKILL never reached the process that ignored SIGTERM");
-  } finally { await rm(dir, { recursive: true, force: true }); }
-});
-
-test("a build that succeeds but leaves something running in the background has it stopped, and says so", { timeout: 30_000, skip: process.platform === "win32" }, async () => {
-  const dir = await mkdtemp(join(tmpdir(), "og-build-left-"));
-  try {
-    const marker = join(dir, "pid");
-    const notices: string[] = [];
-    const output = new Output(true, line => notices.push(line), () => {});
-    const started = Date.now();
-    await build(`${holder(marker)} & sleep 0.5; exit 0`, dir, output, 60_000);
-    assert.ok(Date.now() - started < 4000, `took ${Date.now() - started} ms`);
-    assert.ok(await gone(await pidFrom(marker), 3000), "the background process is still running");
-    assert.ok(notices.some(line => line.includes("build_left_running")), notices.join("\n"));
-  } finally { await rm(dir, { recursive: true, force: true }); }
-});
-
-test("a build that failed before its limit is a failure, not a timeout, whatever it left holding the output", { timeout: 30_000, skip: process.platform === "win32" }, async () => {
-  const dir = await mkdtemp(join(tmpdir(), "og-build-exit-"));
-  try {
-    const marker = join(dir, "pid");
-    /* The holder ignores SIGTERM, so it keeps the output open for the whole grace after the
-       shell exits, and the limit falls inside that window: the case this test is for is the
-       timer firing after the shell has gone. It used to be 1300 ms against a one-second
-       shell, which left 300 ms for a shell to start, sleep and exit; beside other suites
-       that ran out, the shell was still running at the limit, and a correct build read as
-       a timeout (the contention note in AGENTS.md). */
-    const failed = await build(`${holder(marker, true)} & sleep 1; exit 3`, dir, quiet(), 3000).catch((error: unknown) => error as { code: string; finding: RepairFinding });
-    assert.equal(failed.code, "build_failed", failed.finding?.evidence.observed);
-    assert.ok(await gone(await pidFrom(marker), 3000));
-  } finally { await rm(dir, { recursive: true, force: true }); }
-});
-
-test("a person's build stays in the terminal's process group, where Ctrl-C and prompts reach it", { skip: process.platform === "win32" }, async () => {
-  const dir = await mkdtemp(join(tmpdir(), "og-build-group-"));
-  try {
-    const file = join(dir, "pgid");
-    await build(`ps -o pgid= -p $$ > ${file}`, dir, new Output(false, () => {}, () => {}, "plain", () => {}));
-    const own = execFileSync("ps", ["-o", "pgid=", "-p", String(process.pid)], { encoding: "utf8" }).trim();
-    assert.equal((await readFile(file, "utf8")).trim(), own);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 

@@ -30,7 +30,7 @@ port.on("message", (message: { id: number; text?: string; bytes?: Uint8Array }) 
   else reader.reject();
 });
 try {
-  const job = workerData as { files: { path: string; size: number }[]; externalPaths?: readonly string[]; externalDelivery?: string; manifestRequires?: unknown };
+  const job = workerData as { files: { path: string; size: number }[]; externalPaths?: readonly string[]; externalSizes?: Readonly<Record<string, number>>; externalDelivery?: string; manifestRequires?: unknown };
   const metadata = job.files;
   const ordinaryBytes = metadata.filter(file => !compressedBrowserAsset(file.path)).reduce((sum, file) => sum + file.size, 0);
   const decodedText = compressedTextReaders(() => ordinaryBytes);
@@ -55,7 +55,7 @@ try {
     return { ...file, text: async () => String(await read(index)), bytes, head,
       decodedText: decodedText(file.path, file.size, bytes) };
   });
-  port.postMessage({ type: "result", result: await platformPreflight(files, { inspectDecodedCredentials: true, rawInflater, externalPaths: job.externalPaths, externalDelivery: job.externalDelivery, manifestRequires: job.manifestRequires }) });
+  port.postMessage({ type: "result", result: await platformPreflight(files, { inspectDecodedCredentials: true, rawInflater, externalPaths: job.externalPaths, externalSizes: job.externalSizes, externalDelivery: job.externalDelivery, manifestRequires: job.manifestRequires }) });
 } catch {
   port.postMessage({ type: "error" });
 }

@@ -88,6 +88,14 @@ in your home folder, so a coding agent can do all of the above for you, and the 
 them current as it updates. `opengame setup --no-skills` turns that off.
 `opengame skills add .` installs them into one project instead, to commit with it.
 
+## What the CLI sends
+
+Every API request includes the CLI's version, `x-opengame-client: cli` and the name of the
+command, such as `deploy`. Never an argument, a path, a game or a flag's value. OpenGame
+counts requests per token, version and command per day, to learn which commands people
+use. `init`, `check`, `dev`, `vendor`, `setup`, `skills` and `token` run on your machine and
+send no command name.
+
 ## Commands
 
 <!-- generated:commands -->

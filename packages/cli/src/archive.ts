@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { mkdtemp, open, rm } from "node:fs/promises";
+import { lstat, mkdtemp, open, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runPreflight, matchedRawRuntime } from "./preflight";
@@ -38,14 +38,32 @@ export async function inspectArchive(folder: string, manifest: GameManifest, out
   if (!descriptorReader) nodeReaderNotice(output);
   const { snapshot, excluded } = await Snapshot.read(folder, { descriptorReader, workDirectory: options.workDirectory, externalAssets: options.externalAssets,
     externalDelivery: options.externalDelivery, rootIdentity: options.rootIdentity, words: options.vendor ? {} : { changed: BUILD_CHANGED } });
+  const externalSizes = await externalFileSizes(folder, options.externalAssets ?? []);
   try {
-    return await inspectSnapshot(snapshot, excluded, manifest, output, options);
+    return await inspectSnapshot(snapshot, excluded, manifest, output, { ...options, externalSizes });
   } catch (error) { await snapshot.dispose(); throw error; }
 }
 
-async function inspectSnapshot(snapshot: Snapshot, excluded: string[], manifest: GameManifest, output: Output, options: { vendor?: boolean; artifacts?: RuntimeArtifacts; externalAssets?: ReadonlySet<string>; externalDelivery?: string; planChosen?: boolean }) {
+/**
+ * Each external file's size, for the first-download note alone: those files stay out of the
+ * snapshot, and a Unity .data among them is still fetched before the first frame. Only regular
+ * files the plan names under the export folder; one that cannot be measured is left out of the
+ * note, which is advice, rather than failing the check.
+ */
+export async function externalFileSizes(folder: string, paths: Iterable<string>): Promise<Record<string, number>> {
+  const sizes: Record<string, number> = {};
+  for (const path of paths) {
+    try {
+      const stat = await lstat(join(folder, path));
+      if (stat.isFile()) sizes[path] = stat.size;
+    } catch { /* left out of the estimate */ }
+  }
+  return sizes;
+}
+
+async function inspectSnapshot(snapshot: Snapshot, excluded: string[], manifest: GameManifest, output: Output, options: { vendor?: boolean; artifacts?: RuntimeArtifacts; externalAssets?: ReadonlySet<string>; externalSizes?: Readonly<Record<string, number>>; externalDelivery?: string; planChosen?: boolean }) {
   const inspect = async () => {
-    const result = await runPreflight(snapshot.preflightFiles(), undefined, { externalPaths: options.externalAssets ? [...options.externalAssets] : undefined, externalDelivery: options.externalDelivery,
+    const result = await runPreflight(snapshot.preflightFiles(), undefined, { externalPaths: options.externalAssets ? [...options.externalAssets] : undefined, externalSizes: options.externalSizes, externalDelivery: options.externalDelivery,
       // opengame.json never reaches the checker as a file; its requires does, from the manifest read here.
       manifestRequires: manifest.requires ?? null, transferBytes: true });
     assertNoReservedRuntimePaths(result.include);

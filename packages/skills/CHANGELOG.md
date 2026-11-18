@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.7.4
+
+- `opengame-deploy` 1.1.14, `opengame-jam` 1.1.3, `opengame-router` 1.0.10 and
+  `opengame-all-in-one` 1.0.13: an agent stops and asks the person before every
+  `opengame deploy` or `opengame publish`, an update to a live game included, and waits for a
+  clear yes. A deploy can use one of their jam entries, and an update goes live by itself.
+- `opengame-router` 1.0.10 also has the agent read https://opengame.io/for-agents.md and the CLI's
+  AGENTS.md first.
+
 ## 1.7.3
 
 - `opengame-deploy` 1.1.13 and `opengame-all-in-one` 1.0.11: multiplayer works from any engine,

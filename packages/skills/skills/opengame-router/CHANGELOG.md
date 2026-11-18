@@ -1,5 +1,9 @@
 # opengame-router changelog
 
+## 1.0.10
+
+Read https://opengame.io/for-agents.md and the CLI's AGENTS.md first. Ask the person before every `opengame deploy` or `opengame publish`, an update to a live game included, and wait for a clear yes. (18 Nov 2026)
+
 ## 1.0.9
 
 `opengame setup` installs every skill; the starting set is what `opengame skills add .` puts in one project. An update of a game that is already live publishes by itself. (17 Nov 2026)

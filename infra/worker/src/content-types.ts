@@ -179,8 +179,10 @@ export function resolveContentType(path: string): ResolvedType {
 const COMPRESSED_IN_TRANSIT = new Set([
   // engine output and raw data
   "bin", "data", "mem", "symbols", "pck", "buffer", "dmanifest", "wasm",
-  // 3D. hza is Kaigen's asset container (OG Clash), plain at rest, 10 to 53% smaller
-  "glb", "gltf", "ktx", "hza", "fbx", "obj", "mtl",
+  // 3D. hza is Kaigen's asset container (OG Clash), plain at rest, 10 to 53% smaller; index is
+  // its catalog index, read whole at boot (OG Snipes' catalog.index, 2.85 MB, went out plain on
+  // 18 Nov 2026 and is 0.116 of that as Brotli at quality 5)
+  "glb", "gltf", "ktx", "hza", "index", "fbx", "obj", "mtl",
   // uncompressed audio
   "wav",
   // text a game reads as code or data, never a document

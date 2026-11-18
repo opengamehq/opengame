@@ -1,5 +1,9 @@
 # opengame-deploy changelog
 
+## 1.1.14
+
+Stop and ask the creator before every `opengame deploy` or `opengame publish`: show them the game and its title, for a jam entry the track and models you suggest, and wait for a clear yes. A deploy can use one of their jam entries, and an update to a live game publishes by itself. (18 Nov 2026)
+
 ## 1.1.13
 
 A game may keep a service worker on its own address: a takedown removes it and a new version replaces it, from the docs' agent guide. Multiplayer works from any engine: a game reaches servers the creator runs, such as Colyseus, Nakama, Photon or their own, over `wss:`, WebTransport or `https:`, or connects players over WebRTC, and PeerJS is one way among several. A creator's server cannot verify `og.player.id`, so it issues its own token. (18 Nov 2026)

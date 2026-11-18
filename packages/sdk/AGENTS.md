@@ -207,19 +207,21 @@ OpenGame hosts static browser exports. The build needs `index.html` at the root 
 
 At runtime the game may call its own origin, `https://api.opengame.gg`, and any other `https:` or `wss:` host. Each call comes from the player's browser, so that host sees the player's IP address. Keep API keys on the creator's server, never in the bundle: players can read every file in it. The review sandbox has no internet, so the game must draw its first frame without its server.
 
+A game may keep a service worker on the game's address; a takedown removes it and a new version replaces it.
+
 The published game runs at `https://<label>.opengame.gg`, one origin per game, and `opengame deploy` returns it as `data.gameOrigin`. While an experiment runs, players load each version taking part from a `v-` origin instead. If the creator's servers check `Origin` (WebSocket) or send CORS headers (HTTP), they reject the game's requests until that exact origin is on their list, and online play fails with a closed socket, a 401 or 403 on the upgrade, or a CORS error in the console. Tell the creator to add it, and to add a version's `v-` origin before starting an experiment with it. Never suggest allowing `*.opengame.gg`, `null` or any pattern on `opengame.gg`, because other people's games are served there too and a pattern lets them call the creator's server. Use a token in a header or the first socket message, not a cookie. A private preview runs on a temporary `p-` origin, not the game's. That address is a private link, so keep it out of committed config and logs. [Games that talk to your own servers](https://docs.opengame.io/guides/packaging#games-that-talk-to-your-own-servers) has server examples.
 
 A game may not take payments, use crypto, make players create an account or give an email address, show ads, or carry ad pixels or session recording. [Packaging](https://docs.opengame.io/guides/packaging) has every rule and every check.
 
 ## Multiplayer
 
-OpenGame runs no game server or rooms. A multiplayer game brings its own, through PeerJS or a server the creator runs, and OpenGame supplies the invite link:
+OpenGame runs no game server or rooms. A game in any engine can reach the creator's servers (Colyseus, Nakama, Photon or their own) over `wss:`, WebTransport or `https:`, or links browsers over WebRTC. A browser has no raw UDP or TCP, so use the engine's WebSocket or WebRTC transport. OpenGame supplies the invite link:
 
-- **Invites.** Share `og.invite.link(code)`, the game's page on opengame.io with `?join=CODE`, never the game's `opengame.gg` address. After `await og.init()`, a player with `og.invite.code` set opened an invite: join them to that lobby with no menu in between. Codes are 4 to 12 capitals and digits, or 22 characters of `A-Z a-z 0-9 _ -`; for any other code, and outside OpenGame, `link` returns `null`, so keep the code on screen too.
-- **PeerJS.** Run the creator's PeerServer over `wss:` in place of the public `0.peerjs.com`, check `Origin` in front of it, and prefix peer ids with the game's name. Use STUN plus TURN, with TURN credentials issued by the creator's server and kept out of the bundle. When the host leaves, the next player takes over the same lobby id so shared links keep working.
-- **Game servers.** `wss:` and `https:` only. Allow the game's exact origin, never a pattern on `opengame.gg`. Send a token in a header or the first socket message, not a cookie, and treat `og.player.id` as the player's claim.
+- **Invites.** Share `og.invite.link(code)`, the game's page on opengame.io with `?join=CODE`, never the game's `opengame.gg` address. After `await og.init()`, a player with `og.invite.code` set opened an invite: join them to that lobby with no menu in between. `link` is `null` outside OpenGame and for a code the page would change, so show the code too.
+- **Game servers.** Allow only the game's exact origin. Send a token in a header or the first socket message, not a cookie. A server cannot verify `og.player.id`, so it issues that token without a sign-in and decides results.
+- **Peer to peer.** Run a signalling server, such as PeerServer for PeerJS, over `wss:` instead of `0.peerjs.com`, check `Origin` in front of it, and prefix peer ids with the game's name. Use STUN plus TURN, with TURN credentials from the creator's server, not the bundle. The next host keeps the lobby id.
 
-[Multiplayer](https://docs.opengame.io/guides/multiplayer) has the code, the server settings and how to test a lobby with two browsers.
+[Multiplayer](https://docs.opengame.io/guides/multiplayer) covers each engine, server settings and testing.
 
 ## Engines
 

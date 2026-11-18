@@ -347,6 +347,14 @@ export interface PreflightOptions {
   /** Reference-only names from a separately verified external plan. These do
    * not become included files, engine evidence, bytes or inspected content. */
   externalPaths?: readonly string[];
+  /**
+   * The size of each of `externalPaths`, where the caller can see it (the CLI stats the files
+   * it leaves out of the archive). Used for the first-download estimate alone, which is advice:
+   * a Unity `.data` sent through an asset plan is still fetched whole before the first frame,
+   * and before 18 Nov 2026 the CLI's check counted it at nothing (Greptile on the public
+   * mirror's #19). Never evidence, never bytes, never admission.
+   */
+  externalSizes?: Readonly<Record<string, number>>;
   /** The plan kind (limits.json largeAssetPlans) the two fields above belong to. Absent
    * means unity-assets-v1, the kind that existed before this field. */
   externalDelivery?: string;
@@ -1022,7 +1030,16 @@ export async function preflight(
     texts[i] == null ? [] : [{ path: file.path, text: texts[i]! }]).concat(reading.flatMap((file, i) =>
       file.path === "opengame.json" && texts[i] != null && options.manifestRequires === undefined ? [{ path: file.path, text: texts[i]! }] : []))
     .concat(options.manifestRequires === undefined ? [] : [{ path: "opengame.json", text: JSON.stringify({ requires: options.manifestRequires }) }]), engine, sharedModules));
-  findings.push(...bootDownloadFindings(kept.filter((f) => !external.has(f.path)), engineIds));
+  /* External assets count too: a Unity .data sent through an asset plan is still downloaded
+     before the first frame. The platform's check has each one in `kept`, its size checked
+     against its declared byteSize above; the CLI's has only their names, and their sizes
+     beside them (externalSizes). */
+  const keptNames = new Set(kept.map(file => file.path));
+  const referenced = externalPaths.flatMap(path => {
+    const size = options.externalSizes?.[path];
+    return keptNames.has(path) || typeof size !== "number" || !Number.isSafeInteger(size) || size < 0 ? [] : [{ path, size }];
+  });
+  findings.push(...bootDownloadFindings([...kept, ...referenced], engineIds));
   findings.push(...await encryptedPckFindings(kept));
   if (engineIds.has("defold")) findings.push(...await defoldCustomKeyFindings(kept));
   /* The glue's word or the module's own memory flags, whichever speaks. The second is the

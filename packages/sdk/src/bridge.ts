@@ -67,8 +67,10 @@ export function createBridge(client: OpenGameClient): OpenGameBridge {
   };
   const snapshot = (name: BridgeEvent, value: unknown) => { current.set(name, value); emit('event', 0, name, value); };
   client.player.onChange(value => snapshot('player', value));
-  client.onPause(value => snapshot('pause', value));
-  client.audio.onHostMute(value => snapshot('mute', value));
+  /* The bridge listens for every native game, so these are not counted as the game's use.
+     A core from before SDK 0.5.1 counts nothing and has no hush. */
+  const listen = () => { client.onPause(value => snapshot('pause', value)); client.audio.onHostMute(value => snapshot('mute', value)); };
+  if (client.hush) client.hush(listen); else listen();
   client.fullscreen.onChange(value => snapshot('fullscreen', value));
 
   const execute = async (op: BridgeOperation, args: Record<string, unknown>): Promise<Result<unknown>> => {

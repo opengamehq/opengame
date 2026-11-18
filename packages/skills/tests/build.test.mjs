@@ -453,7 +453,8 @@ test("the skills that say when OpenGame opens name launch.json's days, and none 
   assert.ok(skills.find((s) => s.name === "opengame-api").files["SKILL.md"].includes("`entries_closed`"));
 
   const moved = { ...context.launch, launchAt: "2027-03-02T08:00:00Z" };
-  assert.equal(render("Opens {{launch opens}}.", { ...context, launch: moved }), "Opens 2 March 2027.", "midnight in Pacific time is that day");
+  assert.equal(render("Opens {{launch opens}}.", { ...context, launch: moved }), "Opens 2 March 2027.", "midnight in Pacific time is that day in Eastern time too");
+  assert.equal(render("Opens {{launch opens}}.", { ...context, launch: { ...context.launch, launchAt: "2026-11-18T05:00:00Z" } }), "Opens 18 November 2026.", "9 pm Pacific on the 17th is the 18th in Eastern time, the day the site names");
   for (const typed of [`OpenGame opens on ${opens}.`, opens.replace(/ \d{4}$/, ""), context.launch.launchAt.slice(0, 10), context.launch.kickoffCopy, context.launch.closeCopy])
     assert.equal(typedLaunchDates(typed, context.launch).length, 1, typed);
   assert.deepEqual(typedLaunchDates("Opens {{launch opens}}; entries {{launch kickoff}} to {{launch close}}.", context.launch), []);

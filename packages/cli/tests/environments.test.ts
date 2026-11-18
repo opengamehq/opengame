@@ -302,12 +302,17 @@ test("a project at the file-count limit packages, and one file more is refused w
   const files: Record<string, string> = {};
   for (let i = 0; i < LIMITS.bundle.fileCountMax - 1; i++) files[`tiles/t${i}.json`] = "{}";
   const root = await project(files);
+  /* The deadline is for a hung run, not a speed bar: this test is about the count. Standalone,
+     either run takes 7 to 16 s on two cores; the public repository runs every CLI test file at
+     once on one GitHub runner, where the first run passed 60 s on 18 Nov 2026 with no change in
+     packaging, and failed the 0.13.1 mirror twice. */
+  const deadlineMs = 240_000;
   try {
-    const atLimit = await spawnCli(["deploy", root.dir, "--dry-run", "--jsonl"], { stdin: "closed", deadlineMs: 60_000 });
+    const atLimit = await spawnCli(["deploy", root.dir, "--dry-run", "--jsonl"], { stdin: "closed", deadlineMs });
     assert.equal(atLimit.code, 0, atLimit.stdout.slice(-400));
     assert.equal((events(atLimit.stdout).at(-1)!.data as { files: number }).files, LIMITS.bundle.fileCountMax);
     await writeFile(join(root.dir, "tiles/one-more.json"), "{}");
-    const over = await spawnCli(["deploy", root.dir, "--dry-run", "--jsonl"], { stdin: "closed", deadlineMs: 60_000 });
+    const over = await spawnCli(["deploy", root.dir, "--dry-run", "--jsonl"], { stdin: "closed", deadlineMs });
     assert.equal(over.code, 1);
     assert.equal(events(over.stdout).at(-1)!.code, "bundle_limit");
     assert.match(String(events(over.stdout).at(-1)!.message), new RegExp(LIMITS.bundle.fileCountMax.toLocaleString("en-GB")));

@@ -30,7 +30,7 @@ import { filesFromArchive, uploadMissingFiles } from "./incremental";
 import { uploadArchiveParts, type ArchiveSource } from "./archive-parts";
 import { pythonAvailable, safeReadFile } from "./safe-fs";
 import { assertUnitySourceRoot, createUnityArchive, LARGE_ASSET_DELIVERY, planDelivery, readSmallUnityAssets, readUnityAsset, readUnityAssetPart, readUnityAssetPlan, unityFileUnion, unityInputDigest } from "./unity-assets";
-import { TRANSPORT_HEADERS } from "./transport";
+import { Meter, TRANSPORT_HEADERS } from "./transport";
 
 /** The asset plan a command was given. --external-assets takes any plan kind named in
  * the plan file; --unity-assets is the original spelling and takes Unity's only. */
@@ -708,6 +708,24 @@ async function watch(api: Api, token: string, initial: Operation, output: Output
 /** Consecutive failed reads a watch rides out before it reports exit 5. */
 export const WATCH_MISSES = 3;
 
+/** How long the CLI waits before each round of resuming an upload whose connection dropped. */
+const RESUME_WAITS_S = [5, 15, 30, 60] as const;
+/** How many of those rounds this run takes: OPENGAME_UPLOAD_RESUME_ROUNDS, 0 to stop at the
+ * first drop (a CI job that would rather fail fast and rerun), all four by default. */
+function resumeRounds(): number {
+  const raw = process.env.OPENGAME_UPLOAD_RESUME_ROUNDS;
+  if (raw === undefined || raw === "") return RESUME_WAITS_S.length;
+  const rounds = Number(raw);
+  if (!Number.isInteger(rounds) || rounds < 0 || rounds > RESUME_WAITS_S.length) {
+    throw new CliError("invalid_flag", `Set OPENGAME_UPLOAD_RESUME_ROUNDS to a whole number from 0 to ${RESUME_WAITS_S.length}, or leave it unset.`, 2);
+  }
+  return rounds;
+}
+/** A failure the link caused, which the same deploy can pick up again: never a refusal. */
+function resumableDrop(error: unknown): error is CliError {
+  return error instanceof CliError && error.retry === "later" && error.exitCode === 5 &&
+    ["network", "upload_interrupted", "temporarily_unavailable"].includes(error.code);
+}
 class DeadUpload extends Error { constructor(readonly cause: ApiError) { super(cause.message); } }
 
 /**
@@ -842,17 +860,25 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
       jamSaid = true;
       output.emit({ type: "notice", code: "jam_not_entered", message: op.jamNotice.message });
     };
-    const upload = (restarted: boolean) => withProject(root, api.origin, async (state, save) => {
+    /* The key of the deploy this run is uploading, once it has one. The folder lock is let go
+       between resume rounds, for up to a minute, and another deploy from the same folder can
+       replace the saved deploy in that time; a round resumes only the deploy this run started
+       (Greptile on opengamehq/opengame#20), and stops when that is gone. */
+    let ownKey: string | undefined;
+    const upload = (restarted: boolean, pinned?: string) => withProject(root, api.origin, async (state, save) => {
       // Keep the exact checked bytes for this attempt. The disk copy remains
       // necessary for another process to resume, but re-reading and hashing it
       // immediately wastes a full archive read before every first upload.
       let freshArchive: PackedArchive | undefined;
       const saved = state.deploy;
+      if (pinned && saved?.key !== pinned) {
+        throw new CliError("project_busy", "Another deploy from this folder replaced this upload while it waited to resume, so this one stopped. Run opengame status to follow that deploy.", undefined, { next: "opengame status --watch" });
+      }
       // Resume only a deploy whose bytes have not reached the server. One that is
       // queued or checking (after --no-wait, or a watch the shell killed) used to
       // be resumed too, and the next plain deploy re-reported that build instead
       // of uploading the edits made since.
-      let resume = resumesSavedDeploy(saved, key);
+      let resume = resumesSavedDeploy(saved, pinned ?? key);
       const incompatibleFileUpload = Boolean(resume && saved?.transport && saved.request.byteSize > LIMITS.platform.incrementalUpload.archiveBytesMax);
       if (incompatibleFileUpload && saved) {
         if (saved.operationId) {
@@ -943,6 +969,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
         ? "This build is already being checked. Following that deploy."
         : "Resuming the saved deploy with its original archive. Use a new --idempotency-key to deploy newer edits." });
       const pending = state.deploy!;
+      ownKey = pending.key;
       if (pending.request.metadata === "local") output.emit({ type: "notice", code: "local_metadata_selected",
         message: "This deploy uses your local metadata, replacing the website values when its candidate is prepared." });
       if (pending.request.byteSize > limits.archiveBytesMax || pending.request.fileCount > limits.fileCountMax) throw new CliError("bundle_limit", "This build exceeds the server's current size or file limit. Reduce the build, then deploy with a new --idempotency-key.", 1);
@@ -1006,14 +1033,17 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
             // landed and only the answer was lost. A storage blip used to stop the deploy
             // and leave a person to work out that running it again was the fix.
             for (let attempt = 1, upload = response.upload; ; attempt++) {
-              let shown = -1;
+              let shown = -1, shownAt = 0;
               try {
                 const uploadStartedAt = Date.now();
+                // Rate and time left, as every other upload line says them (transport.ts, Meter).
+                const meter = new Meter();
                 await timed("upload", () => api.upload(upload, bytes, (sent, total) => {
                   const percent = Math.floor(sent / total * 100);
-                  if (percent === shown || (percent % 10 !== 0 && output.json)) return;
-                  shown = percent;
-                  output.emit({ type: "progress", stage: "upload", operation: op.id, message: `Sending archive: ${sent} of ${total} bytes`, bytes: sent, total, elapsedMs: Date.now() - uploadStartedAt });
+                  const now = Date.now();
+                  if (output.json ? percent === shown || percent % 10 !== 0 : percent === shown && now - shownAt < 1000) return;
+                  shown = percent; shownAt = now;
+                  output.emit({ type: "progress", stage: "upload", operation: op.id, message: meter.words(Math.min(sent, total), total, sent), bytes: sent, total, elapsedMs: now - uploadStartedAt });
                 }));
                 break;
               } catch (error) {
@@ -1073,18 +1103,40 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
         throw error;
       }
     });
-    let result: { op: Operation; title: string; achievements?: GameManifest["achievements"]; kind?: Pick<GameManifest, "kind" | "basedOn"> };
-    try { result = await upload(false); }
-    catch (error) {
-      if (!(error instanceof DeadUpload)) throw error;
-      // The server's sentence ends by saying to deploy again; with a pinned key that is
-      // exactly what repeats the refusal, so its last instruction is replaced, not added to.
-      if (key) throw new CliError(error.cause.code, `${error.cause.message.replace(/\s*(Run opengame deploy[^.]*|Start a new deploy)\.$/, "")} Run opengame deploy with a new --idempotency-key, or without one.`, 2, { next: "opengame deploy" });
-      output.emit({ type: "notice", code: "upload_restarted", message: `The saved upload could not finish (${error.cause.message.replace(/\.$/, "")}). Starting a new deploy from your current files.` });
-      try { result = await upload(true); }
-      catch (again) {
-        if (again instanceof DeadUpload) throw new CliError(again.cause.code, again.cause.message, 5, { retry: "later", next: "opengame deploy" });
-        throw again;
+    type Uploaded = { op: Operation; title: string; achievements?: GameManifest["achievements"]; kind?: Pick<GameManifest, "kind" | "basedOn"> };
+    const uploadOrRestart = async (pinned?: string): Promise<Uploaded> => {
+      try { return await upload(false, pinned); }
+      catch (error) {
+        if (!(error instanceof DeadUpload)) throw error;
+        // The server's sentence ends by saying to deploy again; with a pinned key that is
+        // exactly what repeats the refusal, so its last instruction is replaced, not added to.
+        if (key) throw new CliError(error.cause.code, `${error.cause.message.replace(/\s*(Run opengame deploy[^.]*|Start a new deploy)\.$/, "")} Run opengame deploy with a new --idempotency-key, or without one.`, 2, { next: "opengame deploy" });
+        output.emit({ type: "notice", code: "upload_restarted", message: `The saved upload could not finish (${error.cause.message.replace(/\.$/, "")}). Starting a new deploy from your current files.` });
+        try { return await upload(true); }
+        catch (again) {
+          if (again instanceof DeadUpload) throw new CliError(again.cause.code, again.cause.message, 5, { retry: "later", next: "opengame deploy" });
+          throw again;
+        }
+      }
+    };
+    /* A dropped connection resumes in this run, since 18 Nov 2026. Each request and each part
+       already has its own few tries, and when those ran out the deploy exited and asked the
+       person to run it again, which resumed exactly where it stopped: the server keeps every
+       file and part it verified. On a link that drops for a minute that was a terminal to
+       babysit. The CLI now does the rerun itself, RESUME_WAITS_S apart, saying so each time.
+       The server's own per-file signing count (deploy.uploadAttemptsMax) still bounds it: a
+       file out of signings ends the upload as a dead one, which starts a new deploy that
+       reuses every verified file, as before. */
+    const rounds = resumeRounds();
+    let result: Uploaded;
+    for (let round = 0; ; round++) {
+      try { result = await uploadOrRestart(round ? ownKey : undefined); break; }
+      catch (error) {
+        if (!resumableDrop(error) || round >= rounds) throw error;
+        const wait = RESUME_WAITS_S[round]!;
+        const cause = error.code === "temporarily_unavailable" ? "OpenGame was too busy to take the upload" : "The connection dropped during the upload";
+        output.emit({ type: "notice", code: "upload_resuming", message: `${cause}. Trying again in ${wait} s (${round + 1} of ${rounds}); everything already sent is kept.` });
+        await sleep(wait * 1000);
       }
     }
     let op = result.op;

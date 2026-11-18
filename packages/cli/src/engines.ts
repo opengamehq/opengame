@@ -217,9 +217,8 @@ async function inspectSourceSettings(root: string, manifest: GameManifest): Prom
       if (raw !== "true" && raw !== "false") { result.unmeasured.push(`${section}.${field} is absent, ambiguous or not a literal boolean.`); continue; }
       const value = raw === "true";
       observe(path, `${section}.${field}`, value);
-      if (field === "progressive_web_app/enabled" && value) advise("source-godot-pwa", "warning", path, `${section}.${field}`, value,
-        "The selected Godot Web preset enables Progressive Web App output; OpenGame does not run its service worker.",
-        "Turn off Progressive Web App in this export preset, rebuild, and check the exported files.");
+      /* Progressive Web App is observed and not advised against since 17 Nov 2026: a game may
+         keep its service worker on its own address, where og-games hosts it. */
       if (field === "variant/thread_support" && value) advise("source-godot-threads", "note", path, `${section}.${field}`, value,
         `The selected Godot Web preset enables threads. ${THREADED_EXPORTS}`, THREADED_FIX);
     }
@@ -348,8 +347,8 @@ export async function engineSetup(root: string, pkg: Parameters<typeof detectSou
      Project archives the stage into <archive folder>/Wasm, so with Build as the archive
      folder (the sample project's choice) the export is Build/Wasm. Its page refuses a
      browser without WebGPU and has no WebGL path, so requires.renderer is set. Its sw.js is
-     an optional data cache: og-games refuses service workers and the loader then reads
-     every file over the network, with no change to the build. */
+     the engine's data cache, and since 17 Nov 2026 og-games hosts it on the game's address,
+     so a return visit reads the level from the browser, with no change to the build. */
   if (preset.id === "unreal") {
     setup.requires = { renderer: "webgpu" };
     // A project folder (Content, Intermediate, DerivedDataCache) is far past the entry count
@@ -361,7 +360,7 @@ export async function engineSetup(root: string, pkg: Parameters<typeof detectSou
       + `${THREADED_EXPORTS} `
       + "The game draws with WebGPU only, so init added requires.renderer webgpu to opengame.json.";
   }
-  if (preset.id === "godot") setup.instructions = `Export with a Web preset; keep the .pck, .wasm and loader together. Disable PWA/service-worker output. ${THREADED_EXPORTS}`;
+  if (preset.id === "godot") setup.instructions = `Export with a Web preset; keep the .pck, .wasm and loader together. Progressive Web App output can stay on: its service worker runs on the game's address. ${THREADED_EXPORTS}`;
   if (["construct", "gdevelop", "rpgmaker", "gamemaker", "ctjs", "cocos"].includes(preset.id)) setup.instructions = "Use the editor's HTML5/Web export. For Cocos choose Web Mobile. Select the folder containing index.html with --output; init does not run or alter the editor.";
   if (["stride", "monogame"].includes(preset.id)) setup.instructions = "This engine has no assumed native browser export. Port to a working KNI/browser target first, then select its static wwwroot. No build command is invented.";
   if (["jsdos", "ruffle"].includes(preset.id)) setup.instructions = "A single SWF or jsdos file can be uploaded once opengame check has validated its contents. opengame dev and opengame vendor add the standard player page around it only when the check read all of the file and the pinned player runtime is available and cleared for redistribution. A file name or this --engine choice does not make a file acceptable. If the runtime's source coverage is incomplete, the command fails with an error.";

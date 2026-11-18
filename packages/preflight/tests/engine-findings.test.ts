@@ -26,23 +26,19 @@ test('thread finding reflects the active contract and ignores capability checks'
   assert.equal(sourceUsesThreads('const GODOT_THREADS_ENABLED=false; typeof SharedArrayBuffer !== "undefined";'), false);
 });
 
-test('service workers and modal calls are notes; comments and string examples are not calls', () => {
-  assert.ok(codes(findings('navigator.serviceWorker.register("sw.js"); alert("hi");')).includes('engine-service-worker'));
+test('modal calls are notes; comments and string examples are not calls; a service worker is no finding', () => {
   assert.ok(codes(findings('window.confirm("hi");')).includes('engine-modal-dialog'));
   assert.deepEqual(codes(findings('// alert("no");\nconst documentation="prompt(42)";')), []);
-  assert.deepEqual(codes(findings('const serviceWorker = false;')), []);
-  // Godot's empty default written as JSON, with the key quoted, is still the default.
-  const loader = 'if (this.config.serviceWorker && navigator.serviceWorker) { navigator.serviceWorker.register(this.config.serviceWorker); }';
-  const sw = (config: string) => codes(findings(`const GODOT_CONFIG = ${config};\n${loader}`, 'godot')).filter(c => c === 'engine-service-worker');
-  assert.deepEqual(sw('{"serviceWorker":"","executable":"index"}'), []);
-  assert.deepEqual(sw('{"serviceWorker":"index.service.worker.js","executable":"index"}'), ['engine-service-worker']);
+  // Games may keep a worker on their own address since 17 Nov 2026, so neither a register()
+  // call nor a Godot PWA config is a note or a warning any more.
+  assert.deepEqual(codes(findings('navigator.serviceWorker.register("sw.js");')), []);
+  assert.deepEqual(codes(findings('const GODOT_CONFIG={"serviceWorker":"index.service.worker.js","executable":"index"};', 'godot', ['index.service.worker.js'])), []);
 });
 
 test('Unity, Godot, Cocos and .NET warnings have negative cases', () => {
   assert.ok(codes(findings('const developmentBuild=true;', 'unity', ['Build/a.js.unityweb'])).includes('unity-development-build'));
   assert.ok(codes(findings('', 'unity', ['Build/a.js.unityweb'])).includes('unity-decompression-fallback'));
   assert.deepEqual(codes(findings('const developmentBuild=false;', 'unity', ['Build/a.wasm.br'])), []);
-  assert.ok(codes(findings('const GODOT_CONFIG={serviceWorker:"index.service.worker.js"};', 'godot')).includes('godot-pwa'));
   assert.deepEqual(codes(findings('const GODOT_CONFIG={serviceWorker:""};', 'godot')), []);
   assert.ok(codes(findings('', 'cocos', ['web-desktop/index.html'])).includes('cocos-web-desktop'));
   assert.deepEqual(codes(findings('', 'cocos', ['web-mobile/index.html'])), []);

@@ -132,7 +132,9 @@ test("bundled deploy resumes a lost PUT response without rebuilding or making an
   });
   server.listen(0, "127.0.0.1"); await once(server, "listening");
   origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-  const env = { ...process.env, OPENGAME_API_URL: origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" };
+  const env = { ...process.env, OPENGAME_API_URL: origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1",
+    // These pin what one run does when a request is out of tries; resuming by itself is archive-parts.test.ts.
+    OPENGAME_UPLOAD_RESUME_ROUNDS: "0" };
   try {
     await writeFile(join(root, "opengame.json"), JSON.stringify(manifest));
     await writeFile(join(root, "index.html"), "<!doctype html><title>Original</title>");
@@ -254,7 +256,9 @@ test("first upload uses the checked snapshot while a retry still verifies the di
   });
   server.listen(0, "127.0.0.1"); await once(server, "listening");
   origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-  const env = { ...process.env, OPENGAME_API_URL: origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" };
+  const env = { ...process.env, OPENGAME_API_URL: origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1",
+    // These pin what one run does when a request is out of tries; resuming by itself is archive-parts.test.ts.
+    OPENGAME_UPLOAD_RESUME_ROUNDS: "0" };
   try {
     await writeFile(join(root, "opengame.json"), JSON.stringify(manifest));
     await writeFile(join(root, "index.html"), "<!doctype html><title>Checked snapshot</title>");
@@ -326,7 +330,9 @@ test("an interrupted upload is retried in the same run with a fresh URL, then st
     });
     server.listen(0, "127.0.0.1"); await once(server, "listening");
     origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-    const env = { ...process.env, OPENGAME_API_URL: origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" };
+    const env = { ...process.env, OPENGAME_API_URL: origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1",
+      // These pin what one run does when a request is out of tries; resuming by itself is archive-parts.test.ts.
+      OPENGAME_UPLOAD_RESUME_ROUNDS: "0" };
     try {
       await writeFile(join(root, "opengame.json"), JSON.stringify(manifest));
       await writeFile(join(root, "index.html"), "<!doctype html><title>Retried</title>");

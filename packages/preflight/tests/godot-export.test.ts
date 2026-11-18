@@ -21,42 +21,14 @@ const report = (id: EngineId): EngineReport => ({ id, name: ENGINE_NAMES[id], ve
 const codes = (engine: EngineId, sources: { path: string; text: string }[], paths: string[] = sources.map(s => s.path)) =>
   engineFindings(paths, sources, report(engine)).map(row => row.code);
 
-test('Godot\'s guarded PWA hook is not a service worker; a real registration still is', () => {
-  for (const text of [GODOT4_REGISTER, GODOT3_REGISTER]) {
+test('a Godot PWA export and any service-worker registration are no finding, since game origins host workers', () => {
+  for (const text of [GODOT4_REGISTER, GODOT3_REGISTER, 'navigator.serviceWorker.register("sw.js");']) {
     assert.deepEqual(codes('godot', [{ path: 'index.js', text }, { path: 'index.html', text: GODOT4_SHELL }]), []);
-    // The exemption belongs to Godot: the same line in a bundle nobody identified counts.
-    assert.ok(codes('custom', [{ path: 'index.js', text }]).includes('engine-service-worker'));
+    assert.deepEqual(codes('custom', [{ path: 'index.js', text }]), []);
   }
-  // Somebody else's registration inside a Godot export is still a registration, and the
-  // finding names the file it is in rather than the first that mentions serviceWorker.
-  const rows = engineFindings(['index.js', 'boot.js'], [{ path: 'index.js', text: GODOT4_REGISTER }, { path: 'boot.js', text: 'navigator.serviceWorker.register("sw.js");' }], report('godot'));
-  assert.equal(rows.find(row => row.code === 'engine-service-worker')?.path, 'boot.js');
-  assert.ok(codes('godot', [{ path: 'index.js', text: 'window.navigator.serviceWorker.register(cfg.worker);' }]).includes('engine-service-worker'));
-  // A PWA export ships its worker, so the file alone is enough for both findings.
   const pwa = codes('godot', [{ path: 'index.js', text: GODOT4_REGISTER }, { path: 'index.html', text: GODOT4_SHELL.replace('"executable"', '"serviceWorker":"index.service.worker.js","executable"') }],
     ['index.js', 'index.html', 'index.service.worker.js']);
-  assert.ok(pwa.includes('engine-service-worker') && pwa.includes('godot-pwa'));
-});
-
-test('Godot\'s guarded register still counts once anything names a worker, whatever it is called', () => {
-  // The dodge a review found: arm Godot's own guard with a worker no file-name rule knows.
-  for (const named of [
-    GODOT4_SHELL.replace('"executable"', '"serviceWorker":"boot.js","executable"'),
-    '<script>const engine = new Engine({ ...GODOT_CONFIG, serviceWorker: "cache/x.js" });</script>',
-    '<script>GODOT_CONFIG.serviceWorker = "offline";</script>',
-    '<script>GODOT_CONFIG["serviceWorker"] = location.hash.slice(1);</script>',
-  ]) {
-    const rows = engineFindings(['index.js', 'index.html', 'boot.js'], [{ path: 'index.js', text: GODOT4_REGISTER }, { path: 'index.html', text: named }], report('godot'));
-    assert.equal(rows.find(row => row.code === 'engine-service-worker')?.path, 'index.html', named);
-  }
-  // Outside the guard, the config argument is an ordinary registration.
-  assert.ok(codes('godot', [{ path: 'index.js', text: 'const config={};navigator.serviceWorker.register(this.config.serviceWorker);' }]).includes('engine-service-worker'));
-  assert.ok(codes('godot', [{ path: 'index.js', text: 'if (ready) { navigator.serviceWorker.register(me.config.serviceWorker); }' }]).includes('engine-service-worker'));
-  // Inside the guard, any other argument is too.
-  assert.ok(codes('godot', [{ path: 'index.js', text: 'if (me.config.serviceWorker) { navigator.serviceWorker.register("w.js"); }' }]).includes('engine-service-worker'));
-  // Godot's own defaults, the empty EngineConfig value and its parse() copy, name nothing.
-  const defaults = `const C={serviceWorker: '',};function f(){this.serviceWorker = parse('serviceWorker', this.serviceWorker);}${GODOT4_REGISTER}`;
-  assert.deepEqual(codes('godot', [{ path: 'index.js', text: defaults }, { path: 'index.html', text: GODOT4_SHELL }]), []);
+  assert.deepEqual(pwa, []);
 });
 
 type Case = { name: string; paths: string[]; sources: { path: string; text: string }[]; heads: Record<string, string>; order: string[]; version: string | null; from: string | null };

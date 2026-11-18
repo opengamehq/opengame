@@ -319,6 +319,7 @@
           "error": {
             "type": "string",
             "enum": [
+              "service_worker_refused",
               "origin_not_allowed",
               "token_rejected",
               "session_rejected",
@@ -8790,7 +8791,8 @@
                     "score",
                     "achievement",
                     "share",
-                    "remix"
+                    "remix",
+                    "feature"
                   ]
                 },
                 "name": {
@@ -11953,8 +11955,8 @@
                 "example": {
                   "launched": false,
                   "access": true,
-                  "opensAt": "2026-11-18T08:00:00.000Z",
-                  "creatorsOpenAt": "2026-11-18T08:00:00.000Z",
+                  "opensAt": "2026-11-18T05:00:00.000Z",
+                  "creatorsOpenAt": "2026-11-18T05:00:00.000Z",
                   "entriesCloseAt": "2026-12-19T08:00:00.000Z",
                   "deploysFrozen": false
                 }
@@ -23324,7 +23326,8 @@
                               "score",
                               "achievement",
                               "share",
-                              "remix"
+                              "remix",
+                              "feature"
                             ]
                           },
                           "name": {
@@ -34971,7 +34974,7 @@
                       "name": "Game Jam #1",
                       "state": "open",
                       "acceptingEntries": true,
-                      "startsAt": "2026-11-18T08:00:00.000Z",
+                      "startsAt": "2026-11-18T05:00:00.000Z",
                       "endsAt": "2026-12-19T08:00:00.000Z",
                       "rulesUrl": "https://opengame.io/rules",
                       "tracks": [
@@ -35161,7 +35164,7 @@
                       "name": "Game Jam #1",
                       "state": "open",
                       "acceptingEntries": true,
-                      "startsAt": "2026-11-18T08:00:00.000Z",
+                      "startsAt": "2026-11-18T05:00:00.000Z",
                       "endsAt": "2026-12-19T08:00:00.000Z",
                       "rulesUrl": "https://opengame.io/rules",
                       "tracks": [

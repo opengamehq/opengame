@@ -42,7 +42,7 @@ test('a Unity build counts its stored Brotli data, wasm and framework', () => {
     { path: 'Build/web.framework.js.br', size: 100_000 }, { path: 'Build/web.loader.js', size: 30_000 },
   ], new Set(['unity']));
   assert.ok(row);
-  assert.ok(row.title.includes(`about ${formatBytes(38 * MB + 100_000)} before`));
+  assert.ok(row.title.includes(`about ${formatBytes(38 * MB + 100_000)} on the wire`));
   assert.match(row.detail!, /In Unity/);
 });
 
@@ -54,13 +54,13 @@ test('the threshold is the line, not a size', () => {
   assert.match(row.detail!, /after the game starts/);
 });
 
-test('a file with both a .br and a .gz twin is counted once, as the smaller', () => {
+test('a file with both a .br and a .gz twin is counted once, as the .br og-games sends', () => {
   const [row] = bootDownloadFindings([
-    { path: 'Build/game.wasm', size: 140 * MB }, { path: 'Build/game.wasm.br', size: 26 * MB }, { path: 'Build/game.wasm.gz', size: 34 * MB },
+    { path: 'Build/game.wasm', size: 140 * MB }, { path: 'Build/game.wasm.gz', size: 22 * MB }, { path: 'Build/game.wasm.br', size: 26 * MB },
   ], new Set(['emscripten']));
   assert.ok(row);
-  assert.ok(row.title.includes(`about ${formatBytes(26 * MB)} before`), row.title);
-  assert.doesNotMatch(row.detail!, /game\.wasm\.gz/);
+  assert.ok(row.title.includes(`about ${formatBytes(26 * MB)} on the wire`), row.title);
+  assert.doesNotMatch(row.detail!, /game\.wasm\.gz/, 'the .br is sent even where the .gz is smaller');
   assert.doesNotMatch(row.title, /up to/, 'every file counted is stored compressed, so this is not a ceiling');
 });
 
@@ -72,7 +72,45 @@ test('Unreal containers are left out, since the engine reads them by range', () 
   ];
   const [row] = bootDownloadFindings(files, new Set(['unreal']));
   assert.ok(row);
-  assert.ok(row.title.includes(`about ${formatBytes(26 * MB)} before`), row.title);
+  assert.ok(row.title.includes(`about ${formatBytes(26 * MB)} on the wire`), row.title);
   assert.doesNotMatch(row.detail!, /pakchunk/);
   assert.match(row.detail!, /In Unreal/);
+});
+
+/* A Unity build whose .data goes through the asset plan (Greptile on the public mirror's #19):
+   the plan changes how the file is uploaded, not whether Unity's loader waits for it, so the
+   first-download note counts it on both checks that see it, the platform's (which has the
+   declared row) and the CLI's (which has the name, and the size it measured on disk). */
+test('a Unity build counts a .data sent through the asset plan, on the platform and in the CLI', async () => {
+  const { preflight } = await import('../src/index');
+  const { platformPreflight } = await import('../src/platform');
+  const text = (path: string, body: string) => ({ path, size: Buffer.byteLength(body), text: async () => body });
+  const unity = () => [
+    text('index.html', '<script src="Build/web.loader.js"></script><script>createUnityInstance(canvas, {dataUrl:"Build/web.data"})</script>'),
+    text('Build/web.loader.js', 'function createUnityInstance() {}'),
+    text('Build/web.framework.js', 'var unityFramework = function () {};'),
+    { path: 'Build/web.wasm', size: 8, text: async () => { throw Error('binary'); } },
+  ];
+  const dataBytes = 60 * MB;
+  const row = { path: 'Build/web.data', byteSize: dataBytes, sha256: 'a'.repeat(64) };
+  const unread = { path: row.path, size: dataBytes,
+    text: async () => { throw Error('external bytes must remain unread'); }, bytes: async () => { throw Error('external bytes must remain unread'); } };
+  const expected = `about ${formatBytes(dataBytes + Buffer.byteLength('var unityFramework = function () {};') + Math.round(8 * LIMITS.performance.wasmTransitRatio))}`;
+
+  const platform = await platformPreflight([...unity(), unread], { externalAssets: [row] });
+  const platformNote = platform.findings.find(finding => finding.code === 'boot-download');
+  assert.ok(platformNote, 'the platform check counts the external .data');
+  assert.equal(platformNote.path, row.path);
+  assert.match(platformNote.title, /up to about/, 'a plain .data is compressed on the way by an unknown amount');
+
+  const cli = await preflight(unity(), { authoritative: true, externalPaths: [row.path], externalSizes: { [row.path]: dataBytes } });
+  const cliNote = cli.findings.find(finding => finding.code === 'boot-download');
+  assert.ok(cliNote, 'the CLI check counts the external .data from its measured size');
+  assert.equal(cliNote.path, row.path);
+  assert.ok(cliNote.title.includes(expected.replace('about', 'up to about')), cliNote.title);
+  assert.ok(dataBytes > noteBytes, 'the case is above the note on its .data alone');
+
+  const unmeasured = await preflight(unity(), { authoritative: true, externalPaths: [row.path] });
+  assert.equal(unmeasured.findings.find(finding => finding.code === 'boot-download'), undefined,
+    'a name with no size is not counted at a guess');
 });

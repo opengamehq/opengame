@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,7 +8,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createServer, type IncomingMessage } from "node:http";
 import { once } from "node:events";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { GameManifest } from "@opengame/protocol";
 import { replyBootstrap, startupInformation } from "./bootstrap-fixture";
 
@@ -105,11 +105,11 @@ async function partsServer(options: { archiveParts?: boolean; drop?: (part: numb
   // Random, so it does not compress: the archive is about as big as this file.
   await writeFile(join(root, "pak.bin"), randomBytes(12 * 1024 * 1024));
   const env = { ...process.env, OPENGAME_API_URL: origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" };
-  const deploy = () => run(process.execPath, [binary, "deploy", root, "--jsonl", "--no-wait"], { env, maxBuffer: 16 * 1024 * 1024 })
+  const deploy = (extra: Record<string, string> = {}) => run(process.execPath, [binary, "deploy", root, "--jsonl", "--no-wait"], { env: { ...env, ...extra }, maxBuffer: 16 * 1024 * 1024 })
     .then(r => ({ code: 0, stdout: r.stdout }), (e: { code: number; stdout: string }) => e)
     .then(result => ({ ...result, events: result.stdout.trim().split("\n").map(line => JSON.parse(line)) }));
   const close = async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(root, { recursive: true, force: true }); };
-  return { deploy, close, requests, puts, held, signed, signings, keys, state: () => state, forgotten: () => forgotten };
+  return { root, deploy, close, requests, puts, held, signed, signings, keys, state: () => state, forgotten: () => forgotten };
 }
 
 test("an archive goes up in parts: its own slices, signed lengths, no credential, a dropped part resent alone", async () => {
@@ -138,12 +138,61 @@ test("an archive goes up in parts: its own slices, signed lengths, no credential
   } finally { await fake.close(); }
 });
 
-test("a part out of tries stops the run, and the next run resumes the same deploy with only the missing part", async () => {
+// Until 18 Nov 2026 a part out of tries ended the run and asked the person to run deploy
+// again, which resumed it. The run now resumes itself (deploy.ts, RESUME_WAITS_S).
+test("a part that keeps dropping is resumed by the same run, with only the missing part sent again", async () => {
+  const fake = await partsServer({ archiveParts: true, drop: (part, attempt) => part === 2 && attempt <= 4 });
+  try {
+    const result = await fake.deploy();
+    assert.equal(result.code, 0, result.stdout);
+    const resumed = result.events.filter(event => event.code === "upload_resuming");
+    assert.equal(resumed.length, 1);
+    assert.equal(resumed[0].message, "The connection dropped during the upload. Trying again in 5 s (1 of 4); everything already sent is kept.");
+    assert.equal(fake.keys.size, 1, "the resumed round asked for the same operation");
+    assert.deepEqual(fake.puts.filter(put => put.part !== 2).map(put => put.part).sort(), [1, 3], "parts already held were not sent again");
+    assert.equal(fake.state(), "queued");
+  } finally { await fake.close(); }
+});
+
+/* The folder lock is let go while a round waits, so another deploy from the same folder can
+   replace the saved one in those seconds (Greptile on opengamehq/opengame#20). The waiting run
+   must not pick that one up and report it as its own. */
+test("a resume round stops when another deploy replaced this one while it waited", async () => {
+  let replaced = false;
+  const fake = await partsServer({ archiveParts: true, drop: (part, attempt) => {
+    if (part !== 2) return false;
+    if (attempt === 3 && !replaced) {
+      replaced = true;
+      // After the round has given up and let go of the lock, and well inside its 5 s wait.
+      setTimeout(async () => {
+        const path = join(fake.root, ".opengame/project.json");
+        const state = JSON.parse(await readFile(path, "utf8"));
+        state.deploy.key = randomUUID();
+        await writeFile(path, JSON.stringify(state));
+      }, 1500);
+    }
+    return true;
+  } });
+  try {
+    const result = await fake.deploy({ OPENGAME_UPLOAD_RESUME_ROUNDS: "1" });
+    assert.ok(replaced);
+    assert.notEqual(result.code, 0, result.stdout);
+    assert.equal(result.events.filter(event => event.code === "upload_resuming").length, 1);
+    assert.equal(result.events.at(-1).code, "project_busy", result.stdout);
+    assert.match(result.events.at(-1).message, /replaced this upload while it waited to resume/);
+    assert.equal(fake.requests.length, 1, "no deploy was started or resumed for the replacement");
+    assert.equal(fake.signings.flat().filter(part => part !== 2).length, 2, "the stopped round signed nothing more");
+  } finally { await fake.close(); }
+});
+
+test("a link that never comes back ends the run after its rounds, and the next run resumes the same deploy", async () => {
   let failing = true;
   const fake = await partsServer({ archiveParts: true, drop: part => failing && part === 2 });
   try {
-    const first = await fake.deploy();
+    // One round, so the test waits 5 s and not the whole 110.
+    const first = await fake.deploy({ OPENGAME_UPLOAD_RESUME_ROUNDS: "1" });
     assert.equal(first.code, 5, first.stdout);
+    assert.equal(first.events.filter(event => event.code === "upload_resuming").length, 1);
     assert.equal(first.events.at(-1).code, "upload_interrupted");
     assert.match(first.events.at(-1).message, /parts already sent are kept/);
     assert.deepEqual([...fake.held.keys()].sort(), [1, 3]);

@@ -205,6 +205,8 @@ function createRadio(): Radio {
   };
 
   async function request(op: string, args: Record<string, unknown> = {}): Promise<Result<unknown>> {
+    // Optional: a core from before SDK 0.5.1 has no feature count.
+    og.feature?.('radio');
     if (!await connected()) return { ok: false, error: 'unavailable' };
     /* A copy of this module loaded after the session (a game's own bundle beside the
        injected SDK) has not seen the capability. It asks anyway; the page answers

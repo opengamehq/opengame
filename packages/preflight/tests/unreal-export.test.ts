@@ -57,12 +57,10 @@ test("an Unreal 5.9 Wasm stage is named Unreal Engine, and its Brotli twins are 
   assert.ok(!result.findings.some(f => f.code === "nested-archive"));
 });
 
-test("Unreal's page copy is dropped, its sw.js is called a cache, and its unfetched names are not missing", async () => {
+test("Unreal's page copy is dropped, its sw.js is no finding, and its unfetched names are not missing", async () => {
   const result = await preflight(stage());
-  const worker = result.findings.find(f => f.code === "engine-service-worker");
-  assert.match(worker?.detail ?? "", /Unreal's sw\.js is the page's optional data cache/);
-  assert.match(worker?.detail ?? "", /Nothing to change in the build/);
-  assert.doesNotMatch(worker?.detail ?? "", /Disable offline or PWA/);
+  // og-games hosts Epic's sw.js as the game's own worker since 17 Nov 2026.
+  assert.ok(!result.findings.some(f => /service-worker|pwa/.test(f.code)));
   const missing = result.findings.find(f => f.code === "missing-ref");
   for (const name of ["wasm-bench.js", "webgpu-capture.json"]) assert.doesNotMatch(JSON.stringify(missing ?? {}), new RegExp(name.replace(".", "\\.")));
   assert.ok(!JSON.stringify(result.findings).includes("index.html.br"), "the page copy is litter, not a finding");

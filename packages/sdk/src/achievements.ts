@@ -12,7 +12,9 @@ declare const __SDK_CONFIG__: { eventsApiOrigin: string; eventTimeoutMs: number;
 /** The private callback supplies a live credential and a monotonic revision.
  * Comparing tokens alone would allow an old A reply after A -> B -> A. */
 export class Achievements {
-  constructor(private readonly session: () => Session) {}
+  constructor(private readonly session: () => Session,
+    /** The client's feature count (index.ts `feature`). */
+    private readonly note: (name: 'achievement_unlock' | 'achievement_list') => void = () => {}) {}
   private validId(id: unknown): id is string {
     return typeof id === 'string' && id.length <= __SDK_CONFIG__.achievementIdCharsMax && /^[a-z0-9][a-z0-9_-]*$/.test(id);
   }
@@ -55,10 +57,11 @@ export class Achievements {
    * unlock preserves its original time and returns firstUnlock: false. Requires
    * a published game session; previews return unavailable_in_preview. */
   unlock(id: string): Promise<AchievementResult<AchievementUnlock>> {
+    this.note('achievement_unlock');
     if (!this.validId(id)) return Promise.resolve({ ok: false, error: 'invalid_achievement' });
     return this.request<AchievementUnlock>(id);
   }
   /** Read active achievements and this player's unlock state. Requires a published
    * game session; previews return unavailable_in_preview. */
-  list(): Promise<AchievementResult<Achievement[]>> { return this.request<Achievement[]>(); }
+  list(): Promise<AchievementResult<Achievement[]>> { this.note('achievement_list'); return this.request<Achievement[]>(); }
 }

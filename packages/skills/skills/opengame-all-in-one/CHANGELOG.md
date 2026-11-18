@@ -1,8 +1,12 @@
 # opengame-all-in-one changelog
 
-## 1.0.11
+## 1.0.12
 
 Carries `opengame-jam` 1.1.2, which names the rules page's five judging criteria with none weighted above another. (17 Nov 2026)
+
+## 1.0.11
+
+Carries opengame-deploy 1.1.13, where a game may keep a service worker on its own address, and multiplayer works from any engine through servers the creator runs or WebRTC. (18 Nov 2026)
 
 ## 1.0.10
 

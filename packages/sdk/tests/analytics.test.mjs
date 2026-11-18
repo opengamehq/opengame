@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { harness, limits } from './harness.mjs';
 // Source-only integration: these tests are UNRUN until the parent rebuilds all bundles.
 
@@ -476,4 +477,114 @@ test('complete accepted-ID receipts retire both accepted and mixed terminal batc
     assert.equal(h.calls.length, 1);
     h.og.dispose();
   }
+});
+
+/* sdk_feature and the version on sdk_ready: which SDK features a game uses, each once a page
+   session, only once a session grants analytics. */
+test('each SDK feature is noted once a session, after the analytics grant, and sdk_ready names the version', async () => {
+  const events = [];
+  const h = harness({ fetcher: async (_url, init) => {
+    const batch = JSON.parse(init.body).events; events.push(...batch);
+    return Response.json({ accepted: batch.length });
+  } });
+  h.og.init();
+  // Used before any session: kept, and sent once the session arrives.
+  h.og.track('level_start', { level: 1 }); h.og.track('level_start', { level: 2 });
+  h.og.onPause(() => {}); h.og.onPause(() => {});
+  void h.og.player.avatar; void h.og.player.avatar;
+  h.fire('pagehide'); assert.equal(h.calls.length, 0);
+  h.send({ type: 'session', token: 'feature-session', capabilities: ['analytics'] });
+  h.og.ready();
+  h.og.fullscreen.request(); h.og.fullscreen.request();
+  h.fire('pagehide'); await new Promise(resolve => setImmediate(resolve));
+  const features = events.filter(event => event.name === 'sdk_feature');
+  assert.deepEqual(features.map(event => event.props.feature).sort(), ['avatar', 'fullscreen', 'pause', 'track']);
+  assert.ok(features.every(event => Object.keys(event.props).length === 1), 'a feature note carries the feature and nothing else');
+  const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+  assert.deepEqual(events.find(event => event.name === 'sdk_ready').props, { duration_ms: events.find(event => event.name === 'sdk_ready').props.duration_ms, sdk_version: version });
+  // Used again: nothing new.
+  const before = events.length;
+  h.og.track('level_start', { level: 3 }); h.og.onPause(() => {}); h.og.fullscreen.request();
+  h.fire('pagehide'); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(events.slice(before).filter(event => event.name === 'sdk_feature').length, 0);
+  assert.equal(events.slice(before).filter(event => event.name === 'level_start').length, 1);
+  h.og.dispose();
+
+  // No analytics grant, no note, however much the game uses.
+  const denied = harness({ fetcher: async (_url, init) => Response.json({ accepted: JSON.parse(init.body).events.length }) });
+  denied.og.init();
+  denied.send({ type: 'session', token: 'no-analytics', capabilities: ['leaderboards'] });
+  denied.og.ready(); denied.og.onPause(() => {}); denied.og.fullscreen.request();
+  denied.fire('pagehide'); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(denied.calls.length, 0);
+  denied.og.dispose();
+});
+
+/* Greptile on opengamehq/opengame#20: a feature note is free of the game's budget, so a game
+   that sent sdk_feature itself in a loop grew the queue without bound. The name is the SDK's. */
+test('a game cannot send sdk_feature itself, so the free allowance stays the SDK\'s', async () => {
+  const events = [];
+  const h = harness({ fetcher: async (_url, init) => {
+    const batch = JSON.parse(init.body).events; events.push(...batch);
+    return Response.json({ accepted: batch.length });
+  } });
+  h.og.init();
+  h.send({ type: 'session', token: 'spoof-session', capabilities: ['analytics'] });
+  h.og.ready();
+  for (let i = 0; i < 1000; i++) {
+    const result = h.og.track('sdk_feature', { feature: 'radio' });
+    assert.equal(result.ok, false); assert.equal(result.error, 'invalid_event');
+  }
+  // feature() is private only to TypeScript: a page notes at most as many names as there are.
+  for (let i = 0; i < 1000; i++) h.og.feature(`made_up_${i}`);
+  for (let flush = 0; flush < 5; flush++) { h.fire('pagehide'); await new Promise(resolve => setImmediate(resolve)); }
+  assert.equal(events.filter(event => event.name === 'sdk_feature').length, 14);
+  let accepted = 0;
+  while (h.og.track('tick').ok) accepted++;
+  assert.ok(accepted > 0, 'the game\'s own events still go');
+  h.og.dispose();
+});
+
+test('the SDK notes only features og-api and the collector accept', () => {
+  const shared = readFileSync(new URL('../../shared/src/analytics.ts', import.meta.url), 'utf8');
+  const listed = JSON.parse(`[${shared.match(/export const SDK_FEATURES = \[([^\]]+)\]/)[1]}]`);
+  const used = new Set();
+  for (const file of ['index.ts', 'leaderboards.ts', 'achievements.ts', 'radio.ts']) {
+    const source = readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8');
+    for (const match of source.matchAll(/(?:feature|note)\??\.?\(\??\.?\(?'([a-z_]+)'\)/g)) used.add(match[1]);
+  }
+  const local = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8').match(/type Feature = ([^;]+);/)[1];
+  assert.deepEqual([...local.matchAll(/'([a-z_]+)'/g)].map(match => match[1]), listed, 'the SDK type and SDK_FEATURES differ');
+  const count = Number(readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8').match(/const FEATURE_COUNT = (\d+);/)[1]);
+  assert.equal(count, listed.length, 'FEATURE_COUNT is not the number of SDK_FEATURES');
+  assert.deepEqual([...used].sort(), [...listed].sort(), 'a feature is listed and never noted, or noted and never listed');
+});
+
+/* Review of this change: the injected bridge subscribes to pause and mute for every native
+   game as it installs, which is not the game using either; and a feature note never takes
+   a slot from the game's own event budget. */
+test('the bridge\'s own listeners are not a game\'s feature use, and notes spend none of the game\'s budget', async () => {
+  const { createBridge } = await import('../dist/bridge.js');
+  const run = async (useMore) => {
+    const events = [];
+    const h = harness({ fetcher: async (_url, init) => {
+      const batch = JSON.parse(init.body).events; events.push(...batch);
+      return Response.json({ accepted: batch.length });
+    } });
+    createBridge(h.og);
+    h.og.init();
+    h.send({ type: 'session', token: 'bridge-session', capabilities: ['analytics'] });
+    h.og.ready();
+    if (useMore) { h.og.onPause(() => {}); h.og.fullscreen.request(); void h.og.player.avatar; }
+    let accepted = 0;
+    while (h.og.track('tick').ok) accepted++;
+    for (let flush = 0; flush < 20; flush++) { h.fire('pagehide'); await new Promise(resolve => setImmediate(resolve)); }
+    h.og.dispose();
+    return { accepted, features: events.filter(event => event.name === 'sdk_feature').map(event => event.props.feature).sort() };
+  };
+  const plain = await run(false), busy = await run(true);
+  assert.deepEqual(plain.features, ['track'], 'the bridge\'s pause and mute listeners were counted');
+  assert.deepEqual(busy.features, ['avatar', 'fullscreen', 'pause', 'track']);
+  assert.equal(busy.accepted, plain.accepted, 'feature notes took slots from the game\'s own events');
+  assert.ok(plain.accepted > 0);
 });

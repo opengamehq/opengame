@@ -444,3 +444,14 @@ test('one boot file past bundle.fileBytesMax is a blocker, and one at it is not'
   assert.match(finding!.title, /^Build\/two\.data is .+\. One file can be at most .+\.$/);
   assert.match(finding!.detail!, /^2 files are over it\./);
 });
+
+test('a Unity .data sent through the asset plan still counts toward boot-download', async () => {
+  /* The plan changes how the file is uploaded, not whether a player waits for it: the loader
+     asks for it before the first frame either way. */
+  const row = external(LIMITS.platform.largeAssets.fileBytesMax);
+  const result = await platformPreflight([...boot(), deferred(row)], { externalAssets: [row] });
+  assert.equal(result.ok, true);
+  const note = result.findings.find(finding => finding.code === 'boot-download');
+  assert.ok(note, 'the external .data is counted');
+  assert.match(note.detail!, /Build\/web\.data/);
+});

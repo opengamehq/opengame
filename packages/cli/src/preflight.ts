@@ -8,14 +8,14 @@ import { CliError } from "./output";
 
 /** Keep hostile or unusually dense source off the CLI's event loop. File reads
  * still use the caller's snapshot, so timing out cannot change what was checked. */
-export function runPreflight(files: PreflightFile[], timeoutMs = LIMITS.platform.deploy.preflightTimeoutMs, options: { externalPaths?: readonly string[]; externalDelivery?: string; manifestRequires?: unknown;
+export function runPreflight(files: PreflightFile[], timeoutMs = LIMITS.platform.deploy.preflightTimeoutMs, options: { externalPaths?: readonly string[]; externalSizes?: Readonly<Record<string, number>>; externalDelivery?: string; manifestRequires?: unknown;
   /** Every `bytes()` answer is a buffer of its own that nothing else keeps (snapshot.ts),
    * so it can be moved to the worker instead of copied. The checker asks for every file's
    * bytes once, one at a time, and a copy held a large file twice. */
   transferBytes?: boolean } = {}): Promise<Awaited<ReturnType<typeof platformPreflight>>> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("../dist/preflight-worker.mjs", import.meta.url), {
-      workerData: { files: files.map(({ path, size }) => ({ path, size })), externalPaths: options.externalPaths, externalDelivery: options.externalDelivery, manifestRequires: options.manifestRequires }, env: {}, execArgv: [],
+      workerData: { files: files.map(({ path, size }) => ({ path, size })), externalPaths: options.externalPaths, externalSizes: options.externalSizes, externalDelivery: options.externalDelivery, manifestRequires: options.manifestRequires }, env: {}, execArgv: [],
       resourceLimits: { maxOldGenerationSizeMb: LIMITS.platform.deploy.preflightMemoryMb },
     });
     let finished = false;

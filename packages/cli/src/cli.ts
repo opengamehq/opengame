@@ -168,7 +168,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of the linked folder's." },
     { name: "yes", type: "boolean", description: "Put it back without the question a person is asked. Required for agents and scripts, since players get the game again." }, stdin, json],
     examples: ["opengame restore", "opengame restore --game <id> --yes --json"] },
-  delete: { args: "[dir]", description: "Delete the linked game for good, as Delete for good does on its page: it comes off the gallery, stops being served and cannot be put back. You type its title to confirm. Refused while it is under a legal hold, with a reviewer, or in a jam being scored. Only the opengame login token can do this, not a token made in settings.", flags: [
+  delete: { args: "[dir]", description: "Delete the linked game in one step, as its page does: it is unpublished and its jam entry withdrawn, freeing the slot. It can't be undone. You type its title to confirm. Refused under a legal hold or in a jam being scored. Only the opengame login token can do this, not a token made in settings.", flags: [
     { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of the linked folder's." },
     { name: "title", type: "string", description: "The game's title, typed out, which the server checks against the game. Required with --yes." },
     { name: "yes", type: "boolean", description: "Delete without the prompt a person types the title into. Agents and scripts pass it with --title." }, stdin, json],
@@ -182,7 +182,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
   handle: { args: "<name>", description: "Rename your handle, as Settings does. Your old handle becomes free for anyone to claim, your games keep their /g links, and your profile address changes. Renames are limited per day. Only the opengame login token can do this, not a token made in settings.", flags: [
     { name: "yes", type: "boolean", description: "Rename without the question a person is asked. Required for agents and scripts." }, stdin, json],
     examples: ["opengame handle stormcaller", "opengame handle stormcaller --yes --json"] },
-  jam: { args: "<withdraw|reenter>", description: "Withdraw the linked game's jam entry, freeing its place, or put a withdrawn one back while the jam is open, as your jam entries page does. Needs a token with submit; opengame login has it.", flags: [
+  jam: { args: "<withdraw|reenter>", description: "Withdraw the linked game's jam entry, freeing its place, or put a withdrawn one back while the jam is open, as your jam entries page does. Unpublish a live one first. Needs a token with submit; opengame login has it.", flags: [
     { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of this folder's linked game." },
     { name: "yes", type: "boolean", description: "Withdraw without the question a person is asked. Required for agents and scripts." }, stdin, json],
     examples: ["opengame jam withdraw", "opengame jam reenter --game <id> --json", "opengame jam withdraw --yes --json"] },

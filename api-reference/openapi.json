@@ -19717,7 +19717,7 @@
           }
         ],
         "summary": "Delete a game for good",
-        "description": "Delete a game you own for good, as Delete for good does on its page, through the same function and the same typed-title confirmation, which the server compares against the game's own title (case and spacing forgiven). The game comes off the gallery, its address answers 410 and its cover and screenshots come off public storage. It cannot be put back. Its build, archive and records are kept, so nothing a live or frozen version points at is removed. Its standing jam entries are withdrawn. Refused while it is under a legal hold, with a reviewer, or in a jam that has closed and is being scored. Only a browser session or the token `opengame login` makes can delete, with the `submit` permission; a token made in settings cannot, whatever its permissions, and neither can one pinned to a game. A banned tester or staff member can still delete, as on the website; a banned creator is no longer a member. What `opengame delete` sends.",
+        "description": "Delete a game you own for good, as Delete for good does on its page, through the same function and the same typed-title confirmation, which the server compares against the game's own title (case and spacing forgiven). The game comes off the gallery, its address answers 410 and its cover and screenshots come off public storage. It cannot be put back. Its build, archive and records are kept, so nothing a live or frozen version points at is removed. Its standing jam entry is withdrawn first, as `opengame jam withdraw` does, which frees its place, and any review of it is closed, so a game in review is deleted in one request. Refused while it is under a legal hold, or in a jam that has closed and is being scored. Only a browser session or the token `opengame login` makes can delete, with the `submit` permission; a token made in settings cannot, whatever its permissions, and neither can one pinned to a game. A banned tester or staff member can still delete, as on the website; a banned creator is no longer a member. What `opengame delete` sends.",
         "parameters": [
           {
             "name": "id",
@@ -19838,7 +19838,7 @@
             }
           },
           "409": {
-            "description": "`delete_refused`: the message says why: a legal hold, a reviewer holding it, a jam being scored, or it is already deleted. Nothing was deleted. `unpublish_refused`, `restore_refused` and `no_reviewed_build` are unpublish's and put back's, and are not sent here.",
+            "description": "`delete_refused`: the message says why: a legal hold, a jam being scored, or it is already deleted. Nothing was deleted. `unpublish_refused`, `restore_refused` and `no_reviewed_build` are unpublish's and put back's, and are not sent here.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19928,7 +19928,7 @@
             }
           },
           "503": {
-            "description": "`take_down_unreachable`: OpenGame could not reach the part of its system that starts and stops serving a game, so nothing changed. `temporarily_unavailable`: OpenGame could not finish checking the game, or the delete. Try again in a few minutes. `restore_unverified` is put back's, and is not sent here. `platform_unconfigured`: a fault on OpenGame's side.",
+            "description": "`take_down_unreachable`: OpenGame could not reach the part of its system that starts and stops serving a game, so nothing changed. `temporarily_unavailable`: OpenGame could not finish checking the game, withdrawing its jam entry, or the delete, and the message says which. Try again in a few minutes. `restore_unverified` is put back's, and is not sent here. `platform_unconfigured`: a fault on OpenGame's side.",
             "content": {
               "application/json": {
                 "schema": {

@@ -212,7 +212,7 @@ test("delete needs the title typed and --yes from an agent, and sends the title 
     assert.deepEqual(server.bodies, [{ title: "tide  RUNNER" }]);
     for (const [status, body, code, exit] of [
       [400, { error: "delete_title_mismatch", message: "Nothing was deleted. The title you typed does not match the game's title. Type it exactly as opengame games prints it.", retry: "after-fix" }, "delete_title_mismatch", 2],
-      [409, { error: "delete_refused", message: "A reviewer has this open right now. Withdraw the entry from your jam entries first, then delete it.", retry: "never" }, "delete_refused", 2],
+      [409, { error: "delete_refused", message: "This game is under a legal hold, so it cannot be deleted or put back up.", retry: "never" }, "delete_refused", 2],
       [403, { error: "forbidden", message: "Only opengame login can delete a game, not a token made in settings. Run opengame login, or delete it on the website." }, "forbidden", 3],
     ] as const) {
       server.act = { status, body };
@@ -241,7 +241,7 @@ test("a person types the title at the prompt, and an empty answer deletes nothin
       return { exit, transcript };
     };
     const empty = await ask("\n");
-    assert.match(empty.transcript, /cannot be put back/);
+    assert.match(empty.transcript, /withdraws its entry and frees the entry slot\. It can.t be undone/);
     assert.equal(empty.exit, 2);
     assert.deepEqual(posts(server), []);
     const typed = await ask("Tide runner\n");

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.4
+
+- `opengame delete` is the one step to remove a game. It unpublishes the game, withdraws its
+  jam entry and frees the entry slot, and closes any review, so a game whose entry is in
+  review no longer needs `opengame jam withdraw` first. It can't be undone, and the prompt
+  says so. Once a jam has closed and the round is being scored, delete is still refused.
+- To leave the jam and keep the game, `opengame unpublish` then `opengame jam withdraw`.
+  The help for `opengame jam` says so.
+
 ## 0.13.3
 
 - The AGENTS.md in the package and the skills it installs tell an agent to stop and ask the

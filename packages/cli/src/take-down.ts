@@ -12,7 +12,7 @@ type Flags = Record<string, string | boolean>;
  * Your games page, from a terminal.
  *
  * Nothing here decides whether either is allowed. The server runs the website's own
- * functions for both, so a hold, a report, a reviewer holding the game, our own takedown or
+ * functions for both, so a hold, a report, our own takedown or
  * a game that is not on the gallery refuses here exactly as it does on the page, and in the
  * page's words, which this prints as they come.
  *
@@ -73,6 +73,10 @@ export async function takeDownCommand(command: "unpublish" | "restore", root: st
  * agent or a script passes it as `--title` with `--yes`. The server compares it against the
  * game's own row, as the page's form does, so the CLI never decides whether it matched.
  *
+ * It is the one step: the server withdraws a standing jam entry first (freeing its place) and
+ * closes any review, so a game in review is deleted with no `opengame jam withdraw` before it.
+ * To leave the jam and keep the game, `opengame unpublish` then `opengame jam withdraw`.
+ *
  * Only the `opengame login` token can delete, not a token made in settings: delete cannot be
  * undone. The bundle and the archive are kept behind the tombstone, as on the website, so a
  * live or frozen version never loses its bytes.
@@ -95,10 +99,10 @@ export async function deleteCommand(root: string, flags: Flags, output: Output) 
       if (!person) {
         /* Named by its public id and not by its title: the title is the person's to type, and
            a refusal that printed it would hand an agent the answer to copy (review of #1286). */
-        throw new CliError("confirmation_required", `Deleting game ${game.publicId} cannot be undone. Ask the person to type its title, then pass what they typed with --title, and --yes.`,
+        throw new CliError("confirmation_required", `Deleting game ${game.publicId} unpublishes it, and if it is in a jam, withdraws its entry and frees the entry slot. It can't be undone. Ask the person to type its title, then pass what they typed with --title, and --yes.`,
           EXIT.input, { next: `opengame delete${requested ? ` --game ${requested}` : ""} --title "<the title the person typed>" --yes` });
       }
-      output.emit({ type: "notice", code: "delete", message: `Deleting ${terminalText(game.title)} takes it off the gallery and stops it being served for good. It cannot be put back. Your uploads are kept, but nobody can play it, you included.` });
+      output.emit({ type: "notice", code: "delete", message: `Deleting ${terminalText(game.title)} unpublishes it, and if it is in a jam, withdraws its entry and frees the entry slot. It can't be undone. Your uploads are kept, but nobody can play it, you included.` });
       typed = (await ask(`Type the title, ${terminalText(game.title)}, to delete it for good:`)).trim();
       if (!typed) throw new CliError("cancelled", "Cancelled. Nothing was deleted.", EXIT.input);
     }

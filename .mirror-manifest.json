@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "ad9e2573e1df188457d69d48c63cd2021cce372d"
+    "commit": "c1f7cf3c2669baf0cb5090bf09e2b1255b2821f0"
   },
-  "digest": "a3f88b113400aa6fc033a75e4d9abc8f67e559f3768d7c222625897c39cad1b1",
+  "digest": "d0ca03a32e27f903fcf7172ea58d10dd19b0c8edaaff4ef654649793180899fe",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -177,8 +177,8 @@
     },
     {
       "path": "api-reference/openapi.json",
-      "bytes": 1444255,
-      "sha256": "dbb13573d60ee46144cb5769757c9586e42e08272924ff5aa14956801484d186",
+      "bytes": 1444408,
+      "sha256": "f0c34c80066e7061bf2e5246ccf2e6d74dc0f316cef8dca9a690dca5231f9040",
       "executable": false
     },
     {
@@ -202,7 +202,7 @@
     {
       "path": "package-lock.json",
       "bytes": 27909,
-      "sha256": "939e0c73d1ad4281a25e91af64f8c0aa86b7751209eb18fca3ba859ca38009ef",
+      "sha256": "a7cff8c03f14a3422ee99d521da9f197ea982cdd6cc9e2f559d8e6b43316c031",
       "executable": false
     },
     {
@@ -213,20 +213,20 @@
     },
     {
       "path": "packages/cli/AGENTS.md",
-      "bytes": 26981,
-      "sha256": "0a334e954874fb8c96aac1c3a7522e584a11065d8808b1836e5b4b233e419e4d",
+      "bytes": 26979,
+      "sha256": "1ddc1a4f8380cd43ae915af898377ad724dd0f654979bd2e52b6ae72d7bfb144",
       "executable": false
     },
     {
       "path": "packages/cli/CHANGELOG.md",
-      "bytes": 24207,
-      "sha256": "d1e9e781b04cbebd356ff4235ffd90d9b05cd946583ca360d30f39bae52e4f4c",
+      "bytes": 24709,
+      "sha256": "24008ff56942586495a2d436bd67a93c086b7b32011db7efcc77eeaf252b999f",
       "executable": false
     },
     {
       "path": "packages/cli/README.md",
-      "bytes": 13188,
-      "sha256": "437b7b27c688c6d119489cebef148b565c23f2f7e66ea79c99642d391b43ff6e",
+      "bytes": 13186,
+      "sha256": "4f7ec9ae3a5569118a051df5955bf0bdac753953356b7d26c79fe21e5463729b",
       "executable": false
     },
     {
@@ -238,7 +238,7 @@
     {
       "path": "packages/cli/package.json",
       "bytes": 1821,
-      "sha256": "3d1bc1d375e318bdb0254271dd107a77e239e0396dde2855735d2cf2593e1a5e",
+      "sha256": "24a57a8cb5a369eb63bae939653fb087dff5c82100cabfdfb4c0aac58f983e9c",
       "executable": false
     },
     {
@@ -321,8 +321,8 @@
     },
     {
       "path": "packages/cli/src/cli.ts",
-      "bytes": 67348,
-      "sha256": "3f3031ecf86b281d3c8db6578b57d82c2577eaa3264d5dbeb3e42280e00c4a10",
+      "bytes": 67346,
+      "sha256": "859b5d3c96aa9cfdb80317ee6533779a76bc4ddd479d190deeb3bad454b8692f",
       "executable": false
     },
     {
@@ -579,8 +579,8 @@
     },
     {
       "path": "packages/cli/src/take-down.ts",
-      "bytes": 7638,
-      "sha256": "5d541e6169c93102821c1c59bc9e689dd4b03ae66bdd2637f50b8e2ce536cead",
+      "bytes": 8001,
+      "sha256": "3eb4a04926e87cf37d1abab4ae8d0b5061b92fc864468fb930897fd8ca603e22",
       "executable": false
     },
     {
@@ -1017,6 +1017,42 @@
     },
     {
       "path": "packages/cli/tests/fixtures/manifests/0.13.3/init-vite.json",
+      "bytes": 357,
+      "sha256": "a399eb39131d09916d1a7806c2f2b3e6279bb2fc864da5bc117f8a3bf0293e07",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.4/init-mod.json",
+      "bytes": 316,
+      "sha256": "9cf0b6bb4f5acbcc94b449d34be8a66a3810275c0452ddedb01e31618731acd1",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.4/init-plain.json",
+      "bytes": 276,
+      "sha256": "a5ae52e22a699b3e24fcf3cc7970abd37d6ead679614758edb2637e13330007d",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.4/init-players-online.json",
+      "bytes": 325,
+      "sha256": "3b30b6254358cd2c1a9c38a57877f2acb1f3465a14e4100def34ea5c2e5fd915",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.4/init-players-private.json",
+      "bytes": 325,
+      "sha256": "28c23ed40ab8462e9c97b393c8e988d55dcf360982c11b28607a3524a88d332a",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.4/init-players-single.json",
+      "bytes": 296,
+      "sha256": "38a5ba552064e5ad3f6ae1a7fcd082a9c0602c50cebc9220cc0e1dc4e717ff53",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.4/init-vite.json",
       "bytes": 357,
       "sha256": "a399eb39131d09916d1a7806c2f2b3e6279bb2fc864da5bc117f8a3bf0293e07",
       "executable": false
@@ -1671,8 +1707,8 @@
     },
     {
       "path": "packages/cli/tests/take-down.test.ts",
-      "bytes": 15418,
-      "sha256": "28b899970580c08e045b78ce40870b8b500b68fe42c21d222180afa45432ed2a",
+      "bytes": 15438,
+      "sha256": "16a47b8c45aa733d1be34e7859081d6e6910a06d9cca1b3c9faefb883a10b61b",
       "executable": false
     },
     {

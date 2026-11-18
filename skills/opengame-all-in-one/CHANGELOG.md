@@ -1,5 +1,9 @@
 # opengame-all-in-one changelog
 
+## 1.0.13
+
+Carries `opengame-deploy` 1.1.14, `opengame-jam` 1.1.3 and `opengame-router` 1.0.10, which ask the person before every deploy or publish and wait for a clear yes. (18 Nov 2026)
+
 ## 1.0.12
 
 Carries `opengame-jam` 1.1.2, which names the rules page's five judging criteria with none weighted above another. (17 Nov 2026)

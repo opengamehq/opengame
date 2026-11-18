@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.3
+
+- The AGENTS.md in the package and the skills it installs tell an agent to stop and ask the
+  creator before every `opengame deploy` or `opengame publish`, an update to a live game
+  included, and to wait for a clear yes. Skills 1.7.4.
+
 ## 0.13.2
 
 - `opengame publish` says where the game's newest release stands. While an update is still

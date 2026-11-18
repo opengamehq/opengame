@@ -2,7 +2,7 @@
 name: opengame-jam
 description: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, deploys one exact release, and enters it with the person's own answers, with opengame publish or on the deploy's page. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
 metadata:
-  version: "1.1.2"
+  version: "1.1.3"
 ---
 
 # Enter an OpenGame jam
@@ -83,12 +83,18 @@ Help them prepare the answers; do not answer for them.
 
 ## Deploy, then enter it
 
+Ask first, every time. Before `opengame deploy` and again before `opengame publish`, stop:
+show the person the game, its title, and the track and models you suggest, and wait for a
+clear yes. While the jam runs, a deploy of a new game uses one of their
+2 entries until they withdraw it with `opengame jam withdraw`, and a redeploy of a live
+entry goes live by itself once review passes. Never deploy because the game looks finished.
+
 Follow `opengame-deploy` for installation, sign-in and the deploy. Use the exact release
 the creator played. Once the deploy is ready, review starts by itself; nobody runs a
 command for it. When `opengame status --json` shows `data.review.state` as
 `awaiting_details`, review has passed, and the entry is made one of two ways:
 
-- **The person asked you to enter it.** Run `opengame publish` with their answers:
+- **The person asked you to enter it, and said yes to these answers.** Run `opengame publish` with them:
 
   ```bash
   opengame publish --track <track> --models <model>,<model> \
@@ -117,7 +123,7 @@ the assets, which track they want, and which account they used at each sponsor.
 ends. The result's `review` has the state, `done`, and `next`, the command to run. No
 person reviews a game. Review either lets it through or returns it with the reason, and
 people judge the jam. A returned entry's findings come as `finding` events, the same as a
-deploy's. Fix them and deploy again; the new release goes to review by itself. While the jam
+deploy's. Fix them, ask the person, and deploy again once they say yes; the new release goes to review by itself. While the jam
 takes entries, a redeploy of a game whose entry is live is entered again with the same
 answers, so it keeps its place.
 

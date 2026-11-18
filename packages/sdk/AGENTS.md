@@ -7,7 +7,7 @@ the error catalogue in one place.
 ## Deployment
 
 <!-- generated:procedure -->
-Deploy the creator's game to a private preview and give them its link. Review starts automatically. When it passes, publish the game with `opengame publish` if the creator asked you to, or give them the deploy's page to publish it themselves. Read each command's result before you run the next one.
+Before every `opengame deploy` or `opengame publish`, stop and ask the creator: show them the game and its title, for a jam entry the track and models you suggest, and wait for a clear yes. A deploy can use one of their jam entries, and an update to a live game publishes by itself. Then deploy to a private preview, give them its link, and publish after review only if they asked. Read each command's result before the next one.
 
 ## Install
 
@@ -23,7 +23,7 @@ opengame version --json
 opengame help --json
 ```
 
-`help --json` lists every command, flag, exit code, environment variable and event, with the finding schema. Read it rather than guessing a flag.
+`help --json` lists every command, flag, exit code, environment variable and event, with the finding schema.
 
 `opengame setup` installs every OpenGame skill in the home folder of each coding agent it finds (Claude Code, Codex, Cursor and OpenCode), and later commands keep them current. If your session started before that, read `opengame-router/SKILL.md` in the folder it names.
 
@@ -105,7 +105,7 @@ opengame init . --title "My game" --json
 opengame init . --title "Doom but blue" --kind mod --based-on "Doom" --json
 ```
 
-Do not ask the creator for a description or a genre before deploying. When you know them, pass `--description` (40 characters or more), `--genre` and `--players`; when you do not, leave them out. Every field defaults to Auto: review writes the description and the genre from the game, and the creator accepts or changes them on the deploy's page, where they also enter the jam. A title or description you pass is offered back with its casing and grammar tidied, and `opengame publish --keep-words` keeps it as written. After the deploy you can set the description yourself with `opengame details --description "..." --json`. If the file already exists, `init` fills in only the fields it leaves blank; edit the file to change the rest.
+Do not ask the creator to write a description or pick a genre. When you know them, pass `--description` (40 characters or more), `--genre` and `--players`; when you do not, leave them out. Every field defaults to Auto: review writes the description and the genre from the game, and the creator accepts or changes them on the deploy's page, where they also enter the jam. A title or description you pass is offered back with its casing and grammar tidied, and `opengame publish --keep-words` keeps it as written. After the deploy you can set the description yourself with `opengame details --description "..." --json`. If the file already exists, `init` fills in only the fields it leaves blank; edit the file to change the rest.
 
 For a game that already exists on OpenGame, in a new checkout, link the folder first so the deploy does not create a second game:
 
@@ -114,7 +114,7 @@ opengame games --json
 opengame link --game <id> --json
 ```
 
-Check, then deploy:
+Check, ask the creator, then deploy:
 
 ```bash
 opengame check . --build --json
@@ -168,7 +168,7 @@ An account can begin 5 deploys in a rolling day, so fix what `opengame check` fi
 
 ## Review and publishing
 
-Review starts automatically once a deploy is ready, so you submit no release. Review is automatic: it plays the game, then passes it or returns it with findings.
+Review starts automatically once a deploy is ready: it plays the game, then passes it or returns it with findings.
 
 When review passes, a game's first release waits to be published. `opengame status --json` shows `data.review.state: "awaiting_details"`, `data.review.next: "opengame publish"` and the deploy's page in `data.review.url`.
 
@@ -209,7 +209,7 @@ At runtime the game may call its own origin, `https://api.opengame.gg`, and any 
 
 A game may keep a service worker on the game's address; a takedown removes it and a new version replaces it.
 
-The published game runs at `https://<label>.opengame.gg`, one origin per game, and `opengame deploy` returns it as `data.gameOrigin`. While an experiment runs, players load each version taking part from a `v-` origin instead. If the creator's servers check `Origin` (WebSocket) or send CORS headers (HTTP), they reject the game's requests until that exact origin is on their list, and online play fails with a closed socket, a 401 or 403 on the upgrade, or a CORS error in the console. Tell the creator to add it, and to add a version's `v-` origin before starting an experiment with it. Never suggest allowing `*.opengame.gg`, `null` or any pattern on `opengame.gg`, because other people's games are served there too and a pattern lets them call the creator's server. Use a token in a header or the first socket message, not a cookie. A private preview runs on a temporary `p-` origin, not the game's. That address is a private link, so keep it out of committed config and logs. [Games that talk to your own servers](https://docs.opengame.io/guides/packaging#games-that-talk-to-your-own-servers) has server examples.
+The published game runs at `https://<label>.opengame.gg`, one origin per game, and `opengame deploy` returns it as `data.gameOrigin`. While an experiment runs, players load each version taking part from a `v-` origin instead. If the creator's servers check `Origin` (WebSocket) or send CORS headers (HTTP), they reject the game's requests until that exact origin is on their list, and online play fails with a closed socket, a 401 or 403 on the upgrade, or a CORS error in the console. Tell the creator to add it, and to add a version's `v-` origin before starting an experiment with it. Never suggest allowing `*.opengame.gg`, `null` or any pattern on `opengame.gg`, because other people's games are served there too and a pattern lets them call the creator's server. A private preview runs on a temporary `p-` origin, not the game's. That address is a private link, so keep it out of committed config and logs. [Games that talk to your own servers](https://docs.opengame.io/guides/packaging#games-that-talk-to-your-own-servers) has server examples.
 
 A game may not take payments, use crypto, make players create an account or give an email address, show ads, or carry ad pixels or session recording. [Packaging](https://docs.opengame.io/guides/packaging) has every rule and every check.
 

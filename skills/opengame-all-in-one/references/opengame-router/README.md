@@ -1,4 +1,4 @@
-> Carried from `opengame-router` 1.0.9. Read it when: Build, test and submit a browser game on OpenGame. Routes game work to the deploy guide, whole-game review and relevant craft skills. Use when someone asks to make a game, improve a game, check it, deploy it or enter an OpenGame jam.
+> Carried from `opengame-router` 1.0.10. Read it when: Build, test and submit a browser game on OpenGame. Routes game work to the deploy guide, whole-game review and relevant craft skills. Use when someone asks to make a game, improve a game, check it, deploy it or enter an OpenGame jam.
 
 
 # Work on an OpenGame game
@@ -8,7 +8,11 @@ uploads and jam entries now. Until 18 November, a CLI or API request with no acc
 hears "OpenGame opens for creators on 18 November." Sign in with `opengame login` first.
 That is not a fault in the game.
 
-Read [the working process](references/process.md) before changing the game. Keep the
+Read https://opengame.io/for-agents.md and the AGENTS.md in the CLI package, then [the
+working process](references/process.md), before changing the game. Ask the person
+before every `opengame deploy` or `opengame publish`, an update to a live game included, and
+wait for a clear yes: a deploy can use one of their jam entries, and an update goes live by
+itself. Keep the
 user's scope and budget. Read only the specialists that apply to the next change.
 
 `opengame setup` installs every OpenGame skill for the agents on the machine, and the CLI

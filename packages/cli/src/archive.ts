@@ -6,8 +6,8 @@ import { runPreflight, matchedRawRuntime } from "./preflight";
 import { createHash, randomUUID } from "node:crypto";
 import { Zip, ZipDeflate, ZipPassThrough } from "fflate";
 import { LIMITS } from "@opengame/shared";
-import { largeAssetPlanAdmits } from "@opengame/shared/large-assets";
-import { detectedIds } from "@opengame/preflight/engines";
+import { largeAssetPlan, largeAssetPlanAdmits } from "@opengame/shared/large-assets";
+import { detectedIds, ENGINE_NAMES } from "@opengame/preflight/engines";
 import { isBundlePath, moreLead, incrementalZipLocalHeader, incrementalZipDescriptor, incrementalZipCentralHeader, incrementalZipEnd, incrementalCrc32,
   type GameManifest, type IncrementalFile, type RepairFinding } from "@opengame/protocol";
 import { PACKAGING_CHECK_VERSION, assertNoReservedRuntimePaths } from "./files";
@@ -98,16 +98,37 @@ async function inspectSnapshot(snapshot: Snapshot, excluded: string[], manifest:
       result = await inspect();
     }
   }
-  /* A plan deploy chose by itself (prepareDeploy) for an engine that plan refuses, such as a
-     Kaigen export on the large-game plan, which has a lane of its own, is not the creator's to
-     fix: deploy sends the build as one archive instead (the fallback there), and that check
-     reports whatever else is wrong. The engine is asked here, with what preflight's own refusal
-     reads (every detected engine and every licence stamp), because that refusal needs the
-     plan's rows and this check has only its paths: it would pass here, and the server's check,
-     which has the rows, would refuse the deploy after the upload. */
-  if (options.planChosen && options.externalDelivery
-    && !largeAssetPlanAdmits(options.externalDelivery, [...detectedIds(result.engine), ...(result.engine?.licences ?? [])])) {
-    throw new CliError("unity_assets_plan", "This build cannot take the file-by-file plan deploy chose for it.", 1);
+  /* Whether the plan admits this build, asked here because preflight cannot: it has the plan's
+     paths and not its rows, so its own refusal never runs for the CLI, and the server's check,
+     which has the rows, would refuse the deploy after the upload. That is what happened to a
+     Kaigen 0.7.1 export on 18 Nov 2026 (d3815c51): check passed its kaigen-assets-v1 plan and
+     the scan refused it. The rule is the scan's (engine_archives.py) and preflight's: a plan
+     that names its engines admits on detection alone, a plan open to any engine refuses one it
+     names, counting every licence stamp as that engine, and a plan that asks for a licence
+     stamp needs one in a boot .wasm. A plan deploy chose by itself (prepareDeploy) is not the
+     creator's to fix: deploy sends the build as one archive instead (the fallback there), and
+     that check reports whatever else is wrong. A creator's plan is refused after the findings
+     below are shown, so a refusal here does not hide another blocker. Not copied: the scan
+     also refuses an any-engine plan whose engine text it could not read whole. */
+  let planRefusal: CliError | null = null;
+  if (options.externalDelivery) {
+    const detected = [...detectedIds(result.engine)];
+    const licences = result.engine?.licences ?? [];
+    const plan = largeAssetPlan(options.externalDelivery);
+    const claimed = plan?.anyEngine ? [...detected, ...licences] : detected;
+    const name = (id: string) => ENGINE_NAMES[id as keyof typeof ENGINE_NAMES] ?? id;
+    const names = (plan?.engines ?? []).map(name).join(" or ");
+    if (!largeAssetPlanAdmits(options.externalDelivery, claimed)) {
+      const refused = plan?.anyEngine ? claimed.find(id => (plan.refusedEngines ?? []).includes(id)) : undefined;
+      planRefusal = new CliError("unity_assets_plan", refused
+        ? `This is a ${name(refused)} export, so its external assets go through that engine's own plan, not ${options.externalDelivery}.`
+        : `This build is not recognised as a ${names} export, so the server would refuse its ${options.externalDelivery} plan after the upload. ${(plan?.engines ?? []).includes("unity")
+          ? "Upload the export Unity wrote: its Build folder with the loader beside the framework, wasm or data files, and a page that calls createUnityInstance."
+          : `Upload the build as ${names} wrote it, with its .wasm unchanged.`}`, 2);
+    } else if (plan?.licenceStamp && !licences.includes(plan.licenceStamp)) {
+      planRefusal = new CliError("unity_assets_plan", `None of the boot .wasm files has ${name(plan.licenceStamp)}'s licence stamp, which the ${options.externalDelivery} plan needs. Upload the build ${name(plan.licenceStamp)} produced, with its .wasm unchanged.`, 2);
+    }
+    if (planRefusal && options.planChosen) throw new CliError("unity_assets_plan", "This build cannot take the file-by-file plan deploy chose for it.", 1);
   }
   const findings: RepairFinding[] = [];
   if (excluded.length) output.emit({ type: "notice", code: "files_excluded", message: `Excluded from upload: ${excluded.join(", ")}`, paths: excluded });
@@ -123,6 +144,7 @@ async function inspectSnapshot(snapshot: Snapshot, excluded: string[], manifest:
     findings.push(repair); output.emit({ type: "finding", finding: repair });
   }
   if (defaults) output.emit({ type: "notice", code: "engine-default", message: `${defaults === 1 ? "One note" : `${defaults} notes`} about names the engine uses but never loads ${defaults === 1 ? "is" : "are"} hidden. ${defaults === 1 ? "It needs" : "They need"} no change; opengame check --json shows ${defaults === 1 ? "it" : "them"}.` });
+  if (planRefusal) throw planRefusal;
   if (!result.ok) throw new CliError("check_failed", "This build has blockers. Fix them, then run opengame check again.", 1);
   const raw = matchedRawRuntime(result, snapshot);
   if (!result.hasEntryPoint && !raw) throw new CliError("entry_missing", "The export has no index.html or complete parser-validated raw payload matching these bytes. Run the build, or point build.output in opengame.json at the folder that holds index.html, then run opengame check again.", 1);

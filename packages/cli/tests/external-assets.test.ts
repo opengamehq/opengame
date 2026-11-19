@@ -391,3 +391,39 @@ test("auto partitions boot bytes between the assembly and ordinary ZIP caps", as
   const boot = [{ path: "index.html", byteSize: 8 }, ...rows.filter(row => !chosen.has(row.path))];
   assert.ok(incrementalArchiveBytes(boot) <= LIMITS.platform.incrementalUpload.archiveBytesMax);
 }));
+
+/* opengame check --external-assets reaches the plan through createUnityArchive with a plan the
+   creator chose, and until 18 Nov 2026 nothing on that path asked whether the plan admits the
+   build: preflight has only the plan's paths, and the archive's own question ran for a plan
+   deploy chose. A Kaigen 0.7.1 export passed check with kaigen-assets-v1 and was refused by
+   the scan after the upload (d3815c51). The fixtures are synthetic (packages/preflight/tests/
+   fixtures/synthetic_kaigen.py). Mutation: drop the creator's half of the check in archive.ts
+   and the stamped module without a Kaigen section passes here. */
+test("check asks whether the creator's plan admits the build, as the server does", async () => temporary(async root => {
+  const { createUnityArchive } = await import("../src/unity-assets");
+  const { manifest } = await import("./shell");
+  const rows = (JSON.parse(await readFile(new URL("../../preflight/tests/fixtures/engine-signatures.json", import.meta.url), "utf8")) as
+    { id: string; text: string; wasm?: { base64: string }[] }[]).filter(row => row.id === "kaigen" && row.wasm);
+  const shaped = rows[1]!;
+  const kaigen071 = Buffer.from(shaped.wasm![0]!.base64, "base64");
+  const stampOnly = Buffer.from(kaigen071);
+  stampOnly.write("xx_flags", stampOnly.indexOf("hz_flags"), "latin1");
+  const build = async (dir: string, wasm: Buffer) => {
+    await mkdir(join(dir, "cooked"), { recursive: true });
+    await writeFile(join(dir, "index.html"), '<!doctype html><canvas id="c"></canvas><script type="module" src="./main.js"></script>');
+    await writeFile(join(dir, "main.js"), 'export const w = new Worker(new URL("./main_worker.js", import.meta.url), { type: "module" });');
+    await writeFile(join(dir, "main_worker.js"), shaped.text);
+    await writeFile(join(dir, "game.wasm"), wasm);
+    await writeFile(join(dir, "cooked/catalog.hza"), "HZA\0cooked");
+    await writeFile(join(dir, "opengame.json"), JSON.stringify(manifest));
+    await writeFile(join(dir, "kaigen-assets.json"), JSON.stringify({ delivery: KAIGEN, assets: ["cooked/"] }));
+  };
+  const quiet = new Output(true, () => {}, () => {});
+  await build(join(root, "ok"), kaigen071);
+  const archive = await createUnityArchive(join(root, "ok"), manifest as never, quiet, join(root, "ok"), "kaigen-assets.json", { unityOnly: false });
+  assert.deepEqual(archive.unityAssets.assets.map(row => row.path), ["cooked/catalog.hza"]);
+  await archive.dispose();
+  await build(join(root, "stamp"), stampOnly);
+  await assert.rejects(createUnityArchive(join(root, "stamp"), manifest as never, quiet, join(root, "stamp"), "kaigen-assets.json", { unityOnly: false }),
+    (error: { code?: string; message?: string }) => error.code === "unity_assets_plan" && /not recognised as a Kaigen export/.test(error.message ?? ""));
+}));

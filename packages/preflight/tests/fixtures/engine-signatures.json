@@ -358,6 +358,42 @@
     ]
   },
   {
+    "id": "kaigen",
+    "path": "main_worker.js",
+    "text": "// Synthetic Kaigen-shaped glue for detection tests; not Kaigen code. Names shortened.\nconst r = await WebAssembly.instantiate(b, { env: { a: () => 1, b: () => 0 } });\n",
+    "source": "Synthetic, built by packages/preflight/tests/fixtures/synthetic_kaigen.py: a 0.7.1-shaped module with shortened imports, hz_flags and hz_memory sections and a licence stamp in a data segment with fake fields. No Kaigen software, template or sample content.",
+    "sha256": "856aeb253fc9ce76e36b60b10e495d053cc8aacd7f19f852d1063780316cef1f",
+    "kind": "exported-game-runtime",
+    "paths": [
+      "game.wasm.br"
+    ],
+    "version": "0.7.1.001",
+    "wasm": [
+      {
+        "path": "game.wasm",
+        "base64": "AGFzbQEAAAABBAFgAAACEQIDZW52AWEAAANlbnYBYgAABQMBAAELvgQBAEEAC7cESFpMSUNTVEFNUDF8U1lOVEhFVElDLU5PVC1BLUxJQ0VOQ0V8U1lOVEhFVElDLU5PVC1BLVRPS0VOfFNZTlRIRVRJQy1OT1QtQS1USUVSAEhaTElDU1RBTVAxfFNZTlRIRVRJQy1OT1QtQS1MSUNFTkNFfFNZTlRIRVRJQy1OT1QtQS1UT0tFTnxTWU5USEVUSUMtTk9ULUEtVElFUgBIWkxJQ1NUQU1QMXxTWU5USEVUSUMtTk9ULUEtTElDRU5DRXxTWU5USEVUSUMtTk9ULUEtVE9LRU58U1lOVEhFVElDLU5PVC1BLVRJRVIASFpMSUNTVEFNUDF8U1lOVEhFVElDLU5PVC1BLUxJQ0VOQ0V8U1lOVEhFVElDLU5PVC1BLVRPS0VOfFNZTlRIRVRJQy1OT1QtQS1USUVSAEhaTElDU1RBTVAxfFNZTlRIRVRJQy1OT1QtQS1MSUNFTkNFfFNZTlRIRVRJQy1OT1QtQS1UT0tFTnxTWU5USEVUSUMtTk9ULUEtVElFUgBIWkxJQ1NUQU1QMXxTWU5USEVUSUMtTk9ULUEtTElDRU5DRXxTWU5USEVUSUMtTk9ULUEtVE9LRU58U1lOVEhFVElDLU5PVC1BLVRJRVIASFpMSUNTVEFNUDF8U1lOVEhFVElDLU5PVC1BLUxJQ0VOQ0V8U1lOVEhFVElDLU5PVC1BLVRPS0VOfFNZTlRIRVRJQy1OT1QtQS1USUVSAAAAAQEwLjcuMS4wMDEAAAoIaHpfZmxhZ3MAAA4JaHpfbWVtb3J5nAAAAA=="
+      }
+    ]
+  },
+  {
+    "id": "kaigen",
+    "path": "main_worker.js",
+    "text": "// Synthetic Kaigen-shaped glue for detection tests; not Kaigen code. Names shortened.\nconst r = await WebAssembly.instantiate(b, { env: { a: () => 1, b: () => 0 } });\n",
+    "source": "Synthetic, built by packages/preflight/tests/fixtures/synthetic_kaigen.py: a module whose only Kaigen mark is an hzlic section opening with a licence stamp with fake fields. No Kaigen software, template or sample content.",
+    "sha256": "856aeb253fc9ce76e36b60b10e495d053cc8aacd7f19f852d1063780316cef1f",
+    "kind": "exported-game-runtime",
+    "paths": [
+      "game.wasm.br"
+    ],
+    "version": "0.7.1.001",
+    "wasm": [
+      {
+        "path": "game.wasm",
+        "base64": "AGFzbQEAAAABBAFgAAACEQIDZW52AWEAAANlbnYBYgAAAL0EBWh6bGljSFpMSUNTVEFNUDF8U1lOVEhFVElDLU5PVC1BLUxJQ0VOQ0V8U1lOVEhFVElDLU5PVC1BLVRPS0VOfFNZTlRIRVRJQy1OT1QtQS1USUVSAEhaTElDU1RBTVAxfFNZTlRIRVRJQy1OT1QtQS1MSUNFTkNFfFNZTlRIRVRJQy1OT1QtQS1UT0tFTnxTWU5USEVUSUMtTk9ULUEtVElFUgBIWkxJQ1NUQU1QMXxTWU5USEVUSUMtTk9ULUEtTElDRU5DRXxTWU5USEVUSUMtTk9ULUEtVE9LRU58U1lOVEhFVElDLU5PVC1BLVRJRVIASFpMSUNTVEFNUDF8U1lOVEhFVElDLU5PVC1BLUxJQ0VOQ0V8U1lOVEhFVElDLU5PVC1BLVRPS0VOfFNZTlRIRVRJQy1OT1QtQS1USUVSAEhaTElDU1RBTVAxfFNZTlRIRVRJQy1OT1QtQS1MSUNFTkNFfFNZTlRIRVRJQy1OT1QtQS1UT0tFTnxTWU5USEVUSUMtTk9ULUEtVElFUgBIWkxJQ1NUQU1QMXxTWU5USEVUSUMtTk9ULUEtTElDRU5DRXxTWU5USEVUSUMtTk9ULUEtVE9LRU58U1lOVEhFVElDLU5PVC1BLVRJRVIASFpMSUNTVEFNUDF8U1lOVEhFVElDLU5PVC1BLUxJQ0VOQ0V8U1lOVEhFVElDLU5PVC1BLVRPS0VOfFNZTlRIRVRJQy1OT1QtQS1USUVSAAAAAQEwLjcuMS4wMDEA"
+      }
+    ]
+  },
+  {
     "id": "emscripten",
     "path": "index.js",
     "text": "tRuns)}function abort(what){Module[\"onAbort\"]?.(what);what=`Aborted(${what})`;err(what);ABORT=true;what+=\". Build with -sASSERTIONS for more info.\";throw new WebAssembly.RuntimeError(what)}va\nr binary=await getWasmBinary(binaryFile);var instance=await WebAssembly.instantiate(binary,imports);return instance}catch(reason){err(`failed to\nModule[\"onRuntimeInitialized\"]?.();var noInitialRun=Module[\"noInitialRun\"]||false;if(!noInitialRun)callMain();postRun()}var wasmExports;\n",

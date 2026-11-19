@@ -234,8 +234,13 @@ const PRIMARY_ORDER = Object.keys(registry) as EngineId[];
    wasm-bindgen's functions, and its crate names are in the panic locations (EM-7).
    `importModulesWithin` asks where the imports come from rather than what they are
    called, for Emscripten, whose names say nothing once -O3 has minified them to `a.a`,
-   `a.b` and on: every import must come from a listed module, and there must be one. */
-type WasmRule = { imports: string[]; customSections: string[]; strings?: string[]; importModulesWithin?: string[] };
+   `a.b` and on: every import must come from a listed module, and there must be one.
+   `customSectionPrefixes` asks what a named custom section starts with, read from the
+   section table (customSectionHeads): Kaigen's `hzlic` section opens with its licence
+   stamp. A signature with a `wasm` rule may name no text patterns at all, and then the
+   module alone decides: Kaigen 0.7.1 shortened the names its glue and imports had carried
+   in 0.6.2, and its founder said on 18 Nov 2026 that those names are not stable. */
+type WasmRule = { imports: string[]; customSections: string[]; strings?: string[]; importModulesWithin?: string[]; customSectionPrefixes?: Record<string, string> };
 type RegistrySignature = { patterns: string[]; evidence: string; paths?: string[]; versionPattern?: string; wasm?: WasmRule };
 type RegistryRow = { name: string; signatures: RegistrySignature[]; licenceStamp?: string };
 
@@ -260,7 +265,9 @@ const RULE_STRINGS = [...new Set(Object.values(registry as Record<string, Regist
 const satisfies = (rule: WasmRule, module: WasmFacts & { strings: string[] }) =>
   rule.imports.every(name => module.imports.includes(name)) && rule.customSections.every(name => module.customSections.includes(name))
   && (rule.strings ?? []).every(text => module.strings.includes(text))
-  && (!rule.importModulesWithin || (module.imports.length > 0 && module.importModules.every(name => rule.importModulesWithin!.includes(name))));
+  && (!rule.importModulesWithin || (module.imports.length > 0 && module.importModules.every(name => rule.importModulesWithin!.includes(name))))
+  && Object.entries(rule.customSectionPrefixes ?? {}).every(([name, prefix]) =>
+    module.customSections.some((section, at) => section === name && (module.customSectionHeads[at] ?? "").startsWith(prefix)));
 
 /** Everything detection needs from one `.wasm`, read once. `licences` names each engine
  * whose licence stamp the bytes carry (the registry's `licenceStamp`): it grants nothing,
@@ -270,7 +277,7 @@ export function wasmModule(path: string, bytes: Uint8Array): WasmModule {
   const walked = wasmFacts(path, bytes);
   // Strings count only in a module that walks to its end, so a file that merely carries
   // the words beside some glue is not a build of that engine.
-  const facts = { ...(walked ?? { path, imports: [], importModules: [], customSections: [], sharedMemory: false }),
+  const facts = { ...(walked ?? { path, imports: [], importModules: [], customSections: [], customSectionHeads: [], sharedMemory: false }),
     strings: walked ? RULE_STRINGS.filter(text => bytesInclude(bytes, text)) : [] };
   const rows = Object.entries(registry as Record<string, RegistryRow>);
   const licences = rows.filter(([, row]) => row.licenceStamp && bytesInclude(bytes, row.licenceStamp)).map(([id]) => id);
@@ -304,14 +311,17 @@ function registryProbes(paths: string[], sources: EngineSource[], modules: WasmM
   for (const [id, row] of Object.entries(registry as Record<string, RegistryRow>)) {
     for (const signature of row.signatures) {
       if (signature.paths && !signature.paths.every(pattern => paths.some(path => new RegExp(pattern).test(path)))) continue;
-      const source = sources.find(source => signature.patterns.every(pattern => new RegExp(pattern).test(source.text)));
-      if (!source) continue;
+      // No patterns means the module alone decides, which only a `wasm` rule may say.
+      const textless = signature.patterns.length === 0;
+      if (textless && !signature.wasm) continue;
+      const source = textless ? undefined : sources.find(source => signature.patterns.every(pattern => new RegExp(pattern).test(source.text)));
+      if (!textless && !source) continue;
       const module = signature.wasm ? modules.find(module => satisfies(signature.wasm!, module)) : undefined;
       if (signature.wasm && !module) continue;
-      const read = module ? module.text : source.text;
+      const read = module ? module.text : source!.text;
       const version = signature.versionPattern && read != null ? new RegExp(signature.versionPattern).exec(read)?.[1] ?? null : null;
       out.push({ id: id as EngineId, name: row.name, version,
-        evidence: module ? `${signature.evidence} in ${source.path} and ${module.path}` : `${signature.evidence} in ${source.path}` });
+        evidence: module && source ? `${signature.evidence} in ${source.path} and ${module.path}` : `${signature.evidence} in ${(module ?? source)!.path}` });
       break;
     }
   }
@@ -351,9 +361,9 @@ function registryProbes(paths: string[], sources: EngineSource[], modules: WasmM
    Emscripten's or wasm-bindgen's is the same, and so is any module carrying Kaigen's
    `hz_flags` section or an engine's licence stamp: a stamp asks for that engine's
    publication statement, and naming such a build "WebAssembly" would read as an answer to
-   who made it. A stamp found elsewhere (base64 in a script, a module renamed `.bin`) still
-   asks for the statement through the licence search in index.ts, beside whatever name this
-   gives.
+   who made it. Kaigen's `hz_memory` and `hzlic` sections count the same as `hz_flags`. A
+   stamp found elsewhere (base64 in a script, a module renamed `.bin`) still asks for the
+   statement through the licence search in index.ts, beside whatever name this gives.
 
    Identification only, like everything here. The words are copyable, and leaving one out
    of a forged bundle gets the forger the name "WebAssembly" and nothing else. engines.py
@@ -361,6 +371,9 @@ function registryProbes(paths: string[], sources: EngineSource[], modules: WasmM
    rather than `\s`, which is Unicode-wide here and ASCII in engines.py. */
 const INSTANTIATES = /\bWebAssembly[ \t\r\n]*\.[ \t\r\n]*(instantiate(?:Streaming)?|compile(?:Streaming)?)[ \t\r\n]*\(|\bnew[ \t\r\n]+WebAssembly[ \t\r\n]*\.[ \t\r\n]*(Module|Instance)[ \t\r\n]*\(/;
 const TOOLCHAIN_GLUE = /failed to asynchronously prepare wasm|\bwasmBinaryFile\b|\b[Ee]mscripten\b|__wbindgen_|__wbg_|["']runtime\.wasmExit["']|["']syscall\/js\.|\bgo\.importObject\b|\bcreateUnityInstance\b|\bUnityLoader\b|\bGODOT_CONFIG\b|\bGodot(?:Config|FS|OS|Runtime)\b|\bEngineLoader\b|\bhz_flags\b/;
+/** Custom sections only Kaigen writes: `hz_flags` since 0.6.2, `hz_memory` in 0.7.1, and
+ * `hzlic`, the licence section its founder named as the stable mark. */
+const KAIGEN_SECTIONS = new Set(["hz_flags", "hz_memory", "hzlic"]);
 const TOOLCHAIN_IMPORT = /^(?:_?emscripten_|__syscall_|invoke_|__wbindgen_|__wbg_|runtime\.|syscall\/js\.)/;
 
 const EMSCRIPTEN_RUNTIME = (registry as Record<string, RegistryRow>).emscripten!.signatures[0]!.patterns.slice(0, 2).map((pattern) => new RegExp(pattern));
@@ -388,7 +401,7 @@ function rawWebAssembly(paths: string[], sources: EngineSource[], modules: WasmM
      An Emscripten library's glue is set aside, as the comment above says. */
   const scripts = sources.filter(source => engineFileKind(source.path) === "text" && !emscriptenRuntime(source.text));
   if (scripts.some(source => TOOLCHAIN_GLUE.test(source.text))) return null;
-  if (modules.some(module => module.licences.length > 0 || module.customSections.includes("hz_flags"))) return null;
+  if (modules.some(module => module.licences.length > 0 || module.customSections.some(name => KAIGEN_SECTIONS.has(name)))) return null;
   const loader = scripts.find(source => INSTANTIATES.test(source.text));
   if (!loader) return null;
   const path = paths.find(path => engineFileKind(path) === "module"

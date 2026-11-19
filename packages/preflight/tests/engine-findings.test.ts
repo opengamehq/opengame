@@ -196,7 +196,7 @@ test('emscripten single-file pthreads are seen from the quoted shared key and th
 
 test('the module reader sees the shared bit, as engines.py wasm_facts does', () => {
   // tests/test_threaded_receipt.py asserts the same four answers of the Python reader.
-  assert.deepEqual(wasmFacts('a.wasm', SHARED_IMPORT), { path: 'a.wasm', imports: ['memory'], importModules: ['env'], customSections: [], sharedMemory: true });
+  assert.deepEqual(wasmFacts('a.wasm', SHARED_IMPORT), { path: 'a.wasm', imports: ['memory'], importModules: ['env'], customSections: [], customSectionHeads: [], sharedMemory: true });
   assert.equal(wasmFacts('a.wasm', SHARED_DEFINED)?.sharedMemory, true);
   assert.equal(wasmFacts('a.wasm', PLAIN_IMPORT)?.sharedMemory, false);
   assert.equal(wasmFacts('a.wasm', ATOMICS_UNSHARED)?.sharedMemory, false);
@@ -343,5 +343,5 @@ test('a memory section this cannot walk says nothing about threads and keeps the
   const half = [0x05, 0x04, 0x02, 0x03, 0x01, 0x02];
   assert.equal(wasmFacts('a.wasm', new Uint8Array([...WASM_HEADER, ...half]))?.sharedMemory, false);
   assert.deepEqual(wasmFacts('a.wasm', new Uint8Array([...PLAIN_IMPORT, ...half])),
-    { path: 'a.wasm', imports: ['memory'], importModules: ['env'], customSections: [], sharedMemory: false });
+    { path: 'a.wasm', imports: ['memory'], importModules: ['env'], customSections: [], customSectionHeads: [], sharedMemory: false });
 });

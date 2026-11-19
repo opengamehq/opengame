@@ -931,7 +931,7 @@ export async function preflight(
     if (!bytes) continue;
     wasmModules.push(wasmModule(file.path, bytes));
     detected = detectEngine(kept.map((f) => f.path), engineSources, { complete: completeEngineText, wasm: wasmModules });
-    const settled = [detected, ...detected.also].some((e) => e.version && wasmModules.some((m) => e.evidence.endsWith(` and ${m.path}`)))
+    const settled = [detected, ...detected.also].some((e) => e.version && wasmModules.some((m) => e.evidence.endsWith(` ${m.path}`)))
       && wasmModules.some((m) => m.licences.length) && (glueThreaded || wasmModules.some((m) => m.sharedMemory));
     if (settled) break;
   }
@@ -1007,7 +1007,12 @@ export async function preflight(
      from detection by quoting one glue key and renaming its worker to .cjs, and the stamp
      was still in its wasm. */
   const claimed = new Set<string>([...engineIds, ...licences]);
-  if (external.size && (!plan || !largeAssetPlanAdmits(delivery, claimed) || !completeEngineText || strippedRoot ||
+  /* A plan that names its engines admits on detection alone, as the scan does
+     (engine_archives.py). Until 18 Nov 2026 the stamp counted here too, so a Kaigen 0.7.1
+     build that neither reader recognised passed this check and was refused on the server
+     (deployment d3815c51). The stamp still counts against a plan that refuses an engine. */
+  const admitting = plan?.anyEngine ? claimed : new Set<string>(engineIds);
+  if (external.size && (!plan || !largeAssetPlanAdmits(delivery, admitting) || !completeEngineText || strippedRoot ||
       externalAssets!.some(row => !keptPaths.has(row.path)))) {
     const refused = plan?.anyEngine ? [...claimed].filter(id => (plan.refusedEngines ?? []).includes(id)) : [];
     const names = (plan?.engines ?? []).map(id => id[0]!.toUpperCase() + id.slice(1)).join(" or ");

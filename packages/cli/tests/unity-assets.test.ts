@@ -47,7 +47,10 @@ test("the explicit plan accepts only individual eligible assets and preserves ex
 test("the boot archive excludes exact asset paths and keeps sibling code, wasm and data", async () => temporary(async root => {
   await mkdir(join(root, "Build"));
   const files = new Map([
-    ["index.html", Buffer.from('<!doctype html><script src="Build/game.js"></script>')],
+    // A Unity export as detection reads one (a Build loader beside its parts, and
+    // createUnityInstance), since a plan is checked against the engine it names.
+    ["index.html", Buffer.from('<!doctype html><script src="Build/game.loader.js"></script><script src="Build/game.js"></script>')],
+    ["Build/game.loader.js", Buffer.from("function createUnityInstance() {}")],
     ["Build/game.js", Buffer.from('document.body.textContent = "ready";')],
     ["Build/game.wasm", Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])],
     ["Build/game.data", Buffer.from("external")], ["Build/other.data", Buffer.from("still in boot")],
@@ -242,7 +245,9 @@ test("the CLI wire sends boot-only fields and binds repeat-key resume to the ass
   try {
     await mkdir(join(root, "export", "Build"), { recursive: true });
     await writeFile(join(root, "opengame.json"), JSON.stringify({ ...manifest, build: { output: "export" } }));
-    await writeFile(join(root, "export", "index.html"), "<!doctype html><title>Game</title>");
+    await writeFile(join(root, "export", "index.html"), '<!doctype html><title>Game</title><script src="Build/game.loader.js"></script>');
+    await writeFile(join(root, "export", "Build", "game.loader.js"), "function createUnityInstance() {}");
+    await writeFile(join(root, "export", "Build", "game.framework.js"), "var unityFramework = 1;");
     await writeFile(join(root, "export", "Build", "game.data"), "first");
     await writeFile(join(root, "assets.json"), JSON.stringify({ assets: ["Build/game.data"] }));
     await mkdir(join(root, "ProjectSettings"));
@@ -258,8 +263,8 @@ test("the CLI wire sends boot-only fields and binds repeat-key resume to the ass
     await deploy("unity-wire");
     assert.equal(requests.length, 1);
     assert.deepEqual(Object.keys(requests[0]!).sort(), ["assets", "byteSize", "delivery", "fileCount", "files", "manifest", "metadata", "metadataRevision", "sha256"].sort());
-    assert.deepEqual(requests[0]!.files.map((file: { path: string }) => file.path), ["index.html"]);
-    assert.equal(requests[0]!.fileCount, 1);
+    assert.deepEqual(requests[0]!.files.map((file: { path: string }) => file.path), ["Build/game.framework.js", "Build/game.loader.js", "index.html"]);
+    assert.equal(requests[0]!.fileCount, 3);
     assert.equal(requests[0]!.assets[0].path, "Build/game.data");
     const statePath = join(root, ".opengame", "project.json");
     const originalState = await readFile(statePath, "utf8"), tampered = JSON.parse(originalState);
@@ -290,7 +295,7 @@ test("the CLI wire sends boot-only fields and binds repeat-key resume to the ass
     await run(process.execPath, [binary, "deploy", root, "--no-wait", "--json"], { env });
     assert.equal(requests.length, 4, "plain resume retries expiry as a new Unity asset operation");
     assert.equal(requests[3]!.delivery, "unity-assets-v1");
-    assert.deepEqual(requests[3]!.files.map((file: { path: string }) => file.path), ["index.html"]);
+    assert.deepEqual(requests[3]!.files.map((file: { path: string }) => file.path), ["Build/game.framework.js", "Build/game.loader.js", "index.html"]);
     assert.deepEqual(requests[3]!.assets.map((file: { path: string }) => file.path), ["Build/game.data"]);
   } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
 }));
@@ -444,6 +449,8 @@ test('the archive caller forwards exact external references without putting byte
   await mkdir(join(root, 'Build')); await mkdir(join(root, 'StreamingAssets'));
   await writeFile(join(root, 'index.html'), '<html><body><canvas></canvas><img src="StreamingAssets/sky.png"><script src="game.js"></script></body></html>');
   await writeFile(join(root, 'game.js'), 'createUnityInstance(document.querySelector("canvas"), {dataUrl:"Build/game.data"});');
+  await writeFile(join(root, 'Build/game.loader.js'), 'function createUnityInstance() {}');
+  await writeFile(join(root, 'Build/game.framework.js'), 'var unityFramework = 1;');
   await writeFile(join(root, 'Build/game.data'), 'external data that is not claimed scanned');
   await writeFile(join(root, 'StreamingAssets/sky.png'), 'external bytes');
   await writeFile(join(root, 'assets.json'), JSON.stringify({ assets: ['Build/game.data', 'StreamingAssets/sky.png'] }));

@@ -35,9 +35,19 @@ export interface WasmFacts {
   importModules: string[];
   /** Custom section names, in order. */
   customSections: string[];
+  /** The first CUSTOM_HEAD_BYTES of each custom section's payload, one character per byte,
+   * beside its name in `customSections`. Kaigen's founder named the `hzlic` section, whose
+   * payload starts with `HZLICSTAMP1`, as the one thing every Kaigen web build carries
+   * (18 Nov 2026), after 0.7.1 shortened the import names detection had keyed on. Read out
+   * of the section table, so the words in a data segment or a comment are not a section. */
+  customSectionHeads: string[];
   /** Whether a memory it imports or defines is shared, which only a threaded build needs. */
   sharedMemory: boolean;
 }
+
+/** How much of each custom section `customSectionHeads` keeps: enough for a marker, never
+ * a payload. engines.py CUSTOM_HEAD_BYTES is the same number. */
+export const CUSTOM_HEAD_BYTES = 32;
 
 export function wasmFacts(path: string, bytes: Uint8Array): WasmFacts | null {
   const n = bytes.length;
@@ -66,7 +76,7 @@ export function wasmFacts(path: string, bytes: Uint8Array): WasmFacts | null {
   };
   const limits = () => { const flags = byte(); leb(); if (flags & 1) leb(); return flags; };
   const valtype = () => { const t = byte(); if (t === 0x63 || t === 0x64) leb(); };
-  const imports: string[] = [], importModules: string[] = [], customSections: string[] = [];
+  const imports: string[] = [], importModules: string[] = [], customSections: string[] = [], customSectionHeads: string[] = [];
   let sharedMemory = false;
   try {
     while (i < n) {
@@ -74,7 +84,10 @@ export function wasmFacts(path: string, bytes: Uint8Array): WasmFacts | null {
       const size = leb();
       const end = i + size;
       if (end > n) return null;
-      if (id === 0) customSections.push(name(end));
+      if (id === 0) {
+        customSections.push(name(end));
+        customSectionHeads.push(String.fromCharCode(...bytes.subarray(i, Math.min(end, i + CUSTOM_HEAD_BYTES))));
+      }
       else if (id === 2) {
         for (let count = leb(); count > 0; count--) {
           const from = name(end);
@@ -100,7 +113,7 @@ export function wasmFacts(path: string, bytes: Uint8Array): WasmFacts | null {
       i = end;
     }
   } catch { return null; }
-  return { path, imports, importModules, customSections, sharedMemory };
+  return { path, imports, importModules, customSections, customSectionHeads, sharedMemory };
 }
 
 /** Whether a module carries a byte sequence, without decoding it to text. */

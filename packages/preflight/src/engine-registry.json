@@ -158,30 +158,43 @@
   "kaigen": {
     "name": "Kaigen",
     "evidenceStatus": "source-verified",
-    "reason": "Structural: a real Kaigen 0.6.2.001-beta export (OG Clash R196) is recognised by its wasm glue and confirmed by the module's own import section and hz_flags section. The licence stamp in any .wasm marks a Kaigen build without identifying the engine. Hosting validation is still required.",
+    "reason": "Structural, from the module alone. A Kaigen web build carries a custom section named hzlic whose payload starts with HZLICSTAMP1, which Kaigen's founder named on 18 Nov 2026 as the mark every web build has; or an hz_flags custom section, which Kaigen 0.6.2.001-beta (OG Clash R196) and 0.7.1.001 (the Kaigen Starting Template) both carry. The glue and import names are not read: 0.7.1 shortened them, and the founder said they are not stable. Either is routing: the licence stamp, checked separately, is what the Kaigen lane admits on, and a stamp in a .wasm without either section marks a Kaigen build without identifying the engine. Hosting validation is still required.",
     "licenceStamp": "HZLICSTAMP1|",
     "signatures": [
       {
-        "patterns": [
-          "\\bcustomSections\\([^()]*[\"']hz_flags[\"']\\)",
-          "\\bjs_gpu_get_supported_compressed_formats[ \\t\\n\\r\\f\\v]*:",
-          "\\b_os_get_file_range_bytes[ \\t\\n\\r\\f\\v]*[:,}]"
-        ],
+        "patterns": [],
         "paths": [
           "\\.wasm(?:\\.(?:br|gz))?(?![\\s\\S])"
         ],
         "wasm": {
-          "imports": [
-            "js_gpu_get_supported_compressed_formats",
-            "_os_get_file_range_bytes"
+          "imports": [],
+          "customSections": [
+            "hzlic"
           ],
+          "customSectionPrefixes": {
+            "hzlic": "HZLICSTAMP1"
+          }
+        },
+        "versionPattern": "HZLICSTAMP1\\|?[\\s\\S]{0,256}?[\\x00-\\x1f](\\d+(?:\\.\\d+){1,3}(?:-[A-Za-z0-9.]+)?)\\x00",
+        "evidence": "Kaigen's hzlic licence section",
+        "source": "Kaigen's founder, 18 Nov 2026: every Kaigen web build contains a custom section named hzlic starting with HZLICSTAMP1",
+        "sha256": "5db1a3b03b650c5faa8b47ecbb75886441f5b33bb00ed4dc3944df094218aef6",
+        "kind": "exported-game-runtime"
+      },
+      {
+        "patterns": [],
+        "paths": [
+          "\\.wasm(?:\\.(?:br|gz))?(?![\\s\\S])"
+        ],
+        "wasm": {
+          "imports": [],
           "customSections": [
             "hz_flags"
           ]
         },
-        "versionPattern": "HZLICSTAMP1\\|[\\s\\S]{0,256}?\\x00(\\d+(?:\\.\\d+){1,3}(?:-[A-Za-z0-9.]+)?)\\x00",
-        "evidence": "the Kaigen wasm glue (its hz_flags section and engine imports)",
-        "source": "OG Clash R196 export built with Kaigen 0.6.2.001-beta, main_worker.js (engine source: src/os/wasm/main_worker.ts, gpu_webgpu.ts, os_fs.ts)",
+        "versionPattern": "HZLICSTAMP1\\|?[\\s\\S]{0,256}?[\\x00-\\x1f](\\d+(?:\\.\\d+){1,3}(?:-[A-Za-z0-9.]+)?)\\x00",
+        "evidence": "Kaigen's hz_flags section",
+        "source": "OG Clash R196 export built with Kaigen 0.6.2.001-beta, and a Kaigen Starting Template export built with 0.7.1.001 (18 Nov 2026): both modules carry an hz_flags custom section, and only 0.6.2 imports _os_get_file_range_bytes",
         "sha256": "afd9455f0b90b06935b66bdcd9d090d2d347f85f66cd573c40b054564e350ac4",
         "kind": "exported-game-runtime"
       }

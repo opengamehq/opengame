@@ -170,9 +170,13 @@ test('a KTX1 texture in a format the server cannot decode is refused at check ti
   const result = await platformPreflight([file('index.html', page), file('game.js', 'const x=1;'),
     ktx1('t/bc7.ktx', 0x8e8d), ktx1('t/astc.ktx', 0x93b0), ktx1('t/rgba8.ktx', 0x8058, 0x1401, 0x1908),
     ktx1('t/etc2.ktx', 0x9274), ktx1('t/pvrtc.ktx', 0x8c02), ktx1('t/etc2_as_rgba.ktx', 0x9274, 0x1401, 0x1908),
-    gzipped('t/etc2z.ktx.gz', 0x9274), gzipped('t/bc7z.ktx.gz', 0x8e8d)]);
+    gzipped('t/etc2z.ktx.gz', 0x9274), gzipped('t/bc7z.ktx.gz', 0x8e8d),
+    // Kaigen 0.7.1's sky, read since 18 Nov 2026: BC6H unsigned and RGB9E5, and BC6H signed.
+    ktx1('t/sky_bc6h.ktx', 0x8e8f), ktx1('t/sky_bc6h_signed.ktx', 0x8e8e), ktx1('t/sky_rgb9e5.ktx', 0x8c3d, 0x8c3e, 0x1907),
+    // RGB9E5 under any other type is not RGB9E5.
+    ktx1('t/rgb9e5_as_bytes.ktx', 0x8c3d, 0x1401, 0x1907)]);
   assert.deepEqual(result.findings.filter(row => row.code === 'image_format_unsupported').map(row => row.path),
-    ['t/etc2.ktx', 't/pvrtc.ktx', 't/etc2_as_rgba.ktx', 't/etc2z.ktx.gz']);
+    ['t/etc2.ktx', 't/pvrtc.ktx', 't/etc2_as_rgba.ktx', 't/etc2z.ktx.gz', 't/rgb9e5_as_bytes.ktx']);
   // ETC is told why and what to ship instead; any other format keeps the conversion advice.
   const detail = (path: string) => result.findings.find(row => row.path === path && row.code === 'image_format_unsupported')?.detail ?? '';
   for (const path of ['t/etc2.ktx', 't/etc2_as_rgba.ktx', 't/etc2z.ktx.gz']) {
@@ -180,7 +184,7 @@ test('a KTX1 texture in a format the server cannot decode is refused at check ti
     assert.match(detail(path), /BC and ASTC/);
     assert.doesNotMatch(detail(path), /PNG/);
   }
-  assert.match(detail('t/pvrtc.ktx'), /Ship it as BC1-5, BC7 or ASTC/);
+  assert.match(detail('t/pvrtc.ktx'), /Ship it as BC1-5, BC6H, BC7, RGB9E5 or ASTC/);
 });
 
 test('external ICE findings are unchanged by SDK-looking markers in the same or another file', async () => {

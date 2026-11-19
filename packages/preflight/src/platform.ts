@@ -158,7 +158,7 @@ export async function platformPreflight(files: PreflightFile[], options: Preflig
       title: `The image check cannot read ${path}.`,
       detail: ktx1Etc(head)
         ? `${path} is an ETC texture. The image check has no ETC decoder, so it cannot review these pixels. Remove the ETC variants and ship BC and ASTC, which the check can read: BC covers most desktop browsers and ASTC covers current phones and tablets. A device with neither gets the engine's fallback, which for Kaigen is untextured models. For Kaigen, cook BC and ASTC only.`
-        : `${path} is a KTX1 texture in a GPU format the check has no decoder for. Ship it as BC1-5, BC7 or ASTC, or convert it to KTX2, PNG, JPEG or WebP.` });
+        : `${path} is a KTX1 texture in a GPU format the check has no decoder for. Ship it as BC1-5, BC6H, BC7, RGB9E5 or ASTC, or convert it to KTX2, PNG, JPEG or WebP.` });
   }
   const formats = added.length === 0;
   // Literal escapes are data until the JavaScript parser decodes them. Check

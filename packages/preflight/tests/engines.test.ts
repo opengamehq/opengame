@@ -85,7 +85,7 @@ test('a Kaigen export with a split loader is Kaigen, versioned from its wasm, ah
   // The scan receipt's `threaded` is what moves a release onto the isolated contract.
   assert.equal(result.threaded, true);
   assert.equal(result.engine?.version, '0.6.2.001-beta');
-  assert.match(result.engine?.evidence ?? '', /main_worker\.js and game\.wasm$/);
+  assert.match(result.engine?.evidence ?? '', /hz_flags section in game\.wasm$/);
   assert.deepEqual(result.engine?.also.map((engine) => engine.id), ['threejs']);
   assert.deepEqual(result.engine?.licences, ['kaigen']);
 });
@@ -115,14 +115,6 @@ test('Kaigen glue names in a comment beside a module that does not import them a
   }
   const alone = await preflight([file('index.html', '<canvas></canvas><script src="w.js"></script>'), file('w.js', spoof), module('game.wasm', EMPTY_WASM)]);
   assert.equal(alone.engine?.id, 'custom');
-});
-
-test('a Kaigen licence stamp asks for the statement even when the loader hides from every signature', async () => {
-  // The glue's names split across strings, so no signature matches the text.
-  const hidden = 'const n=["js_gpu_get_supported_","compressed_formats"].join(""),m=WebAssembly.Module["custom"+"Sections"](mod,"hz_"+"flags");';
-  const result = await kaigenGame(hidden, KAIGEN_WASM);
-  assert.equal(result.engine?.id, 'threejs', 'a stamp is not an identity and grants nothing');
-  assert.deepEqual(result.engine?.licences, ['kaigen']);
 });
 
 test('the stamp is found in a renamed module and in a base64 SINGLE_FILE embed, at every alignment', async () => {
@@ -479,6 +471,48 @@ const sample = (id: string, test: (row: typeof SIGNATURES[number]) => boolean = 
 const RAW_PAGE = '<!doctype html><canvas id="c"></canvas><script type="module" src="./main.js"></script>';
 const RAW_LOADER = 'const { instance } = await WebAssembly.instantiateStreaming(fetch("game.wasm"), { env: { draw } });\ninstance.exports.start();';
 const RAW_MODULE = wasmWith({ imports: ['draw'] });
+
+test('a Kaigen module is Kaigen whatever its glue says, and a licence stamp alone is not', async () => {
+  // The glue's names split across strings, so no text could match. The module decides.
+  const hidden = 'const n=["js_gpu_get_supported_","compressed_formats"].join(""),m=WebAssembly.Module["custom"+"Sections"](mod,"hz_"+"flags");';
+  const result = await kaigenGame(hidden, KAIGEN_WASM);
+  assert.equal(result.engine?.id, 'kaigen', JSON.stringify(result.engine));
+  assert.deepEqual(result.engine?.licences, ['kaigen']);
+  // The stamp in a module with neither Kaigen section asks for the statement and names nothing.
+  const stampOnly = wasmWith({ imports: ['a'], custom: [['notes', 'HZLICSTAMP1|SYNTHETIC-NOT-A-LICENCE|']] });
+  const lone = await kaigenGame(hidden, stampOnly);
+  assert.equal(lone.engine?.id, 'threejs', 'a stamp is not an identity and grants nothing');
+  assert.deepEqual(lone.engine?.licences, ['kaigen']);
+});
+
+/* Kaigen 0.7.1.001 shortened its function names, so the Starting Template a creator
+   deployed on 18 Nov 2026 imported neither of the names 0.6.2 had and was refused the Kaigen
+   lane. Its founder said the names are not stable and named the hzlic section, opening with
+   HZLICSTAMP1, as the mark every web build carries; the 0.7.1 export also kept hz_flags.
+   Both fixtures are synthetic (fixtures/synthetic_kaigen.py). */
+const KAIGEN_ROWS = SIGNATURES.filter((row) => row.id === 'kaigen' && row.wasm);
+const kaigenBytes = (index: number) => new Uint8Array(Buffer.from(KAIGEN_ROWS[index]!.wasm![0]!.base64, 'base64'));
+
+test('a Kaigen 0.7.1 export with shortened names, and one marked only by hzlic, are Kaigen 0.7.1.001', async () => {
+  for (const index of [1, 2]) {
+    const result = await kaigenGame(KAIGEN_ROWS[index]!.text, kaigenBytes(index));
+    assert.equal(result.engine?.id, 'kaigen', `row ${index}: ${JSON.stringify(result.engine)}`);
+    assert.equal(result.engine?.version, '0.7.1.001');
+    assert.deepEqual(result.engine?.licences, ['kaigen']);
+    assert.ok(!result.findings.some((finding) => finding.code === 'engine-licence-stamp' && /not recognised/.test(finding.title)));
+  }
+});
+
+test('hzlic counts only as a section that opens with the stamp, never as words', async () => {
+  const words = 'const s="hzlic HZLICSTAMP1 hz_flags";';
+  for (const wasm of [wasmWith({ imports: ['a'], custom: [['hzlic', 'HZLICSTAMP2|SYNTHETIC']] }),
+    wasmWith({ imports: ['a'], custom: [['hzlicx', 'HZLICSTAMP1|SYNTHETIC']] }), EMPTY_WASM]) {
+    const result = await kaigenGame(words, wasm);
+    assert.notEqual(result.engine?.id, 'kaigen', JSON.stringify(result.engine));
+    assert.ok(!result.engine?.also.some((engine) => engine.id === 'kaigen'));
+  }
+});
+
 /** detectEngine over a page, its scripts and its modules, read completely unless told otherwise. */
 async function detected(scripts: Record<string, string>, modules: Record<string, Uint8Array>, extra: string[] = [], complete = true) {
   const { detectEngine, wasmModule } = await import('../src/engines');
@@ -553,11 +587,14 @@ test('glue or a module that names a toolchain keeps a bundle custom, not raw Web
     assert.equal((await detected({ 'main.js': RAW_LOADER }, { 'game.wasm': wasmWith({ imports: ['draw', name] }) })).id, 'custom', name);
   }
   // Kaigen's section, or an engine's licence stamp alone, in a module whose glue says nothing.
-  assert.equal((await detected({ 'main.js': RAW_LOADER }, { 'game.wasm': wasmWith({ custom: [['hz_flags', '']] }) })).id, 'custom');
+  // hz_flags or hzlic is Kaigen itself (18 Nov 2026); hz_memory names no engine and is not raw.
+  assert.equal((await detected({ 'main.js': RAW_LOADER }, { 'game.wasm': wasmWith({ custom: [['hz_flags', '']] }) })).id, 'kaigen');
+  assert.equal((await detected({ 'main.js': RAW_LOADER }, { 'game.wasm': wasmWith({ custom: [['hz_memory', '']] }) })).id, 'custom');
   assert.equal((await detected({ 'main.js': RAW_LOADER }, { 'game.wasm': wasmWith({ imports: ['draw'], custom: [['notes', 'HZLICSTAMP1|SYNTHETIC']] }) })).id, 'custom');
   // Glue read from a precompressed script is glue all the same.
   assert.equal((await detected({ 'main.js': RAW_LOADER, 'glue.js.br': 'var wasmBinaryFile="other.wasm";' }, { 'game.wasm': RAW_MODULE })).id, 'custom');
-  const stamped = await preflight([file('index.html', RAW_PAGE), file('main.js', RAW_LOADER), module('game.wasm', KAIGEN_WASM)]);
+  const stamped = await preflight([file('index.html', RAW_PAGE), file('main.js', RAW_LOADER),
+    module('game.wasm', wasmWith({ imports: ['draw'], custom: [['notes', 'HZLICSTAMP1|SYNTHETIC']] }))]);
   assert.equal(stamped.engine?.id, 'custom');
   assert.deepEqual(stamped.engine?.licences, ['kaigen']);
 });

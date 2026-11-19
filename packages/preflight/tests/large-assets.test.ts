@@ -404,15 +404,54 @@ const decompBoot = () => [
 
 test('a Kaigen runtime hidden from detection is still refused the large-game lane by its licence stamp', async () => {
   /* Review of 27 Oct 2026: quoting one glue key and renaming the worker took a real Kaigen
-     export out of detection on both readers, while its wasm still carried the stamp. */
+     export out of detection on both readers, while its wasm still carried the stamp. Since
+     18 Nov 2026 the module's hz_flags section is enough, so the glue cannot hide it; a module
+     with that section renamed away still carries the stamp, and the stamp still refuses. */
   const rows = [gameData(0)];
   const quoted = KAIGEN_ROW.text.replace(/\bjs_gpu_get_supported_compressed_formats\s*:/, '"js_gpu_get_supported_compressed_formats":');
   assert.notEqual(quoted, KAIGEN_ROW.text, 'the fixture names the glue key');
-  const boot = kaigenBoot(KAIGEN_WASM).map(row => row.path === 'main_worker.js' ? file('main_worker.cjs', quoted) : row);
+  const glueHidden = kaigenBoot(KAIGEN_WASM).map(row => row.path === 'main_worker.js' ? file('main_worker.cjs', quoted) : row);
+  const seen = await preflight([...glueHidden, ...rows.map(deferred)], { authoritative: true, externalAssets: rows, externalDelivery: LARGE_GAME });
+  assert.equal(seen.engine?.id, 'kaigen', 'the module is read whatever the glue says');
+  assert.ok(seen.findings.some(finding => finding.code === 'external-assets-engine-required'), JSON.stringify(seen.findings));
+  const renamed = Buffer.from(KAIGEN_WASM);
+  renamed.write('xx_flags', renamed.indexOf('hz_flags'), 'latin1');
+  const boot = glueHidden.map(row => row.path === 'game.wasm' ? wasmFile('game.wasm', new Uint8Array(renamed)) : row);
   const hidden = await preflight([...boot, ...rows.map(deferred)], { authoritative: true, externalAssets: rows, externalDelivery: LARGE_GAME });
   assert.notEqual(hidden.engine?.id, 'kaigen', 'detection is fooled');
   assert.deepEqual(hidden.engine?.licences, ['kaigen'], 'the stamp is still read');
   assert.ok(hidden.findings.some(finding => finding.code === 'external-assets-engine-required'), JSON.stringify(hidden.findings));
+});
+
+test('a stamp the scan would not call Kaigen is refused the Kaigen lane here too', async () => {
+  /* The check counted the stamp as Kaigen for this plan and the scan did not, so a build
+     neither reader recognised passed opengame check and failed on the server (d3815c51,
+     18 Nov 2026). Now both admit on detection; the stamp still refuses large-game-v1. */
+  const renamed = Buffer.from(KAIGEN_WASM);
+  renamed.write('xx_flags', renamed.indexOf('hz_flags'), 'latin1');
+  const boot = kaigenBoot(new Uint8Array(renamed));
+  const rows = [hza(0)];
+  const result = await preflight([...boot, ...rows.map(deferred)], { authoritative: true, externalAssets: rows, externalDelivery: KAIGEN_PLAN });
+  assert.notEqual(result.engine?.id, 'kaigen');
+  assert.deepEqual(result.engine?.licences, ['kaigen']);
+  assert.ok(result.findings.some(finding => finding.code === 'external-assets-engine-required'), JSON.stringify(result.findings));
+});
+
+test('a Kaigen 0.7.1 export with shortened names may use the Kaigen lane', async () => {
+  /* 18 Nov 2026: a Starting Template export on 0.7.1.001 uploaded with kaigen-assets.json and
+     was refused review, because 0.7.1 imports neither of the names 0.6.2 did. Synthetic
+     fixtures: the 0.7.1 shape and an hzlic-only one (fixtures/synthetic_kaigen.py). */
+  const shaped = (JSON.parse(readFileSync(new URL('./fixtures/engine-signatures.json', import.meta.url), 'utf8')) as
+    { id: string; text: string; wasm?: { path: string; base64: string }[] }[]).filter(row => row.id === 'kaigen' && row.wasm).slice(1);
+  assert.equal(shaped.length, 2);
+  const rows = [hza(0), hza(1)];
+  for (const row of shaped) {
+    const wasm = new Uint8Array(Buffer.from(row.wasm![0]!.base64, 'base64'));
+    const boot = kaigenBoot(wasm).map(item => item.path === 'main_worker.js' ? file('main_worker.js', row.text) : item);
+    const result = await preflight([...boot, ...rows.map(deferred)], { authoritative: true, externalAssets: rows, externalDelivery: KAIGEN_PLAN });
+    assert.equal(result.engine?.id, 'kaigen', JSON.stringify(result.engine));
+    assert.deepEqual(result.findings.filter(finding => finding.severity === 'blocker').map(finding => finding.code), []);
+  }
 });
 
 test('a game no engine made may move its data out of the boot tree on the large-game lane', async () => {

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.13.6
+
+- A Kaigen build is recognised by its module's `hzlic` or `hz_flags` section, not by the names
+  of the functions it imports. Kaigen 0.7.1 shortened those names, so `opengame check` passed
+  a 0.7.1 export with a `kaigen-assets-v1` plan that the server then refused. Both now read
+  the same sections.
+- `opengame check --external-assets` and `opengame deploy --external-assets` ask whether the
+  plan admits the build before anything uploads, as the server does: a plan that names an
+  engine needs that engine to be recognised, and the large-game plan still refuses a Kaigen
+  build. Until now check passed a plan the server would refuse.
+- `opengame check` accepts BC6H and RGB9E5 `.ktx` textures, which Kaigen 0.7.1 cooks its sky
+  into. ETC textures are still refused.
+
 ## 0.13.5
 
 - AGENTS.md and the bundled skills now cover Kaigen's built-in multiplayer: Kaigen doesn't

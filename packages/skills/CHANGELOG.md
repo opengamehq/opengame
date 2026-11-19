@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.5
+
+- `opengame-multiplayer` 1.1.1, `opengame-deploy` 1.1.15, `opengame-sdk` 1.0.15 and
+  `opengame-all-in-one` 1.0.14: Kaigen has multiplayer built in, with Kaigen Online for
+  sign-in, sessions, friends, signalling and TURN relays, and an offline fallback that keeps
+  the review sandbox rendering. Kaigen doesn't read `og.invite.code` yet, so its players join
+  through Kaigen Online's session list and friend invites.
+
 ## 1.7.4
 
 - `opengame-deploy` 1.1.14, `opengame-jam` 1.1.3, `opengame-router` 1.0.10 and

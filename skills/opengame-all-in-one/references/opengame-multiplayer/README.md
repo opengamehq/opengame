@@ -1,4 +1,4 @@
-> Carried from `opengame-multiplayer` 1.1.0. Read it when: Build multiplayer for a browser game, or a lobby where bots stand in for players. Covers one authority deciding what happened, a relay that only forwards and polices, capped messages, host migration and rejoin, smooth remote players, the lobby as the loading screen, a match that never pauses, bot lobbies, fair spawns, voice, testing several browsers and naming what was never proven. Use when the person asks for co-op, online play, private lobbies, voice chat or bots that feel like players.
+> Carried from `opengame-multiplayer` 1.1.1. Read it when: Build multiplayer for a browser game, or a lobby where bots stand in for players. Covers one authority deciding what happened, a relay that only forwards and polices, capped messages, host migration and rejoin, smooth remote players, the lobby as the loading screen, a match that never pauses, bot lobbies, fair spawns, voice, testing several browsers and naming what was never proven. Use when the person asks for co-op, online play, private lobbies, voice chat or bots that feel like players.
 
 
 # Multiplayer
@@ -28,20 +28,34 @@ https://docs.opengame.io/guides/multiplayer. How bots move, aim
 and get unstuck is in `opengame-enemies`; the lobby's shown gate and byte budgets are in
 `opengame-loading`; the press that starts play and pointer lock are in `opengame-front-end`.
 
+**Kaigen has multiplayer built in.** An authoritative server with client-side prediction,
+plus Kaigen Online for player sign-in, sessions, friends, signalling and relays. Without a
+game server of the creator's own, a player's browser page can host the match over WebRTC:
+Kaigen Online introduces the players and relays traffic through TURN when a direct
+connection fails, with short-lived TURN credentials it issues per session and never in the
+bundle, and relay-only mode hides each player's IP address from the others. A dedicated
+server is reached over WebTransport with a WebSocket (`wss://`) fallback, so it needs a TLS
+certificate for a domain name. With no connection, a Kaigen game starts as a local offline
+host, so it renders and offers solo play in the review sandbox. Kaigen doesn't read
+`og.invite.code` yet: its players join through Kaigen Online's session list and friend
+invites, so the invite rule below applies to other engines. The rules on authority, host
+loss, smoothing, loading and testing still apply. Kaigen's page:
+https://docs.opengame.io/engines/kaigen#multiplayer.
+
 ## Rules
 
 ### An invite opens the game on OpenGame and seats the friend
 - **Invariant:** Every invite or lobby link the game shows is the game's page on opengame.io with `?join=CODE`, and a player who opens one lands in that lobby with no menu in between. When the lobby is gone or full, the game says so and offers a new lobby or solo play.
 - **Technique:** Build the link with `og.invite.link(code)` and show the code beside it, since `link` returns null outside OpenGame and for a code the page would change. After `await og.init()`, a set `og.invite.code` means the player opened an invite: join that lobby at once. Use 4 to 12 capitals and digits without look-alikes for codes people read out, or 22 characters of `A-Z a-z 0-9 _ -` for an id they only copy. Never link to the game's `<label>.opengame.gg` address: opened in a tab it shows a page pointing to OpenGame and drops the code. A code is not a password, so a private lobby has the host accept players or locks once full.
 - **Reference configuration:** The owner asked on 16 Nov 2026 that "the multiplayer lobby link is opengame so people who join get put right into lobby on opengame". OG HERO's six-letter rooms link to its game page with `?join=CODE`, and the page starts the game as it opens on a computer; on a touch screen the player presses Play first and the code still arrives.
-- **Applies when:** Any game with lobbies, rooms or private matches.
+- **Applies when:** Any game with lobbies, rooms or private matches, except a Kaigen game, whose players join through Kaigen Online until Kaigen reads `og.invite.code`.
 - **Verify:** Two separate browsers through opengame.io: one hosts and copies the invite, the other opens it and is in the host's lobby within seconds, with no menu pressed.
 
 ### PeerJS runs on servers the creator chose
 - **Invariant:** A published PeerJS game signals through a PeerServer the creator runs over `wss:`, reaches players behind strict routers through TURN, keeps TURN credentials out of the bundle, and uses peer ids no other app can take.
 - **Technique:** Run `PeerServer` from the `peer` package behind TLS with `allow_discovery: false`, `corsOptions` naming the game's exact origin, and an `Origin` check in front of its socket (`opengame-deploy`). Pass `host`, `port: 443`, `secure: true`, `key` and `config.iceServers` to `new Peer`. Use STUN plus a TURN provider whose short-lived credentials the creator's server issues. Prefix peer ids with the game's name; PeerJS ids are letters and digits with single `-`, `_` or spaces between, so use short codes. On host loss, the next host retries for the lobby's id until the signalling server frees it.
 - **Reference configuration:** The public `0.peerjs.com` is shared by every PeerJS app with no uptime promise. OG HERO's host migration lost players until the new host retried its claim once the old host was gone and re-sent state every two seconds (four browsers, the host killed mid-song). `opengame check` warns on each STUN or TURN server a game names and notes the PeerJS defaults.
-- **Applies when:** Games that connect players with PeerJS or raw WebRTC.
+- **Applies when:** Games that connect players with PeerJS or raw WebRTC, except Kaigen, whose signalling and TURN come from Kaigen Online.
 - **Verify:** Kill the host's browser mid-match: another player hosts and an invite shared before still joins. Join from a phone network: the connection goes through TURN.
 
 ### Players send what they did; one authority decides what happened

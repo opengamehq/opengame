@@ -2,7 +2,7 @@
 name: opengame-sdk
 description: Integrate a browser game with OpenGame through @opengamehq/sdk, the injected global or a native engine bridge. Covers start-up, the player and their OG at load, names, leaderboards, achievements, events, pause, mute, fullscreen, keys inside the frame and threaded builds. Use when the person says integrate with OpenGame, add the SDK, show the player's name or OG, add a leaderboard or achievement, track events, fix fullscreen or keys in the game frame, or asks how a game talks to OpenGame.
 metadata:
-  version: "1.0.14"
+  version: "1.0.15"
 ---
 
 # Integrate a game with OpenGame
@@ -214,6 +214,10 @@ themselves, and lands in the lobby. A link to `<label>.opengame.gg` opens a warn
 game. A code is 4 to 12 capitals and digits, or exactly 22 of `A-Z a-z 0-9 _ -`; `link`
 returns null for anything else, rather than a link whose code the page would change.
 Under `opengame dev` the link is the local page, so two tabs can try it.
+
+Kaigen doesn't read `og.invite.code` yet. A Kaigen game's players join through Kaigen
+Online's session list and friend invites, and `opengame-multiplayer` has Kaigen's own
+multiplayer.
 
 ## OG Radio
 

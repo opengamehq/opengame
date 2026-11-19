@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.5
+
+- AGENTS.md and the bundled skills now cover Kaigen's built-in multiplayer: Kaigen doesn't
+  read `og.invite.code` yet, so a Kaigen game's players join through Kaigen Online.
+  Skills 1.7.5.
+
 ## 0.13.4
 
 - `opengame delete` is the one step to remove a game. It unpublishes the game, withdraws its

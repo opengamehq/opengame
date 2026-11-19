@@ -1,5 +1,9 @@
 # opengame-all-in-one changelog
 
+## 1.0.14
+
+Carries `opengame-deploy` 1.1.15, `opengame-multiplayer` 1.1.1 and `opengame-sdk` 1.0.15, with Kaigen's built-in multiplayer: Kaigen doesn't read `og.invite.code` yet, so its players join through Kaigen Online. (18 Nov 2026)
+
 ## 1.0.13
 
 Carries `opengame-deploy` 1.1.14, `opengame-jam` 1.1.3 and `opengame-router` 1.0.10, which ask the person before every deploy or publish and wait for a clear yes. (18 Nov 2026)

@@ -108,6 +108,7 @@ export const MASCOT_ACCESSORIES = [
   { id: "neonhalo", label: "Neon halo" },
   { id: "crosspin", label: "Cross pin" },
   { id: "frontcap", label: "Cap, facing forward" },
+  { id: "cangaceiro", label: "Cangaceiro hat" },
 ] as const;
 
 export type MascotAccessoryId = (typeof MASCOT_ACCESSORIES)[number]["id"];
@@ -994,6 +995,26 @@ export const ACCESSORY_ART: Record<Exclude<MascotAccessoryId, "none">, Accessory
       part("main", (u, v, h) => sdTiltEllipse(Math.abs(u), v, sideAt(h, 0.4) + 0.12, earV(h) + 0.11, 0.15, 0.075, 0), { behind: true }),
     ],
   },
+  /* The leather half-moon hat of the sertão's cangaceiros, as Lampião wore it: the brim
+     folded up flat against the crown, so from the front the whole hat is one crescent with
+     its points out over the temples, studded in brass with a six-pointed star in the
+     middle. The crescent's lower edge arches up off the brow in the middle, which is what
+     keeps a hat this big off the eyes. */
+  cangaceiro: {
+    main: "#7A4A2A",
+    alt: "gold",
+    parts: [
+      part("alt", (u, v) => sdPoly(u, v + 0.24, SIX_STAR), { flat: true }),
+      // Brass studs along the brim either side of the star, on a smaller copy of its arc.
+      part("alt", (u, v, h) => {
+        const b = cangaceiroWidth(h);
+        let d = Infinity;
+        for (const a of [-0.95, -0.45, 0.45, 0.95]) d = Math.min(d, length(u - b * 0.78 * Math.sin(a), v - (0.22 - 0.56 * Math.cos(a))) - 0.065);
+        return Math.max(d, cangaceiroCrescent(u, v, h));
+      }, { flat: true }),
+      part("main", cangaceiroCrescent),
+    ],
+  },
   racingcap: {
     // A black cap worn straight, brim to the front: seen face on, the brim is a band
     // across the forehead a little wider than the crown, not a peak off to one side.
@@ -1027,6 +1048,25 @@ function fedoraCrown(u: number, v: number, h: MascotHead) {
 function cowboyCrown(u: number, v: number, h: MascotHead) {
   const c = span(h, 1.3, 0.55) * 0.55;
   return Math.max(above(sdEllipse(u, v + 0.06, c, 0.4), v, -0.02), -(length(u, v + 0.5) - 0.1));
+}
+
+const cangaceiroWidth = (h: MascotHead) => span(h, 1.38, 0.6);
+
+/** A six-pointed star about its middle, 0.17 to the points: the cangaceiro's brim badge. */
+const SIX_STAR = Array.from({ length: 12 }, (_, i) => {
+  const r = i % 2 ? 0.095 : 0.17;
+  const a = (i * Math.PI) / 6;
+  return [r * Math.sin(a), -r * Math.cos(a)] as const;
+});
+
+/**
+ * The upper half of a tall ellipse with a shallow bite out of its underside, so the points
+ * hang down past the seat to the temples and the middle sits on the forehead.
+ */
+function cangaceiroCrescent(u: number, v: number, h: MascotHead) {
+  const b = cangaceiroWidth(h);
+  const outer = above(sdEllipse(u, v - 0.22, b, 0.72), v, 0.22);
+  return Math.max(outer, -sdEllipse(u, v - 0.22, b * 0.97, 0.3));
 }
 
 function sombreroCrown(u: number, v: number, h: MascotHead) {

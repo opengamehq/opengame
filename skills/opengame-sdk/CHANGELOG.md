@@ -1,5 +1,9 @@
 # opengame-sdk changelog
 
+## 1.0.15
+
+Kaigen doesn't read `og.invite.code` yet, so a Kaigen game's players join through Kaigen Online's session list and friend invites. (18 Nov 2026)
+
 ## 1.0.14
 
 Unreal Engine 5.9: C++ calls the `window.OpenGame` that OpenGame adds to every threaded page, inside `MAIN_THREAD_EM_ASM`, which runs on the page's thread and waits for it to read any string argument. (17 Nov 2026)

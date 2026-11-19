@@ -942,6 +942,7 @@ Each accessory is a list of parts, each in the main color, the trim color or the
 | `neonhalo` | Neon halo | `magenta` (head palette) |  | -0.62 | 0.63 | -0.51 | -0.16 |  |  |
 | `crosspin` | Cross pin | #222228 |  | -0.50 | -0.10 | -0.18 | 0.24 |  | yes |
 | `frontcap` | Cap, facing forward | #2A2A30 | #45454D | -0.65 | 0.65 | -0.41 | 0.37 |  | yes |
+| `cangaceiro` | Cangaceiro hat | #7A4A2A | `gold` (head palette) | -0.80 | 0.80 | -0.51 | 0.22 |  | yes |
 <!-- /avatar-spec:accessories -->
 
 ### Facial hair and hair color

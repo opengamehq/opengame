@@ -211,13 +211,13 @@ A game may not take payments, use crypto, make players create an account or give
 
 ## Multiplayer
 
-OpenGame runs no game server or rooms. A game in any engine can reach the creator's servers (Colyseus, Nakama, Photon or their own) over `wss:`, WebTransport or `https:`, or links browsers over WebRTC. A browser has no raw UDP or TCP, so use the engine's WebSocket or WebRTC transport. OpenGame supplies the invite link:
+OpenGame runs no game server or rooms. A game in any engine can reach the creator's servers (Colyseus, Nakama, Photon or their own) over `wss:`, WebTransport or `https:`, or links browsers over WebRTC, since a browser has no raw UDP or TCP. Kaigen invites and relays through Kaigen Online, since it doesn't read `og.invite.code` yet.
 
 - **Invites.** Share `og.invite.link(code)`, the game's page on opengame.io with `?join=CODE`, never the game's `opengame.gg` address. After `await og.init()`, a player with `og.invite.code` set opened an invite: join them to that lobby with no menu in between. `link` is `null` outside OpenGame and for a code the page would change, so show the code too.
 - **Game servers.** Allow only the game's exact origin. Send a token in a header or the first socket message, not a cookie. A server cannot verify `og.player.id`, so it issues that token without a sign-in and decides results.
 - **Peer to peer.** Run a signalling server, such as PeerServer for PeerJS, over `wss:` instead of `0.peerjs.com`, check `Origin` in front of it, and prefix peer ids with the game's name. Use STUN plus TURN, with TURN credentials from the creator's server, not the bundle. The next host keeps the lobby id.
 
-[Multiplayer](https://docs.opengame.io/guides/multiplayer) covers each engine, server settings and testing.
+[Multiplayer](https://docs.opengame.io/guides/multiplayer) covers engines, servers and testing.
 
 ## Engines
 

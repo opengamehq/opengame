@@ -1,5 +1,9 @@
 # opengame-deploy changelog
 
+## 1.1.15
+
+Multiplayer: Kaigen invites and relays through Kaigen Online, since it doesn't read `og.invite.code` yet. (18 Nov 2026)
+
 ## 1.1.14
 
 Stop and ask the creator before every `opengame deploy` or `opengame publish`: show them the game and its title, for a jam entry the track and models you suggest, and wait for a clear yes. A deploy can use one of their jam entries, and an update to a live game publishes by itself. (18 Nov 2026)

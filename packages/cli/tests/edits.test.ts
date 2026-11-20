@@ -23,10 +23,11 @@ const token = "ogt_" + "a".repeat(16) + "_" + "b".repeat(43);
 const game: CreatorGame = { id: GAME, publicId: "tiderunner", title: "Tide runner", visibility: "published", latestOperation: null };
 
 type Answer = { status: number; body: unknown };
-interface Fake { origin: string; requests: { method: string; url: string; body: unknown }[]; answer: Answer | null; close(): Promise<void> }
+/** `models`: the server knows a game's declared models (since 19 Nov 2026). An older one does not. */
+interface Fake { origin: string; requests: { method: string; url: string; body: unknown }[]; answer: Answer | null; models: boolean; getAnswer: Answer | null; close(): Promise<void> }
 
-async function fake(): Promise<Fake> {
-  const state = { requests: [] as { method: string; url: string; body: unknown }[], answer: null as Answer | null };
+async function fake({ models = true } = {}): Promise<Fake> {
+  const state = { requests: [] as { method: string; url: string; body: unknown }[], answer: null as Answer | null, models, getAnswer: null as Answer | null };
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     assert.equal(req.headers.authorization, `Bearer ${token}`);
     let text = "";
@@ -39,10 +40,17 @@ async function fake(): Promise<Fake> {
       return send({ status: 200, body: { gameId: GAME, revision: 3, metadata: { title: "Tide runner", tagline: "Race the rain.", description: "A river game." },
         controllerSupport: false, compatibility: {}, cover: null } });
     }
+    // An older server has the path for PATCH only: Next answers its GET 405.
+    if (req.method === "GET" && req.url === `/api/v1/games/${GAME}/details` && state.getAnswer) return send(state.getAnswer);
+    if (req.method === "GET" && req.url === `/api/v1/games/${GAME}/details` && state.models) {
+      return send({ status: 200, body: { apiVersion: "1", gameId: GAME, publicId: "tiderunner", models: [{ key: "gemini", name: "Gemini" }, { key: "claude-code", name: "Claude Code" }],
+        choices: [{ key: "claude", name: "Claude" }, { key: "claude-code", name: "Claude Code" }, { key: "gemini", name: "Gemini" }], url: "https://opengame.io/settings/games/tiderunner" } });
+    }
     if (req.method === "PATCH" && req.url === `/api/v1/games/${GAME}/details`) {
-      const body = state.requests.at(-1)!.body as Record<string, string>;
+      const body = state.requests.at(-1)!.body as Record<string, string> & { models?: string[] };
       return send(state.answer ?? { status: 200, body: { apiVersion: "1", gameId: GAME, publicId: "tiderunner", live: true, revision: 4,
-        title: body.title ?? "Tide runner", tagline: body.tagline ?? "Race the rain.", description: body.description ?? "A river game.", url: "https://opengame.io/settings/games/tiderunner" } });
+        title: body.title ?? "Tide runner", tagline: body.tagline ?? "Race the rain.", description: body.description ?? "A river game.",
+        ...(body.models && state.models ? { models: body.models.map(key => key.toLowerCase()) } : {}), url: "https://opengame.io/settings/games/tiderunner" } });
     }
     if (req.method === "POST" && req.url === "/api/v1/account/handle") {
       const body = state.requests.at(-1)!.body as { handle: string };
@@ -127,6 +135,75 @@ test("details prints the server's refusal in its words, with the shared table's 
     server.answer = { status: 404, body: { error: "not_found", message: "Not found." } };
     const older = await cli(server.origin, root).last("details", "--title", "x");
     assert.deepEqual([older.code, older.event.code], [5, "edit_unavailable"]);
+  } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test("details prints the models the game says it was made with, and the keys --models takes", async () => {
+  const server = await fake();
+  const root = await linkedFolder(server.origin);
+  try {
+    const { code, event } = await cli(server.origin, root).last("details");
+    assert.equal(code, 0);
+    assert.deepEqual(event.data.models, [{ key: "gemini", name: "Gemini" }, { key: "claude-code", name: "Claude Code" }]);
+    assert.match(event.data.message, /\nMade with: Gemini and Claude Code\n/);
+    assert.match(event.data.message, /--models takes any of: claude, claude-code, gemini\./);
+    assert.deepEqual(writes(server), []);
+    // A server from before the models read still prints the words, without a Made with line.
+    server.models = false;
+    server.getAnswer = { status: 405, body: {} };
+    const older = await cli(server.origin, root).last("details");
+    assert.equal(older.code, 0);
+    assert.equal(older.event.data.models, undefined);
+    assert.doesNotMatch(older.event.data.message, /Made with/);
+  } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test("details --models replaces the list, --clear-models empties it, and the two are not sent together", async () => {
+  const server = await fake();
+  const root = await linkedFolder(server.origin);
+  try {
+    const saved = await cli(server.origin, root).last("details", "--models", "gemini, claude-code");
+    assert.equal(saved.code, 0);
+    assert.deepEqual(writes(server).map(r => [r.method, r.url, r.body]), [["PATCH", `/api/v1/games/${GAME}/details`, { models: ["gemini", "claude-code"] }]]);
+    assert.deepEqual(saved.event.data.models, ["gemini", "claude-code"]);
+    assert.match(saved.event.data.message, /^Saved\. Players see the change now\. Its page lists gemini, claude-code under Made with\./);
+    const cleared = await cli(server.origin, root).last("details", "--clear-models");
+    assert.equal(cleared.code, 0);
+    assert.deepEqual(writes(server).at(-1)!.body, { models: [] });
+    assert.match(cleared.event.data.message, /Its page lists no models now\./);
+    // Words and models in one request.
+    await cli(server.origin, root).last("details", "--title", "Tide runner 2", "--models", "gemini");
+    assert.deepEqual(writes(server).at(-1)!.body, { title: "Tide runner 2", models: ["gemini"] });
+    const sent = writes(server).length;
+    const both = await cli(server.origin, root).last("details", "--clear-models", "--models", "gemini");
+    assert.deepEqual([both.code, both.event.code], [2, "conflicting_flags"]);
+    const empty = await cli(server.origin, root).last("details", "--models", " , ");
+    assert.deepEqual([empty.code, empty.event.code], [2, "invalid_flag"]);
+    assert.equal(writes(server).length, sent, "neither refusal sent anything");
+    // The server's refusal, in its words.
+    server.answer = { status: 400, body: { error: "invalid_models", message: "Your jam entry needs at least one model or tool, so the list can’t be empty. Nothing changed.", retry: "after-fix" } };
+    const refused = await cli(server.origin, root).last("details", "--clear-models");
+    assert.deepEqual([refused.code, refused.event.code], [2, "invalid_models"]);
+    server.answer = { status: 409, body: { error: "models_locked", message: "The jam has closed and your entry is being judged, so its models stay as they were entered.", retry: "never" } };
+    const locked = await cli(server.origin, root).last("details", "--models", "gemini");
+    assert.deepEqual([locked.code, locked.event.code], [2, "models_locked"]);
+  } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test("details --models against a server that saves no models says so rather than reporting a save", async () => {
+  const server = await fake({ models: false });
+  const root = await linkedFolder(server.origin);
+  try {
+    const older = await cli(server.origin, root).last("details", "--models", "gemini");
+    assert.deepEqual([older.code, older.event.code], [5, "edit_unavailable"]);
+    // The usual answer of such a server: its schema refuses a body it does not know.
+    server.answer = { status: 400, body: { error: "invalid_request", message: "Send a title, a tagline or a description, as text." } };
+    const refused = await cli(server.origin, root).last("details", "--models", "gemini");
+    assert.deepEqual([refused.code, refused.event.code], [5, "edit_unavailable"]);
+    assert.match(refused.event.message, /Details tab/);
+    // Words alone keep that server's own refusal.
+    const words = await cli(server.origin, root).last("details", "--title", "x");
+    assert.deepEqual([words.code, words.event.code], [2, "invalid_request"]);
   } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
 });
 

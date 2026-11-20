@@ -2,21 +2,18 @@
 name: opengame-api
 description: Call the OpenGame creator API directly over HTTPS. Covers the base URL, creator tokens and scopes, the OpenAPI document, the error shape and retry fields, deploying without the CLI, and checking whether OpenGame is open. Use when the person wants to deploy from their own tool or CI without the CLI, asks about the OpenGame REST API, api/v1, openapi.json or a creator token, or an API call returned an error code you need to read.
 metadata:
-  version: "1.0.8"
+  version: "1.0.9"
 ---
 
 # Call the OpenGame creator API
 
-OpenGame opens on 18 November 2026. The creator API takes any signed-in
-account now; until 18 November a request with no account answers 403 `not_launched`,
-and the CLI says "OpenGame opens for creators on 18 November." Check before anything else:
+The creator API takes any signed-in account. Check before anything else:
 
 ```bash
 curl -s https://opengame.io/api/v1/status
 ```
 
-It answers `{ "launched": false, "access": null }` before launch with no token. Sent with
-a token, `access` says whether that account may use OpenGame now, and is `true` for any
+With no token it answers `"launched": true` and `"access": null`. Sent with a token, `access` says whether that account may use OpenGame now, and is `true` for any
 account. Do not retry a `not_launched` refusal in a loop; sign in, or tell the person.
 
 Most integrations should run the CLI (`opengame-cli`), which builds, checks, packages
@@ -99,7 +96,7 @@ on `error`. Other fields, when present:
 
 Some answers to know:
 
-- `not_launched` (403): the request came with no account before launch. Sign in.
+- `not_launched` (403): the creator API is closed to this caller. Sign in.
 - `not_member` or `account_inactive` (403): the account has no access, or is suspended.
 - `uploads_closed` (403): new uploads are not open to this account; nothing started.
 - `entries_closed` (403, `retry` is `never`): entries have closed, so no game can be

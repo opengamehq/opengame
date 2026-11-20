@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.6
+
+- `opengame-cli` 1.9.4 and `opengame-all-in-one` 1.0.16: `opengame details --models` and
+  `--clear-models` change the models a game says it was made with, after publishing.
+
 ## 1.7.5
 
 - `opengame-multiplayer` 1.1.1, `opengame-deploy` 1.1.15, `opengame-sdk` 1.0.15 and

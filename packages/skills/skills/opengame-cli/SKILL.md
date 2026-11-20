@@ -2,16 +2,14 @@
 name: opengame-cli
 description: Drive the OpenGame command line tool from an agent. Covers installing it, signing in with the person, every command, JSON and JSONL output, exit codes, findings and how to retry. Use when the person mentions the opengame command, the OpenGame CLI, installing @opengamehq/cli, opengame login, check, dev, deploy, status, submit, releases, rollback, unpublish, restore, delete, details, achievements, handle, jam or token, or a command exited with an error you need to read.
 metadata:
-  version: "1.9.2"
+  version: "1.9.4"
 ---
 
 # Use the OpenGame CLI
 
-OpenGame opens on {{launch opens}}, and any signed-in account can use the CLI
-now. Until {{launch kickoff}}, a command run before `opengame login` prints
-"OpenGame opens for creators on {{launch kickoff}}." and exits with the `not_launched` code (7) that
-`opengame help --json` lists. That is not a broken install: run `opengame login`, then the
-command again, and do not reinstall or look for a way round it.
+Any signed-in account can use the CLI. If a command exits with the `not_launched` code (7)
+that `opengame help --json` lists, that is not a broken install: run `opengame login`, then
+the command again, and do not reinstall or look for a way round it.
 
 For the whole deploy procedure, read `opengame-deploy`. This skill is the reference
 for the tool itself.
@@ -78,7 +76,7 @@ token in a command argument, a file in the project, a log or a reply.
 | `opengame restore [dir]` | Put a game the person unpublished back on the gallery. |
 | `opengame delete [dir]` | Delete the linked game for good, with its title typed to confirm. |
 | `opengame achievements [retire <id>]` | List the game's achievements, or retire one. |
-| `opengame details [dir]` | Print the game's title, tagline and description as the website shows them, or change them. |
+| `opengame details [dir]` | Print the game's title, tagline, description and the models it says it was made with, as the website shows them, or change them. |
 | `opengame handle <name>` | Rename the person's handle. |
 | `opengame games` | List your games and their latest deploy. |
 | `opengame link [dir]` | Connect this folder to an existing game. |
@@ -127,10 +125,14 @@ login` token. `delete_refused` says why, for example a legal hold.
 
 ## Change a game's words, or the person's handle
 
-`opengame details --json` prints the title, tagline and description the website shows.
+`opengame details --json` prints the title, tagline and description the website shows,
+and the models and tools the game says it was made with (`data.models`, with the keys it can
+take in `data.choices`).
 `opengame details --title "<text>" --tagline "<text>" --description "<text>" --json` saves
 any of them, as the Details tab does; a field left out stays, and `--clear-tagline` removes
-the tagline. On a published game players
+the tagline. `opengame details --models gemini,claude-code --json` replaces the Made with
+list on the game's page; list what the person says they used, never a guess, and
+`--clear-models` empties it (a jam entry needs at least one). On a published game players
 see it at once, so change only what the person asked for. To keep `opengame.json` in step,
 run `opengame pull` afterwards. `opengame handle <name> --yes --json` renames the person's
 handle. Ask first: their old handle becomes free for anyone to claim, their games keep
@@ -175,7 +177,7 @@ helps, `retry`, `retryAfterSeconds` and `next`, the command to run next.
 | 4 | `rateLimited` | An allowance is used. Wait `retryAfterSeconds`, then run the same command. |
 | 5 | `server` | Our side or the network; the game is fine. Follow `retry`. |
 | 6 | `upgrade` | This CLI is too old. Run `opengame upgrade --json`. |
-| 7 | `notLaunched` | OpenGame is not open to creators yet, and the error's code is `not_launched`. Run `opengame login`, then the same command again. |
+| 7 | `notLaunched` | OpenGame refused this caller as not open to creators, and the error's code is `not_launched`. Run `opengame login`, then the same command again. |
 
 Branch on the error's `code` rather than the number wherever you can.
 

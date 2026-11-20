@@ -24,7 +24,7 @@ notices in its `findings` and `notices` arrays.
 | 4 | Rate limited | Wait `retryAfterSeconds` if the error has it, otherwise a few minutes, then run the same command once. Do not loop |
 | 5 | Our side failed, or a local file could not be read or written | The game is fine. Retry later; never change the game for this |
 | 6 | This CLI is too old for the server | Run `next`, which is `opengame upgrade`. Signed out, run `opengame login` first; it works on this version |
-| 7 | `not_launched`: OpenGame is not open to this caller yet | The CLI has no login. Ask the person to run `opengame login`, then run the same command again. Do not reinstall or retry in a loop |
+| 7 | `not_launched`: OpenGame refused this caller | Ask the person to run `opengame login`, then run the same command again. Do not reinstall or retry in a loop |
 
 ## A worked repair
 

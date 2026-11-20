@@ -1,5 +1,9 @@
 # opengame-sdk changelog
 
+## 1.0.16
+
+OpenGame is open: the opening no longer quotes the pre-launch refusal. (19 Nov 2026)
+
 ## 1.0.15
 
 Kaigen doesn't read `og.invite.code` yet, so a Kaigen game's players join through Kaigen Online's session list and friend invites. (18 Nov 2026)

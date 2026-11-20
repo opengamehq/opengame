@@ -1,5 +1,13 @@
 # opengame-all-in-one changelog
 
+## 1.0.16
+
+Carries `opengame-cli` 1.9.4, with `opengame details --models` for changing what a game says it was made with. (19 Nov 2026)
+
+## 1.0.15
+
+Carries `opengame-deploy` 1.1.16, `opengame-sdk` 1.0.16, `opengame-cli` 1.9.3, `opengame-router` 1.0.11, `opengame-jam` 1.1.4 and `opengame-api` 1.0.9, which no longer describe the days before OpenGame opened. (19 Nov 2026)
+
 ## 1.0.14
 
 Carries `opengame-deploy` 1.1.15, `opengame-multiplayer` 1.1.1 and `opengame-sdk` 1.0.15, with Kaigen's built-in multiplayer: Kaigen doesn't read `og.invite.code` yet, so its players join through Kaigen Online. (18 Nov 2026)

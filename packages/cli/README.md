@@ -25,10 +25,6 @@ Allow access. The CLI keeps the token in the macOS Keychain, and elsewhere in a 
 file under `~/.config/opengame`. In CI, pass a token through `OPENGAME_TOKEN` or
 `--token-stdin`, never as a command argument.
 
-When OpenGame has not opened to creators for your account, a command that needs the
-platform prints `OpenGame opens for creators on` the day the CLI and uploads open, and exits
-with code 7. Signing in works either way.
-
 ## Deploy a game
 
 Run these from the folder that holds your game's `index.html`, or its source when the
@@ -118,7 +114,7 @@ send no command name.
 | `opengame unpublish [dir] [options]` | Take the linked game off the gallery and stop serving it, as Unpublish does on Your games. Your build, uploads and review record are kept, and opengame restore puts it back. Needs a token with read or deploy, and submit; opengame login has all three. |
 | `opengame restore [dir] [options]` | Put a game you unpublished back on the gallery, serving the version it was on, as Put it back does on Your games. Refused for a game we took down, one with an open report or a hold, and one under a copyright notice. Needs a token with read or deploy, and submit; opengame login has all three. |
 | `opengame delete [dir] [options]` | Delete the linked game in one step, as its page does: it is unpublished and its jam entry withdrawn, freeing the slot. It can't be undone. You type its title to confirm. Refused under a legal hold or in a jam being scored. Only the opengame login token can do this, not a token made in settings. |
-| `opengame details [dir] [options]` | Print the linked game's title, tagline and description as the website shows them, or change any of them, as the Details tab on its page does. A field you leave out stays as it is. On a published game players see the change at once. Printing needs a token with read or deploy, and saving needs submit too; opengame login has all three. |
+| `opengame details [dir] [options]` | Print the linked game's title, tagline, description and the models it says it was made with, as the website shows them, or change any of them, as the Details tab on its page does. A field you leave out stays as it is. On a published game players see the change at once. Printing needs a token with read or deploy, and saving needs submit too; opengame login has all three. |
 | `opengame achievements [retire <id>] [options]` | List the linked game's achievements, active and retired, or retire one. Players keep what they unlocked, and the game can no longer award a retired one. Retiring needs a token with deploy and submit; opengame login has them. |
 | `opengame games [options]` | List your games and their latest deploy. |
 | `opengame link [dir] [options]` | Connect this folder to an existing game. |
@@ -144,7 +140,7 @@ send no command name.
 | 4 | `rateLimited` | An allowance is used. Wait retryAfterSeconds when the error has it, then run the same command. |
 | 5 | `server` | Our side or the network, and the game is fine. Run the error's next command when it has one. With retry after-fix or never, waiting will not help; read the message. Otherwise wait (retryAfterSeconds when given) and run the same command. |
 | 6 | `upgrade` | This CLI is too old. Run opengame upgrade. |
-| 7 | `notLaunched` | OpenGame is not open to creators yet, so nothing ran. Signed out, sign in first (next is opengame login) and run the command again; signed in, the message names the day the CLI and uploads open. init and check run before then and say the day as a notice. Nothing about the game is wrong. |
+| 7 | `notLaunched` | OpenGame refused this caller as not open to creators, so nothing ran. Every signed-in account may use it: sign in (next is opengame login) and run the command again. Nothing about the game is wrong. |
 <!-- /generated:commands -->
 
 `opengame <command> --help` prints that command's flags and examples.

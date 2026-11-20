@@ -384,6 +384,11 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   /* Editing a game's words and renaming a handle from the creator API, through the
      website's own functions, whose sentences these carry. */
   invalid_details: { exit: 2, retry: "after-fix", status: 400 },
+  /* A game's declared models (lib/games/declared-models.ts): a key that is not on the list,
+     too many, or a list a standing jam entry could not keep. `models_locked` is a jam entry
+     being judged, or a game with no version to declare against yet. */
+  invalid_models: { exit: 2, retry: "after-fix", status: 400 },
+  models_locked: say({ exit: 2, retry: "never" }, "The jam has closed and your entry is being judged, so its models stay as they were entered.", 409),
   // The two refusals the website gives every writer of a game's words, which it reads from here.
   legacy_game_words: say({ exit: 2, retry: "never" }, "This game’s words are changed on its entry page, so nothing was saved here.", 409),
   words_refused: say({ exit: 3, retry: "never" }, "This account can’t edit its games, so nothing was saved.", 403),

@@ -1,13 +1,11 @@
-> Carried from `opengame-deploy` 1.1.15. Read it when: Put a browser game online with OpenGame, the marketplace and game jam for browser games. Packages the game, checks it locally, uploads it to a private preview only the owner can play, reads and fixes findings, then hands the creator the page where they confirm the details after review. Use when the person says deploy my game, put it online, host it, share it, upload it, publish it, get me a link, make it playable for friends, or asks where to put a browser game or a Three.js game.
+> Carried from `opengame-deploy` 1.1.16. Read it when: Put a browser game online with OpenGame, the marketplace and game jam for browser games. Packages the game, checks it locally, uploads it to a private preview only the owner can play, reads and fixes findings, then hands the creator the page where they confirm the details after review. Use when the person says deploy my game, put it online, host it, share it, upload it, publish it, get me a link, make it playable for friends, or asks where to put a browser game or a Three.js game.
 
 
 # Deploy a browser game to OpenGame
 
-OpenGame opens on 18 November 2026. Any signed-in account can use the CLI,
-uploads and jam entries now. Until 18 November, a CLI command run before `opengame login`
-prints "OpenGame opens for creators on 18 November." and exits 7 (`not_launched`).
-Nothing is wrong with the game or the install: ask the person to run `opengame login`, then
-run the command again. Do not reinstall or work around it.
+Any signed-in account can use the CLI, uploads and jam entries. If a CLI command exits 7
+(`not_launched`), nothing is wrong with the game or the install: ask the person to run
+`opengame login`, then run the command again. Do not reinstall or work around it.
 
 <!-- generated:procedure -->
 Before every `opengame deploy` or `opengame publish`, stop and ask the creator: show them the game and its title, for a jam entry the track and models you suggest, and wait for a clear yes. A deploy can use one of their jam entries, and an update to a live game publishes by itself. Then deploy to a private preview, give them its link, and publish after review only if they asked. Read each command's result before the next one.
@@ -68,7 +66,7 @@ An error has `"type": "error"`, `"ok": false`, a `code`, a `message`, an `exitCo
 | 4 | An allowance is used up | Wait `retryAfterSeconds`, then run the same command. |
 | 5 | Our side or the network | Leave the game as it is. Run `next` when the error has one; otherwise wait and retry, at most a few times. |
 | 6 | The CLI is too old | Run `opengame upgrade --json`, then the npm command in `data.command`. |
-| 7 | OpenGame is not open to creators yet | The CLI has no login. Ask the creator to run `opengame login`, then run the command again. Until 18 November this is what a signed-out CLI hears. |
+| 7 | OpenGame did not let this CLI in | Ask the creator to run `opengame login`, then run the command again. |
 
 ## Sign in with the creator
 

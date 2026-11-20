@@ -427,27 +427,25 @@ test("the public layout puts every skill under skills/ with its changelog, and t
   } finally { await rm(out, { recursive: true, force: true }); }
 });
 
-test("every platform skill tells an agent that OpenGame is not open yet", async () => {
+/* OpenGame opened on 18 Nov 2026. Until then every platform skill told an agent the CLI's
+   pre-launch refusal word for word. Since 19 Nov 2026 the docs and skills describe OpenGame
+   as open, so no platform skill may say it has yet to open. */
+test("no platform skill tells an agent that OpenGame is not open yet", async () => {
   const { skills } = await collectSkills();
   for (const skill of skills.filter((s) => s.family === "platform")) {
     const text = skill.files["SKILL.md"];
-    /* The refusal names the kickoff, the day the CLI and uploads open (the owner, 8 Nov 2026),
-       through {{launch kickoff}}, so the built text carries launch.json's own words. */
-    assert.ok(text.includes(`OpenGame opens for creators on ${loadContext().launch.kickoffCopy}.`), skill.name);
+    assert.doesNotMatch(text, /opens for creators on|not open (to creators |to this caller )?yet|before launch/i, skill.name);
   }
 });
 
 /* The launch instant lives in packages/shared/launch.json and nowhere else. A skill names it
    through {{launch ...}}, so a moved date reaches every skill at the next build, and the lock
    then asks for a version bump like any other change in what a skill says. */
-test("the skills that say when OpenGame opens name launch.json's days, and none is typed", async () => {
+test("the jam skill names launch.json's days, and no skill types one", async () => {
   const context = loadContext();
   const { skills } = await collectSkills();
   const opens = render("{{launch opens}}", context);
   assert.match(opens, /^\d{1,2} [A-Z][a-z]+ \d{4}$/);
-  for (const name of ["opengame-deploy", "opengame-jam", "opengame-api", "opengame-cli", "opengame-router"]) {
-    assert.ok(skills.find((s) => s.name === name).files["SKILL.md"].includes(`OpenGame opens on ${opens}`), name);
-  }
   const jam = skills.find((s) => s.name === "opengame-jam").files["SKILL.md"];
   assert.ok(jam.includes(context.launch.kickoffCopy) && jam.includes(context.launch.closeCopy));
   assert.ok(skills.find((s) => s.name === "opengame-api").files["SKILL.md"].includes("`entries_closed`"));

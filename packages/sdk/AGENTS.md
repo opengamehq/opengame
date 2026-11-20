@@ -65,7 +65,7 @@ An error has `"type": "error"`, `"ok": false`, a `code`, a `message`, an `exitCo
 | 4 | An allowance is used up | Wait `retryAfterSeconds`, then run the same command. |
 | 5 | Our side or the network | Leave the game as it is. Run `next` when the error has one; otherwise wait and retry, at most a few times. |
 | 6 | The CLI is too old | Run `opengame upgrade --json`, then the npm command in `data.command`. |
-| 7 | OpenGame is not open to creators yet | The CLI has no login. Ask the creator to run `opengame login`, then run the command again. Until 18 November this is what a signed-out CLI hears. |
+| 7 | OpenGame did not let this CLI in | Ask the creator to run `opengame login`, then run the command again. |
 
 ## Sign in with the creator
 

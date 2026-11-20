@@ -173,12 +173,14 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "title", type: "string", description: "The game's title, typed out, which the server checks against the game. Required with --yes." },
     { name: "yes", type: "boolean", description: "Delete without the prompt a person types the title into. Agents and scripts pass it with --title." }, stdin, json],
     examples: ["opengame delete", "opengame delete --game <id> --title \"Tide runner\" --yes --json"] },
-  details: { args: "[dir]", description: "Print the linked game's title, tagline and description as the website shows them, or change any of them, as the Details tab on its page does. A field you leave out stays as it is. On a published game players see the change at once. Printing needs a token with read or deploy, and saving needs submit too; opengame login has all three.", flags: [
+  details: { args: "[dir]", description: "Print the linked game's title, tagline, description and the models it says it was made with, as the website shows them, or change any of them, as the Details tab on its page does. A field you leave out stays as it is. On a published game players see the change at once. Printing needs a token with read or deploy, and saving needs submit too; opengame login has all three.", flags: [
     { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of the linked folder's." },
     { name: "title", type: "string", description: "The new title." }, { name: "tagline", type: "string", description: "The new tagline, the line under the title on a card." },
     { name: "description", type: "string", description: "The new description, the copy on the game's page." },
-    { name: "clear-tagline", type: "boolean", description: "Remove the tagline, as emptying its box on the Details tab does." }, stdin, json],
-    examples: ["opengame details", "opengame details --title \"Tide runner\" --tagline \"Race the rain to the river.\" --json"] },
+    { name: "clear-tagline", type: "boolean", description: "Remove the tagline, as emptying its box on the Details tab does." },
+    { name: "models", type: "string", description: "The models and tools you made the game with, separated by commas, as in gemini,claude-code. Replaces the list under Made with on the game's page. opengame details prints the keys it takes." },
+    { name: "clear-models", type: "boolean", description: "Empty the Made with list. Not for a jam entry, which needs at least one." }, stdin, json],
+    examples: ["opengame details", "opengame details --title \"Tide runner\" --tagline \"Race the rain to the river.\" --json", "opengame details --models gemini,claude-code --json"] },
   handle: { args: "<name>", description: "Rename your handle, as Settings does. Your old handle becomes free for anyone to claim, your games keep their /g links, and your profile address changes. Renames are limited per day. Only the opengame login token can do this, not a token made in settings.", flags: [
     { name: "yes", type: "boolean", description: "Rename without the question a person is asked. Required for agents and scripts." }, stdin, json],
     examples: ["opengame handle stormcaller", "opengame handle stormcaller --yes --json"] },
@@ -256,7 +258,7 @@ const EXIT_CODES = [
   { name: "rateLimited", code: EXIT.rateLimited, description: "An allowance is used. Wait retryAfterSeconds when the error has it, then run the same command." },
   { name: "server", code: EXIT.server, description: "Our side or the network, and the game is fine. Run the error's next command when it has one. With retry after-fix or never, waiting will not help; read the message. Otherwise wait (retryAfterSeconds when given) and run the same command." },
   { name: "upgrade", code: EXIT.upgrade, description: "This CLI is too old. Run opengame upgrade." },
-  { name: "notLaunched", code: EXIT.notLaunched, description: "OpenGame is not open to creators yet, so nothing ran. Signed out, sign in first (next is opengame login) and run the command again; signed in, the message names the day the CLI and uploads open. init and check run before then and say the day as a notice. Nothing about the game is wrong." },
+  { name: "notLaunched", code: EXIT.notLaunched, description: "OpenGame refused this caller as not open to creators, so nothing ran. Every signed-in account may use it: sign in (next is opengame login) and run the command again. Nothing about the game is wrong." },
 ];
 /* The commands that answer before launch (launch.ts says why each one). help and version
    are answered before this is reached. A docs commit on 3 Nov 2026 (a9fa6ab49) took this

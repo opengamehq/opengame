@@ -1,5 +1,9 @@
 # opengame-router changelog
 
+## 1.0.11
+
+OpenGame is open: the opening no longer quotes the pre-launch refusal. (19 Nov 2026)
+
 ## 1.0.10
 
 Read https://opengame.io/for-agents.md and the CLI's AGENTS.md first. Ask the person before every `opengame deploy` or `opengame publish`, an update to a live game included, and wait for a clear yes. (18 Nov 2026)

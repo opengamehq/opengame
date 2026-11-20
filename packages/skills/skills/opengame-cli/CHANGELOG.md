@@ -1,5 +1,13 @@
 # opengame-cli changelog
 
+## 1.9.4
+
+`opengame details` prints the models a game says it was made with, and `--models` and `--clear-models` change them after publishing. (19 Nov 2026)
+
+## 1.9.3
+
+OpenGame is open: the opening and the exit 7 row no longer describe the days before launch. (19 Nov 2026)
+
 ## 1.9.2
 
 `opengame jam withdraw` and `reenter` need a token with `submit` alone. The exit table has 7 (`not_launched`). `init` writes Auto for the fields it is not given, and `setup` keeps the skills current until `--no-skills` or `OPENGAME_SKILLS_AUTO=0` stops it. (17 Nov 2026)

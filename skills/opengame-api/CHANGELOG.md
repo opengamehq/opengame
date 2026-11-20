@@ -1,5 +1,9 @@
 # opengame-api changelog
 
+## 1.0.9
+
+OpenGame is open: `GET /api/v1/status` is shown answering `launched: true`, and `not_launched` is described without a launch date. (19 Nov 2026)
+
 ## 1.0.8
 
 A release that passed review is published with `POST /api/v1/submissions/{id}/publish`, as well as on the deploy's page, and an update of a live game publishes by itself (16 Nov 2026).

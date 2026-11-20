@@ -1,5 +1,9 @@
 # opengame-jam changelog
 
+## 1.1.4
+
+The jam has kicked off: the opening says so in the past tense and drops the pre-launch refusal. (19 Nov 2026)
+
 ## 1.1.3
 
 Ask the person before `opengame deploy` and again before `opengame publish`, and wait for a clear yes: a deploy of a new game uses one of their jam entries until they withdraw it, and a redeploy of a live entry goes live by itself. (18 Nov 2026)

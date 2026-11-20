@@ -2,15 +2,14 @@
 name: opengame-sdk
 description: Integrate a browser game with OpenGame through @opengamehq/sdk, the injected global or a native engine bridge. Covers start-up, the player and their OG at load, names, leaderboards, achievements, events, pause, mute, fullscreen, keys inside the frame and threaded builds. Use when the person says integrate with OpenGame, add the SDK, show the player's name or OG, add a leaderboard or achievement, track events, fix fullscreen or keys in the game frame, or asks how a game talks to OpenGame.
 metadata:
-  version: "1.0.15"
+  version: "1.0.16"
 ---
 
 # Integrate a game with OpenGame
 
 Inside an OpenGame page the SDK works as described here. Under `opengame dev` it runs a
-local stand-in that keeps scores and events in the browser. Any signed-in account can deploy
-now. Until 18 November, a CLI with no login hears
-"OpenGame opens for creators on 18 November." Sign in with `opengame login` first.
+local stand-in that keeps scores and events in the browser. Any signed-in account can deploy:
+sign in with `opengame login` first.
 
 The SDK is what ends up inside the game. It talks only to the OpenGame page around
 the game and to `https://api.opengame.gg`.

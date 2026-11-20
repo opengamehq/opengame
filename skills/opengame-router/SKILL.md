@@ -2,15 +2,13 @@
 name: opengame-router
 description: Build, test and submit a browser game on OpenGame. Routes game work to the deploy guide, whole-game review and relevant craft skills. Use when someone asks to make a game, improve a game, check it, deploy it or enter an OpenGame jam.
 metadata:
-  version: "1.0.10"
+  version: "1.0.11"
 ---
 
 # Work on an OpenGame game
 
-OpenGame opens on 18 November 2026. Any signed-in account can use the CLI,
-uploads and jam entries now. Until 18 November, a CLI or API request with no account
-hears "OpenGame opens for creators on 18 November." Sign in with `opengame login` first.
-That is not a fault in the game.
+Any signed-in account can use the CLI, uploads and jam entries. Sign in with
+`opengame login` first.
 
 Read https://opengame.io/for-agents.md and the AGENTS.md in the CLI package, then [the
 working process](references/process.md), before changing the game. Ask the person

@@ -6,9 +6,9 @@
       "digestPublished": "a50e00ea58215787fc93e4129fd115a5608dfe725d8ce33c86a222efa8a9973b"
     },
     "opengame-api": {
-      "version": "1.0.8",
-      "digest": "30b820ac15eeae2e703b1bf6d402fdb92bb358b693fbf82cbf086302c6b2b0c5",
-      "digestPublished": "30b820ac15eeae2e703b1bf6d402fdb92bb358b693fbf82cbf086302c6b2b0c5"
+      "version": "1.0.9",
+      "digest": "6df87ba0676eba8a281495cff3749713edd1103963a873f51304742a52cf2d92",
+      "digestPublished": "6df87ba0676eba8a281495cff3749713edd1103963a873f51304742a52cf2d92"
     },
     "opengame-assets": {
       "version": "1.1.0",
@@ -31,14 +31,14 @@
       "digestPublished": "ac05537f449788b3572c068177fc20e5e45e16775739ebcb1034fd4b73a96072"
     },
     "opengame-cli": {
-      "version": "1.9.2",
-      "digest": "9164d94ff270e4b444a4d440716e9ec55c032fe8feecf1fdcc1ffd9097130506",
-      "digestPublished": "0f5629565203c35ed80d57fa35cc6de365cc9eb706eb79569b6b5d65ff655ad6"
+      "version": "1.9.4",
+      "digest": "38f5f377510b3669af90e8e0b34efb62543363d71c226bf0a0680b44371431b7",
+      "digestPublished": "60e0b159ff94b51f784d5a94478b6e98089b31130f401ce709bdc453864fa32b"
     },
     "opengame-deploy": {
-      "version": "1.1.15",
-      "digest": "8475d62ebb5c395b0fd9a491b8d4cfb33c824c6e67f9b45d636a0b6963e14f82",
-      "digestPublished": "35f083bd6ffb36bc24b9d14c0ac4e00d5199cb4fc0f171aa8ccd51380a5ae187"
+      "version": "1.1.16",
+      "digest": "116aca9fd16ead37ccff4111bd49bdb87a45a6b05ccc1e0b00faab1bd95dffb2",
+      "digestPublished": "ce018ea6cefc01eb2d206d13f5349da0e91c967726ea0ece16fc3bfcc30ffbad"
     },
     "opengame-depth": {
       "version": "1.1.0",
@@ -61,9 +61,9 @@
       "digestPublished": "ab55b90104023d452b2c0af3bb24bb5b7173237782c72da254d33a0805780a3a"
     },
     "opengame-jam": {
-      "version": "1.1.3",
-      "digest": "dc4ae7c8106c7b0dd6972652907fa842dc0203745a78b135a1f7b749793c02b2",
-      "digestPublished": "dc4ae7c8106c7b0dd6972652907fa842dc0203745a78b135a1f7b749793c02b2"
+      "version": "1.1.4",
+      "digest": "0da848c0e7cb3446c3ecc77fe7e170bc98e2511c7a1e0a0674b327ae51ce56e7",
+      "digestPublished": "0da848c0e7cb3446c3ecc77fe7e170bc98e2511c7a1e0a0674b327ae51ce56e7"
     },
     "opengame-lighting": {
       "version": "1.1.0",
@@ -131,9 +131,9 @@
       "digestPublished": "f032b2429ba52d0f1472fdba1b7c1445d911b02b5375f39c61eefa39445067d4"
     },
     "opengame-router": {
-      "version": "1.0.10",
-      "digest": "105111458c3f8ea16a298b95e23e042db2a6dca329a5c8920f72baccb855e638",
-      "digestPublished": "105111458c3f8ea16a298b95e23e042db2a6dca329a5c8920f72baccb855e638"
+      "version": "1.0.11",
+      "digest": "3bc85809abe9761f7b8559940b06b53feae748b3680c4fccab4215c3f0f2a9fa",
+      "digestPublished": "3bc85809abe9761f7b8559940b06b53feae748b3680c4fccab4215c3f0f2a9fa"
     },
     "opengame-scene-audit": {
       "version": "1.1.1",
@@ -141,9 +141,9 @@
       "digestPublished": "61fa3eee75da7f6b560333b0d2c96621370e113a0e0d809b2747a58c8b3f584a"
     },
     "opengame-sdk": {
-      "version": "1.0.15",
-      "digest": "3e19cb6c8eff0b7deebe116f64ca33d105cd9ed136755a16cf4281442672e89e",
-      "digestPublished": "0a58e7c91f85397da99dfb3117da03397cccab022d04cb82f108b76661812372"
+      "version": "1.0.16",
+      "digest": "53655845dc5e4178402c258490924bf48bd72a2410d7ca6a366c68e17bc3754f",
+      "digestPublished": "6fb15262f5390740179f481aabfbd283437d9b40b509c5321939e22a80c16058"
     },
     "opengame-stability": {
       "version": "1.1.0",
@@ -181,9 +181,9 @@
       "digestPublished": "f2895bf1c85e00750afc7c4cbba873f5d26ced3842950b3099687d501a590d35"
     },
     "opengame-all-in-one": {
-      "version": "1.0.14",
-      "digest": "9fe86db187ad61fdd8bda9e21197fcd835cc418223bd602dedf1ada499cc83f1",
-      "digestPublished": "b5797533c86b2c39af13a98308de88a2b3cf7239e139e674706a0fef0ca17566"
+      "version": "1.0.16",
+      "digest": "5b9f1172c5de63f993220dbd82c28272cf22a280d7ab4fe871a5571dc19f95f8",
+      "digestPublished": "d0222e2e7cf13c191cd6db6c845341cc5d408b5bb1a00eda9f60a3cc89113661"
     }
   }
 }

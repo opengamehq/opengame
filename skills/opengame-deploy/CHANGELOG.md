@@ -1,5 +1,9 @@
 # opengame-deploy changelog
 
+## 1.1.16
+
+OpenGame is open: the opening no longer describes a pre-launch refusal, and exit 7 says only to sign in and run the command again. (19 Nov 2026)
+
 ## 1.1.15
 
 Multiplayer: Kaigen invites and relays through Kaigen Online, since it doesn't read `og.invite.code` yet. (18 Nov 2026)

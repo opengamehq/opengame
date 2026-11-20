@@ -245,13 +245,17 @@ export const gameTakeDownSchema = z.object({
 export function gameDetailsApiPath(gameId: string): string {
   return `/api/v1/games/${encodeURIComponent(gameId)}/details`;
 }
-/** The body of `PATCH /api/v1/games/<id>/details`: any of the three, and the rest stay as
- * they are. The server holds each to the website's own limits. */
+/** The body of `PATCH /api/v1/games/<id>/details`: any of the three words and the models,
+ * and the rest stay as they are. The server holds each to the website's own limits. `models`
+ * replaces what the game says it was made with (catalogue keys, `opengame details --models`);
+ * an empty list clears it (19 Nov 2026). */
 export const gameDetailsRequestSchema = z.strictObject({
   title: z.string().max(4096).optional(),
   tagline: z.string().max(4096).optional(),
   description: z.string().max(65536).optional(),
-}).refine(body => body.title !== undefined || body.tagline !== undefined || body.description !== undefined, "Send a title, a tagline or a description.");
+  models: z.array(z.string().max(80)).max(256).optional(),
+}).refine(body => body.title !== undefined || body.tagline !== undefined || body.description !== undefined || body.models !== undefined,
+  "Send a title, a tagline, a description or the models.");
 /** What the website now shows for the game, once saved. */
 export const gameDetailsSchema = z.object({
   gameId: z.uuid(),
@@ -263,6 +267,21 @@ export const gameDetailsSchema = z.object({
   title: z.string(),
   tagline: z.string().nullable(),
   description: z.string(),
+  /** The catalogue keys the game declares now, when the request changed them. Absent from a
+   * server before 19 Nov 2026. */
+  models: z.array(z.string()).optional(),
+  url: z.string(),
+});
+
+/** One entry of OpenGame's list of models and tools: the key `--models` takes, and its name. */
+export const declaredModelSchema = z.object({ key: z.string().min(1), name: z.string() });
+/** `GET /api/v1/games/<id>/details`: what the game says it was made with, and what it may
+ * choose from, for `opengame details`. Since 19 Nov 2026. */
+export const gameDeclaredModelsSchema = z.object({
+  gameId: z.uuid(),
+  publicId: z.string().min(1),
+  models: z.array(declaredModelSchema),
+  choices: z.array(declaredModelSchema),
   url: z.string(),
 });
 

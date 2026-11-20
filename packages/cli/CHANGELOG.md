@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.7
+
+- `opengame details` prints the models and tools the game says it was made with, the list
+  under Made with on its page, and `--models gemini,claude-code` replaces that list after
+  publishing; `--clear-models` empties it. A jam entry keeps at least one, and a model from
+  each sponsor track it entered. Skills 1.7.6.
+- `opengame publish --models` on a release already entered in its jam declares those models.
+  Until now they were dropped without a word, and a different `--track` or `--sponsor` for
+  that entry is now refused rather than ignored.
+
 ## 0.13.6
 
 - A Kaigen build is recognised by its module's `hzlic` or `hz_flags` section, not by the names

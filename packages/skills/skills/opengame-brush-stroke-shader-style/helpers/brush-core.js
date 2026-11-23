@@ -771,7 +771,7 @@ export class BrushState {
 
   /**
    * @param {number} dt seconds since the last frame
-   * @param {{ depth?: boolean, sky?: [number, number, number], edge?: number, pull?: number, history?: boolean }} [mode]
+   * @param { { depth?: boolean, sky?: [number, number, number], edge?: number, pull?: number, history?: boolean } } [mode]
    *        depth: anchors carry real depth. sky: tan of half the field of view (x, y)
    *        and 1 for a perspective camera. edge and pull: for flat pictures.
    */

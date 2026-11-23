@@ -21,9 +21,9 @@
       "digestPublished": "94fdebd7149e7ed36714dc612d70cb71569abc5b9054648c333a27c360c8aaec"
     },
     "opengame-brush-stroke-shader-style": {
-      "version": "1.0.1",
-      "digest": "b0fb74fc671a49e6599dab74eb0995e7d1cd7c66f6c011b110d755f7d59cdcbc",
-      "digestPublished": "b0fb74fc671a49e6599dab74eb0995e7d1cd7c66f6c011b110d755f7d59cdcbc"
+      "version": "1.0.2",
+      "digest": "5757f0ace9a43d6ab09ded42889ae9e6296a08a58d09876b1652a7f3673cff55",
+      "digestPublished": "5757f0ace9a43d6ab09ded42889ae9e6296a08a58d09876b1652a7f3673cff55"
     },
     "opengame-capture": {
       "version": "1.1.0",
@@ -186,9 +186,9 @@
       "digestPublished": "f2895bf1c85e00750afc7c4cbba873f5d26ced3842950b3099687d501a590d35"
     },
     "opengame-all-in-one": {
-      "version": "1.0.18",
-      "digest": "3799b67ac2594c33a5f09c7a49de3b3267b084a431c9cd37b088e8229b6fb3cc",
-      "digestPublished": "14763f6b34ef1688850f00f884f39722dc40ebfc353bf1cdb7f248b5e80ae9b7"
+      "version": "1.0.19",
+      "digest": "5361f3f0388f3e39d236753fe3f0cae3de3ed89202a29ddf705a7d438bbea861",
+      "digestPublished": "9acf9dfacc34d771d69d9bb35d1fa2b26f4f413b328e8bb05a8f6af1330911c3"
     }
   }
 }

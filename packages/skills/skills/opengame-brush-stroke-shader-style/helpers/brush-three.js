@@ -332,7 +332,7 @@ export class BrushStrokeStyle {
 
   /**
    * A hit frame: ink, then one flat colour, then the picture wiped back, with a lens push.
-   * @param {{ at?: [number, number], colour?: [number, number, number], ink?: number, flat?: number, wipe?: number, push?: number }} [hit]
+   * @param { { at?: [number, number], colour?: [number, number, number], ink?: number, flat?: number, wipe?: number, push?: number } } [hit]
    */
   hit(hit) { return this.state.hit(hit); }
 
@@ -369,7 +369,7 @@ export class BrushStrokeStyle {
    * cleared so it lands on top, and everything in it carries its own space.
    * Give layers (a THREE.Layers) when the things to anchor are not on the layers the
    * camera normally sees, such as a first-person body kept on its own layer.
-   * @param {{ clear?: boolean, figure?: boolean, layers?: THREE.Layers }} [layer]
+   * @param { { clear?: boolean, figure?: boolean, layers?: THREE.Layers } } [layer]
    */
   renderAnchors(scene, camera, layer = {}) {
     const clear = layer.clear ?? true;

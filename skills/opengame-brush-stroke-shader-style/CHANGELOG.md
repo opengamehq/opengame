@@ -1,5 +1,11 @@
 # opengame-brush-stroke-shader-style changelog
 
+## 1.0.2
+
+- The helpers' JSDoc object types open with a space between their two braces, so the published
+  package carries no double brace, which the release check reads as a template the renderer
+  skipped (it refused skills 1.8.0 for it).
+
 ## 1.0.1
 
 - `helpers/brush-check.mjs` refuses a malformed capture (a frame of the wrong size, a size or

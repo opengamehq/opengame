@@ -21,3 +21,12 @@ test("the jam's flags and --no-jam are one choice, and a sponsor needs its email
   assert.throws(() => publishAnswers({ "no-jam": true, track: "rpg" }), /not both/);
   assert.throws(() => publishAnswers({ track: "rpg", sponsor: "fal" }), /email of the account you used at fal/);
 });
+
+test("a banner style is directed or classic, and leaving it out keeps the game's own choice", () => {
+  assert.equal(publishAnswers({ "banner-style": "classic" }).bannerStyle, "classic");
+  assert.equal(publishAnswers({ "banner-style": "directed" }).bannerStyle, "directed");
+  assert.equal("bannerStyle" in publishAnswers({}), false);
+  for (const bad of ["Classic", "painted", true] as const) {
+    assert.throws(() => publishAnswers({ "banner-style": bad }), /--banner-style directed or --banner-style classic/, String(bad));
+  }
+});

@@ -211,6 +211,20 @@ export async function suppliedToken(stdin: boolean): Promise<{ token: string; so
 }
 
 /**
+ * The quiet period readPipedToken allows, which is the limit. OPENGAME_TEST_STDIN_WAIT_MS
+ * can only shorten it, and exists for this package's own tests: the three that run a real
+ * CLI against a pipe nobody closes each sat out the whole 30 s, a minute of a CLI row's
+ * floor spent idle (round 66A, 21 Nov 2026). A real process on a real pipe is the point of
+ * those tests (a paused stdin is what lets it exit), so the wait is shortened rather than
+ * faked. Kept out of the public list for the reason cli.ts gives beside ENV.
+ */
+export function stdinWaitMs(): number {
+  const limit = LIMITS.platform.credentials.stdinWaitMs;
+  const asked = Number(process.env.OPENGAME_TEST_STDIN_WAIT_MS);
+  return Number.isInteger(asked) && asked > 0 ? Math.min(asked, limit) : limit;
+}
+
+/**
  * Reads stdin to its end, giving up after `stdinWaitMs` with nothing new on it.
  *
  * An agent's shell (Cursor, Codex) starts every command with stdin as a pipe it never
@@ -219,7 +233,7 @@ export async function suppliedToken(stdin: boolean): Promise<{ token: string; so
  * to the agent like a CLI that had hung.
  */
 function readPipedToken(): Promise<string> {
-  const waitMs = LIMITS.platform.credentials.stdinWaitMs;
+  const waitMs = stdinWaitMs();
   return new Promise((resolve, reject) => {
     const input = process.stdin;
     const chunks: Buffer[] = []; let size = 0;

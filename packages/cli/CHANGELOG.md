@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.13.8
+
+- Skills 1.8.0, which adds `opengame-brush-stroke-shader-style`: making a game look and play as
+  if it were painted by hand, built into the game and not laid over its frame. `opengame setup`
+  installs it with the rest, and `opengame skills add . --skill
+  opengame-brush-stroke-shader-style` adds it to one project.
+- `--banner-style directed|classic` on `opengame publish`, `deploy --publish` and
+  `opengame details` chooses how OpenGame draws the game's banner. An update of a live game
+  goes live by itself once it passes review, with no details step to carry the style, so
+  `publish` and `deploy --publish` save it through `opengame details`'s own save once the
+  release is live, and say whether the banner is being redrawn. A server from before
+  22 Nov 2026 refuses the style with `edit_unavailable` and saves nothing; after a publish,
+  that is said beside the release that went live.
+
 ## 0.13.7
 
 - `opengame details` prints the models and tools the game says it was made with, the list

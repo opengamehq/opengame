@@ -21,9 +21,13 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-19-unreal-toast";
+export const GAME_AUDIO_VERSION = "audio-22-record-pace";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
+/** The recording block the receiver reads (`limits.play.recording`), less the page's own numbers. */
+const RECORDING = (({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs }) =>
+  ({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs }))(limits.play.recording);
+
 const SCREENSHOT = (({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }) =>
   ({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }))(limits.studio.preview.screenshot);
 
@@ -546,6 +550,8 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // Every post here is to 'host', the parent captured before any game script ran, and
   // never to 'parent' read late: a game's own top-level 'var parent' replaces that name
   // for every script after it, and these all run after the game's (review, 29 Oct 2026).
+  // A recording ends with the document; the recorder (RECORD AND INSTANT REPLAY) says so.
+  addEventListener('pagehide', () => recordingLeft());
   addEventListener('pagehide', () => {
     if (documentParent && paintTimed) { try { host.postMessage({ og: 1, type: 'leaving' }, documentParent); } catch { /* The parent went first. */ } }
   });
@@ -620,6 +626,55 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   if (nativeAttachShadow) passFor(Element.prototype.attachShadow, nativeAttachShadow);
   const nativeConnect = AudioNode.prototype.connect;
   const nativeDisconnect = AudioNode.prototype.disconnect;
+  // Kept for the recorder's frame ordering (RECORD AND INSTANT REPLAY, below), which
+  // replaces requestAnimationFrame here, ahead of every game script, passing for the native.
+  const nativeRequestFrame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null;
+  const nativeCancelFrame = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : null;
+  // Which frame's callbacks are running, by its timestamp, which every callback of one frame
+  // shares; null between frames. Cleared by a timer, which cannot run until the frame's
+  // callbacks have all run. Only kept while a recording session runs (captureTick).
+  const nativeSetTimeout = typeof setTimeout === 'function' ? setTimeout : null;
+  let inFrame = null;
+  let clearing = false;
+  const markFrame = (time) => {
+    inFrame = time;
+    if (clearing || !nativeSetTimeout) return;
+    clearing = true;
+    nativeSetTimeout(() => { inFrame = null; clearing = false; }, 0);
+  };
+  let captureTick = null;
+  const queueCapture = (run) => {
+    if (captureTick) nativeCancelFrame.call(globalThis, captureTick.id);
+    const tick = { run: run, id: 0, queuedDuring: inFrame };
+    tick.id = nativeRequestFrame.call(globalThis, (time) => { markFrame(time); if (captureTick === tick) captureTick = null; run(time); });
+    captureTick = tick;
+  };
+  if (nativeRequestFrame && nativeCancelFrame) {
+    globalThis.requestAnimationFrame = passFor(function requestAnimationFrame(callback) {
+      if (!captureTick || typeof callback !== 'function') return nativeRequestFrame.call(globalThis, callback);
+      const id = nativeRequestFrame.call(globalThis, (time) => { markFrame(time); return callback(time); });
+      // The game's callback is due next frame. So is the capture if it was queued between
+      // frames or during this one; then it moves behind the game's. A capture queued before
+      // this frame began is due in this frame, after the game's callback, and stays.
+      if (inFrame === null || captureTick.queuedDuring === inFrame) queueCapture(captureTick.run);
+      return id;
+    }, nativeRequestFrame);
+  }
+  // THE RECORDER'S EAR, BEFORE THE PLAYER'S VOLUME. Everything the game sends to the
+  // speakers is also sent to one gain per context that reaches nothing: a recording taps it
+  // (RECORD AND INSTANT REPLAY, below), so a clip sounds like the game whatever the slider
+  // or the mute says, and no change of either is undone after the fact. Until a recording
+  // attaches a tap, nothing pulls on it, so a browser does no work for it.
+  const tapInputs = new Map();
+  const tapInputFor = (context) => {
+    let input = tapInputs.get(context);
+    if (!input) {
+      input = context.createGain();
+      tapInputs.set(context, input);
+      context.addEventListener('statechange', () => { if (context.state === 'closed') tapInputs.delete(context); });
+    }
+    return input;
+  };
   const outputFor = (destination) => {
     let output = outputs.get(destination);
     if (!output) {
@@ -675,10 +730,17 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       !(typeof OfflineAudioContext !== 'undefined' && destination.context instanceof OfflineAudioContext);
     const actual = realtime ? outputFor(destination) : destination;
     const result = nativeConnect.call(this, actual, ...args);
+    // The same output to the recorder's ear. A failure here is the recorder's alone and
+    // never the game's connect, which has already happened.
+    if (realtime) { try { nativeConnect.call(this, tapInputFor(destination.context), ...args); } catch { /* Not recorded. */ } }
     return result === actual ? destination : result;
   }, nativeConnect);
   AudioNode.prototype.disconnect = passFor(function(...args) {
-    if (outputs.has(args[0])) args[0] = outputs.get(args[0]);
+    if (outputs.has(args[0])) {
+      const input = tapInputs.get(args[0].context);
+      if (input) { try { nativeDisconnect.call(this, input, ...args.slice(1)); } catch { /* Was never fanned out. */ } }
+      args[0] = outputs.get(args[0]);
+    }
     return nativeDisconnect.apply(this, args);
   }, nativeDisconnect);
   const media = new Set();
@@ -1446,6 +1508,360 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     });
   };
 
+  // RECORD AND INSTANT REPLAY (22 Nov 2026). The page cannot read this document's pixels, so
+  // when a player records, the page asks here and this encodes what the game draws. After
+  // each of the game's animation frames, the visible canvases are drawn into one picture at
+  // the size the page asked for and handed to the browser's video encoder (WebCodecs), which
+  // on most machines is the hardware's own and costs the game almost nothing. The game's
+  // sound is tapped where every realtime context reaches the speakers (outputFor above).
+  // Encoded pieces go to the page every flushMs, and the page keeps them on the player's
+  // device: an MP4 is only ever written there, from pieces already encoded, so Stop costs
+  // no rendering. The page treats every piece as the game's claim, as it does a screenshot.
+  //
+  // Frames are paced to fpsMax and dropped, never queued, while the encoder is behind, so a
+  // slow machine records fewer frames rather than playing slower. Known gaps, accepted: an
+  // HTML HUD over the canvas is not in the picture (a screenshot draws the page; sixty a
+  // second cannot), sound played through a media element rather than Web Audio is not in
+  // the track, and a game that draws outside requestAnimationFrame records its last frame.
+  const rec = __OG_RECORDING__;
+  const recordId = /^[A-Za-z0-9_-]{16,64}$/;
+  let recording = null;
+  const tellRecord = (session, body, transfer) => {
+    try { host.postMessage(Object.assign({ og: 1, type: 'record', id: session.id }, body), session.origin, transfer || []); } catch { /* The page went away. */ }
+  };
+  const evenOf = (value) => Math.max(2, Math.round(value / 2) * 2);
+  // The long side gets the long edge whichever way the game faces: 1920x1080 for a wide
+  // game, 1080x1920 for a tall one, and each shrinks until the short side fits too.
+  const outputSize = (edge, shortEdge) => {
+    const aspect = Math.max(0.25, Math.min(4, (innerWidth || 16) / (innerHeight || 9)));
+    let width = aspect >= 1 ? edge : edge * aspect;
+    let height = aspect >= 1 ? edge / aspect : edge;
+    if (Math.min(width, height) > shortEdge) {
+      const scale = shortEdge / Math.min(width, height);
+      width *= scale; height *= scale;
+    }
+    return { width: evenOf(width), height: evenOf(height) };
+  };
+  const videoConfigFor = async (compactOnly) => {
+    if (typeof VideoEncoder !== 'function' || typeof VideoFrame !== 'function' || typeof OffscreenCanvas !== 'function') return null;
+    const sizes = [];
+    if (!compactOnly) sizes.push({ size: outputSize(rec.edge, rec.shortEdge), bitrate: rec.bitsPerSecond, hardware: ['prefer-hardware'] });
+    sizes.push({ size: outputSize(rec.compactEdge, rec.compactShortEdge), bitrate: rec.compactBitsPerSecond, hardware: ['prefer-hardware', 'no-preference'] });
+    // High, Main, then Constrained Baseline, at level 4.2, which covers 1080p at 60.
+    const codecs = ['avc1.64002A', 'avc1.4D002A', 'avc1.42E02A'];
+    for (const choice of sizes) {
+      for (const hardwareAcceleration of choice.hardware) {
+        for (const codec of codecs) {
+          const config = { codec: codec, width: choice.size.width, height: choice.size.height, bitrate: choice.bitrate,
+            framerate: rec.fpsMax, hardwareAcceleration: hardwareAcceleration, latencyMode: 'realtime', avc: { format: 'avc' } };
+          try {
+            const answer = await VideoEncoder.isConfigSupported(config);
+            if (answer && answer.supported) return { config: config, hardware: hardwareAcceleration === 'prefer-hardware' };
+          } catch { /* Try the next. */ }
+        }
+      }
+    }
+    return null;
+  };
+  const audioConfigFor = async (sampleRate) => {
+    if (typeof AudioEncoder !== 'function' || typeof AudioData !== 'function') return null;
+    // AAC where the platform encodes it (macOS, Windows), at the game's own rate; Opus
+    // elsewhere, which takes 48 kHz, so a 44.1 kHz game is resampled in the tap below.
+    for (const codec of ['mp4a.40.2', 'opus']) {
+      const config = { codec: codec, sampleRate: codec === 'opus' ? 48000 : sampleRate, numberOfChannels: 2, bitrate: rec.audioBitsPerSecond };
+      try {
+        const answer = await AudioEncoder.isConfigSupported(config);
+        if (answer && answer.supported) return config;
+      } catch { /* Try the next. */ }
+    }
+    return null;
+  };
+  // The tap is a worklet with no outputs, which a browser runs for as long as it has an
+  // input. It hands the page about 2048 frames at a time. Loaded from a blob: address,
+  // which every runtime contract's script-src allows.
+  const TAP = "registerProcessor('og-record-tap', class extends AudioWorkletProcessor { constructor() { super(); this.parts = []; this.size = 0; } process(inputs) { const input = inputs[0]; if (input && input.length) { const left = input[0]; const right = input[1] || input[0]; this.parts.push([left.slice(), right.slice()]); this.size += left.length; if (this.size >= 2048) { this.port.postMessage(this.parts); this.parts = []; this.size = 0; } } return true; } });";
+  let tapUrl = null;
+  // Linear resampling, carried across blocks so the joins do not click: phase is where
+  // the next output sample falls, in input samples from the start of the next block.
+  const resampler = (step) => {
+    const carry = { phase: 0, last: [0, 0] };
+    return (left, right) => {
+      if (step === 1) return [left, right];
+      const out = [[], []];
+      const input = [left, right];
+      let phase = carry.phase;
+      while (phase < left.length - 1) {
+        const index = Math.floor(phase);
+        const fraction = phase - index;
+        for (let c = 0; c < 2; c++) {
+          const a = index < 0 ? carry.last[c] : input[c][index];
+          const b = input[c][index + 1];
+          out[c].push(a + (b - a) * fraction);
+        }
+        phase += step;
+      }
+      carry.phase = phase - left.length;
+      carry.last = [left[left.length - 1], right[right.length - 1]];
+      return [Float32Array.from(out[0]), Float32Array.from(out[1])];
+    };
+  };
+  // ONE TRACK FROM EVERY CONTEXT. A game may play music on one context and effects on
+  // another, or close one and make the next. Each context gets its own tap, resampled to the
+  // track's rate; the first running one sets the pace, and the others' sound is added to it
+  // as it arrives, up to half a second of it, so a context that stalls cannot drag the track.
+  // Running, not merely open: a suspended context renders nothing, so pacing on one left
+  // every other context queueing and dropping its sound, and the clip went silent while
+  // the game played on (Greptile on opengamehq/opengame#27). The pace is chosen again for
+  // every block, so a context suspended or resumed mid-recording hands it on.
+  const takeFrames = (tap, count) => {
+    const left = new Float32Array(count);
+    const right = new Float32Array(count);
+    let at = 0;
+    while (at < count && tap.queue.length) {
+      const [l, r] = tap.queue[0];
+      const take = Math.min(count - at, l.length);
+      left.set(l.subarray(0, take), at); right.set(r.subarray(0, take), at);
+      at += take;
+      if (take === l.length) tap.queue.shift(); else tap.queue[0] = [l.subarray(take), r.subarray(take)];
+    }
+    tap.queued -= at;
+    return [left, right];
+  };
+  const paceTap = (session) => {
+    let open = null;
+    for (const tap of session.taps.values()) {
+      if (!tap) continue;
+      if (tap.context.state === 'running') return tap;
+      if (!open && tap.context.state !== 'closed') open = tap;
+    }
+    return open;
+  };
+  const encodeMix = (session, tap, left, right) => {
+    const mix = session.mix;
+    if (!mix || mix.encoder.state !== 'configured') return;
+    const frames = left.length;
+    if (!frames) return;
+    if (paceTap(session) !== tap) {
+      tap.queue.push([left, right]);
+      tap.queued += frames;
+      while (tap.queued > mix.config.sampleRate / 2 && tap.queue.length) tap.queued -= tap.queue.shift()[0].length;
+      return;
+    }
+    // What this tap queued while another set the pace is older than this block: dropped,
+    // or it would be mixed in later, out of time, should the pace move back.
+    if (tap.queued) { tap.queue = []; tap.queued = 0; }
+    const data = new Float32Array(frames * 2);
+    data.set(left, 0); data.set(right, frames);
+    for (const other of session.taps.values()) {
+      if (!other || other === tap) continue;
+      const [l, r] = takeFrames(other, frames);
+      for (let i = 0; i < frames; i++) { data[i] += l[i]; data[frames + i] += r[i]; }
+    }
+    const span = frames / mix.config.sampleRate * 1e6;
+    // Timed on the same clock as the pictures, and moved forward when the sound falls a
+    // tenth of a second behind them (a context the game suspended, a hidden tab). Never
+    // back: blocks that queued behind a stalled main thread arrive together and are due
+    // in a burst, and stamping them early would put the track out of order.
+    const due = (performance.now() - session.start) * 1000 - span;
+    if (mix.next < 0 || due - mix.next > 1e5) mix.next = Math.max(0, due);
+    try {
+      const audio = new AudioData({ format: 'f32-planar', sampleRate: mix.config.sampleRate, numberOfFrames: frames, numberOfChannels: 2, timestamp: Math.round(mix.next), data: data });
+      mix.encoder.encode(audio);
+      audio.close();
+    } catch { /* One lost block is a click, not a failed recording. */ }
+    mix.next += span;
+  };
+  const untap = (session) => {
+    for (const tap of session.taps.values()) {
+      if (!tap) continue;
+      try { nativeDisconnect.call(tap.input, tap.node); } catch { /* Already gone. */ }
+      tap.node.port.onmessage = null;
+    }
+    session.taps.clear();
+  };
+  const tapContext = async (session, context) => {
+    if (session.taps.has(context) || session.mix === false || !context.audioWorklet || typeof AudioWorkletNode !== 'function') return;
+    session.taps.set(context, null);
+    try {
+      if (!session.mix) {
+        const config = await audioConfigFor(context.sampleRate);
+        if (!config) { session.mix = false; return; }
+        if (!session.mix) {
+          // An encoder that fails takes every tap with it, or the worklets run for the life
+          // of the document posting blocks nobody encodes.
+          const encoder = new AudioEncoder({
+            output: (chunk, meta) => queueChunk(session, 'a', chunk, meta),
+            error: () => { untap(session); session.mix = false; },
+          });
+          encoder.configure(config);
+          session.mix = { encoder: encoder, config: config, next: -1 };
+        }
+      }
+      tapUrl = tapUrl || URL.createObjectURL(new Blob([TAP], { type: 'text/javascript' }));
+      await context.audioWorklet.addModule(tapUrl);
+      if (session.stopped || !session.mix || context.state === 'closed') { session.taps.delete(context); return; }
+      const node = new AudioWorkletNode(context, 'og-record-tap', { numberOfInputs: 1, numberOfOutputs: 0, channelCount: 2, channelCountMode: 'explicit' });
+      const tap = { context: context, node: node, input: tapInputFor(context), queue: [], queued: 0, resample: resampler(context.sampleRate / session.mix.config.sampleRate) };
+      node.port.onmessage = (event) => {
+        if (session.stopped) return;
+        const parts = event.data.map((part) => tap.resample(part[0], part[1]));
+        const frames = parts.reduce((sum, part) => sum + part[0].length, 0);
+        const left = new Float32Array(frames);
+        const right = new Float32Array(frames);
+        let at = 0;
+        for (const part of parts) { left.set(part[0], at); right.set(part[1], at); at += part[0].length; }
+        encodeMix(session, tap, left, right);
+      };
+      nativeConnect.call(tap.input, node);
+      session.taps.set(context, tap);
+      context.addEventListener('statechange', () => { if (context.state === 'closed') session.taps.delete(context); });
+    } catch {
+      session.taps.delete(context);
+    }
+  };
+  // Every context that has sent sound to the speakers, now and as the game makes more.
+  const tapAudio = (session) => {
+    for (const context of tapInputs.keys()) if (context.state !== 'closed') void tapContext(session, context);
+  };
+  const queueChunk = (session, kind, chunk, meta) => {
+    if (session.closed) return;
+    const data = new ArrayBuffer(chunk.byteLength);
+    chunk.copyTo(data);
+    const item = { k: kind, key: chunk.type === 'key', t: chunk.timestamp, d: chunk.duration || 0, data: data };
+    if (meta && meta.decoderConfig) {
+      const config = meta.decoderConfig;
+      let description = null;
+      if (config.description) {
+        const view = ArrayBuffer.isView(config.description) ? config.description : new Uint8Array(config.description);
+        description = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+      }
+      item.config = { codec: config.codec, width: config.codedWidth || 0, height: config.codedHeight || 0,
+        sampleRate: config.sampleRate || 0, channels: config.numberOfChannels || 0, description: description };
+    }
+    session.pending.push(item);
+  };
+  // Every flush says something, an empty list when nothing was encoded (a game that drew
+  // nothing and played nothing for half a second), so the page can tell a quiet game from a
+  // document that went away without a word.
+  // A SAVE WAITS FOR THE ENCODERS. A hardware encoder hands back a frame within a frame;
+  // a software one under load can hold a second or two, and a save cut before they come out
+  // loses its end (measured on 23 Nov 2026: a 4 s recording on a software encoder came back
+  // 2 s long). So a save drains both encoders before it answers. The next picture after a
+  // drain is a keyframe, since an encoder may start afresh once flushed.
+  const drainRecord = async (session) => {
+    try { if (session.encoder && session.encoder.state === 'configured') await session.encoder.flush(); } catch { /* Keep what came out. */ }
+    try { if (session.mix && session.mix.encoder.state === 'configured') await session.mix.encoder.flush(); } catch { /* Keep what came out. */ }
+    session.lastKey = -1;
+    if (session.closed) return;
+    flushRecord(session);
+    tellRecord(session, { op: 'flushed' });
+  };
+  const flushRecord = (session) => {
+    const items = session.pending;
+    session.pending = [];
+    const transfer = [];
+    for (const item of items) {
+      transfer.push(item.data);
+      if (item.config && item.config.description) transfer.push(item.config.description);
+    }
+    tellRecord(session, { op: 'chunks', items: items }, transfer);
+  };
+  // THE CAPTURE RUNS AFTER THE GAME, EVERY FRAME. WebGL clears a canvas once its frame is
+  // shown, so a copy taken before the game draws is the cleared buffer. Callbacks run in the
+  // order they were asked for, and a game asks for its next frame at any time: inside its
+  // last one, from a click, from a timer that paces it to 30 frames, from the SDK waking it.
+  // So while a session runs, every requestAnimationFrame the page makes moves the pending
+  // capture to the back of the queue, and the capture is always the frame's last callback.
+  // Outside a session the replacement only passes the call through.
+  const captureFrame = (session, now) => {
+    if (session.stopped) return;
+    queueCapture((time) => captureFrame(session, time));
+    // Paced to fpsMax on any display: a frame is due every 1000 / fpsMax ms, so a 144 Hz
+    // screen records 60 a second rather than every second refresh, 48.
+    if (now < session.due - 2) return;
+    session.due = Math.max(session.due + 1000 / rec.fpsMax, now - 1000 / rec.fpsMax);
+    const encoder = session.encoder;
+    if (encoder.state !== 'configured' || encoder.encodeQueueSize > 2) return;
+    if (now - session.lastScan > 500) { session.canvases = visibleCanvases(); session.ground = groundOf(); session.lastScan = now; }
+    if (!session.canvases.length) return;
+    const { width, height } = session.size;
+    const context = session.context;
+    const scale = Math.min(width / (innerWidth || width), height / (innerHeight || height));
+    const left = (width - (innerWidth || width) * scale) / 2;
+    const top = (height - (innerHeight || height) * scale) / 2;
+    context.fillStyle = session.ground;
+    context.fillRect(0, 0, width, height);
+    try {
+      for (const item of session.canvases) {
+        context.drawImage(item.canvas, left + item.rect.left * scale, top + item.rect.top * scale, item.rect.width * scale, item.rect.height * scale);
+      }
+      const timestamp = Math.max(0, Math.round((now - session.start) * 1000));
+      const key = session.lastKey < 0 || timestamp - session.lastKey >= rec.keyframeSeconds * 1e6;
+      const frame = new VideoFrame(session.canvas, { timestamp: timestamp, duration: Math.round(1e6 / rec.fpsMax) });
+      encoder.encode(frame, { keyFrame: key });
+      frame.close();
+      if (key) session.lastKey = timestamp;
+    } catch { /* A canvas mid-resize or tainted: the next frame tries again. */ }
+  };
+  const stopRecord = async (session, reason) => {
+    if (session.stopped) return;
+    session.stopped = true;
+    if (captureTick) { nativeCancelFrame.call(globalThis, captureTick.id); captureTick = null; }
+    clearInterval(session.flusher);
+    clearInterval(session.audioWatch);
+    try { if (session.encoder.state === 'configured') await session.encoder.flush(); } catch { /* Keep what arrived. */ }
+    const mix = session.mix;
+    untap(session);
+    if (mix) {
+      try { if (mix.encoder.state === 'configured') await mix.encoder.flush(); } catch { /* Keep what arrived. */ }
+      try { mix.encoder.close(); } catch { /* Closed. */ }
+    }
+    try { session.encoder.close(); } catch { /* Closed. */ }
+    flushRecord(session);
+    session.closed = true;
+    if (recording === session) recording = null;
+    tellRecord(session, { op: 'stopped', reason: reason });
+  };
+  const startRecord = async (origin, data) => {
+    if (recording) {
+      tellRecord({ id: data.id, origin: origin }, { op: 'failed', reason: 'busy' });
+      return;
+    }
+    const session = { id: data.id, origin: origin, stopped: false, closed: false, pending: [], mix: null, taps: new Map(),
+      due: -Infinity, lastKey: -1, lastScan: -Infinity, canvases: [], ground: '#000' };
+    recording = session;
+    const chosen = nativeRequestFrame ? await videoConfigFor(data.compact === true) : null;
+    if (!chosen || session.stopped) {
+      if (recording === session) recording = null;
+      if (!session.stopped) tellRecord(session, { op: 'failed', reason: 'unsupported' });
+      return;
+    }
+    session.size = { width: chosen.config.width, height: chosen.config.height };
+    session.canvas = new OffscreenCanvas(session.size.width, session.size.height);
+    session.context = session.canvas.getContext('2d', { alpha: false });
+    session.encoder = new VideoEncoder({
+      output: (chunk, meta) => queueChunk(session, 'v', chunk, meta),
+      error: () => { void stopRecord(session, 'failed'); },
+    });
+    try { session.encoder.configure(chosen.config); }
+    catch {
+      if (recording === session) recording = null;
+      tellRecord(session, { op: 'failed', reason: 'unsupported' });
+      return;
+    }
+    session.start = performance.now();
+    tellRecord(session, { op: 'started', width: session.size.width, height: session.size.height, fps: rec.fpsMax,
+      codec: chosen.config.codec, hardware: chosen.hardware });
+    session.flusher = setInterval(() => flushRecord(session), rec.flushMs);
+    // A game that makes its sound only after the first press has no context yet, and one may
+    // make another later; look again every second.
+    session.audioWatch = setInterval(() => tapAudio(session), 1000);
+    tapAudio(session);
+    queueCapture((time) => captureFrame(session, time));
+  };
+  // Registered near the top (recordingLeft), ahead of the receiver's other pagehide work.
+  function recordingLeft() { if (recording) void stopRecord(recording, 'left'); }
+
   // Silence lands at once, as the mute always did. A level change is eased over a few
   // milliseconds where the browser can schedule it, because a slider dragged through
   // forty steps would otherwise click at every one of them.
@@ -1506,6 +1922,15 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       if (typeof data.id === 'string' && shotId.test(data.id)) takeShot(event.origin, data.id);
       return;
     }
+    if (data.type === 'record') {
+      if (typeof data.id !== 'string' || !recordId.test(data.id)) return;
+      if (data.op === 'start') void startRecord(event.origin, data);
+      else if (data.op === 'stop' && recording && recording.id === data.id) void stopRecord(recording, 'asked');
+      // A save asks for what is waiting first, so a replay ends on the frame that was on
+      // screen when the player pressed, not up to flushMs before it.
+      else if (data.op === 'flush' && recording && recording.id === data.id) void drainRecord(recording);
+      return;
+    }
     if (data.type === 'volume') {
       // A number from 0 to 1 or nothing: a level out of range, NaN or a string is a page
       // this script does not understand, and guessing at it could only make a game louder.
@@ -1537,6 +1962,7 @@ export function gameAudioRuntime(origins: string[]): string {
     .replace("__OG_GAMEPAD_INTERVAL__", () => String(limits.analytics.runtime.inputIntervalMs))
     .replace("__OG_GAMEPAD_DEADZONE__", () => String(limits.analytics.runtime.gamepadDeadzone))
     .replace("__OG_CAPTURE__", () => capture)
+    .replace("__OG_RECORDING__", () => JSON.stringify(RECORDING))
     .replace("__OG_AUDIO_PARENTS__", () => parents);
 }
 

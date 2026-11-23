@@ -120,6 +120,14 @@ test("a limit typed by hand in a platform skill is found, outside code examples"
   assert.equal(handTypedLimits("Up to {{raw platform.deploy.uploadAttemptsMax}} upload attempts.", limits).length, 0);
   // A numbered step or a count that is not a limit stays quiet.
   assert.equal(handTypedLimits("1. Run the thing.\nStep 2 of 3.\nTwo players, 4 corners.", limits).length, 0);
+  /* A spelling inside a longer number is not that limit. The check skips a line the spelling is
+     not in before it tries the pattern (round 36C), and these hold the pattern to still decide. */
+  const files = limits.bundle.fileCountMax;
+  assert.equal(handTypedLimits(`Build 1${files}0 of the series.`, limits).length, 0);
+  assert.equal(handTypedLimits(`Version ${files}.5 shipped.`, limits).length, 0);
+  // Two limits on two lines of one call, each named by its own spelling.
+  assert.deepEqual(handTypedLimits(`Archives up to ${archive} MiB.\nAt most ${files.toLocaleString("en-US")} files.`, limits).map((hit) => [hit.line, hit.spelling]),
+    [[1, `${archive} MiB`], [2, files.toLocaleString("en-US")]]);
 });
 
 test("every bundled skill validates, and the registry, folders and families agree", async () => {
@@ -132,7 +140,8 @@ test("every bundled skill validates, and the registry, folders and families agre
   const craft = skills.filter((s) => s.family === "craft").map((s) => s.name).sort();
   assert.deepEqual(craft, ["accessibility", "assets", "audio", "characters", "depth", "front-end", "game-feel", "lighting", "look",
     "performance", "quality-bar", "scene-audit", "verification", "world-physics",
-    "weapons", "enemies", "loading", "mobile", "stability", "capture", "production", "rhythm", "maps", "multiplayer"].sort().map((n) => `opengame-${n}`));
+    "weapons", "enemies", "loading", "mobile", "stability", "capture", "production", "rhythm", "maps", "multiplayer",
+    "brush-stroke-shader-style"].sort().map((n) => `opengame-${n}`));
   for (const skill of skills.filter((s) => s.family === "craft")) {
     const rules = readRules(skill.files["SKILL.md"]);
     assert.ok(rules.length >= 4, `${skill.name} has ${rules.length} rules`);
@@ -455,6 +464,8 @@ test("the jam skill names launch.json's days, and no skill types one", async () 
   assert.equal(render("Opens {{launch opens}}.", { ...context, launch: { ...context.launch, launchAt: "2026-11-18T05:00:00Z" } }), "Opens 18 November 2026.", "9 pm Pacific on the 17th is the 18th in Eastern time, the day the site names");
   for (const typed of [`OpenGame opens on ${opens}.`, opens.replace(/ \d{4}$/, ""), context.launch.launchAt.slice(0, 10), context.launch.kickoffCopy, context.launch.closeCopy])
     assert.equal(typedLaunchDates(typed, context.launch).length, 1, typed);
+  assert.equal(typedLaunchDates(`OPENGAME OPENS ON ${opens.toUpperCase()}.`, context.launch).length, 1, "in any case");
+  assert.deepEqual(typedLaunchDates(`build-x${context.launch.launchAt.slice(0, 10)}x`, context.launch), [], "inside a longer word");
   assert.deepEqual(typedLaunchDates("Opens {{launch opens}}; entries {{launch kickoff}} to {{launch close}}.", context.launch), []);
   assert.throws(() => render("{{launch someday}}", context), /opens, kickoff or close/);
 });

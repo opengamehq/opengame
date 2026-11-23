@@ -1,5 +1,9 @@
 # opengame-router changelog
 
+## 1.0.12
+
+Routes a painted look (brush strokes, an ink line, a lettered HUD, drawn hits) to the new `opengame-brush-stroke-shader-style`. (22 Nov 2026)
+
 ## 1.0.11
 
 OpenGame is open: the opening no longer quotes the pre-launch refusal. (19 Nov 2026)

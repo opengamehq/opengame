@@ -2,7 +2,7 @@
 name: opengame-all-in-one
 description: Every OpenGame skill in one install, with the order to use them in, for taking a browser game from an idea to a AAA-feeling release, a trailer and a montage. Carries the platform, craft and video skills whole. Use when someone wants one skill that covers everything, says make it AAA or make it game of the year, starts a big game with agents, or does not know which OpenGame skill to load.
 metadata:
-  version: "1.0.16"
+  version: "1.0.18"
 ---
 
 # Make a browser game that feels AAA
@@ -163,6 +163,7 @@ core loop first, then every generated asset, then the front end, then playtest.
 | Is it good enough, what is missing | [quality bar](references/opengame-quality-bar/README.md) |
 | Rules, goals, progression, balance | [depth](references/opengame-depth/README.md) |
 | Light, colour, fog, post | [look](references/opengame-look/README.md), [lighting](references/opengame-lighting/README.md) |
+| A painted, brush stroke look for the whole game | [brush stroke style](references/opengame-brush-stroke-shader-style/README.md) |
 | Geometry, props, collision | [scene audit](references/opengame-scene-audit/README.md), [world physics](references/opengame-world-physics/README.md) |
 | Maps, spawns, sightlines | [maps](references/opengame-maps/README.md) |
 | Floaty, stiff, hits do not land, kill cams | [game feel](references/opengame-game-feel/README.md) |

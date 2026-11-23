@@ -136,15 +136,77 @@
     {
       "service": "a crypto wallet",
       "category": "crypto",
-      "severity": "warning",
-      "pattern": "\\bwindow\\.ethereum\\b",
+      "severity": "blocker",
+      "pattern": "\\b(?:window|globalThis|self)\\s*(?:\\.\\s*|\\[\\s*['\"`])(?:ethereum|solana)\\b",
       "flags": "",
       "matches": [
-        "if (window.ethereum) connect();"
+        "if (window.ethereum) connect();",
+        "await window.ethereum.request({ method: 'eth_requestAccounts' })",
+        "const p = globalThis.ethereum;",
+        "self . solana.connect()",
+        "window['ethereum']",
+        "window[\"solana\"]",
+        "window[ `ethereum`]",
+        "window.solana.connect()"
       ],
       "misses": [
         "window.ethereumish",
-        "mywindow.ethereum"
+        "mywindow.ethereum",
+        "windowAny.ethereum",
+        "const w = window; w.ethereum",
+        "window.solanaX",
+        "const ethereumColor = '#627eea';"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "blocker",
+      "pattern": "['\"`](?:accountsChanged|chainChanged)['\"`]",
+      "flags": "",
+      "matches": [
+        "window.ethereum.on('accountsChanged', onAccounts)",
+        "provider.on(\"chainChanged\", reload)",
+        "p.on(`accountsChanged`,f)"
+      ],
+      "misses": [
+        "onAccountsChanged()",
+        "const chainChanged = true;",
+        "emit('accountsChangedX')"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "blocker",
+      "pattern": "\\bnew\\s+(?:[\\w$]+\\s*\\.\\s*)*(?:BrowserProvider|Web3Provider)\\s*\\(",
+      "flags": "",
+      "matches": [
+        "new ethers.BrowserProvider(window.ethereum)",
+        "new ethers.providers.Web3Provider(eth)",
+        "new BrowserProvider(x)",
+        "new e.BrowserProvider(n)"
+      ],
+      "misses": [
+        "BrowserProvider(x)",
+        "new BrowserProviderFactory()",
+        "renew Web3Provider(x)"
+      ]
+    },
+    {
+      "service": "a crypto wallet",
+      "category": "crypto",
+      "severity": "blocker",
+      "pattern": "\\bnew\\s+Web3\\s*\\(",
+      "flags": "",
+      "matches": [
+        "const web3 = new Web3(window.ethereum);",
+        "new Web3 (provider)"
+      ],
+      "misses": [
+        "new Web3Modal()",
+        "new Web3Storage()",
+        "Web3(x)"
       ]
     },
     {
@@ -239,29 +301,48 @@
     {
       "service": "a crypto wallet",
       "category": "crypto",
-      "severity": "warning",
-      "pattern": "\\bwallet_switchEthereumChain\\b",
+      "severity": "blocker",
+      "pattern": "\\bwallet_(?:switch|add)EthereumChain\\b",
       "flags": "",
       "matches": [
-        "request({ method: 'wallet_switchEthereumChain' })"
+        "request({ method: 'wallet_switchEthereumChain' })",
+        "{method:\"wallet_addEthereumChain\",params:[c]}"
       ],
       "misses": [
-        "wallet_switchEthereumChainId"
+        "wallet_switchEthereumChainId",
+        "my_wallet_addEthereumChain"
       ]
     },
     {
       "service": "a crypto wallet",
       "category": "crypto",
       "severity": "warning",
-      "pattern": "\\bwindow\\.(?:solana|phantom)\\b",
+      "pattern": "\\bwindow\\.phantom\\b",
       "flags": "",
       "matches": [
-        "window.solana.connect()",
         "window.phantom?.solana"
       ],
       "misses": [
-        "window.solanaX",
-        "mywindow.phantom"
+        "mywindow.phantom",
+        "window.phantoms"
+      ]
+    },
+    {
+      "service": "a blockchain node",
+      "category": "crypto",
+      "severity": "blocker",
+      "pattern": "\\b(?:https?|wss?)://(?:[a-z0-9-]+\\.)*[a-z0-9-]*(?:mainnet|testnet|blockscout)[a-z0-9-]*\\.[a-z]",
+      "flags": "i",
+      "matches": [
+        "rpc: \"https://rpc.mainnet.chain.robinhood.com\"",
+        "https://robinhoodchain.blockscout.com/tx/0x1",
+        "wss://testnet.example-chain.io/ws",
+        "HTTPS://Sepolia-Testnet.Chain.Example.org"
+      ],
+      "misses": [
+        "https://example.com/mainnet/index.html",
+        "const mainnet = true;",
+        "https://opengame.io/testnet-free"
       ]
     },
     {
@@ -1034,9 +1115,18 @@
       }
     },
     {
+      "id": "goat_city_metamask_signin",
+      "verdict": "blocker",
+      "why": "Goat City 3D (h8wbr8755n, 22 Nov 2026): a MetaMask sign-in in the game's own code, live for half a day as warnings",
+      "files": {
+        "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./src/ui/LoginScreen3D.js\"></script></body></html>",
+        "src/ui/LoginScreen3D.js": "export class LoginScreen3D { async _handleMetaMaskLogin() { if (typeof window === 'undefined' || !window.ethereum) { return this._setStatus('no wallet'); } const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }); this._finish(accounts[0]); } }"
+      }
+    },
+    {
       "id": "a24_ethers",
-      "verdict": "warning",
-      "why": "ethers is a crypto library: a warning, as the table says",
+      "verdict": "blocker",
+      "why": "a wallet read through ethers: a blocker since 22 Nov 2026 (the hard block on crypto)",
       "files": {
         "game.js": "const provider = new ethers.BrowserProvider(window.ethereum); await provider.send(\"eth_requestAccounts\", []);",
         "index.html": "<!doctype html><html><body><canvas></canvas><script type=\"module\" src=\"./game.js\"></script></body></html>"

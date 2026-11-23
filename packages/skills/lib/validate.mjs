@@ -249,18 +249,22 @@ export function typedLaunchDates(sourceText, launch) {
     spellings.add(date);
     spellings.add(date.replace(new RegExp(months.join("|")), (month) => month.slice(0, 3)));
   }
+  const patterns = [...spellings].map((spelling) => [spelling, new RegExp(`(?<![\\w])${escapeRegExp(spelling)}(?![\\w])`, "i")]);
   const hits = [];
   sourceText.split("\n").forEach((line, index) => {
     const bare = line.replace(/\{\{[^}]*\}\}/g, "");
-    for (const spelling of spellings) {
-      const escaped = spelling.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      if (new RegExp(`(?<![\\w])${escaped}(?![\\w])`, "i").test(bare)) { hits.push({ line: index + 1, spelling }); break; }
+    for (const [spelling, pattern] of patterns) {
+      if (pattern.test(bare)) { hits.push({ line: index + 1, spelling }); break; }
     }
   });
   return hits;
 }
 
-export function handTypedLimits(sourceText, limits) {
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/* Every spelling a limits table can be typed in, and the words of each limit's key. Worked out
+   on every call, not kept per table, so a table changed between calls is read as it is now. */
+function spellingsOf(limits) {
   const leaves = [];
   const walk = (value, path) => {
     if (typeof value === "number" && Number.isFinite(value)) leaves.push({ value, path });
@@ -286,6 +290,21 @@ export function handTypedLimits(sourceText, limits) {
       nouns.set(n, set);
     }
   }
+  return { spellings, nouns };
+}
+
+export function handTypedLimits(sourceText, limits) {
+  const { spellings, nouns } = spellingsOf(limits);
+  /* Until 20 Nov 2026 this compiled a pattern for every spelling on every line of every skill,
+     about 1.4 s of the skills build's 2.2 on two cores, paid twice in every build of the CLI (which
+     renders the skills again into its own dist) and so in every gate part, which builds both
+     before its first suite (round 36C). A pattern is now compiled only for a spelling that is on
+     the line, at most once a call. */
+  const patterns = new Map();
+  const pattern = (spelling) => {
+    if (!patterns.has(spelling)) patterns.set(spelling, new RegExp(`(?<![\\d.,])${escapeRegExp(spelling)}(?![\\d.,]*\\d)`));
+    return patterns.get(spelling);
+  };
   const hits = [];
   let fenced = false;
   sourceText.split("\n").forEach((line, index) => {
@@ -297,10 +316,8 @@ export function handTypedLimits(sourceText, limits) {
     // One hit per line, naming the longest matching spelling ("200 MiB" over "200").
     let best = null;
     const consider = (spelling, value) => { if (!best || spelling.length > best.spelling.length) best = { line: index + 1, spelling, value }; };
-    for (const [spelling, n] of spellings) {
-      const escaped = spelling.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      if (new RegExp(`(?<![\\d.,])${escaped}(?![\\d.,]*\\d)`).test(bare)) consider(spelling, n);
-    }
+    // A line the spelling is not in cannot match its pattern, and that is most of them.
+    for (const [spelling, n] of spellings) if (bare.includes(spelling) && pattern(spelling).test(bare)) consider(spelling, n);
     for (const match of bare.matchAll(/(?<![\w.,-])(\d+)(?![\d.,]*\d)((?:\s+[A-Za-z-]+){1,3})/g)) {
       const words = nouns.get(Number(match[1]));
       if (!words) continue;

@@ -11,6 +11,8 @@
  * generic compile error a long way from the header that caused it.
  */
 
+import limits from "../../../packages/shared/limits.json";
+
 const TYPES: Record<string, string> = {
   // documents and code
   html: "text/html; charset=utf-8",
@@ -251,19 +253,33 @@ export function isDocumentPath(path: string): boolean {
  * Three answers. An extension of a program or installer (BLOCKED) is refused whatever the
  * request, compressed or not. An extension in TYPES is served as that type, with nosniff,
  * as before. Any other extension, the opaque data files engines name as they please
- * (`.bytes`, `.hza`, `.iwd`), is served as application/octet-stream only to a request that
- * is not a navigation: a game's own fetch or XHR. A navigation to octet-stream is what
- * makes a browser save a file, so that is refused. The Worker requires an explicit
- * non-document `Sec-Fetch-Dest` (including `empty` for fetch/XHR); requests that send no
- * fetch metadata fail closed.
+ * (`.bytes`, `.hza`, `.iwd`, a disc emulator's `.img` and `.iso`), is served as
+ * application/octet-stream only to a request that is not a navigation: a game's own fetch
+ * or XHR. A navigation to octet-stream is what makes a browser save a file, so that is
+ * refused. The Worker requires an explicit non-document `Sec-Fetch-Dest` (including `empty`
+ * for fetch/XHR); requests that send no fetch metadata fail closed.
+ *
+ * BLOCKED IS THE DEPLOY'S LIST, READ FROM limits.json, AND MAY NEVER BE LONGER. Until
+ * 22 Nov 2026 this file kept its own list of 53 extensions while the deploy refused 31
+ * (`platform.deploy.executablesRefused`, which the deploy's executable check reads).
+ * Most of the other 22 passed the deploy (`.iso` is refused there as an archive, `.com` and
+ * `.run` when their bytes are a program), were published, and then answered 404 here to
+ * the game that asked for them. Mario Colosseum's disc loader asks for
+ * `disc/sys/apploader.img`, the last 116 KB of a 143 MB work set: the game sat at 89%
+ * retrying for ever, and nothing on either side said why. A file the deploy accepted is one
+ * a player has to be able to load, so what counts as a program is decided once, where the
+ * creator is told about it, and the navigation rule above is what keeps everything else
+ * from being a download on our domain. `.so` is on neither list: Emscripten names a side
+ * module that, and it is wasm.
+ *
+ * One reading here is stricter than the deploy's, and is kept in step by another rule: this
+ * also refuses a listed extension under `.br` or `.gz` (`lib.dll.br`), where the deploy reads
+ * only the last extension. They agree because the deploy refuses `x.dll.br` as a nested
+ * archive unless the inner extension is in `browserEnginePolicy.precompressedAssetExtensions`.
+ * Adding a refused extension to that list (Blazor's `.dll.br`, say) has to take it off
+ * `executablesRefused` too, or those files publish and cannot be loaded.
  */
-const BLOCKED = new Set([
-  "exe", "msi", "msix", "msp", "appx", "appxbundle", "dmg", "pkg", "mpkg", "app", "apk", "aab", "xapk", "ipa",
-  "deb", "rpm", "appimage", "snap", "flatpak", "run", "bat", "cmd", "com", "scr", "pif", "cpl", "msc",
-  "ps1", "psm1", "vbs", "vbe", "jse", "wsf", "wsh", "hta", "lnk", "reg", "inf", "gadget", "jar", "jnlp",
-  // Not `.so`: Emscripten names a side module that, and it is wasm.
-  "dll", "dylib", "sys", "drv", "ocx", "iso", "img", "vhd", "vhdx", "torrent", "command", "workflow",
-]);
+const BLOCKED: ReadonlySet<string> = new Set(limits.platform.deploy.executablesRefused.extensions);
 
 /** Destinations a browser fetches as a document or a plugin, which save octet-stream. */
 const NAVIGATION_DESTINATIONS = new Set(["document", "iframe", "frame", "embed", "object"]);

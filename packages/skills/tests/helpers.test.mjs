@@ -11,9 +11,13 @@ import * as springs from "../skills/opengame-game-feel/helpers/spring.js";
 import * as pool from "../skills/opengame-lighting/helpers/light-pool.js";
 import * as audio from "../skills/opengame-audio/helpers/audio-chain.js";
 import * as audit from "../skills/opengame-scene-audit/helpers/scene-audit.js";
+import * as brushCore from "../skills/opengame-brush-stroke-shader-style/helpers/brush-core.js";
+import * as brushThree from "../skills/opengame-brush-stroke-shader-style/helpers/brush-three.js";
+import * as brushHud from "../skills/opengame-brush-stroke-shader-style/helpers/brush-hud.js";
+import { BRUSH_LOOKS } from "../skills/opengame-brush-stroke-shader-style/helpers/brush-looks.js";
 
 test("every helper self-test passes and examines something", () => {
-  for (const [name, helper] of Object.entries({ springs, pool, audio, audit: { selfTest: () => {
+  for (const [name, helper] of Object.entries({ springs, pool, audio, brushCore, brushThree, brushHud, audit: { selfTest: () => {
     const report = audit.runSceneAudit(audit.stairScene(0.17));
     return { ok: report.ok, examined: report.checks.length, failures: report.failures };
   } } })) {
@@ -220,4 +224,45 @@ test("the three.js adapter reads world boxes, flags and triangles from a real sc
   const floats = audit.checkFloat(scene).findings.map((f) => f.id);
   assert.deepEqual(floats, ["crate"], "the crate sits 0.3 m above the floor");
   assert.equal(audit.checkColliders(scene).findings.length, 0, "glass is not opaque volume");
+});
+
+test("the brush pass packs every uniform its shaders declare, for every look", () => {
+  const declared = [...(brushCore.BRUSH_UNIFORMS + brushCore.BRUSH_PRINT_UNIFORMS).matchAll(/uniform\s+vec([34])\s+(u[A-Za-z0-9]+)/g)];
+  assert.ok(declared.length >= 20, "the shader's uniforms were not found");
+  for (const look of Object.keys(BRUSH_LOOKS)) {
+    const state = new brushCore.BrushState(BRUSH_LOOKS);
+    state.look(look);
+    const packed = state.pack(1 / 60, { depth: true, sky: [1, 0.6, 1] });
+    for (const [, size, name] of declared) {
+      assert.equal(packed[name]?.length, Number(size), `${look}: ${name}`);
+      assert.ok(packed[name].every(Number.isFinite), `${look}: ${name} is not all numbers`);
+    }
+    // A look may only name values the pass has: a misspelt one would be silently ignored.
+    for (const key of Object.keys(BRUSH_LOOKS[look])) assert.ok(key in brushCore.BRUSH_DEFAULTS, `${look} sets ${key}, which is not a value`);
+  }
+  assert.throws(() => new brushCore.BrushState(BRUSH_LOOKS).look("no-such-look"), /no look called/);
+});
+
+test("the brush shaders are whole: balanced, free of engine names, and every function they call exists", () => {
+  for (const [name, text] of Object.entries({ common: brushCore.BRUSH_COMMON, paint: brushCore.BRUSH_PAINT, print: brushCore.BRUSH_PRINT })) {
+    for (const [open, close] of [["{", "}"], ["(", ")"]]) assert.equal(text.split(open).length, text.split(close).length, `${name}: unbalanced ${open}${close}`);
+    assert.ok(!/gl_FragColor|texture2D|THREE|modelMatrix|sampler2D/.test(text), `${name} names an engine or an old GLSL`);
+    assert.ok(!text.includes("`"), `${name} holds a backtick, which would end the string it lives in`);
+  }
+  // The two functions an adapter must supply are called and never defined here.
+  assert.ok(/brushScene\(/.test(brushCore.BRUSH_PAINT) && !/vec4 brushScene\(/.test(brushCore.BRUSH_PAINT));
+  assert.ok(/brushAnchor\(/.test(brushCore.BRUSH_PAINT) && /#ifdef BRUSH_TWO_FIELDS/.test(brushCore.BRUSH_PAINT));
+});
+
+test("a paint-in runs from bare to finished once and then lets go", () => {
+  const state = new brushCore.BrushState();
+  state.paintIn({ seconds: 1, from: "centre", over: "game" });
+  const first = state.pack(1 / 60);
+  assert.equal(first.uReveal[0], 1); assert.equal(first.uReveal[3], 1);
+  assert.ok(first.uPaperFx[3] < 0.1);
+  let last = first.uPaperFx[3];
+  for (let i = 0; i < 58; i++) { const p = state.pack(1 / 60); assert.ok(p.uPaperFx[3] >= last); last = p.uPaperFx[3]; }
+  for (let i = 0; i < 5; i++) state.pack(1 / 60);
+  const done = state.pack(1 / 60);
+  assert.equal(done.uReveal[0], 0); assert.equal(done.uPaperFx[3], 1);
 });

@@ -4,6 +4,7 @@ import { linkedGameId, readGame } from "./games";
 import { Api, ApiError } from "./http";
 import { CliError, Output, agentMode, terminalText } from "./output";
 import { confirm } from "./prompt";
+import { BANNER_STYLE_NAMES as STYLE_NAMES, bannerSentence, bannerStyleFlag, refusesBannerStyle, type BannerStyleChoice } from "./publish";
 
 type Flags = Record<string, string | boolean>;
 
@@ -80,6 +81,7 @@ export async function detailsCommand(root: string, flags: Flags, output: Output)
       if (!models.length) throw new CliError("invalid_flag", "Name the models with --models, separated by commas, as in --models gemini,claude-code. Run opengame details to see the list, or use --clear-models to empty it.", EXIT.input);
       body.models = models;
     }
+    if (flags["banner-style"] !== undefined) body.bannerStyle = bannerStyleFlag(flags["banner-style"]);
 
     if (!Object.keys(body).length) {
       const [snapshot, declared] = await Promise.all([
@@ -91,10 +93,14 @@ export async function detailsCommand(root: string, flags: Flags, output: Output)
       const text = (value: unknown) => typeof value === "string" && value.trim() ? terminalText(value) : "(none)";
       const models = declared ? `Made with: ${madeWith(declared.models)}\n` : "";
       const choices = declared ? `\n--models takes any of: ${declared.choices.map(choice => terminalText(choice.key)).join(", ")}.` : "";
+      /* From a server since 22 Nov 2026: the game's own banner style, or the account's default it takes. */
+      const style = declared?.defaultBannerStyle ? { bannerStyle: declared.bannerStyle ?? null, defaultBannerStyle: declared.defaultBannerStyle } : null;
+      const banner = style ? `Banner style: ${STYLE_NAMES[style.bannerStyle ?? style.defaultBannerStyle]}${style.bannerStyle ? "" : " (your account's default)"}\n` : "";
+      const flagsNamed = declared ? `--title, --tagline, --description, --models${style ? " or --banner-style" : ""}` : "--title, --tagline or --description";
       output.emit({ type: "result", command: "details", data: { gameId: game.id, publicId: game.publicId, title: words.title ?? null,
         tagline: words.tagline ?? null, description: words.description ?? null, revision: snapshot.data.revision,
-        ...(declared ? { models: declared.models, choices: declared.choices } : {}), url: page,
-        message: `Title: ${text(words.title)}\nTagline: ${text(words.tagline)}\nDescription: ${text(words.description)}\n${models}\nChange them with opengame details ${declared ? "--title, --tagline, --description or --models" : "--title, --tagline or --description"}.${choices}\n${page}` } });
+        ...(declared ? { models: declared.models, choices: declared.choices } : {}), ...(style ?? {}), url: page,
+        message: `Title: ${text(words.title)}\nTagline: ${text(words.tagline)}\nDescription: ${text(words.description)}\n${models}${banner}\nChange them with opengame details ${flagsNamed}.${choices}\n${page}` } });
       return;
     }
 
@@ -106,7 +112,12 @@ export async function detailsCommand(root: string, flags: Flags, output: Output)
         && error.data.message === "Send a title, a tagline or a description, as text.") {
         throw new CliError("edit_unavailable", `This OpenGame server cannot change a game's models from the CLI yet. Change them on the Details tab: ${page}`, 5, { retry: "after-fix" });
       }
-      throw olderServer(error, body.models ? "change a game's details" : "change a game's words", page);
+      /* And one from before 22 Nov 2026 refuses a banner style the same way, in either of the
+         two sentences it had. Nothing was saved: its schema refuses the whole body. */
+      if (body.bannerStyle && refusesBannerStyle(error)) {
+        throw new CliError("edit_unavailable", `This OpenGame server cannot change a game's banner style from the CLI yet, so nothing was saved. Choose it on the Details tab: ${page}`, 5, { retry: "after-fix" });
+      }
+      throw olderServer(error, body.models || body.bannerStyle ? "change a game's details" : "change a game's words", page);
     }
     const parsed = gameDetailsSchema.safeParse(raw);
     if (!parsed.success) throw new CliError("invalid_response", "The details were saved, but the answer could not be read. Run opengame details to see them.", 5, { next: "opengame details" });
@@ -115,8 +126,11 @@ export async function detailsCommand(root: string, flags: Flags, output: Output)
        that comes back without them changed only the words. */
     if (body.models && !done.models) throw new CliError("edit_unavailable", `This OpenGame server cannot change a game's models from the CLI yet. Change them on the Details tab: ${page}`, 5, { retry: "after-fix" });
     const said = body.models ? (done.models!.length ? ` Its page lists ${done.models!.map(terminalText).join(", ")} under Made with.` : " Its page lists no models now.") : "";
-    output.emit({ type: "result", command: "details", data: { ...done,
-      message: `${done.live ? `Saved. Players see the ${body.models ? "change" : "new words"} now.` : `Saved. The game's page will use ${body.models ? "these details" : "these words"}.`}${said}\n${done.url}` } });
+    const style = typeof body.bannerStyle === "string" ? body.bannerStyle as BannerStyleChoice : null;
+    const banner = style ? bannerSentence(style, done) : "";
+    const onlyStyle = Object.keys(body).length === 1 && style !== null;
+    const saved = onlyStyle ? "Saved." : done.live ? `Saved. Players see the ${body.models ? "change" : "new words"} now.` : `Saved. The game's page will use ${body.models ? "these details" : "these words"}.`;
+    output.emit({ type: "result", command: "details", data: { ...done, message: `${saved}${said}${banner}\n${done.url}` } });
   } finally { await api.close(); }
 }
 

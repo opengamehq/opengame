@@ -4,7 +4,7 @@ import { LIMITS } from "@opengame/shared";
 import { canonicalName } from "@opengame/shared/unicode-casefold";
 import { incrementalFilesSchema, incrementalArchiveBytes, incrementalZipLocalHeader, incrementalZipDescriptor,
   incrementalZipCentralHeader, incrementalZipEnd, incrementalCrc32, isBundlePath, type IncrementalFile } from "@opengame/protocol";
-import { Api, UploadInterrupted } from "./http";
+import { Api, UploadInterrupted, uploadRetryPauseMs } from "./http";
 import { setTimeout as sleep } from "node:timers/promises";
 import { CliError, type Output } from "./output";
 import { sendFiles, type ReadRange } from "./transport";
@@ -282,7 +282,7 @@ export async function uploadMissingFiles(api: Api, token: string, operation: str
           if (route !== "assets" || !(error instanceof UploadInterrupted)) throw error;
           if (attempt >= LIMITS.platform.deploy.uploadAttemptsMax) throw new CliError("upload_interrupted", "The whole-file upload did not finish. Run opengame deploy again to resume verified files.", 5, { next: "opengame deploy", retry: "later" });
           output.emit({ type: "notice", code: "upload_retrying", message: "Retrying the interrupted file from the beginning; verified files remain saved." });
-          await sleep(Math.min(8000, 1000 * 2 ** (attempt - 1)));
+          await sleep(uploadRetryPauseMs(attempt));
           // A fresh descriptor can report that the PUT landed despite a lost
           // answer. Verification is still required before counting it complete.
           const missing = await refresh(item);

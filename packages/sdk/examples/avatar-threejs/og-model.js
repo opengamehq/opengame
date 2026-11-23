@@ -347,7 +347,7 @@ export function buildOg(avatar, { theme = 'light' } = {}) {
     /* A sneaker: a flat sole the length of the shoe, round at toe and heel, and an upper
        sunk into it so the two read as one shoe, toe forward, flat on the ground. */
     const footWidth = Math.min(shoeWidth, legSpacing * 2 - 0.01);
-    const soleMesh = add(new THREE.CapsuleGeometry(0.5, 1, 6, 24), SPEC.sole);
+    const soleMesh = add(new THREE.CapsuleGeometry(0.5, 1, 6, 24), SPEC.soles[outfit?.shoes] ?? SPEC.sole);
     soleMesh.rotation.x = Math.PI / 2;
     soleMesh.position.set(side * legSpacing, sole / 2, shoeLength * 0.16);
     soleMesh.scale.set(footWidth, shoeLength / 2, sole);

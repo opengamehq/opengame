@@ -130,7 +130,9 @@ to five paths per ramp on every card the creator has.
    the dressed frame (`MASCOT_FRAME.dressed`, -1.2 to 1.2 across, -1.4 at the top). A
    look with an accessory is drawn in that larger box, and a part that leaves it is cut
    off by the edge of every square the face is drawn in. Size horizontal reach by `k`,
-   not by `w`: the cap's brim is sized by `w` and overhangs every wide head.
+   not by `w`: the cap's brim is sized by `w` and overhangs every wide head. The top hat
+   is the one exception to `0.5 * k`: it reaches as high as `headroom` in `accessories.ts`
+   says the frame allows over that head, up to 0.72, because a short top hat is a bowler.
 
 ## Looking at it
 

@@ -181,24 +181,55 @@ export function limitsNotes(limits = JSON.parse(readFileSync(SOURCE, "utf8"))) {
 export const TILE = 40, SPAN = 2 * TILE;
 export const CLEAN_RUN = /[ !#-&(-[\]-_a-~]{80,}/g;
 const tileIndex = new WeakMap();
+/* The tiles' rolling hashes beside the tiles themselves (notesIn below). Arithmetic in 32 bits,
+   so a window's hash is the same number whichever way it was reached; a collision costs one
+   slice and one lookup, never a hit, since only the tile itself is believed. */
+const HASH_BASE = 0x01000193;
+const HASH_DROP = (() => { let pow = 1; for (let i = 0; i < TILE; i++) pow = Math.imul(pow, HASH_BASE); return pow; })();
+const tileHash = tile => { let h = 0; for (let i = 0; i < tile.length; i++) h = (Math.imul(h, HASH_BASE) + tile.charCodeAt(i)) | 0; return h; };
+/* Which UTF-16 units CLEAN_RUN's class holds, read off the class itself so the two cannot part. */
+const CLEAN_CHAR = (() => {
+  if (!CLEAN_RUN.source.endsWith("{80,}")) throw new Error("CLEAN_RUN is no longer a class of 80 or more");
+  const one = new RegExp(`^${CLEAN_RUN.source.slice(0, -"{80,}".length)}$`), table = new Uint8Array(128);
+  for (let code = 0; code < 128; code++) table[code] = one.test(String.fromCharCode(code)) ? 1 : 0;
+  return table;
+})();
 function tilesOf(notes) {
   let index = tileIndex.get(notes);
   if (index) return index;
-  index = new Map();
-  const add = (tile, entry) => { const list = index.get(tile); if (list) list.push(entry); else index.set(tile, [entry]); };
+  const tiles = new Map(), hashes = new Set();
+  const add = (tile, entry) => { const list = tiles.get(tile); if (list) list.push(entry); else { tiles.set(tile, [entry]); hashes.add(tileHash(tile)); } };
   for (const [path, note] of notes) for (const [run] of note.matchAll(CLEAN_RUN)) {
     for (let at = 0; at + TILE <= run.length; at += TILE) add(run.slice(at, at + TILE), { path, run, at });
     add(run.slice(-TILE), { path, run, at: run.length - TILE });
   }
+  index = { tiles, hashes };
   tileIndex.set(notes, index);
   return index;
 }
 
-/** The paths of the notes some 80 consecutive characters of which appear in `text`. */
+/** The paths of the notes some 80 consecutive characters of which appear in `text`.
+
+    ONE PASS, AND A SLICE ONLY WHERE A TILE COULD BE (20 Nov 2026, round 34A). This slid a
+    40-character window over every offset of every file, a string allocation and a map lookup
+    per byte: 2.2 of the scan's 3.5 s on a worker over a web build, and the postbuild that takes 6.2 s
+    on Vercel's machine, which every web release waits for. Every tile is 40 characters of
+    CLEAN_RUN's class, so a window holding any other character cannot be one; the walk below
+    keeps the hash of the last 40 characters while they are all of the class, and reads the
+    window only when that hash is a tile's. The window it reads is then judged exactly as before,
+    by the tile itself and the 80 characters around it, so the same notes are found in every file:
+    tests/limits-values.test.ts holds this to the window over every offset, on texts built to put a note
+    at a run's edges and on random ones. */
 export function notesIn(text, notes = limitsNotes()) {
-  const index = tilesOf(notes), found = new Set();
-  for (let at = 0; at + TILE <= text.length; at += 1) {
-    const entries = index.get(text.slice(at, at + TILE));
+  const { tiles, hashes } = tilesOf(notes), found = new Set();
+  let h = 0, clean = 0;
+  for (let end = 0; end < text.length; end++) {
+    const code = text.charCodeAt(end);
+    if (code >= 128 || !CLEAN_CHAR[code]) { h = 0; clean = 0; continue; }
+    h = (Math.imul(h, HASH_BASE) + code) | 0;
+    if (++clean > TILE) h = (h - Math.imul(text.charCodeAt(end - TILE), HASH_DROP)) | 0;
+    if (clean < TILE || !hashes.has(h)) continue;
+    const at = end + 1 - TILE, entries = tiles.get(text.slice(at, at + TILE));
     if (!entries) continue;
     for (const { path, run, at: offset } of entries) {
       if (found.has(path)) continue;
@@ -362,15 +393,22 @@ export function sourceShapes() {
          `{someLimitKey:` excused that limit on every build, and the test written for the
          three.js key below excused the key it was testing (review of this change). */
       if (testing || /\.test\.|\.spec\./.test(entry.name)) continue;
-      const text = readFileSync(path, "utf8");
-      for (const [, key] of text.matchAll(/(?:^|[{,\s(])["']?([A-Za-z_$][\w$-]{9,})["']?\??\s*:/gm)) keys.add(key);
-      for (const [, key, number, double, single] of text.matchAll(/(?:^|[{,\s(])["']?([A-Za-z_$][\w$-]{7,})["']?\s*:\s*(?:(-?[\d.][\d._]*(?:e[-+]?\d+)?)|"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)')/gim)) {
-        if (number !== undefined) { const n = Number(number.replaceAll("_", "")); if (Number.isFinite(n)) pairs.add(pairId(key, n)); }
-        else pairs.add(pairId(key, double ?? single));
-      }
+      shapesIn(readFileSync(path, "utf8"), { keys, pairs });
     }
   })(join(repo, root), false);
   return (sourceOnce = { keys, pairs });
+}
+
+/** One file's share of sourceShapes: the keys and key-value pairs its text writes, added to
+ * `into`. Exported so that a check deciding whether a changed file can move this scan's answer
+ * reads it the way the scan does, rather than through a copy of it. */
+export function shapesIn(text, into = { keys: new Set(), pairs: new Set() }) {
+  for (const [, key] of text.matchAll(/(?:^|[{,\s(])["']?([A-Za-z_$][\w$-]{9,})["']?\??\s*:/gm)) into.keys.add(key);
+  for (const [, key, number, double, single] of text.matchAll(/(?:^|[{,\s(])["']?([A-Za-z_$][\w$-]{7,})["']?\s*:\s*(?:(-?[\d.][\d._]*(?:e[-+]?\d+)?)|"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)')/gim)) {
+    if (number !== undefined) { const n = Number(number.replaceAll("_", "")); if (Number.isFinite(n)) into.pairs.add(pairId(key, n)); }
+    else into.pairs.add(pairId(key, double ?? single));
+  }
+  return into;
 }
 
 function excludedContext(limits, paths) {
@@ -381,10 +419,12 @@ function excludedContext(limits, paths) {
     if (!node || typeof node !== "object" || Array.isArray(node)) return;
     for (const [key, inner] of Object.entries(node)) { keptNames.add(key); walk(inner); }
   })(kept);
-  const covered = path => paths.some(allowed => {
-    const a = allowed.split("."), b = path.split(".");
-    return a.length <= b.length && a.every((key, index) => key === "*" || key === b[index]);
-  });
+  // Each allowed path split once, not once per leaf asked about (0.4 s of the postbuild on a worker).
+  const allowedParts = paths.map(allowed => allowed.split("."));
+  const covered = path => {
+    const b = path.split(".");
+    return allowedParts.some(a => a.length <= b.length && a.every((key, index) => key === "*" || key === b[index]));
+  };
   return { values, kept, keptNames, covered, source: sourceShapes() };
 }
 

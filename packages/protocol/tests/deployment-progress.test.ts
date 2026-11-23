@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { OFF_GALLERY_HOLD } from "../src/status";
 import { deploymentSteps, elapsedWords, stageEta, stageTimingsFromSamples, transferEstimate, uploadPercent, type DeploymentProgressInput, type UploadReceipt } from "../src/deployment-progress";
 
 const now = Date.parse("2026-11-12T06:00:00Z");
@@ -103,6 +104,16 @@ test("held review names the actual hold and a failed review keeps its recovery i
   const failed = deploymentSteps({ state: "ready", submission: { ...submission("returned"), outcome: { decision: "return", reason: "The start button does not respond.", findings: [], appealable: false } } });
   assert.match(failed.find(s => s.id === "review")!.detail, /start button/);
   assert.match(failed.find(s => s.id === "review")!.detail, /what to change or how to appeal/);
+});
+/* 20261121090000: a release waiting on its game being off the gallery read "Checking your game.
+   This usually takes under a minute" for days. The server sends why only for that wait. */
+test("a release held by its game being off the gallery says so, and a real wait still reads as checking", () => {
+  const review = (cannotConfirm?: string) => deploymentSteps({ state: "ready", submission: submission("waiting"), cannotConfirm }).find(s => s.id === "review")!;
+  assert.deepEqual([review(OFF_GALLERY_HOLD).state, review(OFF_GALLERY_HOLD).detail], ["held", OFF_GALLERY_HOLD]);
+  for (const other of [undefined, "Entries for OpenGame Jam 01 closed, so this build cannot replace the entry."]) {
+    assert.equal(review(other).state, "running", String(other));
+    assert.match(review(other).detail, /^Checking your game/);
+  }
 });
 test("an overrun counts the time a stage has been running", () => {
   assert.equal(elapsedWords(0), "0 s");

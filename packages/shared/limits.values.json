@@ -378,9 +378,24 @@
         ],
         "patterns": [
           {
-            "pattern": "\\bwindow\\.ethereum\\b",
+            "pattern": "\\b(?:window|globalThis|self)\\s*(?:\\.\\s*|\\[\\s*['\"`])(?:ethereum|solana)\\b",
             "flags": "",
-            "severity": "warning"
+            "severity": "blocker"
+          },
+          {
+            "pattern": "['\"`](?:accountsChanged|chainChanged)['\"`]",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "\\bnew\\s+(?:[\\w$]+\\s*\\.\\s*)*(?:BrowserProvider|Web3Provider)\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
+          },
+          {
+            "pattern": "\\bnew\\s+Web3\\s*\\(",
+            "flags": "",
+            "severity": "blocker"
           },
           {
             "pattern": "\\beth_requestAccounts\\b",
@@ -413,12 +428,12 @@
             "severity": "warning"
           },
           {
-            "pattern": "\\bwallet_switchEthereumChain\\b",
+            "pattern": "\\bwallet_(?:switch|add)EthereumChain\\b",
             "flags": "",
-            "severity": "warning"
+            "severity": "blocker"
           },
           {
-            "pattern": "\\bwindow\\.(?:solana|phantom)\\b",
+            "pattern": "\\bwindow\\.phantom\\b",
             "flags": "",
             "severity": "warning"
           }
@@ -445,7 +460,13 @@
           "binance.org",
           "opensea.io"
         ],
-        "patterns": []
+        "patterns": [
+          {
+            "pattern": "\\b(?:https?|wss?)://(?:[a-z0-9-]+\\.)*[a-z0-9-]*(?:mainnet|testnet|blockscout)[a-z0-9-]*\\.[a-z]",
+            "flags": "i",
+            "severity": "blocker"
+          }
+        ]
       },
       {
         "name": "a service that sells crypto",
@@ -800,7 +821,7 @@
       {
         "name": "a crypto library",
         "category": "crypto",
-        "severity": "warning",
+        "severity": "blocker",
         "packages": [
           "ethers",
           "web3",
@@ -978,6 +999,33 @@
     "frameProgress": {
       "reportIntervalMs": 1000,
       "heartbeatMs": 5000
+    },
+    "recording": {
+      "edge": 1920,
+      "shortEdge": 1080,
+      "compactEdge": 1280,
+      "compactShortEdge": 720,
+      "fpsMax": 60,
+      "bitsPerSecond": 12000000,
+      "compactBitsPerSecond": 6000000,
+      "audioBitsPerSecond": 160000,
+      "keyframeSeconds": 1,
+      "pieceSeconds": 10,
+      "replaySeconds": [
+        15,
+        30,
+        60,
+        300,
+        900
+      ],
+      "replayCompactMaxSeconds": 60,
+      "recordMaxSeconds": 900,
+      "warnSeconds": 15,
+      "flushMs": 500,
+      "startTimeoutMs": 4000,
+      "drainTimeoutMs": 3000,
+      "bytesPerSecondMax": 5000000,
+      "packetsPerSecondMax": 600
     },
     "frameEventStringCharsMax": 120,
     "frameEventDigitRunMin": 9,
@@ -2416,6 +2464,6 @@
       512
     ],
     "sizeDefault": 256,
-    "version": 1
+    "version": 2
   }
 }

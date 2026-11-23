@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 import { archivePartBytes, archivePartCount, archivePartUploadSchema, type IncrementalFile } from "@opengame/protocol";
 import { LIMITS } from "@opengame/shared";
-import { Api, UploadInterrupted, type UploadHeaders } from "./http";
+import { Api, UploadInterrupted, type UploadHeaders, uploadRetryPauseMs } from "./http";
 import { page as readPage, retryShortly, type Page } from "./incremental";
 import { readableBytes } from "./bytes";
 import { CliError, type Output } from "./output";
@@ -200,7 +200,7 @@ export async function sendFiles(api: Api, token: string, operation: string, file
           throw new CliError("upload_interrupted", `An upload did not finish after ${tries} tries; the last time ${error.cause}. Everything already sent is kept. Check your connection, then run opengame deploy to resume.`, 5, { next: "opengame deploy", retry: "later" });
         }
         output.emit({ type: "notice", code: "upload_retrying", message: `An upload was interrupted (${error.cause}). Trying it again, ${tries + 1} of ${LIMITS.platform.deploy.uploadAttemptsMax}; everything already sent is kept.` });
-        await sleep(Math.min(8000, 1000 * 2 ** (tries - 1)));
+        await sleep(uploadRetryPauseMs(tries));
         // Something else failed during the wait: send nothing new, so the command can stop and say so.
         if (failed) throw error;
         if (!await renew()) return;

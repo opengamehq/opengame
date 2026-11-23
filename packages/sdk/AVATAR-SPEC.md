@@ -148,266 +148,266 @@ In 3D the head is the outline inflated. At a point inside the outline `d` from t
 <!-- avatar-spec:shapes -->
 | Picture | Id | Label | Hairstyle | Markings | Width | Height |
 | --- | --- | --- | --- | --- | --- | --- |
-| ![Circle](https://opengame.io/api/avatars/circle.classic.tangerine/portrait?size=64&theme=light&v=1) | `circle` |  | yes |  | 1.00 | 1.00 |
-| ![Rounded square](https://opengame.io/api/avatars/square.classic.tangerine/portrait?size=64&theme=light&v=1) | `square` | Rounded square |  |  | 0.94 | 0.94 |
-| ![Rounded rectangle](https://opengame.io/api/avatars/slab.classic.tangerine/portrait?size=64&theme=light&v=1) | `slab` | Rounded rectangle |  |  | 1.11 | 0.74 |
-| ![Tall](https://opengame.io/api/avatars/tall.classic.tangerine/portrait?size=64&theme=light&v=1) | `tall` |  |  |  | 0.71 | 1.04 |
-| ![Egg](https://opengame.io/api/avatars/egg.classic.tangerine/portrait?size=64&theme=light&v=1) | `egg` |  |  |  | 0.78 | 1.00 |
-| ![Pebble](https://opengame.io/api/avatars/pebble.classic.tangerine/portrait?size=64&theme=light&v=1) | `pebble` |  |  |  | 1.10 | 0.77 |
-| ![Bean](https://opengame.io/api/avatars/bean.classic.tangerine/portrait?size=64&theme=light&v=1) | `bean` |  |  |  | 0.96 | 0.90 |
-| ![Drop](https://opengame.io/api/avatars/drop.classic.tangerine/portrait?size=64&theme=light&v=1) | `drop` |  |  |  | 0.78 | 1.01 |
-| ![Ghost](https://opengame.io/api/avatars/ghost.classic.tangerine/portrait?size=64&theme=light&v=1) | `ghost` |  |  |  | 0.90 | 0.98 |
-| ![Cloud](https://opengame.io/api/avatars/puff.classic.tangerine/portrait?size=64&theme=light&v=1) | `puff` | Cloud |  |  | 0.94 | 0.99 |
-| ![Flower](https://opengame.io/api/avatars/flower.classic.tangerine/portrait?size=64&theme=light&v=1) | `flower` |  |  |  | 0.98 | 0.96 |
-| ![Star](https://opengame.io/api/avatars/star.classic.tangerine/portrait?size=64&theme=light&v=1) | `star` |  |  |  | 0.96 | 0.92 |
-| ![Heart](https://opengame.io/api/avatars/heart.classic.tangerine/portrait?size=64&theme=light&v=1) | `heart` |  |  |  | 1.13 | 1.03 |
-| ![Diamond](https://opengame.io/api/avatars/diamond.classic.tangerine/portrait?size=64&theme=light&v=1) | `diamond` |  |  |  | 1.12 | 1.16 |
-| ![Hexagon](https://opengame.io/api/avatars/hexagon.classic.tangerine/portrait?size=64&theme=light&v=1) | `hexagon` |  |  |  | 1.08 | 0.96 |
-| ![Cat](https://opengame.io/api/avatars/cat.classic.tangerine/portrait?size=64&theme=light&v=1) | `cat` |  |  |  | 0.88 | 1.04 |
-| ![Bear](https://opengame.io/api/avatars/bear.classic.tangerine/portrait?size=64&theme=light&v=1) | `bear` |  |  |  | 0.92 | 0.94 |
-| ![Sprout](https://opengame.io/api/avatars/sprout.classic.tangerine/portrait?size=64&theme=light&v=1) | `sprout` |  |  |  | 0.85 | 1.07 |
-| ![Bunny](https://opengame.io/api/avatars/bunny.classic.tangerine/portrait?size=64&theme=light&v=1) | `bunny` |  |  |  | 0.76 | 1.02 |
-| ![Devil](https://opengame.io/api/avatars/devil.classic.tangerine/portrait?size=64&theme=light&v=1) | `devil` |  |  |  | 0.96 | 1.06 |
-| ![Alien](https://opengame.io/api/avatars/alien.classic.tangerine/portrait?size=64&theme=light&v=1) | `alien` |  |  |  | 0.97 | 1.07 |
-| ![Mushroom](https://opengame.io/api/avatars/mushroom.classic.tangerine/portrait?size=64&theme=light&v=1) | `mushroom` |  |  |  | 1.12 | 0.96 |
-| ![Onigiri](https://opengame.io/api/avatars/onigiri.classic.tangerine/portrait?size=64&theme=light&v=1) | `onigiri` |  |  |  | 1.06 | 0.95 |
-| ![Slime](https://opengame.io/api/avatars/slime.classic.tangerine/portrait?size=64&theme=light&v=1) | `slime` |  |  |  | 1.03 | 0.87 |
-| ![Pear](https://opengame.io/api/avatars/pear.classic.tangerine/portrait?size=64&theme=light&v=1) | `pear` |  |  |  | 0.67 | 0.94 |
-| ![Spiky](https://opengame.io/api/avatars/spiky.classic.tangerine/portrait?size=64&theme=light&v=1) | `spiky` |  |  |  | 0.92 | 0.96 |
-| ![Pill](https://opengame.io/api/avatars/pill.classic.tangerine/portrait?size=64&theme=light&v=1) | `pill` |  |  |  | 0.62 | 1.03 |
-| ![Dome](https://opengame.io/api/avatars/dome.classic.tangerine/portrait?size=64&theme=light&v=1) | `dome` |  |  |  | 1.12 | 0.95 |
-| ![Blob](https://opengame.io/api/avatars/blob.classic.tangerine/portrait?size=64&theme=light&v=1) | `blob` |  |  |  | 0.94 | 0.90 |
-| ![Moon](https://opengame.io/api/avatars/moon.classic.tangerine/portrait?size=64&theme=light&v=1) | `moon` |  |  |  | 0.94 | 0.97 |
-| ![Octagon](https://opengame.io/api/avatars/octagon.classic.tangerine/portrait?size=64&theme=light&v=1) | `octagon` |  |  |  | 0.88 | 0.88 |
-| ![Gem](https://opengame.io/api/avatars/gem.classic.tangerine/portrait?size=64&theme=light&v=1) | `gem` |  |  |  | 1.10 | 0.92 |
-| ![Shield](https://opengame.io/api/avatars/shield.classic.tangerine/portrait?size=64&theme=light&v=1) | `shield` |  |  |  | 0.93 | 1.00 |
-| ![Lemon](https://opengame.io/api/avatars/lemon.classic.tangerine/portrait?size=64&theme=light&v=1) | `lemon` |  |  |  | 1.17 | 0.69 |
-| ![Apple](https://opengame.io/api/avatars/apple.classic.tangerine/portrait?size=64&theme=light&v=1) | `apple` |  |  |  | 0.96 | 0.96 |
-| ![Pumpkin](https://opengame.io/api/avatars/pumpkin.classic.tangerine/portrait?size=64&theme=light&v=1) | `pumpkin` |  |  |  | 1.10 | 0.95 |
-| ![Acorn](https://opengame.io/api/avatars/acorn.classic.tangerine/portrait?size=64&theme=light&v=1) | `acorn` |  |  |  | 1.00 | 1.08 |
-| ![Cactus](https://opengame.io/api/avatars/cactus.classic.tangerine/portrait?size=64&theme=light&v=1) | `cactus` |  |  |  | 0.94 | 0.96 |
-| ![Flame](https://opengame.io/api/avatars/flame.classic.tangerine/portrait?size=64&theme=light&v=1) | `flame` |  |  |  | 0.65 | 1.05 |
-| ![Snowman](https://opengame.io/api/avatars/snowman.classic.tangerine/portrait?size=64&theme=light&v=1) | `snowman` |  |  |  | 0.60 | 1.02 |
-| ![Dumpling](https://opengame.io/api/avatars/dumpling.classic.tangerine/portrait?size=64&theme=light&v=1) | `dumpling` |  |  |  | 1.12 | 0.79 |
-| ![Bell](https://opengame.io/api/avatars/bell.classic.tangerine/portrait?size=64&theme=light&v=1) | `bell` |  |  |  | 1.03 | 1.19 |
-| ![UFO](https://opengame.io/api/avatars/ufo.classic.tangerine/portrait?size=64&theme=light&v=1) | `ufo` | UFO |  |  | 1.13 | 0.69 |
-| ![Robot](https://opengame.io/api/avatars/robot.classic.tangerine/portrait?size=64&theme=light&v=1) | `robot` |  |  |  | 1.07 | 0.98 |
-| ![Crown](https://opengame.io/api/avatars/crown.classic.tangerine/portrait?size=64&theme=light&v=1) | `crown` |  |  |  | 0.76 | 1.06 |
-| ![Unicorn](https://opengame.io/api/avatars/unicorn.classic.tangerine/portrait?size=64&theme=light&v=1) | `unicorn` |  |  |  | 0.88 | 1.09 |
-| ![Fox](https://opengame.io/api/avatars/fox.classic.tangerine/portrait?size=64&theme=light&v=1) | `fox` |  |  |  | 0.90 | 0.96 |
-| ![Mouse](https://opengame.io/api/avatars/mouse.classic.tangerine/portrait?size=64&theme=light&v=1) | `mouse` |  |  |  | 1.04 | 0.91 |
-| ![Frog](https://opengame.io/api/avatars/frog.classic.tangerine/portrait?size=64&theme=light&v=1) | `frog` |  |  |  | 1.10 | 0.79 |
-| ![Chick](https://opengame.io/api/avatars/chick.classic.tangerine/portrait?size=64&theme=light&v=1) | `chick` |  |  |  | 0.85 | 1.03 |
-| ![Octopus](https://opengame.io/api/avatars/octopus.classic.tangerine/portrait?size=64&theme=light&v=1) | `octopus` |  |  |  | 0.93 | 0.97 |
-| ![Jellyfish](https://opengame.io/api/avatars/jellyfish.classic.tangerine/portrait?size=64&theme=light&v=1) | `jellyfish` |  |  |  | 0.97 | 0.86 |
-| ![Pentagon](https://opengame.io/api/avatars/pentagon.classic.tangerine/portrait?size=64&theme=light&v=1) | `pentagon` |  |  |  | 1.01 | 0.96 |
-| ![Plus](https://opengame.io/api/avatars/plus.classic.tangerine/portrait?size=64&theme=light&v=1) | `plus` |  |  |  | 1.03 | 1.00 |
-| ![Peanut](https://opengame.io/api/avatars/peanut.classic.tangerine/portrait?size=64&theme=light&v=1) | `peanut` |  |  |  | 1.04 | 0.69 |
-| ![Leaf](https://opengame.io/api/avatars/leaf.classic.tangerine/portrait?size=64&theme=light&v=1) | `leaf` |  |  |  | 0.75 | 0.92 |
-| ![Shell](https://opengame.io/api/avatars/shell.classic.tangerine/portrait?size=64&theme=light&v=1) | `shell` |  |  |  | 0.97 | 0.94 |
-| ![Tulip](https://opengame.io/api/avatars/tulip.classic.tangerine/portrait?size=64&theme=light&v=1) | `tulip` |  |  |  | 0.81 | 1.08 |
-| ![Penguin](https://opengame.io/api/avatars/penguin.classic.tangerine/portrait?size=64&theme=light&v=1) | `penguin` |  |  |  | 0.94 | 0.97 |
-| ![Owl](https://opengame.io/api/avatars/owl.classic.tangerine/portrait?size=64&theme=light&v=1) | `owl` |  |  |  | 1.04 | 0.94 |
-| ![Pig](https://opengame.io/api/avatars/pig.classic.tangerine/portrait?size=64&theme=light&v=1) | `pig` |  |  |  | 1.07 | 0.85 |
-| ![Koala](https://opengame.io/api/avatars/koala.classic.tangerine/portrait?size=64&theme=light&v=1) | `koala` |  |  |  | 1.15 | 0.75 |
-| ![Hamster](https://opengame.io/api/avatars/hamster.classic.tangerine/portrait?size=64&theme=light&v=1) | `hamster` |  |  |  | 1.03 | 0.83 |
-| ![Puppy](https://opengame.io/api/avatars/puppy.classic.tangerine/portrait?size=64&theme=light&v=1) | `puppy` |  |  |  | 1.03 | 0.81 |
-| ![Bat](https://opengame.io/api/avatars/bat.classic.tangerine/portrait?size=64&theme=light&v=1) | `bat` |  |  |  | 1.17 | 0.89 |
-| ![Hedgehog](https://opengame.io/api/avatars/hedgehog.classic.tangerine/portrait?size=64&theme=light&v=1) | `hedgehog` |  |  |  | 1.08 | 0.80 |
-| ![Axolotl](https://opengame.io/api/avatars/axolotl.classic.tangerine/portrait?size=64&theme=light&v=1) | `axolotl` |  |  |  | 1.22 | 0.86 |
-| ![Hatchling](https://opengame.io/api/avatars/hatch.classic.tangerine/portrait?size=64&theme=light&v=1) | `hatch` | Hatchling |  |  | 0.88 | 0.92 |
-| ![Bee](https://opengame.io/api/avatars/bee.classic.tangerine/portrait?size=64&theme=light&v=1) | `bee` |  |  |  | 1.04 | 0.96 |
-| ![Snail](https://opengame.io/api/avatars/snail.classic.tangerine/portrait?size=64&theme=light&v=1) | `snail` |  |  |  | 1.12 | 0.75 |
-| ![Turtle](https://opengame.io/api/avatars/turtle.classic.tangerine/portrait?size=64&theme=light&v=1) | `turtle` |  |  |  | 1.04 | 0.75 |
-| ![Crab](https://opengame.io/api/avatars/crab.classic.tangerine/portrait?size=64&theme=light&v=1) | `crab` |  |  |  | 1.12 | 0.90 |
-| ![Fish](https://opengame.io/api/avatars/fish.classic.tangerine/portrait?size=64&theme=light&v=1) | `fish` |  |  |  | 1.11 | 0.71 |
-| ![Whale](https://opengame.io/api/avatars/whale.classic.tangerine/portrait?size=64&theme=light&v=1) | `whale` |  |  |  | 1.18 | 0.89 |
-| ![Shark](https://opengame.io/api/avatars/shark.classic.tangerine/portrait?size=64&theme=light&v=1) | `shark` |  |  |  | 1.09 | 0.92 |
-| ![Strawberry](https://opengame.io/api/avatars/strawberry.classic.tangerine/portrait?size=64&theme=light&v=1) | `strawberry` |  |  |  | 0.78 | 1.08 |
-| ![Pineapple](https://opengame.io/api/avatars/pineapple.classic.tangerine/portrait?size=64&theme=light&v=1) | `pineapple` |  |  |  | 0.74 | 1.08 |
-| ![Cupcake](https://opengame.io/api/avatars/cupcake.classic.tangerine/portrait?size=64&theme=light&v=1) | `cupcake` |  |  |  | 0.97 | 1.03 |
-| ![Ice cream](https://opengame.io/api/avatars/icecream.classic.tangerine/portrait?size=64&theme=light&v=1) | `icecream` | Ice cream |  |  | 0.83 | 0.97 |
-| ![Pudding](https://opengame.io/api/avatars/pudding.classic.tangerine/portrait?size=64&theme=light&v=1) | `pudding` |  |  |  | 1.12 | 0.81 |
-| ![Toast](https://opengame.io/api/avatars/toast.classic.tangerine/portrait?size=64&theme=light&v=1) | `toast` |  |  |  | 0.99 | 0.93 |
-| ![Burger](https://opengame.io/api/avatars/burger.classic.tangerine/portrait?size=64&theme=light&v=1) | `burger` |  |  |  | 1.07 | 0.96 |
-| ![Bowl](https://opengame.io/api/avatars/bowl.classic.tangerine/portrait?size=64&theme=light&v=1) | `bowl` |  |  |  | 1.04 | 0.67 |
-| ![Mitten](https://opengame.io/api/avatars/mitten.classic.tangerine/portrait?size=64&theme=light&v=1) | `mitten` |  |  |  | 0.92 | 0.91 |
-| ![Tooth](https://opengame.io/api/avatars/tooth.classic.tangerine/portrait?size=64&theme=light&v=1) | `tooth` |  |  |  | 0.90 | 0.94 |
-| ![Candle](https://opengame.io/api/avatars/candle.classic.tangerine/portrait?size=64&theme=light&v=1) | `candle` |  |  |  | 0.69 | 1.08 |
-| ![Light bulb](https://opengame.io/api/avatars/bulb.classic.tangerine/portrait?size=64&theme=light&v=1) | `bulb` | Light bulb |  |  | 0.76 | 0.98 |
-| ![Mug](https://opengame.io/api/avatars/mug.classic.tangerine/portrait?size=64&theme=light&v=1) | `mug` |  |  |  | 0.95 | 0.79 |
-| ![Potion](https://opengame.io/api/avatars/potion.classic.tangerine/portrait?size=64&theme=light&v=1) | `potion` |  |  |  | 0.74 | 1.03 |
-| ![Balloon](https://opengame.io/api/avatars/balloon.classic.tangerine/portrait?size=64&theme=light&v=1) | `balloon` |  |  |  | 0.78 | 1.36 |
-| ![Present](https://opengame.io/api/avatars/present.classic.tangerine/portrait?size=64&theme=light&v=1) | `present` |  |  |  | 0.97 | 0.87 |
-| ![Padlock](https://opengame.io/api/avatars/padlock.classic.tangerine/portrait?size=64&theme=light&v=1) | `padlock` |  |  |  | 0.88 | 0.90 |
-| ![House](https://opengame.io/api/avatars/house.classic.tangerine/portrait?size=64&theme=light&v=1) | `house` |  |  |  | 1.07 | 0.96 |
-| ![TV](https://opengame.io/api/avatars/tv.classic.tangerine/portrait?size=64&theme=light&v=1) | `tv` | TV |  |  | 1.04 | 1.04 |
-| ![Gamepad](https://opengame.io/api/avatars/gamepad.classic.tangerine/portrait?size=64&theme=light&v=1) | `gamepad` |  |  |  | 1.08 | 0.61 |
-| ![Trophy](https://opengame.io/api/avatars/trophy.classic.tangerine/portrait?size=64&theme=light&v=1) | `trophy` |  |  |  | 1.03 | 0.90 |
-| ![Chest](https://opengame.io/api/avatars/chest.classic.tangerine/portrait?size=64&theme=light&v=1) | `chest` |  |  |  | 1.04 | 0.71 |
-| ![Bomb](https://opengame.io/api/avatars/bomb.classic.tangerine/portrait?size=64&theme=light&v=1) | `bomb` |  |  |  | 0.84 | 1.07 |
-| ![Pawn](https://opengame.io/api/avatars/pawn.classic.tangerine/portrait?size=64&theme=light&v=1) | `pawn` |  |  |  | 0.79 | 1.12 |
-| ![Spade](https://opengame.io/api/avatars/spade.classic.tangerine/portrait?size=64&theme=light&v=1) | `spade` |  |  |  | 0.92 | 0.97 |
-| ![Club](https://opengame.io/api/avatars/club.classic.tangerine/portrait?size=64&theme=light&v=1) | `club` |  |  |  | 0.92 | 0.96 |
-| ![Wizard](https://opengame.io/api/avatars/wizard.classic.tangerine/portrait?size=64&theme=light&v=1) | `wizard` |  |  |  | 0.99 | 1.10 |
-| ![Rocket](https://opengame.io/api/avatars/rocket.classic.tangerine/portrait?size=64&theme=light&v=1) | `rocket` |  |  |  | 0.88 | 0.96 |
-| ![Planet](https://opengame.io/api/avatars/planet.classic.tangerine/portrait?size=64&theme=light&v=1) | `planet` |  |  |  | 1.28 | 0.74 |
-| ![Panda](https://opengame.io/api/avatars/panda.classic.tangerine/portrait?size=64&theme=light&v=1) | `panda` |  |  | contrast | 0.97 | 0.90 |
-| ![Ladybug](https://opengame.io/api/avatars/ladybug.classic.tangerine/portrait?size=64&theme=light&v=1) | `ladybug` |  |  | contrast | 1.03 | 1.04 |
-| ![Elephant](https://opengame.io/api/avatars/elephant.classic.tangerine/portrait?size=64&theme=light&v=1) | `elephant` |  |  |  | 1.15 | 0.81 |
-| ![Lion](https://opengame.io/api/avatars/lion.classic.tangerine/portrait?size=64&theme=light&v=1) | `lion` |  |  |  | 0.94 | 0.97 |
-| ![Sheep](https://opengame.io/api/avatars/sheep.classic.tangerine/portrait?size=64&theme=light&v=1) | `sheep` |  |  |  | 1.08 | 0.79 |
-| ![Cow](https://opengame.io/api/avatars/cow.classic.tangerine/portrait?size=64&theme=light&v=1) | `cow` |  |  | contrast | 1.15 | 1.02 |
-| ![Duck](https://opengame.io/api/avatars/duck.classic.tangerine/portrait?size=64&theme=light&v=1) | `duck` |  |  |  | 1.14 | 0.94 |
-| ![Seal](https://opengame.io/api/avatars/seal.classic.tangerine/portrait?size=64&theme=light&v=1) | `seal` |  |  |  | 0.88 | 0.90 |
-| ![Dragon](https://opengame.io/api/avatars/dragon.classic.tangerine/portrait?size=64&theme=light&v=1) | `dragon` |  |  |  | 1.12 | 1.03 |
-| ![Dinosaur](https://opengame.io/api/avatars/dino.classic.tangerine/portrait?size=64&theme=light&v=1) | `dino` | Dinosaur |  |  | 1.14 | 0.97 |
-| ![Deer](https://opengame.io/api/avatars/deer.classic.tangerine/portrait?size=64&theme=light&v=1) | `deer` |  |  |  | 0.97 | 1.07 |
-| ![Giraffe](https://opengame.io/api/avatars/giraffe.classic.tangerine/portrait?size=64&theme=light&v=1) | `giraffe` |  |  | contrast | 0.94 | 1.04 |
-| ![Monkey](https://opengame.io/api/avatars/monkey.classic.tangerine/portrait?size=64&theme=light&v=1) | `monkey` |  |  | light | 1.12 | 0.89 |
-| ![Mole](https://opengame.io/api/avatars/mole.classic.tangerine/portrait?size=64&theme=light&v=1) | `mole` |  |  |  | 1.12 | 0.76 |
-| ![Squid](https://opengame.io/api/avatars/squid.classic.tangerine/portrait?size=64&theme=light&v=1) | `squid` |  |  |  | 0.71 | 0.96 |
-| ![Manta ray](https://opengame.io/api/avatars/ray.classic.tangerine/portrait?size=64&theme=light&v=1) | `ray` | Manta ray |  |  | 1.14 | 0.88 |
-| ![Butterfly](https://opengame.io/api/avatars/butterfly.classic.tangerine/portrait?size=64&theme=light&v=1) | `butterfly` |  |  |  | 1.06 | 1.04 |
-| ![Spider](https://opengame.io/api/avatars/spider.classic.tangerine/portrait?size=64&theme=light&v=1) | `spider` |  |  |  | 1.12 | 1.10 |
-| ![Caterpillar](https://opengame.io/api/avatars/caterpillar.classic.tangerine/portrait?size=64&theme=light&v=1) | `caterpillar` |  |  |  | 1.09 | 0.99 |
-| ![Yeti](https://opengame.io/api/avatars/yeti.classic.tangerine/portrait?size=64&theme=light&v=1) | `yeti` |  |  |  | 1.17 | 1.04 |
-| ![Goose](https://opengame.io/api/avatars/goose.classic.tangerine/portrait?size=64&theme=light&v=1) | `goose` |  |  |  | 1.13 | 0.99 |
-| ![Toucan](https://opengame.io/api/avatars/toucan.classic.tangerine/portrait?size=64&theme=light&v=1) | `toucan` |  |  |  | 1.06 | 0.77 |
-| ![Parrot](https://opengame.io/api/avatars/parrot.classic.tangerine/portrait?size=64&theme=light&v=1) | `parrot` |  |  |  | 0.80 | 1.10 |
-| ![Rhino](https://opengame.io/api/avatars/rhino.classic.tangerine/portrait?size=64&theme=light&v=1) | `rhino` |  |  |  | 1.09 | 0.69 |
-| ![Hippo](https://opengame.io/api/avatars/hippo.classic.tangerine/portrait?size=64&theme=light&v=1) | `hippo` |  |  |  | 0.99 | 0.88 |
-| ![Llama](https://opengame.io/api/avatars/llama.classic.tangerine/portrait?size=64&theme=light&v=1) | `llama` |  |  |  | 0.62 | 1.10 |
-| ![Camel](https://opengame.io/api/avatars/camel.classic.tangerine/portrait?size=64&theme=light&v=1) | `camel` |  |  |  | 1.05 | 0.77 |
-| ![Ram](https://opengame.io/api/avatars/ram.classic.tangerine/portrait?size=64&theme=light&v=1) | `ram` |  |  |  | 1.10 | 0.74 |
-| ![Walrus](https://opengame.io/api/avatars/walrus.classic.tangerine/portrait?size=64&theme=light&v=1) | `walrus` |  |  |  | 0.97 | 0.88 |
-| ![Hen](https://opengame.io/api/avatars/hen.classic.tangerine/portrait?size=64&theme=light&v=1) | `hen` |  |  |  | 0.98 | 0.98 |
-| ![Squirrel](https://opengame.io/api/avatars/squirrel.classic.tangerine/portrait?size=64&theme=light&v=1) | `squirrel` |  |  |  | 0.88 | 0.92 |
-| ![Golem](https://opengame.io/api/avatars/golem.classic.tangerine/portrait?size=64&theme=light&v=1) | `golem` |  |  |  | 1.07 | 0.92 |
-| ![Cherry](https://opengame.io/api/avatars/cherry.classic.tangerine/portrait?size=64&theme=light&v=1) | `cherry` |  |  |  | 0.89 | 1.01 |
-| ![Banana](https://opengame.io/api/avatars/banana.classic.tangerine/portrait?size=64&theme=light&v=1) | `banana` |  |  |  | 1.03 | 0.72 |
-| ![Carrot](https://opengame.io/api/avatars/carrot.classic.tangerine/portrait?size=64&theme=light&v=1) | `carrot` |  |  |  | 0.71 | 1.09 |
-| ![Eggplant](https://opengame.io/api/avatars/eggplant.classic.tangerine/portrait?size=64&theme=light&v=1) | `eggplant` |  |  |  | 0.69 | 1.07 |
-| ![Corn](https://opengame.io/api/avatars/corn.classic.tangerine/portrait?size=64&theme=light&v=1) | `corn` |  |  |  | 0.83 | 1.01 |
-| ![Cookie](https://opengame.io/api/avatars/cookie.classic.tangerine/portrait?size=64&theme=light&v=1) | `cookie` |  |  |  | 0.96 | 0.97 |
-| ![Macaron](https://opengame.io/api/avatars/macaron.classic.tangerine/portrait?size=64&theme=light&v=1) | `macaron` |  |  |  | 1.00 | 0.71 |
-| ![Popsicle](https://opengame.io/api/avatars/popsicle.classic.tangerine/portrait?size=64&theme=light&v=1) | `popsicle` |  |  |  | 0.74 | 0.99 |
-| ![Cake slice](https://opengame.io/api/avatars/cake.classic.tangerine/portrait?size=64&theme=light&v=1) | `cake` | Cake slice |  |  | 1.04 | 1.02 |
-| ![Croissant](https://opengame.io/api/avatars/croissant.classic.tangerine/portrait?size=64&theme=light&v=1) | `croissant` |  |  |  | 1.10 | 0.64 |
-| ![Bubble tea](https://opengame.io/api/avatars/boba.classic.tangerine/portrait?size=64&theme=light&v=1) | `boba` | Bubble tea |  |  | 0.76 | 1.06 |
-| ![Pizza](https://opengame.io/api/avatars/pizza.classic.tangerine/portrait?size=64&theme=light&v=1) | `pizza` |  |  |  | 1.08 | 0.90 |
-| ![Chili](https://opengame.io/api/avatars/chili.classic.tangerine/portrait?size=64&theme=light&v=1) | `chili` |  |  |  | 0.95 | 1.05 |
-| ![Grapes](https://opengame.io/api/avatars/grapes.classic.tangerine/portrait?size=64&theme=light&v=1) | `grapes` |  |  |  | 0.96 | 1.05 |
-| ![Radish](https://opengame.io/api/avatars/radish.classic.tangerine/portrait?size=64&theme=light&v=1) | `radish` |  |  |  | 0.69 | 1.08 |
-| ![Popcorn](https://opengame.io/api/avatars/popcorn.classic.tangerine/portrait?size=64&theme=light&v=1) | `popcorn` |  |  |  | 0.79 | 0.99 |
-| ![Fries](https://opengame.io/api/avatars/fries.classic.tangerine/portrait?size=64&theme=light&v=1) | `fries` |  |  |  | 0.81 | 1.05 |
-| ![Hot dog](https://opengame.io/api/avatars/hotdog.classic.tangerine/portrait?size=64&theme=light&v=1) | `hotdog` | Hot dog |  |  | 1.13 | 0.62 |
-| ![Candy](https://opengame.io/api/avatars/candy.classic.tangerine/portrait?size=64&theme=light&v=1) | `candy` |  |  |  | 1.17 | 0.64 |
-| ![Teapot](https://opengame.io/api/avatars/teapot.classic.tangerine/portrait?size=64&theme=light&v=1) | `teapot` |  |  |  | 1.12 | 0.79 |
-| ![Cauldron](https://opengame.io/api/avatars/cauldron.classic.tangerine/portrait?size=64&theme=light&v=1) | `cauldron` |  |  |  | 0.78 | 0.99 |
-| ![Bottle](https://opengame.io/api/avatars/bottle.classic.tangerine/portrait?size=64&theme=light&v=1) | `bottle` |  |  |  | 0.64 | 1.02 |
-| ![Jar](https://opengame.io/api/avatars/jar.classic.tangerine/portrait?size=64&theme=light&v=1) | `jar` |  |  |  | 0.83 | 0.93 |
-| ![Hourglass](https://opengame.io/api/avatars/hourglass.classic.tangerine/portrait?size=64&theme=light&v=1) | `hourglass` |  |  |  | 0.79 | 1.04 |
-| ![Lantern](https://opengame.io/api/avatars/lantern.classic.tangerine/portrait?size=64&theme=light&v=1) | `lantern` |  |  |  | 0.79 | 0.97 |
-| ![Umbrella](https://opengame.io/api/avatars/umbrella.classic.tangerine/portrait?size=64&theme=light&v=1) | `umbrella` |  |  |  | 1.10 | 1.00 |
-| ![Potted plant](https://opengame.io/api/avatars/plant.classic.tangerine/portrait?size=64&theme=light&v=1) | `plant` | Potted plant |  |  | 0.79 | 1.07 |
-| ![Snow globe](https://opengame.io/api/avatars/globe.classic.tangerine/portrait?size=64&theme=light&v=1) | `globe` | Snow globe |  |  | 0.81 | 0.90 |
-| ![Mailbox](https://opengame.io/api/avatars/mailbox.classic.tangerine/portrait?size=64&theme=light&v=1) | `mailbox` |  |  |  | 0.98 | 0.90 |
-| ![Traffic cone](https://opengame.io/api/avatars/cone.classic.tangerine/portrait?size=64&theme=light&v=1) | `cone` | Traffic cone |  |  | 1.03 | 1.00 |
-| ![Hydrant](https://opengame.io/api/avatars/hydrant.classic.tangerine/portrait?size=64&theme=light&v=1) | `hydrant` |  |  |  | 0.81 | 1.00 |
-| ![Rain cloud](https://opengame.io/api/avatars/rain.classic.tangerine/portrait?size=64&theme=light&v=1) | `rain` | Rain cloud |  |  | 0.96 | 0.92 |
-| ![Sun](https://opengame.io/api/avatars/sun.classic.tangerine/portrait?size=64&theme=light&v=1) | `sun` |  |  |  | 1.03 | 1.04 |
-| ![Crystal](https://opengame.io/api/avatars/crystal.classic.tangerine/portrait?size=64&theme=light&v=1) | `crystal` |  |  |  | 1.07 | 1.07 |
-| ![Tree](https://opengame.io/api/avatars/tree.classic.tangerine/portrait?size=64&theme=light&v=1) | `tree` |  |  |  | 0.96 | 1.01 |
-| ![Pine](https://opengame.io/api/avatars/pine.classic.tangerine/portrait?size=64&theme=light&v=1) | `pine` |  |  |  | 1.08 | 1.08 |
-| ![Volcano](https://opengame.io/api/avatars/volcano.classic.tangerine/portrait?size=64&theme=light&v=1) | `volcano` |  |  |  | 1.13 | 1.08 |
-| ![Comet](https://opengame.io/api/avatars/comet.classic.tangerine/portrait?size=64&theme=light&v=1) | `comet` |  |  |  | 1.00 | 1.08 |
-| ![Knight](https://opengame.io/api/avatars/knight.classic.tangerine/portrait?size=64&theme=light&v=1) | `knight` |  |  |  | 0.97 | 1.03 |
-| ![Ninja](https://opengame.io/api/avatars/ninja.classic.tangerine/portrait?size=64&theme=light&v=1) | `ninja` |  |  | light | 1.01 | 0.84 |
-| ![Tower](https://opengame.io/api/avatars/tower.classic.tangerine/portrait?size=64&theme=light&v=1) | `tower` |  |  |  | 0.81 | 0.95 |
-| ![Lighthouse](https://opengame.io/api/avatars/lighthouse.classic.tangerine/portrait?size=64&theme=light&v=1) | `lighthouse` |  |  |  | 0.76 | 1.01 |
-| ![Windmill](https://opengame.io/api/avatars/windmill.classic.tangerine/portrait?size=64&theme=light&v=1) | `windmill` |  |  |  | 0.90 | 1.09 |
-| ![Camera](https://opengame.io/api/avatars/camera.classic.tangerine/portrait?size=64&theme=light&v=1) | `camera` |  |  |  | 1.07 | 0.73 |
-| ![Joystick](https://opengame.io/api/avatars/joystick.classic.tangerine/portrait?size=64&theme=light&v=1) | `joystick` |  |  |  | 1.00 | 1.01 |
-| ![Arcade cabinet](https://opengame.io/api/avatars/arcade.classic.tangerine/portrait?size=64&theme=light&v=1) | `arcade` | Arcade cabinet |  |  | 0.83 | 1.00 |
-| ![Medal](https://opengame.io/api/avatars/medal.classic.tangerine/portrait?size=64&theme=light&v=1) | `medal` |  |  |  | 0.67 | 1.05 |
-| ![Satellite](https://opengame.io/api/avatars/satellite.classic.tangerine/portrait?size=64&theme=light&v=1) | `satellite` |  |  |  | 1.14 | 1.04 |
-| ![Tornado](https://opengame.io/api/avatars/tornado.classic.tangerine/portrait?size=64&theme=light&v=1) | `tornado` |  |  |  | 1.03 | 1.00 |
-| ![Stump](https://opengame.io/api/avatars/stump.classic.tangerine/portrait?size=64&theme=light&v=1) | `stump` |  |  |  | 1.06 | 0.95 |
-| ![Lamp](https://opengame.io/api/avatars/lamp.classic.tangerine/portrait?size=64&theme=light&v=1) | `lamp` |  |  |  | 0.99 | 1.04 |
-| ![Alarm clock](https://opengame.io/api/avatars/alarm.classic.tangerine/portrait?size=64&theme=light&v=1) | `alarm` | Alarm clock |  |  | 0.85 | 0.97 |
-| ![Hot air balloon](https://opengame.io/api/avatars/hotair.classic.tangerine/portrait?size=64&theme=light&v=1) | `hotair` | Hot air balloon |  |  | 0.81 | 1.06 |
-| ![Car](https://opengame.io/api/avatars/car.classic.tangerine/portrait?size=64&theme=light&v=1) | `car` |  |  |  | 1.10 | 0.68 |
-| ![Tugboat](https://opengame.io/api/avatars/boat.classic.tangerine/portrait?size=64&theme=light&v=1) | `boat` | Tugboat |  |  | 1.17 | 1.04 |
-| ![Submarine](https://opengame.io/api/avatars/sub.classic.tangerine/portrait?size=64&theme=light&v=1) | `sub` | Submarine |  |  | 1.14 | 0.89 |
-| ![Bone](https://opengame.io/api/avatars/bone.classic.tangerine/portrait?size=64&theme=light&v=1) | `bone` |  |  |  | 1.06 | 0.60 |
-| ![Sock](https://opengame.io/api/avatars/sock.classic.tangerine/portrait?size=64&theme=light&v=1) | `sock` |  |  |  | 0.96 | 0.96 |
-| ![T-shirt](https://opengame.io/api/avatars/tshirt.classic.tangerine/portrait?size=64&theme=light&v=1) | `tshirt` | T-shirt |  |  | 1.17 | 0.86 |
-| ![Top hat](https://opengame.io/api/avatars/tophat.classic.tangerine/portrait?size=64&theme=light&v=1) | `tophat` | Top hat |  |  | 1.10 | 0.87 |
-| ![Key](https://opengame.io/api/avatars/key.classic.tangerine/portrait?size=64&theme=light&v=1) | `key` |  |  |  | 0.69 | 1.00 |
-| ![Raccoon](https://opengame.io/api/avatars/raccoon.classic.tangerine/portrait?size=64&theme=light&v=1) | `raccoon` |  |  | contrast | 1.15 | 0.92 |
-| ![Tiger](https://opengame.io/api/avatars/tiger.classic.tangerine/portrait?size=64&theme=light&v=1) | `tiger` |  |  | contrast | 1.15 | 0.88 |
-| ![Koi](https://opengame.io/api/avatars/koi.classic.tangerine/portrait?size=64&theme=light&v=1) | `koi` |  |  | contrast | 0.87 | 0.91 |
-| ![Dalmatian](https://opengame.io/api/avatars/dalmatian.classic.tangerine/portrait?size=64&theme=light&v=1) | `dalmatian` |  |  | contrast | 0.97 | 0.81 |
-| ![Zebra](https://opengame.io/api/avatars/zebra.classic.tangerine/portrait?size=64&theme=light&v=1) | `zebra` |  |  | contrast | 0.69 | 1.03 |
-| ![Bearded bust](https://opengame.io/api/avatars/bust.classic.tangerine/portrait?size=64&theme=light&v=1) | `bust` | Bearded bust |  | dark | 0.74 | 1.02 |
-| ![Mop top](https://opengame.io/api/avatars/moptop.classic.tangerine/portrait?size=64&theme=light&v=1) | `moptop` | Mop top | yes | dark | 1.05 | 1.05 |
-| ![Spiky crop](https://opengame.io/api/avatars/spikecut.classic.tangerine/portrait?size=64&theme=light&v=1) | `spikecut` | Spiky crop | yes | dark | 0.89 | 0.96 |
-| ![Side part](https://opengame.io/api/avatars/sidepart.classic.tangerine/portrait?size=64&theme=light&v=1) | `sidepart` | Side part | yes | grey | 0.89 | 1.10 |
-| ![Pompadour](https://opengame.io/api/avatars/pompadour.classic.tangerine/portrait?size=64&theme=light&v=1) | `pompadour` |  | yes | dark | 0.78 | 1.11 |
-| ![Sculpted head](https://opengame.io/api/avatars/sculpt.classic.tangerine/portrait?size=64&theme=light&v=1) | `sculpt` | Sculpted head |  |  | 0.77 | 1.03 |
-| ![Brick pyramid](https://opengame.io/api/avatars/pyramid.classic.tangerine/portrait?size=64&theme=light&v=1) | `pyramid` | Brick pyramid |  | dark | 1.03 | 1.00 |
-| ![Swept quiff](https://opengame.io/api/avatars/quiff.classic.tangerine/portrait?size=64&theme=light&v=1) | `quiff` | Swept quiff |  | dark | 0.83 | 1.09 |
-| ![Full beard](https://opengame.io/api/avatars/fullbeard.classic.tangerine/portrait?size=64&theme=light&v=1) | `fullbeard` | Full beard |  | brown | 0.81 | 0.95 |
-| ![Wavy hair](https://opengame.io/api/avatars/waves.classic.tangerine/portrait?size=64&theme=light&v=1) | `waves` | Wavy hair |  | dark | 0.98 | 1.03 |
-| ![Moustache](https://opengame.io/api/avatars/tache.classic.tangerine/portrait?size=64&theme=light&v=1) | `tache` | Moustache |  | dark | 0.92 | 1.00 |
-| ![Long hair](https://opengame.io/api/avatars/longhair.classic.tangerine/portrait?size=64&theme=light&v=1) | `longhair` | Long hair | yes | dark | 0.96 | 1.03 |
-| ![Long waves](https://opengame.io/api/avatars/longwaves.classic.tangerine/portrait?size=64&theme=light&v=1) | `longwaves` | Long waves | yes | dark | 1.08 | 1.06 |
-| ![Deep waves](https://opengame.io/api/avatars/deepwaves.classic.tangerine/portrait?size=64&theme=light&v=1) | `deepwaves` | Deep waves | yes | dark | 1.17 | 1.04 |
-| ![Short fringe](https://opengame.io/api/avatars/shortfringe.classic.tangerine/portrait?size=64&theme=light&v=1) | `shortfringe` | Short fringe | yes | brown | 0.88 | 1.05 |
-| ![Short curls](https://opengame.io/api/avatars/shortcurls.classic.tangerine/portrait?size=64&theme=light&v=1) | `shortcurls` | Short curls | yes | dark | 0.81 | 1.05 |
-| ![Layered fringe](https://opengame.io/api/avatars/layeredfringe.classic.tangerine/portrait?size=64&theme=light&v=1) | `layeredfringe` | Layered fringe | yes | dark | 0.84 | 1.10 |
-| ![Silk fringe](https://opengame.io/api/avatars/silkfringe.classic.tangerine/portrait?size=64&theme=light&v=1) | `silkfringe` | Silk fringe | yes | grey | 0.92 | 1.07 |
-| ![Short quiff](https://opengame.io/api/avatars/shortquiff.classic.tangerine/portrait?size=64&theme=light&v=1) | `shortquiff` | Short quiff | yes | brown | 0.83 | 1.11 |
-| ![Tousled crop](https://opengame.io/api/avatars/tousled.classic.tangerine/portrait?size=64&theme=light&v=1) | `tousled` | Tousled crop | yes | brown | 0.83 | 1.07 |
-| ![Shaved and bearded](https://opengame.io/api/avatars/shavedbeard.classic.tangerine/portrait?size=64&theme=light&v=1) | `shavedbeard` | Shaved and bearded |  | dark | 0.86 | 0.93 |
-| ![Buzz cut](https://opengame.io/api/avatars/buzzcut.classic.tangerine/portrait?size=64&theme=light&v=1) | `buzzcut` | Buzz cut | yes | dark | 0.85 | 0.89 |
-| ![Crew cut](https://opengame.io/api/avatars/crewcut.classic.tangerine/portrait?size=64&theme=light&v=1) | `crewcut` | Crew cut | yes | brown | 0.85 | 0.99 |
-| ![Receding hairline](https://opengame.io/api/avatars/receding.classic.tangerine/portrait?size=64&theme=light&v=1) | `receding` | Receding hairline | yes | dark | 0.85 | 0.92 |
-| ![Slicked back](https://opengame.io/api/avatars/slickback.classic.tangerine/portrait?size=64&theme=light&v=1) | `slickback` | Slicked back | yes | brown | 0.86 | 1.09 |
-| ![Faux hawk](https://opengame.io/api/avatars/fauxhawk.classic.tangerine/portrait?size=64&theme=light&v=1) | `fauxhawk` | Faux hawk | yes | dark | 0.85 | 1.12 |
-| ![Pixie cut](https://opengame.io/api/avatars/pixie.classic.tangerine/portrait?size=64&theme=light&v=1) | `pixie` | Pixie cut | yes | dark | 0.83 | 0.93 |
-| ![Cornrows](https://opengame.io/api/avatars/cornrows.classic.tangerine/portrait?size=64&theme=light&v=1) | `cornrows` |  | yes | dark | 0.85 | 0.90 |
-| ![Curtains](https://opengame.io/api/avatars/curtains.classic.tangerine/portrait?size=64&theme=light&v=1) | `curtains` |  | yes | brown | 0.88 | 1.01 |
-| ![Afro](https://opengame.io/api/avatars/afro.classic.tangerine/portrait?size=64&theme=light&v=1) | `afro` |  | yes | dark | 1.03 | 1.06 |
-| ![Top knot](https://opengame.io/api/avatars/topknot.classic.tangerine/portrait?size=64&theme=light&v=1) | `topknot` | Top knot | yes | dark | 0.85 | 1.10 |
-| ![Space buns](https://opengame.io/api/avatars/twinbuns.classic.tangerine/portrait?size=64&theme=light&v=1) | `twinbuns` | Space buns | yes | brown | 0.85 | 1.04 |
-| ![Bob](https://opengame.io/api/avatars/bob.classic.tangerine/portrait?size=64&theme=light&v=1) | `bob` |  | yes | dark | 0.83 | 0.96 |
-| ![Low ponytail](https://opengame.io/api/avatars/lowpony.classic.tangerine/portrait?size=64&theme=light&v=1) | `lowpony` | Low ponytail | yes | brown | 0.98 | 0.93 |
-| ![Locs](https://opengame.io/api/avatars/locs.classic.tangerine/portrait?size=64&theme=light&v=1) | `locs` |  | yes | dark | 1.10 | 1.00 |
-| ![Side-swept long](https://opengame.io/api/avatars/sideswept.classic.tangerine/portrait?size=64&theme=light&v=1) | `sideswept` | Side-swept long | yes | dark | 0.92 | 1.04 |
-| ![Skin fade](https://opengame.io/api/avatars/skinfade.classic.tangerine/portrait?size=64&theme=light&v=1) | `skinfade` | Skin fade | yes | dark | 0.85 | 1.00 |
-| ![Undercut](https://opengame.io/api/avatars/undercut.classic.tangerine/portrait?size=64&theme=light&v=1) | `undercut` |  | yes | dark | 0.85 | 1.12 |
-| ![French crop](https://opengame.io/api/avatars/frenchcrop.classic.tangerine/portrait?size=64&theme=light&v=1) | `frenchcrop` | French crop | yes | dark | 0.85 | 0.96 |
-| ![Mohawk](https://opengame.io/api/avatars/mohawk.classic.tangerine/portrait?size=64&theme=light&v=1) | `mohawk` |  | yes | dark | 0.85 | 1.12 |
-| ![Long bob](https://opengame.io/api/avatars/lob.classic.tangerine/portrait?size=64&theme=light&v=1) | `lob` | Long bob | yes | brown | 0.86 | 0.97 |
-| ![Blunt bangs](https://opengame.io/api/avatars/bluntbangs.classic.tangerine/portrait?size=64&theme=light&v=1) | `bluntbangs` | Blunt bangs | yes | dark | 0.94 | 0.96 |
-| ![Curtain bangs](https://opengame.io/api/avatars/curtainbangs.classic.tangerine/portrait?size=64&theme=light&v=1) | `curtainbangs` | Curtain bangs | yes | brown | 1.12 | 1.02 |
-| ![Shag](https://opengame.io/api/avatars/shag.classic.tangerine/portrait?size=64&theme=light&v=1) | `shag` |  | yes | brown | 1.01 | 0.94 |
-| ![Long curls](https://opengame.io/api/avatars/longcurls.classic.tangerine/portrait?size=64&theme=light&v=1) | `longcurls` | Long curls | yes | dark | 1.22 | 1.04 |
-| ![Afro puff](https://opengame.io/api/avatars/afropuff.classic.tangerine/portrait?size=64&theme=light&v=1) | `afropuff` | Afro puff | yes | dark | 0.85 | 1.10 |
-| ![High ponytail](https://opengame.io/api/avatars/highpony.classic.tangerine/portrait?size=64&theme=light&v=1) | `highpony` | High ponytail | yes | dark | 0.90 | 1.09 |
-| ![High bun](https://opengame.io/api/avatars/highbun.classic.tangerine/portrait?size=64&theme=light&v=1) | `highbun` | High bun | yes | brown | 0.85 | 1.10 |
-| ![Messy bun](https://opengame.io/api/avatars/messybun.classic.tangerine/portrait?size=64&theme=light&v=1) | `messybun` | Messy bun | yes | brown | 0.85 | 1.11 |
-| ![Pigtails](https://opengame.io/api/avatars/pigtails.classic.tangerine/portrait?size=64&theme=light&v=1) | `pigtails` |  | yes | dark | 1.03 | 0.92 |
-| ![Box braids](https://opengame.io/api/avatars/boxbraids.classic.tangerine/portrait?size=64&theme=light&v=1) | `boxbraids` | Box braids | yes | dark | 0.97 | 1.03 |
-| ![Half up](https://opengame.io/api/avatars/halfup.classic.tangerine/portrait?size=64&theme=light&v=1) | `halfup` | Half up | yes | brown | 0.94 | 1.15 |
-| ![Textured crop](https://opengame.io/api/avatars/texturedcrop.classic.tangerine/portrait?size=64&theme=light&v=1) | `texturedcrop` | Textured crop | yes | brown | 0.85 | 0.99 |
-| ![Tapered crop](https://opengame.io/api/avatars/taperedcrop.classic.tangerine/portrait?size=64&theme=light&v=1) | `taperedcrop` | Tapered crop | yes | brown | 0.85 | 0.96 |
-| ![Soft quiff](https://opengame.io/api/avatars/softquiff.classic.tangerine/portrait?size=64&theme=light&v=1) | `softquiff` | Soft quiff | yes | brown | 0.85 | 1.09 |
-| ![Curly crop](https://opengame.io/api/avatars/curlycrop.classic.tangerine/portrait?size=64&theme=light&v=1) | `curlycrop` | Curly crop | yes | dark | 0.85 | 0.97 |
-| ![Soft bob](https://opengame.io/api/avatars/softbob.classic.tangerine/portrait?size=64&theme=light&v=1) | `softbob` | Soft bob | yes | brown | 0.92 | 0.84 |
-| ![Round bob](https://opengame.io/api/avatars/roundbob.classic.tangerine/portrait?size=64&theme=light&v=1) | `roundbob` | Round bob | yes | brown | 0.81 | 0.84 |
+| ![Circle](https://opengame.io/api/avatars/circle.classic.tangerine/portrait?size=64&theme=light&v=2) | `circle` |  | yes |  | 1.00 | 1.00 |
+| ![Rounded square](https://opengame.io/api/avatars/square.classic.tangerine/portrait?size=64&theme=light&v=2) | `square` | Rounded square |  |  | 0.94 | 0.94 |
+| ![Rounded rectangle](https://opengame.io/api/avatars/slab.classic.tangerine/portrait?size=64&theme=light&v=2) | `slab` | Rounded rectangle |  |  | 1.11 | 0.74 |
+| ![Tall](https://opengame.io/api/avatars/tall.classic.tangerine/portrait?size=64&theme=light&v=2) | `tall` |  |  |  | 0.71 | 1.04 |
+| ![Egg](https://opengame.io/api/avatars/egg.classic.tangerine/portrait?size=64&theme=light&v=2) | `egg` |  |  |  | 0.78 | 1.00 |
+| ![Pebble](https://opengame.io/api/avatars/pebble.classic.tangerine/portrait?size=64&theme=light&v=2) | `pebble` |  |  |  | 1.10 | 0.77 |
+| ![Bean](https://opengame.io/api/avatars/bean.classic.tangerine/portrait?size=64&theme=light&v=2) | `bean` |  |  |  | 0.96 | 0.90 |
+| ![Drop](https://opengame.io/api/avatars/drop.classic.tangerine/portrait?size=64&theme=light&v=2) | `drop` |  |  |  | 0.78 | 1.01 |
+| ![Ghost](https://opengame.io/api/avatars/ghost.classic.tangerine/portrait?size=64&theme=light&v=2) | `ghost` |  |  |  | 0.90 | 0.98 |
+| ![Cloud](https://opengame.io/api/avatars/puff.classic.tangerine/portrait?size=64&theme=light&v=2) | `puff` | Cloud |  |  | 0.94 | 0.99 |
+| ![Flower](https://opengame.io/api/avatars/flower.classic.tangerine/portrait?size=64&theme=light&v=2) | `flower` |  |  |  | 0.98 | 0.96 |
+| ![Star](https://opengame.io/api/avatars/star.classic.tangerine/portrait?size=64&theme=light&v=2) | `star` |  |  |  | 0.96 | 0.92 |
+| ![Heart](https://opengame.io/api/avatars/heart.classic.tangerine/portrait?size=64&theme=light&v=2) | `heart` |  |  |  | 1.13 | 1.03 |
+| ![Diamond](https://opengame.io/api/avatars/diamond.classic.tangerine/portrait?size=64&theme=light&v=2) | `diamond` |  |  |  | 1.12 | 1.16 |
+| ![Hexagon](https://opengame.io/api/avatars/hexagon.classic.tangerine/portrait?size=64&theme=light&v=2) | `hexagon` |  |  |  | 1.08 | 0.96 |
+| ![Cat](https://opengame.io/api/avatars/cat.classic.tangerine/portrait?size=64&theme=light&v=2) | `cat` |  |  |  | 0.88 | 1.04 |
+| ![Bear](https://opengame.io/api/avatars/bear.classic.tangerine/portrait?size=64&theme=light&v=2) | `bear` |  |  |  | 0.92 | 0.94 |
+| ![Sprout](https://opengame.io/api/avatars/sprout.classic.tangerine/portrait?size=64&theme=light&v=2) | `sprout` |  |  |  | 0.85 | 1.07 |
+| ![Bunny](https://opengame.io/api/avatars/bunny.classic.tangerine/portrait?size=64&theme=light&v=2) | `bunny` |  |  |  | 0.76 | 1.02 |
+| ![Devil](https://opengame.io/api/avatars/devil.classic.tangerine/portrait?size=64&theme=light&v=2) | `devil` |  |  |  | 0.96 | 1.06 |
+| ![Alien](https://opengame.io/api/avatars/alien.classic.tangerine/portrait?size=64&theme=light&v=2) | `alien` |  |  |  | 0.97 | 1.07 |
+| ![Mushroom](https://opengame.io/api/avatars/mushroom.classic.tangerine/portrait?size=64&theme=light&v=2) | `mushroom` |  |  |  | 1.12 | 0.96 |
+| ![Onigiri](https://opengame.io/api/avatars/onigiri.classic.tangerine/portrait?size=64&theme=light&v=2) | `onigiri` |  |  |  | 1.06 | 0.95 |
+| ![Slime](https://opengame.io/api/avatars/slime.classic.tangerine/portrait?size=64&theme=light&v=2) | `slime` |  |  |  | 1.03 | 0.87 |
+| ![Pear](https://opengame.io/api/avatars/pear.classic.tangerine/portrait?size=64&theme=light&v=2) | `pear` |  |  |  | 0.67 | 0.94 |
+| ![Spiky](https://opengame.io/api/avatars/spiky.classic.tangerine/portrait?size=64&theme=light&v=2) | `spiky` |  |  |  | 0.92 | 0.96 |
+| ![Pill](https://opengame.io/api/avatars/pill.classic.tangerine/portrait?size=64&theme=light&v=2) | `pill` |  |  |  | 0.62 | 1.03 |
+| ![Dome](https://opengame.io/api/avatars/dome.classic.tangerine/portrait?size=64&theme=light&v=2) | `dome` |  |  |  | 1.12 | 0.95 |
+| ![Blob](https://opengame.io/api/avatars/blob.classic.tangerine/portrait?size=64&theme=light&v=2) | `blob` |  |  |  | 0.94 | 0.90 |
+| ![Moon](https://opengame.io/api/avatars/moon.classic.tangerine/portrait?size=64&theme=light&v=2) | `moon` |  |  |  | 0.94 | 0.97 |
+| ![Octagon](https://opengame.io/api/avatars/octagon.classic.tangerine/portrait?size=64&theme=light&v=2) | `octagon` |  |  |  | 0.88 | 0.88 |
+| ![Gem](https://opengame.io/api/avatars/gem.classic.tangerine/portrait?size=64&theme=light&v=2) | `gem` |  |  |  | 1.10 | 0.92 |
+| ![Shield](https://opengame.io/api/avatars/shield.classic.tangerine/portrait?size=64&theme=light&v=2) | `shield` |  |  |  | 0.93 | 1.00 |
+| ![Lemon](https://opengame.io/api/avatars/lemon.classic.tangerine/portrait?size=64&theme=light&v=2) | `lemon` |  |  |  | 1.17 | 0.69 |
+| ![Apple](https://opengame.io/api/avatars/apple.classic.tangerine/portrait?size=64&theme=light&v=2) | `apple` |  |  |  | 0.96 | 0.96 |
+| ![Pumpkin](https://opengame.io/api/avatars/pumpkin.classic.tangerine/portrait?size=64&theme=light&v=2) | `pumpkin` |  |  |  | 1.10 | 0.95 |
+| ![Acorn](https://opengame.io/api/avatars/acorn.classic.tangerine/portrait?size=64&theme=light&v=2) | `acorn` |  |  |  | 1.00 | 1.08 |
+| ![Cactus](https://opengame.io/api/avatars/cactus.classic.tangerine/portrait?size=64&theme=light&v=2) | `cactus` |  |  |  | 0.94 | 0.96 |
+| ![Flame](https://opengame.io/api/avatars/flame.classic.tangerine/portrait?size=64&theme=light&v=2) | `flame` |  |  |  | 0.65 | 1.05 |
+| ![Snowman](https://opengame.io/api/avatars/snowman.classic.tangerine/portrait?size=64&theme=light&v=2) | `snowman` |  |  |  | 0.60 | 1.02 |
+| ![Dumpling](https://opengame.io/api/avatars/dumpling.classic.tangerine/portrait?size=64&theme=light&v=2) | `dumpling` |  |  |  | 1.12 | 0.79 |
+| ![Bell](https://opengame.io/api/avatars/bell.classic.tangerine/portrait?size=64&theme=light&v=2) | `bell` |  |  |  | 1.03 | 1.19 |
+| ![UFO](https://opengame.io/api/avatars/ufo.classic.tangerine/portrait?size=64&theme=light&v=2) | `ufo` | UFO |  |  | 1.13 | 0.69 |
+| ![Robot](https://opengame.io/api/avatars/robot.classic.tangerine/portrait?size=64&theme=light&v=2) | `robot` |  |  |  | 1.07 | 0.98 |
+| ![Crown](https://opengame.io/api/avatars/crown.classic.tangerine/portrait?size=64&theme=light&v=2) | `crown` |  |  |  | 0.76 | 1.06 |
+| ![Unicorn](https://opengame.io/api/avatars/unicorn.classic.tangerine/portrait?size=64&theme=light&v=2) | `unicorn` |  |  |  | 0.88 | 1.09 |
+| ![Fox](https://opengame.io/api/avatars/fox.classic.tangerine/portrait?size=64&theme=light&v=2) | `fox` |  |  |  | 0.90 | 0.96 |
+| ![Mouse](https://opengame.io/api/avatars/mouse.classic.tangerine/portrait?size=64&theme=light&v=2) | `mouse` |  |  |  | 1.04 | 0.91 |
+| ![Frog](https://opengame.io/api/avatars/frog.classic.tangerine/portrait?size=64&theme=light&v=2) | `frog` |  |  |  | 1.10 | 0.79 |
+| ![Chick](https://opengame.io/api/avatars/chick.classic.tangerine/portrait?size=64&theme=light&v=2) | `chick` |  |  |  | 0.85 | 1.03 |
+| ![Octopus](https://opengame.io/api/avatars/octopus.classic.tangerine/portrait?size=64&theme=light&v=2) | `octopus` |  |  |  | 0.93 | 0.97 |
+| ![Jellyfish](https://opengame.io/api/avatars/jellyfish.classic.tangerine/portrait?size=64&theme=light&v=2) | `jellyfish` |  |  |  | 0.97 | 0.86 |
+| ![Pentagon](https://opengame.io/api/avatars/pentagon.classic.tangerine/portrait?size=64&theme=light&v=2) | `pentagon` |  |  |  | 1.01 | 0.96 |
+| ![Plus](https://opengame.io/api/avatars/plus.classic.tangerine/portrait?size=64&theme=light&v=2) | `plus` |  |  |  | 1.03 | 1.00 |
+| ![Peanut](https://opengame.io/api/avatars/peanut.classic.tangerine/portrait?size=64&theme=light&v=2) | `peanut` |  |  |  | 1.04 | 0.69 |
+| ![Leaf](https://opengame.io/api/avatars/leaf.classic.tangerine/portrait?size=64&theme=light&v=2) | `leaf` |  |  |  | 0.75 | 0.92 |
+| ![Shell](https://opengame.io/api/avatars/shell.classic.tangerine/portrait?size=64&theme=light&v=2) | `shell` |  |  |  | 0.97 | 0.94 |
+| ![Tulip](https://opengame.io/api/avatars/tulip.classic.tangerine/portrait?size=64&theme=light&v=2) | `tulip` |  |  |  | 0.81 | 1.08 |
+| ![Penguin](https://opengame.io/api/avatars/penguin.classic.tangerine/portrait?size=64&theme=light&v=2) | `penguin` |  |  |  | 0.94 | 0.97 |
+| ![Owl](https://opengame.io/api/avatars/owl.classic.tangerine/portrait?size=64&theme=light&v=2) | `owl` |  |  |  | 1.04 | 0.94 |
+| ![Pig](https://opengame.io/api/avatars/pig.classic.tangerine/portrait?size=64&theme=light&v=2) | `pig` |  |  |  | 1.07 | 0.85 |
+| ![Koala](https://opengame.io/api/avatars/koala.classic.tangerine/portrait?size=64&theme=light&v=2) | `koala` |  |  |  | 1.15 | 0.75 |
+| ![Hamster](https://opengame.io/api/avatars/hamster.classic.tangerine/portrait?size=64&theme=light&v=2) | `hamster` |  |  |  | 1.03 | 0.83 |
+| ![Puppy](https://opengame.io/api/avatars/puppy.classic.tangerine/portrait?size=64&theme=light&v=2) | `puppy` |  |  |  | 1.03 | 0.81 |
+| ![Bat](https://opengame.io/api/avatars/bat.classic.tangerine/portrait?size=64&theme=light&v=2) | `bat` |  |  |  | 1.17 | 0.89 |
+| ![Hedgehog](https://opengame.io/api/avatars/hedgehog.classic.tangerine/portrait?size=64&theme=light&v=2) | `hedgehog` |  |  |  | 1.08 | 0.80 |
+| ![Axolotl](https://opengame.io/api/avatars/axolotl.classic.tangerine/portrait?size=64&theme=light&v=2) | `axolotl` |  |  |  | 1.22 | 0.86 |
+| ![Hatchling](https://opengame.io/api/avatars/hatch.classic.tangerine/portrait?size=64&theme=light&v=2) | `hatch` | Hatchling |  |  | 0.88 | 0.92 |
+| ![Bee](https://opengame.io/api/avatars/bee.classic.tangerine/portrait?size=64&theme=light&v=2) | `bee` |  |  |  | 1.04 | 0.96 |
+| ![Snail](https://opengame.io/api/avatars/snail.classic.tangerine/portrait?size=64&theme=light&v=2) | `snail` |  |  |  | 1.12 | 0.75 |
+| ![Turtle](https://opengame.io/api/avatars/turtle.classic.tangerine/portrait?size=64&theme=light&v=2) | `turtle` |  |  |  | 1.04 | 0.75 |
+| ![Crab](https://opengame.io/api/avatars/crab.classic.tangerine/portrait?size=64&theme=light&v=2) | `crab` |  |  |  | 1.12 | 0.90 |
+| ![Fish](https://opengame.io/api/avatars/fish.classic.tangerine/portrait?size=64&theme=light&v=2) | `fish` |  |  |  | 1.11 | 0.71 |
+| ![Whale](https://opengame.io/api/avatars/whale.classic.tangerine/portrait?size=64&theme=light&v=2) | `whale` |  |  |  | 1.18 | 0.89 |
+| ![Shark](https://opengame.io/api/avatars/shark.classic.tangerine/portrait?size=64&theme=light&v=2) | `shark` |  |  |  | 1.09 | 0.92 |
+| ![Strawberry](https://opengame.io/api/avatars/strawberry.classic.tangerine/portrait?size=64&theme=light&v=2) | `strawberry` |  |  |  | 0.78 | 1.08 |
+| ![Pineapple](https://opengame.io/api/avatars/pineapple.classic.tangerine/portrait?size=64&theme=light&v=2) | `pineapple` |  |  |  | 0.74 | 1.08 |
+| ![Cupcake](https://opengame.io/api/avatars/cupcake.classic.tangerine/portrait?size=64&theme=light&v=2) | `cupcake` |  |  |  | 0.97 | 1.03 |
+| ![Ice cream](https://opengame.io/api/avatars/icecream.classic.tangerine/portrait?size=64&theme=light&v=2) | `icecream` | Ice cream |  |  | 0.83 | 0.97 |
+| ![Pudding](https://opengame.io/api/avatars/pudding.classic.tangerine/portrait?size=64&theme=light&v=2) | `pudding` |  |  |  | 1.12 | 0.81 |
+| ![Toast](https://opengame.io/api/avatars/toast.classic.tangerine/portrait?size=64&theme=light&v=2) | `toast` |  |  |  | 0.99 | 0.93 |
+| ![Burger](https://opengame.io/api/avatars/burger.classic.tangerine/portrait?size=64&theme=light&v=2) | `burger` |  |  |  | 1.07 | 0.96 |
+| ![Bowl](https://opengame.io/api/avatars/bowl.classic.tangerine/portrait?size=64&theme=light&v=2) | `bowl` |  |  |  | 1.04 | 0.67 |
+| ![Mitten](https://opengame.io/api/avatars/mitten.classic.tangerine/portrait?size=64&theme=light&v=2) | `mitten` |  |  |  | 0.92 | 0.91 |
+| ![Tooth](https://opengame.io/api/avatars/tooth.classic.tangerine/portrait?size=64&theme=light&v=2) | `tooth` |  |  |  | 0.90 | 0.94 |
+| ![Candle](https://opengame.io/api/avatars/candle.classic.tangerine/portrait?size=64&theme=light&v=2) | `candle` |  |  |  | 0.69 | 1.08 |
+| ![Light bulb](https://opengame.io/api/avatars/bulb.classic.tangerine/portrait?size=64&theme=light&v=2) | `bulb` | Light bulb |  |  | 0.76 | 0.98 |
+| ![Mug](https://opengame.io/api/avatars/mug.classic.tangerine/portrait?size=64&theme=light&v=2) | `mug` |  |  |  | 0.95 | 0.79 |
+| ![Potion](https://opengame.io/api/avatars/potion.classic.tangerine/portrait?size=64&theme=light&v=2) | `potion` |  |  |  | 0.74 | 1.03 |
+| ![Balloon](https://opengame.io/api/avatars/balloon.classic.tangerine/portrait?size=64&theme=light&v=2) | `balloon` |  |  |  | 0.78 | 1.36 |
+| ![Present](https://opengame.io/api/avatars/present.classic.tangerine/portrait?size=64&theme=light&v=2) | `present` |  |  |  | 0.97 | 0.87 |
+| ![Padlock](https://opengame.io/api/avatars/padlock.classic.tangerine/portrait?size=64&theme=light&v=2) | `padlock` |  |  |  | 0.88 | 0.90 |
+| ![House](https://opengame.io/api/avatars/house.classic.tangerine/portrait?size=64&theme=light&v=2) | `house` |  |  |  | 1.07 | 0.96 |
+| ![TV](https://opengame.io/api/avatars/tv.classic.tangerine/portrait?size=64&theme=light&v=2) | `tv` | TV |  |  | 1.04 | 1.04 |
+| ![Gamepad](https://opengame.io/api/avatars/gamepad.classic.tangerine/portrait?size=64&theme=light&v=2) | `gamepad` |  |  |  | 1.08 | 0.61 |
+| ![Trophy](https://opengame.io/api/avatars/trophy.classic.tangerine/portrait?size=64&theme=light&v=2) | `trophy` |  |  |  | 1.03 | 0.90 |
+| ![Chest](https://opengame.io/api/avatars/chest.classic.tangerine/portrait?size=64&theme=light&v=2) | `chest` |  |  |  | 1.04 | 0.71 |
+| ![Bomb](https://opengame.io/api/avatars/bomb.classic.tangerine/portrait?size=64&theme=light&v=2) | `bomb` |  |  |  | 0.84 | 1.07 |
+| ![Pawn](https://opengame.io/api/avatars/pawn.classic.tangerine/portrait?size=64&theme=light&v=2) | `pawn` |  |  |  | 0.79 | 1.12 |
+| ![Spade](https://opengame.io/api/avatars/spade.classic.tangerine/portrait?size=64&theme=light&v=2) | `spade` |  |  |  | 0.92 | 0.97 |
+| ![Club](https://opengame.io/api/avatars/club.classic.tangerine/portrait?size=64&theme=light&v=2) | `club` |  |  |  | 0.92 | 0.96 |
+| ![Wizard](https://opengame.io/api/avatars/wizard.classic.tangerine/portrait?size=64&theme=light&v=2) | `wizard` |  |  |  | 0.99 | 1.10 |
+| ![Rocket](https://opengame.io/api/avatars/rocket.classic.tangerine/portrait?size=64&theme=light&v=2) | `rocket` |  |  |  | 0.88 | 0.96 |
+| ![Planet](https://opengame.io/api/avatars/planet.classic.tangerine/portrait?size=64&theme=light&v=2) | `planet` |  |  |  | 1.28 | 0.74 |
+| ![Panda](https://opengame.io/api/avatars/panda.classic.tangerine/portrait?size=64&theme=light&v=2) | `panda` |  |  | contrast | 0.97 | 0.90 |
+| ![Ladybug](https://opengame.io/api/avatars/ladybug.classic.tangerine/portrait?size=64&theme=light&v=2) | `ladybug` |  |  | contrast | 1.03 | 1.04 |
+| ![Elephant](https://opengame.io/api/avatars/elephant.classic.tangerine/portrait?size=64&theme=light&v=2) | `elephant` |  |  |  | 1.15 | 0.81 |
+| ![Lion](https://opengame.io/api/avatars/lion.classic.tangerine/portrait?size=64&theme=light&v=2) | `lion` |  |  |  | 0.94 | 0.97 |
+| ![Sheep](https://opengame.io/api/avatars/sheep.classic.tangerine/portrait?size=64&theme=light&v=2) | `sheep` |  |  |  | 1.08 | 0.79 |
+| ![Cow](https://opengame.io/api/avatars/cow.classic.tangerine/portrait?size=64&theme=light&v=2) | `cow` |  |  | contrast | 1.15 | 1.02 |
+| ![Duck](https://opengame.io/api/avatars/duck.classic.tangerine/portrait?size=64&theme=light&v=2) | `duck` |  |  |  | 1.14 | 0.94 |
+| ![Seal](https://opengame.io/api/avatars/seal.classic.tangerine/portrait?size=64&theme=light&v=2) | `seal` |  |  |  | 0.88 | 0.90 |
+| ![Dragon](https://opengame.io/api/avatars/dragon.classic.tangerine/portrait?size=64&theme=light&v=2) | `dragon` |  |  |  | 1.12 | 1.03 |
+| ![Dinosaur](https://opengame.io/api/avatars/dino.classic.tangerine/portrait?size=64&theme=light&v=2) | `dino` | Dinosaur |  |  | 1.14 | 0.97 |
+| ![Deer](https://opengame.io/api/avatars/deer.classic.tangerine/portrait?size=64&theme=light&v=2) | `deer` |  |  |  | 0.97 | 1.07 |
+| ![Giraffe](https://opengame.io/api/avatars/giraffe.classic.tangerine/portrait?size=64&theme=light&v=2) | `giraffe` |  |  | contrast | 0.94 | 1.04 |
+| ![Monkey](https://opengame.io/api/avatars/monkey.classic.tangerine/portrait?size=64&theme=light&v=2) | `monkey` |  |  | light | 1.12 | 0.89 |
+| ![Mole](https://opengame.io/api/avatars/mole.classic.tangerine/portrait?size=64&theme=light&v=2) | `mole` |  |  |  | 1.12 | 0.76 |
+| ![Squid](https://opengame.io/api/avatars/squid.classic.tangerine/portrait?size=64&theme=light&v=2) | `squid` |  |  |  | 0.71 | 0.96 |
+| ![Manta ray](https://opengame.io/api/avatars/ray.classic.tangerine/portrait?size=64&theme=light&v=2) | `ray` | Manta ray |  |  | 1.14 | 0.88 |
+| ![Butterfly](https://opengame.io/api/avatars/butterfly.classic.tangerine/portrait?size=64&theme=light&v=2) | `butterfly` |  |  |  | 1.06 | 1.04 |
+| ![Spider](https://opengame.io/api/avatars/spider.classic.tangerine/portrait?size=64&theme=light&v=2) | `spider` |  |  |  | 1.12 | 1.10 |
+| ![Caterpillar](https://opengame.io/api/avatars/caterpillar.classic.tangerine/portrait?size=64&theme=light&v=2) | `caterpillar` |  |  |  | 1.09 | 0.99 |
+| ![Yeti](https://opengame.io/api/avatars/yeti.classic.tangerine/portrait?size=64&theme=light&v=2) | `yeti` |  |  |  | 1.17 | 1.04 |
+| ![Goose](https://opengame.io/api/avatars/goose.classic.tangerine/portrait?size=64&theme=light&v=2) | `goose` |  |  |  | 1.13 | 0.99 |
+| ![Toucan](https://opengame.io/api/avatars/toucan.classic.tangerine/portrait?size=64&theme=light&v=2) | `toucan` |  |  |  | 1.06 | 0.77 |
+| ![Parrot](https://opengame.io/api/avatars/parrot.classic.tangerine/portrait?size=64&theme=light&v=2) | `parrot` |  |  |  | 0.80 | 1.10 |
+| ![Rhino](https://opengame.io/api/avatars/rhino.classic.tangerine/portrait?size=64&theme=light&v=2) | `rhino` |  |  |  | 1.09 | 0.69 |
+| ![Hippo](https://opengame.io/api/avatars/hippo.classic.tangerine/portrait?size=64&theme=light&v=2) | `hippo` |  |  |  | 0.99 | 0.88 |
+| ![Llama](https://opengame.io/api/avatars/llama.classic.tangerine/portrait?size=64&theme=light&v=2) | `llama` |  |  |  | 0.62 | 1.10 |
+| ![Camel](https://opengame.io/api/avatars/camel.classic.tangerine/portrait?size=64&theme=light&v=2) | `camel` |  |  |  | 1.05 | 0.77 |
+| ![Ram](https://opengame.io/api/avatars/ram.classic.tangerine/portrait?size=64&theme=light&v=2) | `ram` |  |  |  | 1.10 | 0.74 |
+| ![Walrus](https://opengame.io/api/avatars/walrus.classic.tangerine/portrait?size=64&theme=light&v=2) | `walrus` |  |  |  | 0.97 | 0.88 |
+| ![Hen](https://opengame.io/api/avatars/hen.classic.tangerine/portrait?size=64&theme=light&v=2) | `hen` |  |  |  | 0.98 | 0.98 |
+| ![Squirrel](https://opengame.io/api/avatars/squirrel.classic.tangerine/portrait?size=64&theme=light&v=2) | `squirrel` |  |  |  | 0.88 | 0.92 |
+| ![Golem](https://opengame.io/api/avatars/golem.classic.tangerine/portrait?size=64&theme=light&v=2) | `golem` |  |  |  | 1.07 | 0.92 |
+| ![Cherry](https://opengame.io/api/avatars/cherry.classic.tangerine/portrait?size=64&theme=light&v=2) | `cherry` |  |  |  | 0.89 | 1.01 |
+| ![Banana](https://opengame.io/api/avatars/banana.classic.tangerine/portrait?size=64&theme=light&v=2) | `banana` |  |  |  | 1.03 | 0.72 |
+| ![Carrot](https://opengame.io/api/avatars/carrot.classic.tangerine/portrait?size=64&theme=light&v=2) | `carrot` |  |  |  | 0.71 | 1.09 |
+| ![Eggplant](https://opengame.io/api/avatars/eggplant.classic.tangerine/portrait?size=64&theme=light&v=2) | `eggplant` |  |  |  | 0.69 | 1.07 |
+| ![Corn](https://opengame.io/api/avatars/corn.classic.tangerine/portrait?size=64&theme=light&v=2) | `corn` |  |  |  | 0.83 | 1.01 |
+| ![Cookie](https://opengame.io/api/avatars/cookie.classic.tangerine/portrait?size=64&theme=light&v=2) | `cookie` |  |  |  | 0.96 | 0.97 |
+| ![Macaron](https://opengame.io/api/avatars/macaron.classic.tangerine/portrait?size=64&theme=light&v=2) | `macaron` |  |  |  | 1.00 | 0.71 |
+| ![Popsicle](https://opengame.io/api/avatars/popsicle.classic.tangerine/portrait?size=64&theme=light&v=2) | `popsicle` |  |  |  | 0.74 | 0.99 |
+| ![Cake slice](https://opengame.io/api/avatars/cake.classic.tangerine/portrait?size=64&theme=light&v=2) | `cake` | Cake slice |  |  | 1.04 | 1.02 |
+| ![Croissant](https://opengame.io/api/avatars/croissant.classic.tangerine/portrait?size=64&theme=light&v=2) | `croissant` |  |  |  | 1.10 | 0.64 |
+| ![Bubble tea](https://opengame.io/api/avatars/boba.classic.tangerine/portrait?size=64&theme=light&v=2) | `boba` | Bubble tea |  |  | 0.76 | 1.06 |
+| ![Pizza](https://opengame.io/api/avatars/pizza.classic.tangerine/portrait?size=64&theme=light&v=2) | `pizza` |  |  |  | 1.08 | 0.90 |
+| ![Chili](https://opengame.io/api/avatars/chili.classic.tangerine/portrait?size=64&theme=light&v=2) | `chili` |  |  |  | 0.95 | 1.05 |
+| ![Grapes](https://opengame.io/api/avatars/grapes.classic.tangerine/portrait?size=64&theme=light&v=2) | `grapes` |  |  |  | 0.96 | 1.05 |
+| ![Radish](https://opengame.io/api/avatars/radish.classic.tangerine/portrait?size=64&theme=light&v=2) | `radish` |  |  |  | 0.69 | 1.08 |
+| ![Popcorn](https://opengame.io/api/avatars/popcorn.classic.tangerine/portrait?size=64&theme=light&v=2) | `popcorn` |  |  |  | 0.79 | 0.99 |
+| ![Fries](https://opengame.io/api/avatars/fries.classic.tangerine/portrait?size=64&theme=light&v=2) | `fries` |  |  |  | 0.81 | 1.05 |
+| ![Hot dog](https://opengame.io/api/avatars/hotdog.classic.tangerine/portrait?size=64&theme=light&v=2) | `hotdog` | Hot dog |  |  | 1.13 | 0.62 |
+| ![Candy](https://opengame.io/api/avatars/candy.classic.tangerine/portrait?size=64&theme=light&v=2) | `candy` |  |  |  | 1.17 | 0.64 |
+| ![Teapot](https://opengame.io/api/avatars/teapot.classic.tangerine/portrait?size=64&theme=light&v=2) | `teapot` |  |  |  | 1.12 | 0.79 |
+| ![Cauldron](https://opengame.io/api/avatars/cauldron.classic.tangerine/portrait?size=64&theme=light&v=2) | `cauldron` |  |  |  | 0.78 | 0.99 |
+| ![Bottle](https://opengame.io/api/avatars/bottle.classic.tangerine/portrait?size=64&theme=light&v=2) | `bottle` |  |  |  | 0.64 | 1.02 |
+| ![Jar](https://opengame.io/api/avatars/jar.classic.tangerine/portrait?size=64&theme=light&v=2) | `jar` |  |  |  | 0.83 | 0.93 |
+| ![Hourglass](https://opengame.io/api/avatars/hourglass.classic.tangerine/portrait?size=64&theme=light&v=2) | `hourglass` |  |  |  | 0.79 | 1.04 |
+| ![Lantern](https://opengame.io/api/avatars/lantern.classic.tangerine/portrait?size=64&theme=light&v=2) | `lantern` |  |  |  | 0.79 | 0.97 |
+| ![Umbrella](https://opengame.io/api/avatars/umbrella.classic.tangerine/portrait?size=64&theme=light&v=2) | `umbrella` |  |  |  | 1.10 | 1.00 |
+| ![Potted plant](https://opengame.io/api/avatars/plant.classic.tangerine/portrait?size=64&theme=light&v=2) | `plant` | Potted plant |  |  | 0.79 | 1.07 |
+| ![Snow globe](https://opengame.io/api/avatars/globe.classic.tangerine/portrait?size=64&theme=light&v=2) | `globe` | Snow globe |  |  | 0.81 | 0.90 |
+| ![Mailbox](https://opengame.io/api/avatars/mailbox.classic.tangerine/portrait?size=64&theme=light&v=2) | `mailbox` |  |  |  | 0.98 | 0.90 |
+| ![Traffic cone](https://opengame.io/api/avatars/cone.classic.tangerine/portrait?size=64&theme=light&v=2) | `cone` | Traffic cone |  |  | 1.03 | 1.00 |
+| ![Hydrant](https://opengame.io/api/avatars/hydrant.classic.tangerine/portrait?size=64&theme=light&v=2) | `hydrant` |  |  |  | 0.81 | 1.00 |
+| ![Rain cloud](https://opengame.io/api/avatars/rain.classic.tangerine/portrait?size=64&theme=light&v=2) | `rain` | Rain cloud |  |  | 0.96 | 0.92 |
+| ![Sun](https://opengame.io/api/avatars/sun.classic.tangerine/portrait?size=64&theme=light&v=2) | `sun` |  |  |  | 1.03 | 1.04 |
+| ![Crystal](https://opengame.io/api/avatars/crystal.classic.tangerine/portrait?size=64&theme=light&v=2) | `crystal` |  |  |  | 1.07 | 1.07 |
+| ![Tree](https://opengame.io/api/avatars/tree.classic.tangerine/portrait?size=64&theme=light&v=2) | `tree` |  |  |  | 0.96 | 1.01 |
+| ![Pine](https://opengame.io/api/avatars/pine.classic.tangerine/portrait?size=64&theme=light&v=2) | `pine` |  |  |  | 1.08 | 1.08 |
+| ![Volcano](https://opengame.io/api/avatars/volcano.classic.tangerine/portrait?size=64&theme=light&v=2) | `volcano` |  |  |  | 1.13 | 1.08 |
+| ![Comet](https://opengame.io/api/avatars/comet.classic.tangerine/portrait?size=64&theme=light&v=2) | `comet` |  |  |  | 1.00 | 1.08 |
+| ![Knight](https://opengame.io/api/avatars/knight.classic.tangerine/portrait?size=64&theme=light&v=2) | `knight` |  |  |  | 0.97 | 1.03 |
+| ![Ninja](https://opengame.io/api/avatars/ninja.classic.tangerine/portrait?size=64&theme=light&v=2) | `ninja` |  |  | light | 1.01 | 0.84 |
+| ![Tower](https://opengame.io/api/avatars/tower.classic.tangerine/portrait?size=64&theme=light&v=2) | `tower` |  |  |  | 0.81 | 0.95 |
+| ![Lighthouse](https://opengame.io/api/avatars/lighthouse.classic.tangerine/portrait?size=64&theme=light&v=2) | `lighthouse` |  |  |  | 0.76 | 1.01 |
+| ![Windmill](https://opengame.io/api/avatars/windmill.classic.tangerine/portrait?size=64&theme=light&v=2) | `windmill` |  |  |  | 0.90 | 1.09 |
+| ![Camera](https://opengame.io/api/avatars/camera.classic.tangerine/portrait?size=64&theme=light&v=2) | `camera` |  |  |  | 1.07 | 0.73 |
+| ![Joystick](https://opengame.io/api/avatars/joystick.classic.tangerine/portrait?size=64&theme=light&v=2) | `joystick` |  |  |  | 1.00 | 1.01 |
+| ![Arcade cabinet](https://opengame.io/api/avatars/arcade.classic.tangerine/portrait?size=64&theme=light&v=2) | `arcade` | Arcade cabinet |  |  | 0.83 | 1.00 |
+| ![Medal](https://opengame.io/api/avatars/medal.classic.tangerine/portrait?size=64&theme=light&v=2) | `medal` |  |  |  | 0.67 | 1.05 |
+| ![Satellite](https://opengame.io/api/avatars/satellite.classic.tangerine/portrait?size=64&theme=light&v=2) | `satellite` |  |  |  | 1.14 | 1.04 |
+| ![Tornado](https://opengame.io/api/avatars/tornado.classic.tangerine/portrait?size=64&theme=light&v=2) | `tornado` |  |  |  | 1.03 | 1.00 |
+| ![Stump](https://opengame.io/api/avatars/stump.classic.tangerine/portrait?size=64&theme=light&v=2) | `stump` |  |  |  | 1.06 | 0.95 |
+| ![Lamp](https://opengame.io/api/avatars/lamp.classic.tangerine/portrait?size=64&theme=light&v=2) | `lamp` |  |  |  | 0.99 | 1.04 |
+| ![Alarm clock](https://opengame.io/api/avatars/alarm.classic.tangerine/portrait?size=64&theme=light&v=2) | `alarm` | Alarm clock |  |  | 0.85 | 0.97 |
+| ![Hot air balloon](https://opengame.io/api/avatars/hotair.classic.tangerine/portrait?size=64&theme=light&v=2) | `hotair` | Hot air balloon |  |  | 0.81 | 1.06 |
+| ![Car](https://opengame.io/api/avatars/car.classic.tangerine/portrait?size=64&theme=light&v=2) | `car` |  |  |  | 1.10 | 0.68 |
+| ![Tugboat](https://opengame.io/api/avatars/boat.classic.tangerine/portrait?size=64&theme=light&v=2) | `boat` | Tugboat |  |  | 1.17 | 1.04 |
+| ![Submarine](https://opengame.io/api/avatars/sub.classic.tangerine/portrait?size=64&theme=light&v=2) | `sub` | Submarine |  |  | 1.14 | 0.89 |
+| ![Bone](https://opengame.io/api/avatars/bone.classic.tangerine/portrait?size=64&theme=light&v=2) | `bone` |  |  |  | 1.06 | 0.60 |
+| ![Sock](https://opengame.io/api/avatars/sock.classic.tangerine/portrait?size=64&theme=light&v=2) | `sock` |  |  |  | 0.96 | 0.96 |
+| ![T-shirt](https://opengame.io/api/avatars/tshirt.classic.tangerine/portrait?size=64&theme=light&v=2) | `tshirt` | T-shirt |  |  | 1.17 | 0.86 |
+| ![Top hat](https://opengame.io/api/avatars/tophat.classic.tangerine/portrait?size=64&theme=light&v=2) | `tophat` | Top hat |  |  | 1.10 | 0.87 |
+| ![Key](https://opengame.io/api/avatars/key.classic.tangerine/portrait?size=64&theme=light&v=2) | `key` |  |  |  | 0.69 | 1.00 |
+| ![Raccoon](https://opengame.io/api/avatars/raccoon.classic.tangerine/portrait?size=64&theme=light&v=2) | `raccoon` |  |  | contrast | 1.15 | 0.92 |
+| ![Tiger](https://opengame.io/api/avatars/tiger.classic.tangerine/portrait?size=64&theme=light&v=2) | `tiger` |  |  | contrast | 1.15 | 0.88 |
+| ![Koi](https://opengame.io/api/avatars/koi.classic.tangerine/portrait?size=64&theme=light&v=2) | `koi` |  |  | contrast | 0.87 | 0.91 |
+| ![Dalmatian](https://opengame.io/api/avatars/dalmatian.classic.tangerine/portrait?size=64&theme=light&v=2) | `dalmatian` |  |  | contrast | 0.97 | 0.81 |
+| ![Zebra](https://opengame.io/api/avatars/zebra.classic.tangerine/portrait?size=64&theme=light&v=2) | `zebra` |  |  | contrast | 0.69 | 1.03 |
+| ![Bearded bust](https://opengame.io/api/avatars/bust.classic.tangerine/portrait?size=64&theme=light&v=2) | `bust` | Bearded bust |  | dark | 0.74 | 1.02 |
+| ![Mop top](https://opengame.io/api/avatars/moptop.classic.tangerine/portrait?size=64&theme=light&v=2) | `moptop` | Mop top | yes | dark | 1.05 | 1.05 |
+| ![Spiky crop](https://opengame.io/api/avatars/spikecut.classic.tangerine/portrait?size=64&theme=light&v=2) | `spikecut` | Spiky crop | yes | dark | 0.89 | 0.96 |
+| ![Side part](https://opengame.io/api/avatars/sidepart.classic.tangerine/portrait?size=64&theme=light&v=2) | `sidepart` | Side part | yes | grey | 0.89 | 1.10 |
+| ![Pompadour](https://opengame.io/api/avatars/pompadour.classic.tangerine/portrait?size=64&theme=light&v=2) | `pompadour` |  | yes | dark | 0.78 | 1.11 |
+| ![Sculpted head](https://opengame.io/api/avatars/sculpt.classic.tangerine/portrait?size=64&theme=light&v=2) | `sculpt` | Sculpted head |  |  | 0.77 | 1.03 |
+| ![Brick pyramid](https://opengame.io/api/avatars/pyramid.classic.tangerine/portrait?size=64&theme=light&v=2) | `pyramid` | Brick pyramid |  | dark | 1.03 | 1.00 |
+| ![Swept quiff](https://opengame.io/api/avatars/quiff.classic.tangerine/portrait?size=64&theme=light&v=2) | `quiff` | Swept quiff |  | dark | 0.83 | 1.09 |
+| ![Full beard](https://opengame.io/api/avatars/fullbeard.classic.tangerine/portrait?size=64&theme=light&v=2) | `fullbeard` | Full beard |  | brown | 0.81 | 0.95 |
+| ![Wavy hair](https://opengame.io/api/avatars/waves.classic.tangerine/portrait?size=64&theme=light&v=2) | `waves` | Wavy hair |  | dark | 0.98 | 1.03 |
+| ![Moustache](https://opengame.io/api/avatars/tache.classic.tangerine/portrait?size=64&theme=light&v=2) | `tache` | Moustache |  | dark | 0.92 | 1.00 |
+| ![Long hair](https://opengame.io/api/avatars/longhair.classic.tangerine/portrait?size=64&theme=light&v=2) | `longhair` | Long hair | yes | dark | 0.96 | 1.03 |
+| ![Long waves](https://opengame.io/api/avatars/longwaves.classic.tangerine/portrait?size=64&theme=light&v=2) | `longwaves` | Long waves | yes | dark | 1.08 | 1.06 |
+| ![Deep waves](https://opengame.io/api/avatars/deepwaves.classic.tangerine/portrait?size=64&theme=light&v=2) | `deepwaves` | Deep waves | yes | dark | 1.17 | 1.04 |
+| ![Short fringe](https://opengame.io/api/avatars/shortfringe.classic.tangerine/portrait?size=64&theme=light&v=2) | `shortfringe` | Short fringe | yes | brown | 0.88 | 1.05 |
+| ![Short curls](https://opengame.io/api/avatars/shortcurls.classic.tangerine/portrait?size=64&theme=light&v=2) | `shortcurls` | Short curls | yes | dark | 0.81 | 1.05 |
+| ![Layered fringe](https://opengame.io/api/avatars/layeredfringe.classic.tangerine/portrait?size=64&theme=light&v=2) | `layeredfringe` | Layered fringe | yes | dark | 0.84 | 1.10 |
+| ![Silk fringe](https://opengame.io/api/avatars/silkfringe.classic.tangerine/portrait?size=64&theme=light&v=2) | `silkfringe` | Silk fringe | yes | grey | 0.92 | 1.07 |
+| ![Short quiff](https://opengame.io/api/avatars/shortquiff.classic.tangerine/portrait?size=64&theme=light&v=2) | `shortquiff` | Short quiff | yes | brown | 0.83 | 1.11 |
+| ![Tousled crop](https://opengame.io/api/avatars/tousled.classic.tangerine/portrait?size=64&theme=light&v=2) | `tousled` | Tousled crop | yes | brown | 0.83 | 1.07 |
+| ![Shaved and bearded](https://opengame.io/api/avatars/shavedbeard.classic.tangerine/portrait?size=64&theme=light&v=2) | `shavedbeard` | Shaved and bearded |  | dark | 0.86 | 0.93 |
+| ![Buzz cut](https://opengame.io/api/avatars/buzzcut.classic.tangerine/portrait?size=64&theme=light&v=2) | `buzzcut` | Buzz cut | yes | dark | 0.85 | 0.89 |
+| ![Crew cut](https://opengame.io/api/avatars/crewcut.classic.tangerine/portrait?size=64&theme=light&v=2) | `crewcut` | Crew cut | yes | brown | 0.85 | 0.99 |
+| ![Receding hairline](https://opengame.io/api/avatars/receding.classic.tangerine/portrait?size=64&theme=light&v=2) | `receding` | Receding hairline | yes | dark | 0.85 | 0.92 |
+| ![Slicked back](https://opengame.io/api/avatars/slickback.classic.tangerine/portrait?size=64&theme=light&v=2) | `slickback` | Slicked back | yes | brown | 0.86 | 1.09 |
+| ![Faux hawk](https://opengame.io/api/avatars/fauxhawk.classic.tangerine/portrait?size=64&theme=light&v=2) | `fauxhawk` | Faux hawk | yes | dark | 0.85 | 1.12 |
+| ![Pixie cut](https://opengame.io/api/avatars/pixie.classic.tangerine/portrait?size=64&theme=light&v=2) | `pixie` | Pixie cut | yes | dark | 0.83 | 0.93 |
+| ![Cornrows](https://opengame.io/api/avatars/cornrows.classic.tangerine/portrait?size=64&theme=light&v=2) | `cornrows` |  | yes | dark | 0.85 | 0.90 |
+| ![Curtains](https://opengame.io/api/avatars/curtains.classic.tangerine/portrait?size=64&theme=light&v=2) | `curtains` |  | yes | brown | 0.88 | 1.01 |
+| ![Afro](https://opengame.io/api/avatars/afro.classic.tangerine/portrait?size=64&theme=light&v=2) | `afro` |  | yes | dark | 1.03 | 1.06 |
+| ![Top knot](https://opengame.io/api/avatars/topknot.classic.tangerine/portrait?size=64&theme=light&v=2) | `topknot` | Top knot | yes | dark | 0.85 | 1.10 |
+| ![Space buns](https://opengame.io/api/avatars/twinbuns.classic.tangerine/portrait?size=64&theme=light&v=2) | `twinbuns` | Space buns | yes | brown | 0.85 | 1.04 |
+| ![Bob](https://opengame.io/api/avatars/bob.classic.tangerine/portrait?size=64&theme=light&v=2) | `bob` |  | yes | dark | 0.83 | 0.96 |
+| ![Low ponytail](https://opengame.io/api/avatars/lowpony.classic.tangerine/portrait?size=64&theme=light&v=2) | `lowpony` | Low ponytail | yes | brown | 0.98 | 0.93 |
+| ![Locs](https://opengame.io/api/avatars/locs.classic.tangerine/portrait?size=64&theme=light&v=2) | `locs` |  | yes | dark | 1.10 | 1.00 |
+| ![Side-swept long](https://opengame.io/api/avatars/sideswept.classic.tangerine/portrait?size=64&theme=light&v=2) | `sideswept` | Side-swept long | yes | dark | 0.92 | 1.04 |
+| ![Skin fade](https://opengame.io/api/avatars/skinfade.classic.tangerine/portrait?size=64&theme=light&v=2) | `skinfade` | Skin fade | yes | dark | 0.85 | 1.00 |
+| ![Undercut](https://opengame.io/api/avatars/undercut.classic.tangerine/portrait?size=64&theme=light&v=2) | `undercut` |  | yes | dark | 0.85 | 1.12 |
+| ![French crop](https://opengame.io/api/avatars/frenchcrop.classic.tangerine/portrait?size=64&theme=light&v=2) | `frenchcrop` | French crop | yes | dark | 0.85 | 0.96 |
+| ![Mohawk](https://opengame.io/api/avatars/mohawk.classic.tangerine/portrait?size=64&theme=light&v=2) | `mohawk` |  | yes | dark | 0.85 | 1.12 |
+| ![Long bob](https://opengame.io/api/avatars/lob.classic.tangerine/portrait?size=64&theme=light&v=2) | `lob` | Long bob | yes | brown | 0.86 | 0.97 |
+| ![Blunt bangs](https://opengame.io/api/avatars/bluntbangs.classic.tangerine/portrait?size=64&theme=light&v=2) | `bluntbangs` | Blunt bangs | yes | dark | 0.94 | 0.96 |
+| ![Curtain bangs](https://opengame.io/api/avatars/curtainbangs.classic.tangerine/portrait?size=64&theme=light&v=2) | `curtainbangs` | Curtain bangs | yes | brown | 1.12 | 1.02 |
+| ![Shag](https://opengame.io/api/avatars/shag.classic.tangerine/portrait?size=64&theme=light&v=2) | `shag` |  | yes | brown | 1.01 | 0.94 |
+| ![Long curls](https://opengame.io/api/avatars/longcurls.classic.tangerine/portrait?size=64&theme=light&v=2) | `longcurls` | Long curls | yes | dark | 1.22 | 1.04 |
+| ![Afro puff](https://opengame.io/api/avatars/afropuff.classic.tangerine/portrait?size=64&theme=light&v=2) | `afropuff` | Afro puff | yes | dark | 0.85 | 1.10 |
+| ![High ponytail](https://opengame.io/api/avatars/highpony.classic.tangerine/portrait?size=64&theme=light&v=2) | `highpony` | High ponytail | yes | dark | 0.90 | 1.09 |
+| ![High bun](https://opengame.io/api/avatars/highbun.classic.tangerine/portrait?size=64&theme=light&v=2) | `highbun` | High bun | yes | brown | 0.85 | 1.10 |
+| ![Messy bun](https://opengame.io/api/avatars/messybun.classic.tangerine/portrait?size=64&theme=light&v=2) | `messybun` | Messy bun | yes | brown | 0.85 | 1.11 |
+| ![Pigtails](https://opengame.io/api/avatars/pigtails.classic.tangerine/portrait?size=64&theme=light&v=2) | `pigtails` |  | yes | dark | 1.03 | 0.92 |
+| ![Box braids](https://opengame.io/api/avatars/boxbraids.classic.tangerine/portrait?size=64&theme=light&v=2) | `boxbraids` | Box braids | yes | dark | 0.97 | 1.03 |
+| ![Half up](https://opengame.io/api/avatars/halfup.classic.tangerine/portrait?size=64&theme=light&v=2) | `halfup` | Half up | yes | brown | 0.94 | 1.15 |
+| ![Textured crop](https://opengame.io/api/avatars/texturedcrop.classic.tangerine/portrait?size=64&theme=light&v=2) | `texturedcrop` | Textured crop | yes | brown | 0.85 | 0.99 |
+| ![Tapered crop](https://opengame.io/api/avatars/taperedcrop.classic.tangerine/portrait?size=64&theme=light&v=2) | `taperedcrop` | Tapered crop | yes | brown | 0.85 | 0.96 |
+| ![Soft quiff](https://opengame.io/api/avatars/softquiff.classic.tangerine/portrait?size=64&theme=light&v=2) | `softquiff` | Soft quiff | yes | brown | 0.85 | 1.09 |
+| ![Curly crop](https://opengame.io/api/avatars/curlycrop.classic.tangerine/portrait?size=64&theme=light&v=2) | `curlycrop` | Curly crop | yes | dark | 0.85 | 0.97 |
+| ![Soft bob](https://opengame.io/api/avatars/softbob.classic.tangerine/portrait?size=64&theme=light&v=2) | `softbob` | Soft bob | yes | brown | 0.92 | 0.84 |
+| ![Round bob](https://opengame.io/api/avatars/roundbob.classic.tangerine/portrait?size=64&theme=light&v=2) | `roundbob` | Round bob | yes | brown | 0.81 | 0.84 |
 <!-- /avatar-spec:shapes -->
 
 <!-- avatar-spec:shape-eyes -->
@@ -701,167 +701,167 @@ A style uses only the head's two eye colors, apart from `googly`, which is white
 <!-- avatar-spec:eye-styles -->
 | Picture | Id | Label |
 | --- | --- | --- |
-| ![Classic](https://opengame.io/api/avatars/circle.classic.tangerine/portrait?size=64&theme=light&v=1) | `classic` |  |
-| ![Sparkle](https://opengame.io/api/avatars/circle.sparkle.tangerine/portrait?size=64&theme=light&v=1) | `sparkle` |  |
-| ![Wink](https://opengame.io/api/avatars/circle.wink.tangerine/portrait?size=64&theme=light&v=1) | `wink` |  |
-| ![Happy](https://opengame.io/api/avatars/circle.happy.tangerine/portrait?size=64&theme=light&v=1) | `happy` |  |
-| ![Calm](https://opengame.io/api/avatars/circle.calm.tangerine/portrait?size=64&theme=light&v=1) | `calm` |  |
-| ![Angry](https://opengame.io/api/avatars/circle.angry.tangerine/portrait?size=64&theme=light&v=1) | `angry` |  |
-| ![Sad](https://opengame.io/api/avatars/circle.sad.tangerine/portrait?size=64&theme=light&v=1) | `sad` |  |
-| ![Sleepy](https://opengame.io/api/avatars/circle.sleepy.tangerine/portrait?size=64&theme=light&v=1) | `sleepy` |  |
-| ![Squint](https://opengame.io/api/avatars/circle.squint.tangerine/portrait?size=64&theme=light&v=1) | `squint` |  |
-| ![Wide](https://opengame.io/api/avatars/circle.wide.tangerine/portrait?size=64&theme=light&v=1) | `wide` |  |
-| ![Dots](https://opengame.io/api/avatars/circle.dots.tangerine/portrait?size=64&theme=light&v=1) | `dots` |  |
-| ![One eye](https://opengame.io/api/avatars/circle.cyclops.tangerine/portrait?size=64&theme=light&v=1) | `cyclops` | One eye |
-| ![Hearts](https://opengame.io/api/avatars/circle.hearts.tangerine/portrait?size=64&theme=light&v=1) | `hearts` |  |
-| ![Stars](https://opengame.io/api/avatars/circle.stars.tangerine/portrait?size=64&theme=light&v=1) | `stars` |  |
-| ![Dazed](https://opengame.io/api/avatars/circle.dazed.tangerine/portrait?size=64&theme=light&v=1) | `dazed` |  |
-| ![Glasses](https://opengame.io/api/avatars/circle.glasses.tangerine/portrait?size=64&theme=light&v=1) | `glasses` |  |
-| ![Lashes](https://opengame.io/api/avatars/circle.lashes.tangerine/portrait?size=64&theme=light&v=1) | `lashes` |  |
-| ![Googly](https://opengame.io/api/avatars/circle.googly.tangerine/portrait?size=64&theme=light&v=1) | `googly` |  |
-| ![Dizzy](https://opengame.io/api/avatars/circle.dizzy.tangerine/portrait?size=64&theme=light&v=1) | `dizzy` |  |
-| ![Crying](https://opengame.io/api/avatars/circle.crying.tangerine/portrait?size=64&theme=light&v=1) | `crying` |  |
-| ![Excited](https://opengame.io/api/avatars/circle.excited.tangerine/portrait?size=64&theme=light&v=1) | `excited` |  |
-| ![Side eye](https://opengame.io/api/avatars/circle.sideeye.tangerine/portrait?size=64&theme=light&v=1) | `sideeye` | Side eye |
-| ![Visor](https://opengame.io/api/avatars/circle.visor.tangerine/portrait?size=64&theme=light&v=1) | `visor` |  |
-| ![Square](https://opengame.io/api/avatars/circle.square.tangerine/portrait?size=64&theme=light&v=1) | `square` |  |
-| ![Monocle](https://opengame.io/api/avatars/circle.monocle.tangerine/portrait?size=64&theme=light&v=1) | `monocle` |  |
-| ![Anime](https://opengame.io/api/avatars/circle.anime.tangerine/portrait?size=64&theme=light&v=1) | `anime` |  |
-| ![Pleading](https://opengame.io/api/avatars/circle.pleading.tangerine/portrait?size=64&theme=light&v=1) | `pleading` |  |
-| ![Ovals](https://opengame.io/api/avatars/circle.ovals.tangerine/portrait?size=64&theme=light&v=1) | `ovals` |  |
-| ![Mismatched](https://opengame.io/api/avatars/circle.mismatched.tangerine/portrait?size=64&theme=light&v=1) | `mismatched` |  |
-| ![Brows](https://opengame.io/api/avatars/circle.brows.tangerine/portrait?size=64&theme=light&v=1) | `brows` |  |
-| ![Worried](https://opengame.io/api/avatars/circle.worried.tangerine/portrait?size=64&theme=light&v=1) | `worried` |  |
-| ![Raised brow](https://opengame.io/api/avatars/circle.raised.tangerine/portrait?size=64&theme=light&v=1) | `raised` | Raised brow |
-| ![Furious](https://opengame.io/api/avatars/circle.furious.tangerine/portrait?size=64&theme=light&v=1) | `furious` |  |
-| ![Shocked](https://opengame.io/api/avatars/circle.shocked.tangerine/portrait?size=64&theme=light&v=1) | `shocked` |  |
-| ![Sly](https://opengame.io/api/avatars/circle.sly.tangerine/portrait?size=64&theme=light&v=1) | `sly` |  |
-| ![Slit](https://opengame.io/api/avatars/circle.slit.tangerine/portrait?size=64&theme=light&v=1) | `slit` |  |
-| ![Starstruck](https://opengame.io/api/avatars/circle.starstruck.tangerine/portrait?size=64&theme=light&v=1) | `starstruck` |  |
-| ![Smitten](https://opengame.io/api/avatars/circle.smitten.tangerine/portrait?size=64&theme=light&v=1) | `smitten` |  |
-| ![Diamond](https://opengame.io/api/avatars/circle.diamond.tangerine/portrait?size=64&theme=light&v=1) | `diamond` |  |
-| ![Hollow](https://opengame.io/api/avatars/circle.hollow.tangerine/portrait?size=64&theme=light&v=1) | `hollow` |  |
-| ![Plus](https://opengame.io/api/avatars/circle.plus.tangerine/portrait?size=64&theme=light&v=1) | `plus` |  |
-| ![Twinkle](https://opengame.io/api/avatars/circle.twinkle.tangerine/portrait?size=64&theme=light&v=1) | `twinkle` |  |
-| ![Target](https://opengame.io/api/avatars/circle.target.tangerine/portrait?size=64&theme=light&v=1) | `target` |  |
-| ![Hypno](https://opengame.io/api/avatars/circle.hypno.tangerine/portrait?size=64&theme=light&v=1) | `hypno` |  |
-| ![Button](https://opengame.io/api/avatars/circle.button.tangerine/portrait?size=64&theme=light&v=1) | `button` |  |
-| ![Goggles](https://opengame.io/api/avatars/circle.goggles.tangerine/portrait?size=64&theme=light&v=1) | `goggles` |  |
-| ![Shades](https://opengame.io/api/avatars/circle.shades.tangerine/portrait?size=64&theme=light&v=1) | `shades` |  |
-| ![Pirate](https://opengame.io/api/avatars/circle.pirate.tangerine/portrait?size=64&theme=light&v=1) | `pirate` |  |
-| ![Blush](https://opengame.io/api/avatars/circle.blush.tangerine/portrait?size=64&theme=light&v=1) | `blush` |  |
-| ![Nervous](https://opengame.io/api/avatars/circle.nervous.tangerine/portrait?size=64&theme=light&v=1) | `nervous` |  |
-| ![Cross-eyed](https://opengame.io/api/avatars/circle.crosseyed.tangerine/portrait?size=64&theme=light&v=1) | `crosseyed` | Cross-eyed |
-| ![Daydream](https://opengame.io/api/avatars/circle.daydream.tangerine/portrait?size=64&theme=light&v=1) | `daydream` |  |
-| ![Peeking](https://opengame.io/api/avatars/circle.peeking.tangerine/portrait?size=64&theme=light&v=1) | `peeking` |  |
-| ![Ringed](https://opengame.io/api/avatars/circle.ringed.tangerine/portrait?size=64&theme=light&v=1) | `ringed` |  |
-| ![Tired](https://opengame.io/api/avatars/circle.tired.tangerine/portrait?size=64&theme=light&v=1) | `tired` |  |
-| ![Annoyed](https://opengame.io/api/avatars/circle.annoyed.tangerine/portrait?size=64&theme=light&v=1) | `annoyed` |  |
-| ![Skeptical](https://opengame.io/api/avatars/circle.skeptic.tangerine/portrait?size=64&theme=light&v=1) | `skeptic` | Skeptical |
-| ![Dreamy](https://opengame.io/api/avatars/circle.dreamy.tangerine/portrait?size=64&theme=light&v=1) | `dreamy` |  |
-| ![Flirty](https://opengame.io/api/avatars/circle.flirty.tangerine/portrait?size=64&theme=light&v=1) | `flirty` |  |
-| ![Demure](https://opengame.io/api/avatars/circle.demure.tangerine/portrait?size=64&theme=light&v=1) | `demure` |  |
-| ![Snooze](https://opengame.io/api/avatars/circle.snooze.tangerine/portrait?size=64&theme=light&v=1) | `snooze` |  |
-| ![Sobbing](https://opengame.io/api/avatars/circle.sobbing.tangerine/portrait?size=64&theme=light&v=1) | `sobbing` |  |
-| ![Humming](https://opengame.io/api/avatars/circle.humming.tangerine/portrait?size=64&theme=light&v=1) | `humming` |  |
-| ![Puzzled](https://opengame.io/api/avatars/circle.puzzled.tangerine/portrait?size=64&theme=light&v=1) | `puzzled` |  |
-| ![Alert](https://opengame.io/api/avatars/circle.alert.tangerine/portrait?size=64&theme=light&v=1) | `alert` |  |
-| ![Unibrow](https://opengame.io/api/avatars/circle.unibrow.tangerine/portrait?size=64&theme=light&v=1) | `unibrow` |  |
-| ![Freckles](https://opengame.io/api/avatars/circle.freckles.tangerine/portrait?size=64&theme=light&v=1) | `freckles` |  |
-| ![Whiskers](https://opengame.io/api/avatars/circle.whiskers.tangerine/portrait?size=64&theme=light&v=1) | `whiskers` |  |
-| ![Glitter](https://opengame.io/api/avatars/circle.glitter.tangerine/portrait?size=64&theme=light&v=1) | `glitter` |  |
-| ![Bow](https://opengame.io/api/avatars/circle.bow.tangerine/portrait?size=64&theme=light&v=1) | `bow` |  |
-| ![Scar](https://opengame.io/api/avatars/circle.scar.tangerine/portrait?size=64&theme=light&v=1) | `scar` |  |
-| ![Bandage](https://opengame.io/api/avatars/circle.bandage.tangerine/portrait?size=64&theme=light&v=1) | `bandage` |  |
-| ![Cyborg](https://opengame.io/api/avatars/circle.cyborg.tangerine/portrait?size=64&theme=light&v=1) | `cyborg` |  |
-| ![Three eyes](https://opengame.io/api/avatars/circle.triclops.tangerine/portrait?size=64&theme=light&v=1) | `triclops` | Three eyes |
-| ![Four eyes](https://opengame.io/api/avatars/circle.quad.tangerine/portrait?size=64&theme=light&v=1) | `quad` | Four eyes |
-| ![Aviators](https://opengame.io/api/avatars/circle.aviators.tangerine/portrait?size=64&theme=light&v=1) | `aviators` |  |
-| ![Heart shades](https://opengame.io/api/avatars/circle.heartshades.tangerine/portrait?size=64&theme=light&v=1) | `heartshades` | Heart shades |
-| ![Mask](https://opengame.io/api/avatars/circle.mask.tangerine/portrait?size=64&theme=light&v=1) | `mask` |  |
-| ![Winged](https://opengame.io/api/avatars/circle.winged.tangerine/portrait?size=64&theme=light&v=1) | `winged` |  |
-| ![Goat](https://opengame.io/api/avatars/circle.goat.tangerine/portrait?size=64&theme=light&v=1) | `goat` |  |
-| ![Keyhole](https://opengame.io/api/avatars/circle.keyhole.tangerine/portrait?size=64&theme=light&v=1) | `keyhole` |  |
-| ![Scanlines](https://opengame.io/api/avatars/circle.scanline.tangerine/portrait?size=64&theme=light&v=1) | `scanline` | Scanlines |
-| ![Glowing](https://opengame.io/api/avatars/circle.glowing.tangerine/portrait?size=64&theme=light&v=1) | `glowing` |  |
-| ![Blocks](https://opengame.io/api/avatars/circle.blocks.tangerine/portrait?size=64&theme=light&v=1) | `blocks` |  |
-| ![Triangle](https://opengame.io/api/avatars/circle.triangle.tangerine/portrait?size=64&theme=light&v=1) | `triangle` |  |
-| ![Hexagon](https://opengame.io/api/avatars/circle.hexagon.tangerine/portrait?size=64&theme=light&v=1) | `hexagon` |  |
-| ![Deadpan](https://opengame.io/api/avatars/circle.deadpan.tangerine/portrait?size=64&theme=light&v=1) | `deadpan` |  |
-| ![Disapproving](https://opengame.io/api/avatars/circle.disapprove.tangerine/portrait?size=64&theme=light&v=1) | `disapprove` | Disapproving |
-| ![Wavy](https://opengame.io/api/avatars/circle.wavy.tangerine/portrait?size=64&theme=light&v=1) | `wavy` |  |
-| ![Frazzled](https://opengame.io/api/avatars/circle.frazzled.tangerine/portrait?size=64&theme=light&v=1) | `frazzled` |  |
-| ![Money](https://opengame.io/api/avatars/circle.money.tangerine/portrait?size=64&theme=light&v=1) | `money` |  |
-| ![Lightning](https://opengame.io/api/avatars/circle.bolt.tangerine/portrait?size=64&theme=light&v=1) | `bolt` | Lightning |
-| ![Fiery](https://opengame.io/api/avatars/circle.fiery.tangerine/portrait?size=64&theme=light&v=1) | `fiery` |  |
-| ![Flowers](https://opengame.io/api/avatars/circle.flowers.tangerine/portrait?size=64&theme=light&v=1) | `flowers` |  |
-| ![Moons](https://opengame.io/api/avatars/circle.moons.tangerine/portrait?size=64&theme=light&v=1) | `moons` |  |
-| ![Sunny](https://opengame.io/api/avatars/circle.sunny.tangerine/portrait?size=64&theme=light&v=1) | `sunny` |  |
-| ![Gears](https://opengame.io/api/avatars/circle.gears.tangerine/portrait?size=64&theme=light&v=1) | `gears` |  |
-| ![Spades](https://opengame.io/api/avatars/circle.spades.tangerine/portrait?size=64&theme=light&v=1) | `spades` |  |
-| ![Paws](https://opengame.io/api/avatars/circle.paws.tangerine/portrait?size=64&theme=light&v=1) | `paws` |  |
-| ![Chomp](https://opengame.io/api/avatars/circle.chomp.tangerine/portrait?size=64&theme=light&v=1) | `chomp` |  |
-| ![Heart outlines](https://opengame.io/api/avatars/circle.openhearts.tangerine/portrait?size=64&theme=light&v=1) | `openhearts` | Heart outlines |
-| ![Pinpoint](https://opengame.io/api/avatars/circle.pinpoint.tangerine/portrait?size=64&theme=light&v=1) | `pinpoint` |  |
-| ![Cross pupils](https://opengame.io/api/avatars/circle.crosspupil.tangerine/portrait?size=64&theme=light&v=1) | `crosspupil` | Cross pupils |
-| ![Bloodshot](https://opengame.io/api/avatars/circle.bloodshot.tangerine/portrait?size=64&theme=light&v=1) | `bloodshot` |  |
-| ![Doll](https://opengame.io/api/avatars/circle.doll.tangerine/portrait?size=64&theme=light&v=1) | `doll` |  |
-| ![Wall-eyed](https://opengame.io/api/avatars/circle.walleyed.tangerine/portrait?size=64&theme=light&v=1) | `walleyed` | Wall-eyed |
-| ![Starry wink](https://opengame.io/api/avatars/circle.starwink.tangerine/portrait?size=64&theme=light&v=1) | `starwink` | Starry wink |
-| ![Determined](https://opengame.io/api/avatars/circle.determined.tangerine/portrait?size=64&theme=light&v=1) | `determined` |  |
-| ![Smug](https://opengame.io/api/avatars/circle.smug.tangerine/portrait?size=64&theme=light&v=1) | `smug` |  |
-| ![Woozy](https://opengame.io/api/avatars/circle.woozy.tangerine/portrait?size=64&theme=light&v=1) | `woozy` |  |
-| ![Flustered](https://opengame.io/api/avatars/circle.flustered.tangerine/portrait?size=64&theme=light&v=1) | `flustered` |  |
-| ![Tears of joy](https://opengame.io/api/avatars/circle.joyful.tangerine/portrait?size=64&theme=light&v=1) | `joyful` | Tears of joy |
-| ![Sweating](https://opengame.io/api/avatars/circle.sweaty.tangerine/portrait?size=64&theme=light&v=1) | `sweaty` | Sweating |
-| ![Crush](https://opengame.io/api/avatars/circle.crush.tangerine/portrait?size=64&theme=light&v=1) | `crush` |  |
-| ![Idea](https://opengame.io/api/avatars/circle.idea.tangerine/portrait?size=64&theme=light&v=1) | `idea` |  |
-| ![Clown](https://opengame.io/api/avatars/circle.clown.tangerine/portrait?size=64&theme=light&v=1) | `clown` |  |
-| ![War paint](https://opengame.io/api/avatars/circle.warpaint.tangerine/portrait?size=64&theme=light&v=1) | `warpaint` | War paint |
-| ![Stitched](https://opengame.io/api/avatars/circle.stitched.tangerine/portrait?size=64&theme=light&v=1) | `stitched` |  |
-| ![Speechless](https://opengame.io/api/avatars/circle.ellipsis.tangerine/portrait?size=64&theme=light&v=1) | `ellipsis` | Speechless |
-| ![Question marks](https://opengame.io/api/avatars/circle.questions.tangerine/portrait?size=64&theme=light&v=1) | `questions` | Question marks |
-| ![Exclamation](https://opengame.io/api/avatars/circle.exclaim.tangerine/portrait?size=64&theme=light&v=1) | `exclaim` | Exclamation |
-| ![Notes](https://opengame.io/api/avatars/circle.notes.tangerine/portrait?size=64&theme=light&v=1) | `notes` |  |
-| ![Clubs](https://opengame.io/api/avatars/circle.clubs.tangerine/portrait?size=64&theme=light&v=1) | `clubs` |  |
-| ![Shields](https://opengame.io/api/avatars/circle.shields.tangerine/portrait?size=64&theme=light&v=1) | `shields` |  |
-| ![Checks](https://opengame.io/api/avatars/circle.checks.tangerine/portrait?size=64&theme=light&v=1) | `checks` |  |
-| ![Hourglass](https://opengame.io/api/avatars/circle.hourglass.tangerine/portrait?size=64&theme=light&v=1) | `hourglass` |  |
-| ![D-shape](https://opengame.io/api/avatars/circle.dshape.tangerine/portrait?size=64&theme=light&v=1) | `dshape` | D-shape |
-| ![Teardrop](https://opengame.io/api/avatars/circle.teardrop.tangerine/portrait?size=64&theme=light&v=1) | `teardrop` |  |
-| ![Droopy](https://opengame.io/api/avatars/circle.droopy.tangerine/portrait?size=64&theme=light&v=1) | `droopy` |  |
-| ![Cat’s eye](https://opengame.io/api/avatars/circle.catseye.tangerine/portrait?size=64&theme=light&v=1) | `catseye` | Cat’s eye |
-| ![Squircle](https://opengame.io/api/avatars/circle.squircle.tangerine/portrait?size=64&theme=light&v=1) | `squircle` |  |
-| ![Owl](https://opengame.io/api/avatars/circle.owl.tangerine/portrait?size=64&theme=light&v=1) | `owl` |  |
-| ![Bug eyes](https://opengame.io/api/avatars/circle.bug.tangerine/portrait?size=64&theme=light&v=1) | `bug` | Bug eyes |
-| ![Spider](https://opengame.io/api/avatars/circle.spider.tangerine/portrait?size=64&theme=light&v=1) | `spider` |  |
-| ![Outlined](https://opengame.io/api/avatars/circle.outline.tangerine/portrait?size=64&theme=light&v=1) | `outline` | Outlined |
-| ![Wide-set](https://opengame.io/api/avatars/circle.wideset.tangerine/portrait?size=64&theme=light&v=1) | `wideset` | Wide-set |
-| ![Close-set](https://opengame.io/api/avatars/circle.closeset.tangerine/portrait?size=64&theme=light&v=1) | `closeset` | Close-set |
-| ![LED](https://opengame.io/api/avatars/circle.led.tangerine/portrait?size=64&theme=light&v=1) | `led` | LED |
-| ![Scanner](https://opengame.io/api/avatars/circle.scanner.tangerine/portrait?size=64&theme=light&v=1) | `scanner` |  |
-| ![Reticle](https://opengame.io/api/avatars/circle.reticle.tangerine/portrait?size=64&theme=light&v=1) | `reticle` |  |
-| ![VR headset](https://opengame.io/api/avatars/circle.vr.tangerine/portrait?size=64&theme=light&v=1) | `vr` | VR headset |
-| ![3D glasses](https://opengame.io/api/avatars/circle.threed.tangerine/portrait?size=64&theme=light&v=1) | `threed` | 3D glasses |
-| ![Ski goggles](https://opengame.io/api/avatars/circle.ski.tangerine/portrait?size=64&theme=light&v=1) | `ski` | Ski goggles |
-| ![Sleep mask](https://opengame.io/api/avatars/circle.sleepmask.tangerine/portrait?size=64&theme=light&v=1) | `sleepmask` | Sleep mask |
-| ![Star glasses](https://opengame.io/api/avatars/circle.starglasses.tangerine/portrait?size=64&theme=light&v=1) | `starglasses` | Star glasses |
-| ![Magnifier](https://opengame.io/api/avatars/circle.magnify.tangerine/portrait?size=64&theme=light&v=1) | `magnify` | Magnifier |
-| ![Cat-eye glasses](https://opengame.io/api/avatars/circle.catglasses.tangerine/portrait?size=64&theme=light&v=1) | `catglasses` | Cat-eye glasses |
-| ![Reading glasses](https://opengame.io/api/avatars/circle.readers.tangerine/portrait?size=64&theme=light&v=1) | `readers` | Reading glasses |
-| ![Disguise](https://opengame.io/api/avatars/circle.disguise.tangerine/portrait?size=64&theme=light&v=1) | `disguise` |  |
-| ![Pause](https://opengame.io/api/avatars/circle.pause.tangerine/portrait?size=64&theme=light&v=1) | `pause` |  |
-| ![Equalizer](https://opengame.io/api/avatars/circle.equalizer.tangerine/portrait?size=64&theme=light&v=1) | `equalizer` |  |
-| ![Prompt](https://opengame.io/api/avatars/circle.prompt.tangerine/portrait?size=64&theme=light&v=1) | `prompt` |  |
-| ![Cursors](https://opengame.io/api/avatars/circle.cursor.tangerine/portrait?size=64&theme=light&v=1) | `cursor` | Cursors |
-| ![Laser](https://opengame.io/api/avatars/circle.laser.tangerine/portrait?size=64&theme=light&v=1) | `laser` |  |
-| ![Power](https://opengame.io/api/avatars/circle.power.tangerine/portrait?size=64&theme=light&v=1) | `power` |  |
-| ![Snowflakes](https://opengame.io/api/avatars/circle.snowflake.tangerine/portrait?size=64&theme=light&v=1) | `snowflake` | Snowflakes |
-| ![Crinkled](https://opengame.io/api/avatars/circle.crinkled.tangerine/portrait?size=64&theme=light&v=1) | `crinkled` |  |
-| ![Dice](https://opengame.io/api/avatars/circle.dice.tangerine/portrait?size=64&theme=light&v=1) | `dice` |  |
-| ![Saucer eyes](https://opengame.io/api/avatars/circle.saucers.tangerine/portrait?size=64&theme=light&v=1) | `saucers` | Saucer eyes |
-| ![Glasses and eyes](https://opengame.io/api/avatars/circle.specs.tangerine/portrait?size=64&theme=light&v=1) | `specs` | Glasses and eyes |
-| ![Round glasses](https://opengame.io/api/avatars/circle.roundspecs.tangerine/portrait?size=64&theme=light&v=1) | `roundspecs` | Round glasses |
+| ![Classic](https://opengame.io/api/avatars/circle.classic.tangerine/portrait?size=64&theme=light&v=2) | `classic` |  |
+| ![Sparkle](https://opengame.io/api/avatars/circle.sparkle.tangerine/portrait?size=64&theme=light&v=2) | `sparkle` |  |
+| ![Wink](https://opengame.io/api/avatars/circle.wink.tangerine/portrait?size=64&theme=light&v=2) | `wink` |  |
+| ![Happy](https://opengame.io/api/avatars/circle.happy.tangerine/portrait?size=64&theme=light&v=2) | `happy` |  |
+| ![Calm](https://opengame.io/api/avatars/circle.calm.tangerine/portrait?size=64&theme=light&v=2) | `calm` |  |
+| ![Angry](https://opengame.io/api/avatars/circle.angry.tangerine/portrait?size=64&theme=light&v=2) | `angry` |  |
+| ![Sad](https://opengame.io/api/avatars/circle.sad.tangerine/portrait?size=64&theme=light&v=2) | `sad` |  |
+| ![Sleepy](https://opengame.io/api/avatars/circle.sleepy.tangerine/portrait?size=64&theme=light&v=2) | `sleepy` |  |
+| ![Squint](https://opengame.io/api/avatars/circle.squint.tangerine/portrait?size=64&theme=light&v=2) | `squint` |  |
+| ![Wide](https://opengame.io/api/avatars/circle.wide.tangerine/portrait?size=64&theme=light&v=2) | `wide` |  |
+| ![Dots](https://opengame.io/api/avatars/circle.dots.tangerine/portrait?size=64&theme=light&v=2) | `dots` |  |
+| ![One eye](https://opengame.io/api/avatars/circle.cyclops.tangerine/portrait?size=64&theme=light&v=2) | `cyclops` | One eye |
+| ![Hearts](https://opengame.io/api/avatars/circle.hearts.tangerine/portrait?size=64&theme=light&v=2) | `hearts` |  |
+| ![Stars](https://opengame.io/api/avatars/circle.stars.tangerine/portrait?size=64&theme=light&v=2) | `stars` |  |
+| ![Dazed](https://opengame.io/api/avatars/circle.dazed.tangerine/portrait?size=64&theme=light&v=2) | `dazed` |  |
+| ![Glasses](https://opengame.io/api/avatars/circle.glasses.tangerine/portrait?size=64&theme=light&v=2) | `glasses` |  |
+| ![Lashes](https://opengame.io/api/avatars/circle.lashes.tangerine/portrait?size=64&theme=light&v=2) | `lashes` |  |
+| ![Googly](https://opengame.io/api/avatars/circle.googly.tangerine/portrait?size=64&theme=light&v=2) | `googly` |  |
+| ![Dizzy](https://opengame.io/api/avatars/circle.dizzy.tangerine/portrait?size=64&theme=light&v=2) | `dizzy` |  |
+| ![Crying](https://opengame.io/api/avatars/circle.crying.tangerine/portrait?size=64&theme=light&v=2) | `crying` |  |
+| ![Excited](https://opengame.io/api/avatars/circle.excited.tangerine/portrait?size=64&theme=light&v=2) | `excited` |  |
+| ![Side eye](https://opengame.io/api/avatars/circle.sideeye.tangerine/portrait?size=64&theme=light&v=2) | `sideeye` | Side eye |
+| ![Visor](https://opengame.io/api/avatars/circle.visor.tangerine/portrait?size=64&theme=light&v=2) | `visor` |  |
+| ![Square](https://opengame.io/api/avatars/circle.square.tangerine/portrait?size=64&theme=light&v=2) | `square` |  |
+| ![Monocle](https://opengame.io/api/avatars/circle.monocle.tangerine/portrait?size=64&theme=light&v=2) | `monocle` |  |
+| ![Anime](https://opengame.io/api/avatars/circle.anime.tangerine/portrait?size=64&theme=light&v=2) | `anime` |  |
+| ![Pleading](https://opengame.io/api/avatars/circle.pleading.tangerine/portrait?size=64&theme=light&v=2) | `pleading` |  |
+| ![Ovals](https://opengame.io/api/avatars/circle.ovals.tangerine/portrait?size=64&theme=light&v=2) | `ovals` |  |
+| ![Mismatched](https://opengame.io/api/avatars/circle.mismatched.tangerine/portrait?size=64&theme=light&v=2) | `mismatched` |  |
+| ![Brows](https://opengame.io/api/avatars/circle.brows.tangerine/portrait?size=64&theme=light&v=2) | `brows` |  |
+| ![Worried](https://opengame.io/api/avatars/circle.worried.tangerine/portrait?size=64&theme=light&v=2) | `worried` |  |
+| ![Raised brow](https://opengame.io/api/avatars/circle.raised.tangerine/portrait?size=64&theme=light&v=2) | `raised` | Raised brow |
+| ![Furious](https://opengame.io/api/avatars/circle.furious.tangerine/portrait?size=64&theme=light&v=2) | `furious` |  |
+| ![Shocked](https://opengame.io/api/avatars/circle.shocked.tangerine/portrait?size=64&theme=light&v=2) | `shocked` |  |
+| ![Sly](https://opengame.io/api/avatars/circle.sly.tangerine/portrait?size=64&theme=light&v=2) | `sly` |  |
+| ![Slit](https://opengame.io/api/avatars/circle.slit.tangerine/portrait?size=64&theme=light&v=2) | `slit` |  |
+| ![Starstruck](https://opengame.io/api/avatars/circle.starstruck.tangerine/portrait?size=64&theme=light&v=2) | `starstruck` |  |
+| ![Smitten](https://opengame.io/api/avatars/circle.smitten.tangerine/portrait?size=64&theme=light&v=2) | `smitten` |  |
+| ![Diamond](https://opengame.io/api/avatars/circle.diamond.tangerine/portrait?size=64&theme=light&v=2) | `diamond` |  |
+| ![Hollow](https://opengame.io/api/avatars/circle.hollow.tangerine/portrait?size=64&theme=light&v=2) | `hollow` |  |
+| ![Plus](https://opengame.io/api/avatars/circle.plus.tangerine/portrait?size=64&theme=light&v=2) | `plus` |  |
+| ![Twinkle](https://opengame.io/api/avatars/circle.twinkle.tangerine/portrait?size=64&theme=light&v=2) | `twinkle` |  |
+| ![Target](https://opengame.io/api/avatars/circle.target.tangerine/portrait?size=64&theme=light&v=2) | `target` |  |
+| ![Hypno](https://opengame.io/api/avatars/circle.hypno.tangerine/portrait?size=64&theme=light&v=2) | `hypno` |  |
+| ![Button](https://opengame.io/api/avatars/circle.button.tangerine/portrait?size=64&theme=light&v=2) | `button` |  |
+| ![Goggles](https://opengame.io/api/avatars/circle.goggles.tangerine/portrait?size=64&theme=light&v=2) | `goggles` |  |
+| ![Shades](https://opengame.io/api/avatars/circle.shades.tangerine/portrait?size=64&theme=light&v=2) | `shades` |  |
+| ![Pirate](https://opengame.io/api/avatars/circle.pirate.tangerine/portrait?size=64&theme=light&v=2) | `pirate` |  |
+| ![Blush](https://opengame.io/api/avatars/circle.blush.tangerine/portrait?size=64&theme=light&v=2) | `blush` |  |
+| ![Nervous](https://opengame.io/api/avatars/circle.nervous.tangerine/portrait?size=64&theme=light&v=2) | `nervous` |  |
+| ![Cross-eyed](https://opengame.io/api/avatars/circle.crosseyed.tangerine/portrait?size=64&theme=light&v=2) | `crosseyed` | Cross-eyed |
+| ![Daydream](https://opengame.io/api/avatars/circle.daydream.tangerine/portrait?size=64&theme=light&v=2) | `daydream` |  |
+| ![Peeking](https://opengame.io/api/avatars/circle.peeking.tangerine/portrait?size=64&theme=light&v=2) | `peeking` |  |
+| ![Ringed](https://opengame.io/api/avatars/circle.ringed.tangerine/portrait?size=64&theme=light&v=2) | `ringed` |  |
+| ![Tired](https://opengame.io/api/avatars/circle.tired.tangerine/portrait?size=64&theme=light&v=2) | `tired` |  |
+| ![Annoyed](https://opengame.io/api/avatars/circle.annoyed.tangerine/portrait?size=64&theme=light&v=2) | `annoyed` |  |
+| ![Skeptical](https://opengame.io/api/avatars/circle.skeptic.tangerine/portrait?size=64&theme=light&v=2) | `skeptic` | Skeptical |
+| ![Dreamy](https://opengame.io/api/avatars/circle.dreamy.tangerine/portrait?size=64&theme=light&v=2) | `dreamy` |  |
+| ![Flirty](https://opengame.io/api/avatars/circle.flirty.tangerine/portrait?size=64&theme=light&v=2) | `flirty` |  |
+| ![Demure](https://opengame.io/api/avatars/circle.demure.tangerine/portrait?size=64&theme=light&v=2) | `demure` |  |
+| ![Snooze](https://opengame.io/api/avatars/circle.snooze.tangerine/portrait?size=64&theme=light&v=2) | `snooze` |  |
+| ![Sobbing](https://opengame.io/api/avatars/circle.sobbing.tangerine/portrait?size=64&theme=light&v=2) | `sobbing` |  |
+| ![Humming](https://opengame.io/api/avatars/circle.humming.tangerine/portrait?size=64&theme=light&v=2) | `humming` |  |
+| ![Puzzled](https://opengame.io/api/avatars/circle.puzzled.tangerine/portrait?size=64&theme=light&v=2) | `puzzled` |  |
+| ![Alert](https://opengame.io/api/avatars/circle.alert.tangerine/portrait?size=64&theme=light&v=2) | `alert` |  |
+| ![Unibrow](https://opengame.io/api/avatars/circle.unibrow.tangerine/portrait?size=64&theme=light&v=2) | `unibrow` |  |
+| ![Freckles](https://opengame.io/api/avatars/circle.freckles.tangerine/portrait?size=64&theme=light&v=2) | `freckles` |  |
+| ![Whiskers](https://opengame.io/api/avatars/circle.whiskers.tangerine/portrait?size=64&theme=light&v=2) | `whiskers` |  |
+| ![Glitter](https://opengame.io/api/avatars/circle.glitter.tangerine/portrait?size=64&theme=light&v=2) | `glitter` |  |
+| ![Bow](https://opengame.io/api/avatars/circle.bow.tangerine/portrait?size=64&theme=light&v=2) | `bow` |  |
+| ![Scar](https://opengame.io/api/avatars/circle.scar.tangerine/portrait?size=64&theme=light&v=2) | `scar` |  |
+| ![Bandage](https://opengame.io/api/avatars/circle.bandage.tangerine/portrait?size=64&theme=light&v=2) | `bandage` |  |
+| ![Cyborg](https://opengame.io/api/avatars/circle.cyborg.tangerine/portrait?size=64&theme=light&v=2) | `cyborg` |  |
+| ![Three eyes](https://opengame.io/api/avatars/circle.triclops.tangerine/portrait?size=64&theme=light&v=2) | `triclops` | Three eyes |
+| ![Four eyes](https://opengame.io/api/avatars/circle.quad.tangerine/portrait?size=64&theme=light&v=2) | `quad` | Four eyes |
+| ![Aviators](https://opengame.io/api/avatars/circle.aviators.tangerine/portrait?size=64&theme=light&v=2) | `aviators` |  |
+| ![Heart shades](https://opengame.io/api/avatars/circle.heartshades.tangerine/portrait?size=64&theme=light&v=2) | `heartshades` | Heart shades |
+| ![Mask](https://opengame.io/api/avatars/circle.mask.tangerine/portrait?size=64&theme=light&v=2) | `mask` |  |
+| ![Winged](https://opengame.io/api/avatars/circle.winged.tangerine/portrait?size=64&theme=light&v=2) | `winged` |  |
+| ![Goat](https://opengame.io/api/avatars/circle.goat.tangerine/portrait?size=64&theme=light&v=2) | `goat` |  |
+| ![Keyhole](https://opengame.io/api/avatars/circle.keyhole.tangerine/portrait?size=64&theme=light&v=2) | `keyhole` |  |
+| ![Scanlines](https://opengame.io/api/avatars/circle.scanline.tangerine/portrait?size=64&theme=light&v=2) | `scanline` | Scanlines |
+| ![Glowing](https://opengame.io/api/avatars/circle.glowing.tangerine/portrait?size=64&theme=light&v=2) | `glowing` |  |
+| ![Blocks](https://opengame.io/api/avatars/circle.blocks.tangerine/portrait?size=64&theme=light&v=2) | `blocks` |  |
+| ![Triangle](https://opengame.io/api/avatars/circle.triangle.tangerine/portrait?size=64&theme=light&v=2) | `triangle` |  |
+| ![Hexagon](https://opengame.io/api/avatars/circle.hexagon.tangerine/portrait?size=64&theme=light&v=2) | `hexagon` |  |
+| ![Deadpan](https://opengame.io/api/avatars/circle.deadpan.tangerine/portrait?size=64&theme=light&v=2) | `deadpan` |  |
+| ![Disapproving](https://opengame.io/api/avatars/circle.disapprove.tangerine/portrait?size=64&theme=light&v=2) | `disapprove` | Disapproving |
+| ![Wavy](https://opengame.io/api/avatars/circle.wavy.tangerine/portrait?size=64&theme=light&v=2) | `wavy` |  |
+| ![Frazzled](https://opengame.io/api/avatars/circle.frazzled.tangerine/portrait?size=64&theme=light&v=2) | `frazzled` |  |
+| ![Money](https://opengame.io/api/avatars/circle.money.tangerine/portrait?size=64&theme=light&v=2) | `money` |  |
+| ![Lightning](https://opengame.io/api/avatars/circle.bolt.tangerine/portrait?size=64&theme=light&v=2) | `bolt` | Lightning |
+| ![Fiery](https://opengame.io/api/avatars/circle.fiery.tangerine/portrait?size=64&theme=light&v=2) | `fiery` |  |
+| ![Flowers](https://opengame.io/api/avatars/circle.flowers.tangerine/portrait?size=64&theme=light&v=2) | `flowers` |  |
+| ![Moons](https://opengame.io/api/avatars/circle.moons.tangerine/portrait?size=64&theme=light&v=2) | `moons` |  |
+| ![Sunny](https://opengame.io/api/avatars/circle.sunny.tangerine/portrait?size=64&theme=light&v=2) | `sunny` |  |
+| ![Gears](https://opengame.io/api/avatars/circle.gears.tangerine/portrait?size=64&theme=light&v=2) | `gears` |  |
+| ![Spades](https://opengame.io/api/avatars/circle.spades.tangerine/portrait?size=64&theme=light&v=2) | `spades` |  |
+| ![Paws](https://opengame.io/api/avatars/circle.paws.tangerine/portrait?size=64&theme=light&v=2) | `paws` |  |
+| ![Chomp](https://opengame.io/api/avatars/circle.chomp.tangerine/portrait?size=64&theme=light&v=2) | `chomp` |  |
+| ![Heart outlines](https://opengame.io/api/avatars/circle.openhearts.tangerine/portrait?size=64&theme=light&v=2) | `openhearts` | Heart outlines |
+| ![Pinpoint](https://opengame.io/api/avatars/circle.pinpoint.tangerine/portrait?size=64&theme=light&v=2) | `pinpoint` |  |
+| ![Cross pupils](https://opengame.io/api/avatars/circle.crosspupil.tangerine/portrait?size=64&theme=light&v=2) | `crosspupil` | Cross pupils |
+| ![Bloodshot](https://opengame.io/api/avatars/circle.bloodshot.tangerine/portrait?size=64&theme=light&v=2) | `bloodshot` |  |
+| ![Doll](https://opengame.io/api/avatars/circle.doll.tangerine/portrait?size=64&theme=light&v=2) | `doll` |  |
+| ![Wall-eyed](https://opengame.io/api/avatars/circle.walleyed.tangerine/portrait?size=64&theme=light&v=2) | `walleyed` | Wall-eyed |
+| ![Starry wink](https://opengame.io/api/avatars/circle.starwink.tangerine/portrait?size=64&theme=light&v=2) | `starwink` | Starry wink |
+| ![Determined](https://opengame.io/api/avatars/circle.determined.tangerine/portrait?size=64&theme=light&v=2) | `determined` |  |
+| ![Smug](https://opengame.io/api/avatars/circle.smug.tangerine/portrait?size=64&theme=light&v=2) | `smug` |  |
+| ![Woozy](https://opengame.io/api/avatars/circle.woozy.tangerine/portrait?size=64&theme=light&v=2) | `woozy` |  |
+| ![Flustered](https://opengame.io/api/avatars/circle.flustered.tangerine/portrait?size=64&theme=light&v=2) | `flustered` |  |
+| ![Tears of joy](https://opengame.io/api/avatars/circle.joyful.tangerine/portrait?size=64&theme=light&v=2) | `joyful` | Tears of joy |
+| ![Sweating](https://opengame.io/api/avatars/circle.sweaty.tangerine/portrait?size=64&theme=light&v=2) | `sweaty` | Sweating |
+| ![Crush](https://opengame.io/api/avatars/circle.crush.tangerine/portrait?size=64&theme=light&v=2) | `crush` |  |
+| ![Idea](https://opengame.io/api/avatars/circle.idea.tangerine/portrait?size=64&theme=light&v=2) | `idea` |  |
+| ![Clown](https://opengame.io/api/avatars/circle.clown.tangerine/portrait?size=64&theme=light&v=2) | `clown` |  |
+| ![War paint](https://opengame.io/api/avatars/circle.warpaint.tangerine/portrait?size=64&theme=light&v=2) | `warpaint` | War paint |
+| ![Stitched](https://opengame.io/api/avatars/circle.stitched.tangerine/portrait?size=64&theme=light&v=2) | `stitched` |  |
+| ![Speechless](https://opengame.io/api/avatars/circle.ellipsis.tangerine/portrait?size=64&theme=light&v=2) | `ellipsis` | Speechless |
+| ![Question marks](https://opengame.io/api/avatars/circle.questions.tangerine/portrait?size=64&theme=light&v=2) | `questions` | Question marks |
+| ![Exclamation](https://opengame.io/api/avatars/circle.exclaim.tangerine/portrait?size=64&theme=light&v=2) | `exclaim` | Exclamation |
+| ![Notes](https://opengame.io/api/avatars/circle.notes.tangerine/portrait?size=64&theme=light&v=2) | `notes` |  |
+| ![Clubs](https://opengame.io/api/avatars/circle.clubs.tangerine/portrait?size=64&theme=light&v=2) | `clubs` |  |
+| ![Shields](https://opengame.io/api/avatars/circle.shields.tangerine/portrait?size=64&theme=light&v=2) | `shields` |  |
+| ![Checks](https://opengame.io/api/avatars/circle.checks.tangerine/portrait?size=64&theme=light&v=2) | `checks` |  |
+| ![Hourglass](https://opengame.io/api/avatars/circle.hourglass.tangerine/portrait?size=64&theme=light&v=2) | `hourglass` |  |
+| ![D-shape](https://opengame.io/api/avatars/circle.dshape.tangerine/portrait?size=64&theme=light&v=2) | `dshape` | D-shape |
+| ![Teardrop](https://opengame.io/api/avatars/circle.teardrop.tangerine/portrait?size=64&theme=light&v=2) | `teardrop` |  |
+| ![Droopy](https://opengame.io/api/avatars/circle.droopy.tangerine/portrait?size=64&theme=light&v=2) | `droopy` |  |
+| ![Cat’s eye](https://opengame.io/api/avatars/circle.catseye.tangerine/portrait?size=64&theme=light&v=2) | `catseye` | Cat’s eye |
+| ![Squircle](https://opengame.io/api/avatars/circle.squircle.tangerine/portrait?size=64&theme=light&v=2) | `squircle` |  |
+| ![Owl](https://opengame.io/api/avatars/circle.owl.tangerine/portrait?size=64&theme=light&v=2) | `owl` |  |
+| ![Bug eyes](https://opengame.io/api/avatars/circle.bug.tangerine/portrait?size=64&theme=light&v=2) | `bug` | Bug eyes |
+| ![Spider](https://opengame.io/api/avatars/circle.spider.tangerine/portrait?size=64&theme=light&v=2) | `spider` |  |
+| ![Outlined](https://opengame.io/api/avatars/circle.outline.tangerine/portrait?size=64&theme=light&v=2) | `outline` | Outlined |
+| ![Wide-set](https://opengame.io/api/avatars/circle.wideset.tangerine/portrait?size=64&theme=light&v=2) | `wideset` | Wide-set |
+| ![Close-set](https://opengame.io/api/avatars/circle.closeset.tangerine/portrait?size=64&theme=light&v=2) | `closeset` | Close-set |
+| ![LED](https://opengame.io/api/avatars/circle.led.tangerine/portrait?size=64&theme=light&v=2) | `led` | LED |
+| ![Scanner](https://opengame.io/api/avatars/circle.scanner.tangerine/portrait?size=64&theme=light&v=2) | `scanner` |  |
+| ![Reticle](https://opengame.io/api/avatars/circle.reticle.tangerine/portrait?size=64&theme=light&v=2) | `reticle` |  |
+| ![VR headset](https://opengame.io/api/avatars/circle.vr.tangerine/portrait?size=64&theme=light&v=2) | `vr` | VR headset |
+| ![3D glasses](https://opengame.io/api/avatars/circle.threed.tangerine/portrait?size=64&theme=light&v=2) | `threed` | 3D glasses |
+| ![Ski goggles](https://opengame.io/api/avatars/circle.ski.tangerine/portrait?size=64&theme=light&v=2) | `ski` | Ski goggles |
+| ![Sleep mask](https://opengame.io/api/avatars/circle.sleepmask.tangerine/portrait?size=64&theme=light&v=2) | `sleepmask` | Sleep mask |
+| ![Star glasses](https://opengame.io/api/avatars/circle.starglasses.tangerine/portrait?size=64&theme=light&v=2) | `starglasses` | Star glasses |
+| ![Magnifier](https://opengame.io/api/avatars/circle.magnify.tangerine/portrait?size=64&theme=light&v=2) | `magnify` | Magnifier |
+| ![Cat-eye glasses](https://opengame.io/api/avatars/circle.catglasses.tangerine/portrait?size=64&theme=light&v=2) | `catglasses` | Cat-eye glasses |
+| ![Reading glasses](https://opengame.io/api/avatars/circle.readers.tangerine/portrait?size=64&theme=light&v=2) | `readers` | Reading glasses |
+| ![Disguise](https://opengame.io/api/avatars/circle.disguise.tangerine/portrait?size=64&theme=light&v=2) | `disguise` |  |
+| ![Pause](https://opengame.io/api/avatars/circle.pause.tangerine/portrait?size=64&theme=light&v=2) | `pause` |  |
+| ![Equalizer](https://opengame.io/api/avatars/circle.equalizer.tangerine/portrait?size=64&theme=light&v=2) | `equalizer` |  |
+| ![Prompt](https://opengame.io/api/avatars/circle.prompt.tangerine/portrait?size=64&theme=light&v=2) | `prompt` |  |
+| ![Cursors](https://opengame.io/api/avatars/circle.cursor.tangerine/portrait?size=64&theme=light&v=2) | `cursor` | Cursors |
+| ![Laser](https://opengame.io/api/avatars/circle.laser.tangerine/portrait?size=64&theme=light&v=2) | `laser` |  |
+| ![Power](https://opengame.io/api/avatars/circle.power.tangerine/portrait?size=64&theme=light&v=2) | `power` |  |
+| ![Snowflakes](https://opengame.io/api/avatars/circle.snowflake.tangerine/portrait?size=64&theme=light&v=2) | `snowflake` | Snowflakes |
+| ![Crinkled](https://opengame.io/api/avatars/circle.crinkled.tangerine/portrait?size=64&theme=light&v=2) | `crinkled` |  |
+| ![Dice](https://opengame.io/api/avatars/circle.dice.tangerine/portrait?size=64&theme=light&v=2) | `dice` |  |
+| ![Saucer eyes](https://opengame.io/api/avatars/circle.saucers.tangerine/portrait?size=64&theme=light&v=2) | `saucers` | Saucer eyes |
+| ![Glasses and eyes](https://opengame.io/api/avatars/circle.specs.tangerine/portrait?size=64&theme=light&v=2) | `specs` | Glasses and eyes |
+| ![Round glasses](https://opengame.io/api/avatars/circle.roundspecs.tangerine/portrait?size=64&theme=light&v=2) | `roundspecs` | Round glasses |
 <!-- /avatar-spec:eye-styles -->
 
 ### Head accessories
@@ -882,7 +882,7 @@ Each accessory is a list of parts, each in the main color, the trim color or the
 | `beanie` | Beanie | #1FB5B0 | #F3E7C9 | -0.60 | 0.60 | -0.53 | 0.02 |  | yes |
 | `halo` | Halo | #FFD45C |  | -0.62 | 0.63 | -0.51 | -0.16 |  |  |
 | `headphones` | Headphones | #2B2B30 | #E8423A | -0.92 | 0.93 | -0.26 | 0.77 | yes | yes |
-| `tophat` | Top hat | #4A4A54 | #E8423A | -0.60 | 0.60 | -0.51 | 0.04 |  | yes |
+| `tophat` | Top hat | #4A4A54 | #E8423A | -0.50 | 0.50 | -0.63 | 0.07 |  | yes |
 | `bowler` | Bowler hat | #57504A | #2E2A28 | -0.62 | 0.63 | -0.43 | 0.02 |  | yes |
 | `fedora` | Fedora | #7A7068 | #2B2B30 | -0.67 | 0.68 | -0.43 | 0.02 |  | yes |
 | `cowboy` | Cowboy hat | #B07A45 | #5A3A22 | -0.75 | 0.75 | -0.46 | 0.02 |  | yes |
@@ -943,6 +943,8 @@ Each accessory is a list of parts, each in the main color, the trim color or the
 | `crosspin` | Cross pin | #222228 |  | -0.50 | -0.10 | -0.18 | 0.24 |  | yes |
 | `frontcap` | Cap, facing forward | #2A2A30 | #45454D | -0.65 | 0.65 | -0.41 | 0.37 |  | yes |
 | `cangaceiro` | Cangaceiro hat | #7A4A2A | `gold` (head palette) | -0.80 | 0.80 | -0.51 | 0.22 |  | yes |
+| `samurai` | Samurai helmet | #9E2A2B | `gold` (head palette) | -0.75 | 0.75 | -0.56 | 0.37 |  | yes |
+| `ninja` | Ninja headband | #25262D | `silver` (head palette) | -0.60 | 0.98 | -0.01 | 0.37 | yes | yes |
 <!-- /avatar-spec:accessories -->
 
 ### Facial hair and hair color
@@ -1658,7 +1660,7 @@ These ignore the accessory color and keep the materials they are made of: `oakwa
 ### Shoes
 
 Sneakers, sized in H, with the soles flat on the ground. <!-- avatar-spec:sole -->
-Soles are #F8EFD0 whatever the shoe color.
+Soles are #F8EFD0 whatever the shoe color, except `oxford` (#4A4B51) and `loafer` (#4A4B51).
 <!-- /avatar-spec:sole -->
 
 <!-- avatar-spec:shoes -->
@@ -1678,6 +1680,8 @@ Soles are #F8EFD0 whatever the shoe color.
 | `platform` | Platform | A simple upper on a tall flat sole | 0.43 | 0.32 | 0.13 | 0.25 |
 | `airforce` | Air court | A perforated low top with stitched panels and a broad sole | 0.45 | 0.33 | 0.11 | 0.24 |
 | `jumpcourt` | Jump court | A layered high top with ankle panels | 0.45 | 0.32 | 0.09 | 0.22 |
+| `oxford` | Oxfords | Polished leather with a toe cap and laces | 0.47 | 0.29 | 0.06 | 0.16 |
+| `loafer` | Loafers | Polished leather slip-ons with a strap across the top | 0.46 | 0.29 | 0.06 | 0.16 |
 <!-- /avatar-spec:shoes -->
 
 ## Parts you do not have

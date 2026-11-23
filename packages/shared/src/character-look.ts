@@ -208,6 +208,8 @@ export const CHARACTER_SHOES = [
   { id: "platform", label: "Platform", description: "A simple upper on a tall flat sole" },
   { id: "airforce", label: "Air court", description: "A perforated low top with stitched panels and a broad sole" },
   { id: "jumpcourt", label: "Jump court", description: "A layered high top with ankle panels" },
+  { id: "oxford", label: "Oxfords", description: "Polished leather with a toe cap and laces" },
+  { id: "loafer", label: "Loafers", description: "Polished leather slip-ons with a strap across the top" },
 ] as const;
 
 export const CHARACTER_COLORS = [

@@ -1,6 +1,6 @@
 import { LIMITS } from "@opengame/shared/browser";
 import type { CheckProgress } from "./findings";
-import { heldMessage } from "./status";
+import { OFF_GALLERY_HOLD, heldMessage } from "./status";
 import { isRetiredCheck } from "./review";
 import type { Submission } from "./submission";
 
@@ -94,6 +94,11 @@ export function deploymentSteps(input: DeploymentProgressInput): DeployStep[] {
       put("review", submission.hold ? "held" : "running", submission.hold
         ? heldMessage(submission.hold) + (submission.hold.reason === "placement" ? " We’ll retry it; you don’t need to upload again." : "")
         : CHECKING);
+    /* A release waiting on its game being off the gallery, which nothing of ours retries
+       (20261121090000): the page says why, not "checking". Only that sentence: the server sends
+       it only for that wait, and `cannotConfirm` carries other refusals (a jam's re-entry)
+       that are no reason to stop calling a running check one. */
+    if (submission.state === "waiting" && !submission.hold && input.cannotConfirm === OFF_GALLERY_HOLD) put("review", "held", OFF_GALLERY_HOLD);
     if (submission.state === "needs_certification") put("review", "waiting", "Review starts after you confirm the required details.");
     if (["returned", "blocked", "withdrawn", "superseded"].includes(submission.state)) put("details", "waiting", "Nothing to confirm for this build.");
     if (["returned", "blocked", "withdrawn", "superseded"].includes(submission.state))

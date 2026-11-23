@@ -1090,1578 +1090,1609 @@ function haircutMarkings() {
   return marks;
 }
 
+/*
+ * Every shape's signed distance, one small function each. Until 21 Nov 2026 this was one
+ * `switch` inside `sdShape`, 1,570 lines and 122 KB of bytecode, which is past the size V8
+ * will optimise a function at (60 KB), so every sample of every face, sheet, 3D head and
+ * picker ran in the interpreter: about 715 ns a call on a build machine, against 192 ns for the same
+ * arithmetic as a table (calling one shape at a time; 956 against 510 ns cycling every shape), and the slowest tests in the repository were mostly waiting on it
+ * (packages/ui's accessory reach files, 224 s of CPU between them). The bodies are the
+ * switch's cases moved as they were, and `sdShape` answers the same number, bit for bit, for
+ * every shape (checked over 34 million samples). Keep a new shape here as its own entry: the
+ * `Record` makes a missing one a type error, and `tests/mascot-shape-table.test.ts` fails if
+ * `sdShape` grows back into one large function.
+ */
+const SHAPE_DISTANCE: Record<MascotShapeId, (x: number, y: number, t: number) => number> = {
+  circle(x, y) {
+    return length(x, y) - 0.84;
+  },
+  square(x, y) {
+    return sdRoundBox(x, y, 0.79, 0.79, 0.3);
+  },
+  slab(x, y) {
+    return sdRoundBox(x, y - 0.1, 0.93, 0.62, 0.34);
+  },
+  tall(x, y) {
+    return sdRoundBox(x, y + 0.03, 0.6, 0.88, 0.32);
+  },
+  egg(x, y) {
+    return sdCone(x, y, 0, 0.2, 0.66, 0, -0.36, 0.46);
+  },
+  pebble(x, y) {
+    return sdEllipse(x, y - 0.2, 0.92, 0.64);
+  },
+  bean(x, y, t) {
+    const s = Math.sin(t * 1.3) * 0.015;
+    const a = length(x + 0.2 + s, y + 0.16) - 0.6;
+    const b = length(x - 0.24 + s, y - 0.18 - s) - 0.57;
+    return smin(a, b, 0.42);
+  },
+  drop(x, y) {
+    return sdCone(x, y, 0, 0.2, 0.66, 0, -0.74, 0.1);
+  },
+  ghost(x, y, t) {
+    const head = length(x, y + 0.08) - 0.76;
+    const skirt = sdRoundBox(x, y - 0.32, 0.76, 0.5, 0.06);
+    const hem = y - (0.74 + 0.085 * Math.cos(x * 12.5 + t * 2.2));
+    return Math.max(Math.min(head, skirt), hem);
+  },
+  puff(x, y, t) {
+    let d = length(x, y) - 0.6;
+    for (let i = 0; i < 6; i += 1) {
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const breathe = Math.sin(t * 1.6 + i * 1.7) * 0.012;
+      d = smin(d, length(x - Math.cos(angle) * 0.46, y - Math.sin(angle) * 0.46) - (0.38 + breathe), 0.2);
+    }
+    return d;
+  },
+  flower(x, y, t) {
+    let d = length(x, y - 0.04) - 0.5;
+    for (let i = 0; i < 5; i += 1) {
+      const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      const sway = Math.sin(t * 1.4 + i) * 0.01;
+      d = smin(d, length(x - Math.cos(angle) * 0.5, y - 0.04 - Math.sin(angle) * 0.5) - (0.35 + sway), 0.06);
+    }
+    return d;
+  },
+  star(x, y) {
+    const yy = y - 0.08;
+    const angle = Math.atan2(x, -yy);
+    const r = 0.64 + 0.2 * Math.cos(5 * angle);
+    return (length(x, yy) - r) * 0.78;
+  },
+  heart(x, y) {
+    return heart(x, y + 0.03, 1.74);
+  },
+  diamond(x, y) {
+    const a = 0.78, b = 0.8;
+    const d = (Math.abs(x) / a + Math.abs(y - 0.02) / b - 1) / Math.sqrt(1 / (a * a) + 1 / (b * b));
+    return d - 0.12;
+  },
+  hexagon(x, y) {
+    return sdHexagon(x, y - 0.04, 0.66) - 0.14;
+  },
+  cat(x, y) {
+    const head = length(x, y - 0.12) - 0.74;
+    const ear = Math.min(
+      sdCone(x, y, -0.42, -0.26, 0.24, -0.6, -0.84, 0.06),
+      sdCone(x, y, 0.42, -0.26, 0.24, 0.6, -0.84, 0.06),
+    );
+    return smin(head, ear, 0.08);
+  },
+  bear(x, y) {
+    const head = length(x, y - 0.12) - 0.73;
+    const ears = Math.min(length(x + 0.52, y + 0.48) - 0.25, length(x - 0.52, y + 0.48) - 0.25);
+    return smin(head, ears, 0.08);
+  },
+  bunny(x, y) {
+    const head = length(x, y - 0.24) - 0.64;
+    const ear = (side: number) => {
+      const ex = x - side * 0.24;
+      const ey = y + 0.46;
+      const c = Math.cos(side * 0.16), sn = Math.sin(side * 0.16);
+      return sdEllipse(ex * c + ey * sn, -ex * sn + ey * c, 0.13, 0.38);
+    };
+    return smin(head, Math.min(ear(-1), ear(1)), 0.08);
+  },
+  devil(x, y) {
+    const head = length(x, y - 0.06) - 0.8;
+    const horns = Math.min(
+      sdCone(x, y, -0.42, -0.5, 0.16, -0.62, -0.9, 0.03),
+      sdCone(x, y, 0.42, -0.5, 0.16, 0.62, -0.9, 0.03),
+    );
+    return smin(head, horns, 0.06);
+  },
+  alien(x, y, t) {
+    const head = sdEllipse(x, y - 0.16, 0.82, 0.7);
+    const bob = Math.sin(t * 2) * 0.02;
+    const stem = sdCone(x, y, 0, -0.5, 0.045, 0.1, -0.76, 0.035);
+    const ball = length(x - 0.12, y + 0.84 + bob) - 0.1;
+    return Math.min(head, stem, ball);
+  },
+  mushroom(x, y) {
+    const cap = Math.max(sdEllipse(x, y + 0.14, 0.94, 0.62), y - 0.12);
+    const stem = sdRoundBox(x, y - 0.46, 0.42, 0.4, 0.18);
+    return smin(cap, stem, 0.05);
+  },
+  onigiri(x, y) {
+    // Inigo Quilez's equilateral triangle, rounded, with y turned to point up.
+    const r = 0.74;
+    const k = Math.sqrt(3);
+    let px = Math.abs(x) - r;
+    let py = -(y - 0.22) + r / k;
+    if (px + k * py > 0) {
+      const nx = (px - k * py) / 2;
+      const ny = (-k * px - py) / 2;
+      px = nx;
+      py = ny;
+    }
+    px -= Math.max(-2 * r, Math.min(0, px));
+    return -length(px, py) * Math.sign(py) - 0.16;
+  },
+  slime(x, y, t) {
+    const body = Math.max(sdEllipse(x, y - 0.12, 0.86, 0.7), y - 0.62);
+    const drip = (cx: number, len: number, r: number) => sdCone(x, y, cx, 0.52, r, cx + 0.02, 0.52 + len, r * 0.72);
+    const ooze = Math.sin(t * 1.7) * 0.03;
+    const drips = Math.min(drip(-0.42, 0.24 + ooze, 0.1), drip(0.06, 0.3 - ooze, 0.09), drip(0.48, 0.16 + ooze, 0.08));
+    return smin(body, drips, 0.06);
+  },
+  pear(x, y) {
+    return smin(length(x, y - 0.36) - 0.56, length(x, y + 0.26) - 0.4, 0.3);
+  },
+  spiky(x, y, t) {
+    const angle = Math.atan2(x, -y);
+    return (length(x, y) - (0.72 + 0.09 * Math.cos(10 * angle + t * 0.6))) * 0.72;
+  },
+  pill(x, y) {
+    return sdRoundBox(x, y, 0.52, 0.86, 0.52);
+  },
+  dome(x, y) {
+    return Math.max(sdEllipse(x, y - 0.66, 0.92, 1.4), y - 0.8) - 0.02;
+  },
+  blob(x, y, t) {
+    const a = Math.atan2(y - 0.04, x);
+    const r = 0.74 * (1 + 0.09 * Math.cos(3 * a + 0.5 + Math.sin(t * 0.9) * 0.25) + 0.06 * Math.cos(5 * a + 1.3));
+    return (length(x, y - 0.04) - r) * 0.85;
+  },
+  moon(x, y) {
+    const disc = length(x, y - 0.04) - 0.82;
+    const bite = length(x - 0.46, y + 0.24) - 0.66;
+    return Math.max(disc, -bite);
+  },
+  octagon(x, y) {
+    const ax = Math.abs(x);
+    const ay = Math.abs(y - 0.02);
+    return Math.max(ax, ay, (ax + ay) * Math.SQRT1_2) - 0.74;
+  },
+  gem(x, y) {
+    return sdPolygon(x, y, [[-0.46, -0.58], [0.46, -0.58], [0.84, -0.18], [0, 0.82], [-0.84, -0.18]]) - 0.06;
+  },
+  shield(x, y) {
+    return smin(sdRoundBox(x, y + 0.3, 0.78, 0.5, 0.18), sdCone(x, y, 0, 0.02, 0.72, 0, 0.84, 0.04), 0.06);
+  },
+  lemon(x, y) {
+    return smin(
+      sdEllipse(x, y - 0.18, 0.72, 0.58),
+      Math.min(sdCone(x, y, 0.5, 0.18, 0.22, 0.94, 0.1, 0.04), sdCone(x, y, -0.5, 0.18, 0.22, -0.94, 0.26, 0.04)),
+      0.14,
+    );
+  },
+  apple(x, y) {
+    const body = smin(length(x - 0.2, y - 0.14) - 0.6, length(x + 0.2, y - 0.14) - 0.6, 0.2);
+    const dimple = length(x, y + 0.58) - 0.16;
+    const stem = sdCapsule(x, y, 0, -0.42, 0.08, -0.82, 0.045);
+    const leaf = sdEllipse((x - 0.3) * 0.86 + (y + 0.74) * 0.5, -(x - 0.3) * 0.5 + (y + 0.74) * 0.86, 0.2, 0.09);
+    return Math.min(Math.max(body, -dimple), stem, leaf);
+  },
+  pumpkin(x, y) {
+    let d = sdEllipse(x, y - 0.2, 0.34, 0.62);
+    for (const [cx, rx] of [[-0.3, 0.4], [0.3, 0.4], [-0.6, 0.32], [0.6, 0.32]] as const) {
+      d = smin(d, sdEllipse(x - cx, y - 0.24, rx, 0.56), 0.06);
+    }
+    return Math.min(d, sdCapsule(x, y, 0.02, -0.34, 0.1, -0.7, 0.07));
+  },
+  acorn(x, y) {
+    const nut = sdCone(x, y, 0, 0.1, 0.64, 0, 0.86, 0.05);
+    const cap = Math.max(sdEllipse(x, y + 0.24, 0.84, 0.46), y + 0.02);
+    return Math.min(nut, cap, sdCapsule(x, y, 0, -0.66, 0.06, -0.86, 0.05));
+  },
+  cactus(x, y, t) {
+    const body = sdRoundBox(x, y - 0.06, 0.36, 0.8, 0.36);
+    const sway = Math.sin(t * 1.2) * 0.02;
+    const left = Math.min(sdCapsule(x, y, -0.3, 0.22, -0.66, 0.22, 0.13), sdCapsule(x, y, -0.66, 0.22, -0.66 + sway, -0.2, 0.13));
+    const right = Math.min(sdCapsule(x, y, 0.3, 0.02, 0.66, 0.02, 0.13), sdCapsule(x, y, 0.66, 0.02, 0.66 - sway, -0.44, 0.13));
+    return smin(body, Math.min(left, right), 0.06);
+  },
+  flame(x, y, t) {
+    const f = Math.sin(t * 5.3) * 0.05;
+    const core = sdCone(x, y, 0, 0.34, 0.54, f, -0.86, 0.03);
+    const tongue = sdCone(x, y, 0.26, 0.16, 0.22, 0.44 - f, -0.44, 0.02);
+    const tongue2 = sdCone(x, y, -0.28, 0.24, 0.2, -0.42 + f, -0.26, 0.02);
+    return smin(core, Math.min(tongue, tongue2), 0.12);
+  },
+  snowman(x, y) {
+    return smin(length(x, y - 0.38) - 0.5, length(x, y + 0.42) - 0.42, 0.08);
+  },
+  dumpling(x, y) {
+    const base = Math.max(sdEllipse(x, y - 0.42, 0.94, 0.86), y - 0.8);
+    const crest = sdEllipse(x, y + 0.38, 0.22, 0.12 + 0.03 * Math.cos(x * 40));
+    return smin(base, crest, 0.1);
+  },
+  bell(x, y) {
+    const body = sdCone(x, y, 0, 0.36, 0.7, 0, -0.5, 0.38);
+    const lip = sdRoundBox(x, y - 0.66, 0.86, 0.14, 0.1);
+    const knob = length(x, y + 0.84) - 0.1;
+    return Math.min(smin(body, lip, 0.08), knob);
+  },
+  ufo(x, y, t) {
+    const dome = Math.max(length(x, y + 0.14) - 0.5, y - 0.1);
+    const saucer = sdEllipse(x, y - 0.26, 0.96, 0.26);
+    const glow = Math.sin(t * 2) * 0.01;
+    return smin(dome, saucer - glow, 0.06);
+  },
+  robot(x, y, t) {
+    const head = sdRoundBox(x, y - 0.12, 0.7, 0.62, 0.14);
+    const ears = Math.min(sdRoundBox(x + 0.8, y - 0.12, 0.1, 0.2, 0.05), sdRoundBox(x - 0.8, y - 0.12, 0.1, 0.2, 0.05));
+    const stem = sdCapsule(x, y, 0, -0.5, 0, -0.74, 0.04);
+    const ball = length(x, y + 0.82 + Math.sin(t * 2.4) * 0.015) - 0.09;
+    return Math.min(head, ears, stem, ball);
+  },
+  crown(x, y) {
+    const head = length(x, y - 0.24) - 0.64;
+    let points = sdRoundBox(x, y + 0.36, 0.56, 0.12, 0.04);
+    for (const px of [-0.42, 0, 0.42]) points = Math.min(points, sdCone(x, y, px, -0.36, 0.14, px * 1.12, -0.86, 0.05));
+    return Math.min(head, points);
+  },
+  unicorn(x, y) {
+    const head = length(x, y - 0.14) - 0.74;
+    const horn = sdCone(x, y, 0.02, -0.5, 0.14, 0.12, -0.94, 0.02);
+    return smin(head, horn, 0.05);
+  },
+  fox(x, y) {
+    const head = smin(length(x, y - 0.12) - 0.6, Math.min(sdEllipse(x - 0.42, y - 0.36, 0.34, 0.22), sdEllipse(x + 0.42, y - 0.36, 0.34, 0.22)), 0.1);
+    const ears = Math.min(sdCone(x, y, -0.34, -0.22, 0.2, -0.7, -0.86, 0.04), sdCone(x, y, 0.34, -0.22, 0.2, 0.7, -0.86, 0.04));
+    return smin(head, ears, 0.06);
+  },
+  mouse(x, y) {
+    const head = length(x, y - 0.24) - 0.6;
+    const ears = Math.min(length(x - 0.54, y + 0.34) - 0.34, length(x + 0.54, y + 0.34) - 0.34);
+    return smin(head, ears, 0.05);
+  },
+  frog(x, y) {
+    const body = sdEllipse(x, y - 0.32, 0.92, 0.54);
+    const bumps = Math.min(length(x - 0.42, y + 0.18) - 0.28, length(x + 0.42, y + 0.18) - 0.28);
+    return smin(body, bumps, 0.14);
+  },
+  chick(x, y) {
+    const body = length(x, y - 0.14) - 0.72;
+    let tuft = Infinity;
+    for (const a of [-0.45, 0, 0.45]) {
+      const tx = x - Math.sin(a) * 0.12;
+      const ty = y + 0.7;
+      tuft = Math.min(tuft, sdEllipse(tx * Math.cos(a) - ty * Math.sin(a), tx * Math.sin(a) + ty * Math.cos(a), 0.06, 0.17));
+    }
+    return Math.min(body, tuft);
+  },
+  octopus(x, y, t) {
+    let d = sdEllipse(x, y + 0.06, 0.78, 0.66);
+    [-0.54, -0.18, 0.18, 0.54].forEach((tx, i) => {
+      d = smin(d, sdCone(x, y, tx, 0.34, 0.14, tx * 1.12 + Math.sin(t * 2.6 + i * 1.7) * 0.05, 0.84, 0.08), 0.1);
+    });
+    return d;
+  },
+  jellyfish(x, y, t) {
+    let d = Math.max(sdEllipse(x, y - 0.12, 0.82, 0.74), y - 0.22);
+    [-0.5, -0.25, 0, 0.25, 0.5].forEach((tx, i) => {
+      const wx = x - (tx + 0.05 * Math.sin(y * 10 + t * 3 + i));
+      const end = 0.82 - (i % 2) * 0.1;
+      d = Math.min(d, Math.max(Math.abs(wx) - 0.045, Math.max(0.16 - y, y - end)));
+    });
+    return d;
+  },
+  pentagon(x, y) {
+    return sdPoly(x, y, PENTAGON) - 0.08;
+  },
+  plus(x, y) {
+    return smin(sdRoundBox(x, y - 0.02, 0.86, 0.34, 0.16), sdRoundBox(x, y - 0.02, 0.36, 0.84, 0.16), 0.14);
+  },
+  peanut(x, y, t) {
+    const s = Math.sin(t * 1.2) * 0.012;
+    return smin(sdEllipse(x + 0.38, y - 0.3 + s, 0.5, 0.54), sdEllipse(x - 0.38, y - 0.26 - s, 0.5, 0.58), 0.26);
+  },
+  leaf(x, y, t) {
+    // A vesica tipped over the way a leaf lies, its stalk on the ground at the left.
+    const a = 0.62 + Math.sin(t * 1.3) * 0.03;
+    const c = Math.cos(a), s = Math.sin(a);
+    const yy = y - 0.04;
+    const px = Math.abs(x * c + yy * s);
+    const py = Math.abs(-x * s + yy * c);
+    const b = Math.sqrt(1 - 0.5 * 0.5);
+    const blade = (py - b) * 0.5 > px * b ? length(px, py - b) : length(px + 0.5, py) - 1;
+    return Math.min(blade, sdCapsule(x, y, -0.46, 0.7, -0.62, 0.84, 0.045));
+  },
+  shell(x, y) {
+    // A scallop: ribs fanning from a hinge on the ground, each ending in a bump.
+    const hy = y - 0.9;
+    const r = length(x, hy);
+    const a = Math.atan2(x, -hy);
+    const rim = r - (1.5 + 0.07 * Math.abs(Math.cos(a * 14)));
+    const wedge = r * Math.sin(Math.min(Math.abs(a) - 0.6, 1.2));
+    const hinge = sdRoundBox(x, y - 0.74, 0.32, 0.1, 0.05);
+    return smin(smax(rim * 0.9, wedge, 0.12), hinge, 0.12);
+  },
+  tulip(x, y, t) {
+    const cup = sdEllipse(x, y - 0.02, 0.66, 0.58);
+    const petals = Math.min(
+      sdCone(x, y, 0, -0.12, 0.36, 0, -0.84, 0.06),
+      sdCone(x, y, -0.34, 0.0, 0.32, -0.5, -0.56, 0.1),
+      sdCone(x, y, 0.34, 0.0, 0.32, 0.5, -0.56, 0.1),
+    );
+    const sway = Math.sin(t * 1.4) * 0.02;
+    const stem = sdCapsule(x, y, 0, 0.5, sway, 0.84, 0.08);
+    const leaves = Math.min(sdTiltEllipse(x, y, -0.32, 0.72, 0.3, 0.11, -0.5), sdTiltEllipse(x, y, 0.32, 0.72, 0.3, 0.11, 0.5));
+    return smin(smin(cup, petals, 0.08), smin(stem, leaves, 0.06), 0.08);
+  },
+  penguin(x, y, t) {
+    const body = sdEllipse(x, y - 0.02, 0.6, 0.8);
+    const flap = Math.sin(t * 2.4) * 0.06;
+    const wings = Math.min(sdTiltEllipse(x, y, -0.6, 0.14, 0.12, 0.34, -0.5 - flap), sdTiltEllipse(x, y, 0.6, 0.14, 0.12, 0.34, 0.5 + flap));
+    const feet = Math.min(sdEllipse(x + 0.24, y - 0.79, 0.2, 0.07), sdEllipse(x - 0.24, y - 0.79, 0.2, 0.07));
+    return smin(smin(body, wings, 0.08), feet, 0.04);
+  },
+  owl(x, y) {
+    // The dip in the brow is what makes it an owl and not a cat: the facial disc.
+    const body = smax(sdRoundBox(x, y - 0.14, 0.7, 0.7, 0.46), -(length(x, y + 0.74) - 0.16), 0.12);
+    const tufts = Math.min(sdCone(x, y, -0.5, -0.38, 0.14, -0.84, -0.66, 0.03), sdCone(x, y, 0.5, -0.38, 0.14, 0.84, -0.66, 0.03));
+    const wings = Math.min(sdTiltEllipse(x, y, -0.7, 0.32, 0.15, 0.36, -0.25), sdTiltEllipse(x, y, 0.7, 0.32, 0.15, 0.36, 0.25));
+    const feet = Math.min(sdEllipse(x + 0.22, y - 0.84, 0.14, 0.05), sdEllipse(x - 0.22, y - 0.84, 0.14, 0.05));
+    return Math.min(smin(smin(body, tufts, 0.08), wings, 0.06), feet);
+  },
+  pig(x, y) {
+    const body = sdEllipse(x, y - 0.14, 0.8, 0.6);
+    // Ears that flop forward over the brow, and a tail with a curl in it.
+    const ears = Math.min(sdTiltEllipse(x, y, -0.5, -0.4, 0.2, 0.13, 0.7), sdTiltEllipse(x, y, 0.5, -0.4, 0.2, 0.13, -0.7));
+    let legs = Infinity;
+    for (const lx of [-0.5, -0.18, 0.18, 0.5]) legs = Math.min(legs, sdRoundBox(x - lx, y - 0.76, 0.1, 0.1, 0.05));
+    const tail = Math.max(sdRing(x, y, 0.88, 0.02, 0.08, 0.035), -(x - 0.84) - (y - 0.02));
+    return Math.min(smin(smin(body, ears, 0.08), legs, 0.08), tail);
+  },
+  koala(x, y) {
+    const head = sdEllipse(x, y - 0.24, 0.66, 0.6);
+    const ex = Math.abs(x) - 0.62;
+    const ey = y + 0.08;
+    const ears = length(ex, ey) - (0.32 + 0.025 * Math.cos(Math.atan2(ey, ex) * 7));
+    return smin(head, ears * 0.9, 0.06);
+  },
+  hamster(x, y) {
+    const body = smin(length(x, y - 0.02) - 0.5, sdEllipse(x, y - 0.44, 0.86, 0.42), 0.36);
+    const ears = Math.min(length(x + 0.36, y + 0.4) - 0.13, length(x - 0.36, y + 0.4) - 0.13);
+    return smin(body, ears, 0.06);
+  },
+  puppy(x, y, t) {
+    const head = length(x, y - 0.16) - 0.68;
+    const flop = Math.sin(t * 1.6) * 0.03;
+    return smin(head, sdTiltEllipse(Math.abs(x), y, 0.62, 0.08, 0.2, 0.42, 0.35 + flop), 0.06);
+  },
+  bat(x, y, t) {
+    const head = length(x, y - 0.24) - 0.6;
+    const ears = Math.min(sdCone(x, y, -0.3, -0.2, 0.14, -0.4, -0.62, 0.03), sdCone(x, y, 0.3, -0.2, 0.14, 0.4, -0.62, 0.03));
+    const flap = Math.sin(t * 3) * 0.03;
+    const wx = Math.abs(x);
+    let scallop = Infinity;
+    for (const sx of [0.42, 0.68, 0.94]) scallop = Math.min(scallop, length(wx - sx, y - 0.4 + flap) - 0.14);
+    const wings = Math.max(sdEllipse(wx - 0.62, y - 0.1 + flap, 0.36, 0.32), -scallop);
+    return smin(Math.min(head, ears), wings, 0.06);
+  },
+  hedgehog(x, y, t) {
+    const body = Math.max(sdEllipse(x, y - 0.42, 0.84, 0.66), y - 0.84);
+    // Spines round the top half only, a triangle wave in angle about the middle.
+    const dy = y - 0.42;
+    const a = Math.atan2(x, -dy);
+    const u = a * 3.2 + 0.5 + Math.sin(t * 1.2) * 0.04;
+    const saw = Math.abs(u - Math.floor(u) - 0.5) * 2;
+    const spines = Math.abs(a) < 1.7 ? (length(x, dy) - (0.66 + 0.26 * (1 - saw))) * 0.6 : Infinity;
+    return Math.min(body, Math.max(spines, y - 0.84));
+  },
+  axolotl(x, y, t) {
+    const head = sdEllipse(x, y - 0.3, 0.74, 0.54);
+    const sway = Math.sin(t * 2) * 0.03;
+    const ax = Math.abs(x);
+    let gills = Infinity;
+    for (const [gx, gy] of [[0.94, 0.02], [0.88, -0.28], [0.66, -0.5]] as const) gills = Math.min(gills, sdCone(ax, y, 0.56, 0.14, 0.05, gx, gy + sway, 0.09));
+    return smin(head, gills, 0.06);
+  },
+  hatch(x, y) {
+    // A chick still half in its egg: the shell's broken edge is a zigzag.
+    const head = length(x, y + 0.12) - 0.56;
+    const u = x * 3.2 + 0.5;
+    const crack = 0.02 + 0.14 * Math.abs(u - Math.floor(u) - 0.5) * 2;
+    const shell = Math.max(sdEllipse(x, y - 0.4, 0.74, 0.46), (crack - y) * 0.7);
+    return Math.min(head, shell);
+  },
+  bee(x, y, t) {
+    const body = sdEllipse(x, y - 0.3, 0.78, 0.56);
+    const buzz = Math.sin(t * 9) * 0.04;
+    // Wings standing off the back, long and thin, so they read as wings and not ears.
+    const wings = Math.min(sdTiltEllipse(x, y, -0.6, -0.3, 0.13, 0.32, 0.95 + buzz), sdTiltEllipse(x, y, 0.6, -0.3, 0.13, 0.32, -0.95 - buzz));
+    const feelers = Math.min(
+      sdCapsule(x, y, -0.1, -0.2, -0.18, -0.62, 0.035),
+      sdCapsule(x, y, 0.1, -0.2, 0.18, -0.62, 0.035),
+      length(x + 0.19, y + 0.68) - 0.07,
+      length(x - 0.19, y + 0.68) - 0.07,
+    );
+    return Math.min(smin(body, wings, 0.04), feelers);
+  },
+  snail(x, y, t) {
+    const shell = length(x - 0.14, y - 0.18) - 0.6;
+    const foot = sdCapsule(x, y, -0.78, 0.72, 0.82, 0.72, 0.13);
+    const neck = sdCone(x, y, -0.6, 0.66, 0.16, -0.7, 0.24, 0.13);
+    const bob = Math.sin(t * 1.8) * 0.02;
+    const horns = Math.min(
+      sdCapsule(x, y, -0.74, 0.2, -0.86, -0.14 + bob, 0.035),
+      sdCapsule(x, y, -0.64, 0.18, -0.6, -0.18 - bob, 0.035),
+      length(x + 0.86, y + 0.16 - bob) - 0.06,
+      length(x + 0.6, y + 0.2 + bob) - 0.06,
+    );
+    return Math.min(smin(Math.min(foot, neck), shell, 0.08), horns);
+  },
+  turtle(x, y, t) {
+    const shell = Math.max(sdEllipse(x, y - 0.56, 0.72, 0.96), y - 0.62);
+    const rim = sdRoundBox(x, y - 0.62, 0.8, 0.07, 0.07);
+    const peek = Math.sin(t * 1.1) * 0.02;
+    const head = length(x - 0.76 - peek, y - 0.42) - 0.17;
+    const legs = Math.min(sdRoundBox(x + 0.44, y - 0.76, 0.12, 0.1, 0.05), sdRoundBox(x - 0.38, y - 0.76, 0.12, 0.1, 0.05));
+    return Math.min(smin(shell, rim, 0.04), smin(head, legs, 0.04));
+  },
+  crab(x, y, t) {
+    const body = sdEllipse(x, y - 0.42, 0.74, 0.4);
+    const ax = Math.abs(x);
+    const snap = Math.sin(t * 2.2) * 0.04;
+    const arms = sdCapsule(ax, y, 0.5, 0.2, 0.62, -0.2, 0.07);
+    const claws = Math.max(length(ax - 0.62, y + 0.42) - 0.24, -sdCone(ax, y, 0.62, -0.44, 0.01, 0.52 - snap, -0.78, 0.13));
+    let legs = Infinity;
+    for (const [lx, ly] of [[0.9, 0.62], [0.84, 0.82]] as const) legs = Math.min(legs, sdCapsule(ax, y, 0.56, 0.5, lx, ly, 0.045));
+    return smin(body, Math.min(arms, claws, legs), 0.06);
+  },
+  fish(x, y, t) {
+    const swish = Math.sin(t * 3) * 0.04;
+    const body = sdEllipse(x + 0.16, y - 0.32, 0.68, 0.5);
+    const tail = Math.max(sdCone(x, y, 0.42, 0.32, 0.05, 0.8, 0.32 + swish, 0.3), -(length(x - 1.08, y - 0.32 - swish) - 0.2));
+    const fin = sdCone(x, y, -0.24, -0.1, 0.14, -0.02, -0.34, 0.04);
+    return smin(body, Math.min(tail, fin), 0.08);
+  },
+  whale(x, y, t) {
+    const body = smin(sdEllipse(x + 0.12, y - 0.36, 0.8, 0.5), sdCone(x, y, 0.42, 0.5, 0.24, 0.74, 0.0, 0.08), 0.2);
+    const flukes = Math.min(sdTiltEllipse(x, y, 0.6, -0.12, 0.2, 0.08, 0.6), sdTiltEllipse(x, y, 0.88, -0.08, 0.2, 0.08, -0.6));
+    const spurt = Math.sin(t * 2.6) * 0.03;
+    const spout = Math.min(
+      sdCapsule(x, y, -0.24, -0.24, -0.38, -0.52 - spurt, 0.04),
+      sdCapsule(x, y, -0.24, -0.24, -0.22, -0.6 - spurt, 0.04),
+      sdCapsule(x, y, -0.24, -0.24, -0.08, -0.52 - spurt, 0.04),
+    );
+    return Math.min(smin(body, flukes, 0.06), spout);
+  },
+  shark(x, y, t) {
+    // Side on, like the fish, and told apart from it by the fin and the crescent tail.
+    const swish = Math.sin(t * 2.4) * 0.03;
+    const body = smin(sdCone(x, y, 0.06, 0.38, 0.46, -0.66, 0.36, 0.2), sdCone(x, y, 0.3, 0.38, 0.32, 0.7, 0.38 + swish, 0.08), 0.1);
+    const fin = Math.max(sdPoly(x, y, SHARK_FIN) - 0.04, -(length(x - 0.5, y + 0.52) - 0.3));
+    const tail = Math.min(sdCone(x, y, 0.66, 0.38 + swish, 0.07, 0.94, 0.04 + swish, 0.03), sdCone(x, y, 0.66, 0.38 + swish, 0.07, 0.9, 0.66 + swish, 0.03));
+    const flipper = sdCone(x, y, -0.1, 0.66, 0.1, -0.3, 0.86, 0.03);
+    return smin(body, Math.min(fin, tail, flipper), 0.06);
+  },
+  strawberry(x, y) {
+    const berry = sdCone(x, y, 0, -0.02, 0.66, 0, 0.72, 0.14);
+    let leaves = Infinity;
+    for (const [lx, ly] of [[-0.52, -0.54], [-0.26, -0.84], [0.26, -0.84], [0.52, -0.54]] as const) leaves = Math.min(leaves, sdCone(x, y, 0, -0.62, 0.12, lx, ly, 0.03));
+    return Math.min(smin(berry, leaves, 0.04), sdCapsule(x, y, 0, -0.66, 0.06, -0.92, 0.04));
+  },
+  pineapple(x, y) {
+    const body = sdEllipse(x, y - 0.3, 0.62, 0.56);
+    let crown = Infinity;
+    for (const [lx, ly] of [[0, -0.92], [-0.28, -0.8], [0.28, -0.8], [-0.46, -0.52], [0.46, -0.52]] as const) crown = Math.min(crown, sdCone(x, y, 0, -0.24, 0.13, lx, ly, 0.03));
+    return smin(body, crown, 0.06);
+  },
+  cupcake(x, y) {
+    const wrapper = sdPoly(x, y, CUPCAKE_WRAPPER) - 0.06;
+    const swirl = smin(smin(sdEllipse(x, y - 0.06, 0.82, 0.3), sdEllipse(x, y + 0.26, 0.58, 0.24), 0.1), sdCone(x, y, 0, -0.38, 0.3, 0.06, -0.74, 0.05), 0.1);
+    return Math.min(wrapper, swirl, length(x - 0.08, y + 0.8) - 0.08);
+  },
+  icecream(x, y, t) {
+    const scoop = sdEllipse(x, y + 0.2, 0.7, 0.56);
+    let drips = Infinity;
+    for (const [dx, dl] of [[-0.5, 0.12], [0.46, 0.18]] as const) drips = Math.min(drips, sdCapsule(x, y, dx, 0.2, dx, 0.2 + dl + Math.sin(t * 1.5 + dx * 9) * 0.02, 0.09));
+    return Math.min(smin(scoop, drips, 0.08), sdCone(x, y, 0, 0.3, 0.36, 0, 0.84, 0.04));
+  },
+  pudding(x, y, t) {
+    // A wobble that shears from the plate up, the way a pudding moves.
+    const sx = x - Math.sin(t * 3) * 0.03 * (0.6 - y);
+    const body = sdPoly(sx, y, PUDDING) - 0.1;
+    const drips = Math.min(sdCapsule(Math.abs(sx), y, 0.52, -0.4, 0.58, -0.16, 0.06), sdCapsule(sx, y, 0.1, -0.44, 0.1, -0.3, 0.06));
+    return Math.min(smin(body, drips, 0.04), sdEllipse(x, y - 0.78, 0.94, 0.08));
+  },
+  toast(x, y) {
+    const crown = smin(length(x + 0.38, y + 0.26) - 0.46, length(x - 0.38, y + 0.26) - 0.46, 0.3);
+    return smin(crown, sdRoundBox(x, y - 0.32, 0.7, 0.52, 0.14), 0.1);
+  },
+  burger(x, y, t) {
+    const bun = Math.max(sdEllipse(x, y - 0.06, 0.84, 0.82), y - 0.06);
+    const lettuce = sdRoundBox(x, y - 0.14 - 0.03 * Math.sin(x * 15 + t * 1.4), 0.9, 0.06, 0.05);
+    const patty = sdRoundBox(x, y - 0.33, 0.86, 0.12, 0.1);
+    const base = sdRoundBox(x, y - 0.66, 0.8, 0.18, 0.16);
+    return Math.min(bun, lettuce, patty, base);
+  },
+  bowl(x, y) {
+    const shell = Math.max(length(x, y + 0.02) - 0.88, -0.04 - y);
+    let filling = Infinity;
+    for (let i = 0; i < 6; i += 1) filling = Math.min(filling, length(x + 0.6 - i * 0.24, y + 0.08 + (i % 2) * 0.04) - 0.15);
+    return smin(shell, filling, 0.06);
+  },
+  mitten(x, y, t) {
+    const hand = smin(sdRoundBox(x - 0.1, y + 0.06, 0.52, 0.62, 0.5), sdRoundBox(x - 0.1, y - 0.4, 0.48, 0.2, 0.1), 0.1);
+    const wave = Math.sin(t * 2) * 0.03;
+    const thumb = sdCapsule(x, y, -0.36, 0.2, -0.7, -0.16 + wave, 0.18);
+    return smin(smin(hand, thumb, 0.12), sdRoundBox(x - 0.1, y - 0.7, 0.56, 0.15, 0.06), 0.04);
+  },
+  tooth(x, y) {
+    const crown = smax(sdRoundBox(x, y + 0.22, 0.76, 0.5, 0.42), -(length(x, y + 0.92) - 0.22), 0.12);
+    const roots = Math.min(sdCone(x, y, -0.36, 0.2, 0.32, -0.3, 0.76, 0.1), sdCone(x, y, 0.36, 0.2, 0.32, 0.3, 0.76, 0.1));
+    return smin(crown, roots, 0.1);
+  },
+  candle(x, y, t) {
+    const body = sdRoundBox(x, y - 0.26, 0.56, 0.6, 0.1);
+    const drip = sdCapsule(x, y, 0.5, -0.32, 0.52, -0.06, 0.07);
+    const wick = sdCapsule(x, y, 0, -0.34, 0, -0.48, 0.03);
+    const f = Math.sin(t * 5.3) * 0.03;
+    return Math.min(smin(body, drip, 0.04), wick, sdCone(x, y, 0, -0.58, 0.14, f, -0.94, 0.02));
+  },
+  bulb(x, y) {
+    const glass = smin(length(x, y + 0.18) - 0.64, sdRoundBox(x, y - 0.4, 0.3, 0.16, 0.1), 0.24);
+    const yy = y - 0.68;
+    const base = sdRoundBox(x, yy, 0.27 + 0.03 * Math.cos(yy * 36), 0.15, 0.05);
+    return Math.min(glass, base);
+  },
+  mug(x, y) {
+    const body = sdRoundBox(x + 0.14, y - 0.18, 0.62, 0.66, 0.16);
+    const handle = Math.max(sdRing(x, y, 0.5, 0.16, 0.26, 0.08), 0.46 - x);
+    return smin(body, handle, 0.04);
+  },
+  potion(x, y) {
+    const flask = length(x, y - 0.24) - 0.62;
+    const neck = sdRoundBox(x, y + 0.48, 0.17, 0.2, 0.04);
+    const lip = sdRoundBox(x, y + 0.62, 0.24, 0.05, 0.04);
+    const cork = sdRoundBox(x, y + 0.76, 0.14, 0.1, 0.05);
+    return Math.min(smin(flask, neck, 0.1), lip, cork);
+  },
+  balloon(x, y, t) {
+    const sway = Math.sin(t * 1.4) * 0.03;
+    const ball = sdEllipse(x - sway, y + 0.16, 0.66, 0.72);
+    const knot = sdCone(x, y, sway, 0.54, 0.04, sway, 0.66, 0.09);
+    const string = y > 0.66 ? Math.abs(x - sway * 0.5 - 0.04 * Math.sin(y * 14)) - 0.035 : Infinity;
+    return Math.min(ball, knot, string);
+  },
+  present(x, y) {
+    const box = sdRoundBox(x, y - 0.42, 0.72, 0.44, 0.06);
+    const lid = sdRoundBox(x, y + 0.1, 0.82, 0.12, 0.05);
+    const bow = Math.min(sdTiltEllipse(x, y, -0.26, -0.4, 0.26, 0.15, 0.55), sdTiltEllipse(x, y, 0.26, -0.4, 0.26, 0.15, -0.55), length(x, y + 0.28) - 0.1);
+    return Math.min(box, lid, bow);
+  },
+  padlock(x, y) {
+    const body = sdRoundBox(x, y - 0.38, 0.74, 0.48, 0.16);
+    const shackle = Math.max(sdRing(x, y, 0, -0.1, 0.44, 0.11), y + 0.06);
+    return Math.min(body, shackle);
+  },
+  house(x, y) {
+    const walls = sdRoundBox(x, y - 0.42, 0.66, 0.44, 0.06);
+    const roof = sdPoly(x, y, ROOF) - 0.06;
+    const chimney = sdRoundBox(x - 0.48, y + 0.42, 0.1, 0.2, 0.03);
+    return Math.min(walls, roof, chimney);
+  },
+  tv(x, y, t) {
+    const box = sdRoundBox(x, y - 0.18, 0.88, 0.58, 0.2);
+    const feet = Math.min(sdRoundBox(x + 0.5, y - 0.8, 0.1, 0.06, 0.03), sdRoundBox(x - 0.5, y - 0.8, 0.1, 0.06, 0.03));
+    const wiggle = Math.sin(t * 1.6) * 0.02;
+    const aerial = Math.min(
+      sdCapsule(x, y, -0.06, -0.42, -0.38, -0.86 + wiggle, 0.035),
+      sdCapsule(x, y, 0.06, -0.42, 0.42, -0.82 - wiggle, 0.035),
+      length(x, y + 0.42) - 0.1,
+    );
+    return Math.min(box, feet, aerial);
+  },
+  gamepad(x, y) {
+    const bar = sdRoundBox(x, y - 0.22, 0.66, 0.36, 0.3);
+    const grips = Math.min(sdTiltEllipse(x, y, -0.6, 0.46, 0.28, 0.38, 0.5), sdTiltEllipse(x, y, 0.6, 0.46, 0.28, 0.38, -0.5));
+    const shoulders = sdRoundBox(Math.abs(x) - 0.48, y + 0.14, 0.18, 0.06, 0.06);
+    return smin(smin(bar, grips, 0.16), shoulders, 0.06);
+  },
+  trophy(x, y) {
+    const cup = Math.max(sdEllipse(x, y + 0.56, 0.62, 0.86), -0.66 - y);
+    const handles = Math.max(sdRing(Math.abs(x), y, 0.6, -0.36, 0.2, 0.06), 0.5 - Math.abs(x));
+    const stem = sdCone(x, y, 0, 0.24, 0.1, 0, 0.6, 0.14);
+    const base = sdRoundBox(x, y - 0.74, 0.46, 0.12, 0.06);
+    return Math.min(smin(cup, stem, 0.1), handles, base);
+  },
+  chest(x, y) {
+    const base = sdRoundBox(x, y - 0.52, 0.84, 0.34, 0.08);
+    const lid = Math.max(sdEllipse(x, y - 0.18, 0.88, 0.52), y - 0.2);
+    return Math.min(base, lid);
+  },
+  bomb(x, y, t) {
+    const ball = length(x, y - 0.16) - 0.7;
+    const cx = x - 0.34, cy = y + 0.5;
+    const c = Math.cos(0.6), s = Math.sin(0.6);
+    const cap = sdRoundBox(cx * c + cy * s, -cx * s + cy * c, 0.16, 0.11, 0.04);
+    const fuse = sdCapsule(x, y, 0.42, -0.58, 0.56, -0.76, 0.035);
+    const spark = star(x - 0.62, y + 0.84, 0.1 + Math.sin(t * 9) * 0.02) * 0.6;
+    return Math.min(ball, cap, fuse, spark);
+  },
+  pawn(x, y) {
+    const head = length(x, y + 0.38) - 0.46;
+    const collar = sdRoundBox(x, y - 0.1, 0.36, 0.06, 0.06);
+    const body = sdCone(x, y, 0, 0.62, 0.44, 0, 0.12, 0.2);
+    const base = sdRoundBox(x, y - 0.76, 0.66, 0.1, 0.08);
+    return Math.min(smin(head, collar, 0.06), smin(smin(body, collar, 0.06), base, 0.1));
+  },
+  spade(x, y) {
+    const blade = heart(x, -(y + 0.08), 1.4);
+    const stem = Math.max(sdCone(x, y, 0, 0.3, 0.05, 0, 0.78, 0.16), y - 0.86);
+    return smin(blade, stem, 0.06);
+  },
+  club(x, y) {
+    const top = length(x, y + 0.36) - 0.4;
+    const sides = Math.min(length(x + 0.38, y - 0.16) - 0.4, length(x - 0.38, y - 0.16) - 0.4);
+    const lobes = smin(smin(top, sides, 0.2), length(x, y) - 0.3, 0.1);
+    return smin(lobes, Math.max(sdCone(x, y, 0, 0.4, 0.05, 0, 0.78, 0.16), y - 0.86), 0.06);
+  },
+  wizard(x, y, t) {
+    const head = length(x, y - 0.24) - 0.62;
+    const brim = sdEllipse(x, y + 0.34, 0.84, 0.1);
+    const flop = Math.sin(t * 1.3) * 0.03;
+    return Math.min(head, smin(brim, sdCone(x, y, 0, -0.42, 0.44, 0.26 + flop, -0.94, 0.04), 0.04));
+  },
+  rocket(x, y) {
+    const hull = sdCone(x, y, 0, 0.26, 0.5, 0, -0.62, 0.12);
+    const fins = sdPoly(Math.abs(x), y, ROCKET_FIN) - 0.04;
+    const nozzle = sdRoundBox(x, y - 0.78, 0.2, 0.08, 0.04);
+    return Math.min(smin(hull, fins, 0.04), nozzle);
+  },
+  planet(x, y, t) {
+    const ball = length(x, y - 0.22) - 0.62;
+    const dx = x, dy = y - 0.22;
+    const a = -0.32 + Math.sin(t * 0.8) * 0.02;
+    const c = Math.cos(a), s = Math.sin(a);
+    const ring = Math.abs(sdEllipse(dx * c + dy * s, -dx * s + dy * c, 0.94, 0.22)) - 0.045;
+    return Math.min(ball, ring);
+  },
+  panda(x, y) {
+    // Wider than the bear and with smaller, higher ears, so the two still differ as
+    // silhouettes; the patches are what make it a panda, and they are `MARKINGS`.
+    const head = sdEllipse(x, y - 0.14, 0.82, 0.7);
+    const ears = Math.min(length(x + 0.56, y + 0.46) - 0.21, length(x - 0.56, y + 0.46) - 0.21);
+    return smin(head, ears, 0.06);
+  },
+  ladybug(x, y) {
+    const shell = sdEllipse(x, y - 0.16, 0.86, 0.7);
+    const head = sdEllipse(x, y + 0.5, 0.4, 0.24);
+    const feelers = Math.min(
+      sdCapsule(x, y, -0.16, -0.66, -0.3, -0.84, 0.035),
+      sdCapsule(x, y, 0.16, -0.66, 0.3, -0.84, 0.035),
+    );
+    return Math.min(smin(shell, head, 0.08), feelers);
+  },
+  elephant(x, y, t) {
+    const head = length(x, y - 0.1) - 0.62;
+    const ears = sdTiltEllipse(Math.abs(x), y, 0.64, 0.02, 0.32, 0.44, -0.25);
+    const flap = Math.sin(t * 1.8) * 0.02;
+    const trunk = Math.min(sdCone(x, y, 0, 0.46, 0.2, 0.06, 0.74, 0.1), sdCapsule(x, y, 0.06, 0.76, 0.22 + flap, 0.68, 0.08));
+    return smin(smin(head, ears, 0.06), trunk, 0.08);
+  },
+  lion(x, y) {
+    // Ten rounded scallops: few enough that each is several cells wide at navbar size.
+    const dy = y - 0.03;
+    const angle = Math.atan2(x, -dy);
+    const mane = (length(x, dy) - (0.74 + 0.08 * Math.cos(10 * angle))) * 0.82;
+    const ears = length(Math.abs(x) - 0.5, y + 0.62) - 0.17;
+    return smin(mane, ears, 0.04);
+  },
+  sheep(x, y) {
+    const bx = x - 0.08, by = y - 0.12;
+    const wool = (sdEllipse(bx, by, 0.76, 0.52) - 0.045 * Math.cos(13 * Math.atan2(by, bx))) * 0.8;
+    const head = sdTiltEllipse(x, y, -0.66, -0.16, 0.24, 0.32, 0.3);
+    const ear = sdTiltEllipse(x, y, -0.5, -0.34, 0.16, 0.07, -0.5);
+    let legs = Infinity;
+    for (const lx of [-0.42, -0.14, 0.3, 0.56]) legs = Math.min(legs, sdCapsule(x, y, lx, 0.5, lx, 0.78, 0.07));
+    return Math.min(smin(wool, Math.min(head, ear), 0.06), legs);
+  },
+  cow(x, y) {
+    const head = smin(sdRoundBox(x, y - 0.06, 0.56, 0.5, 0.4), sdEllipse(x, y - 0.56, 0.52, 0.3), 0.14);
+    const ax = Math.abs(x);
+    const horns = sdCone(ax, y, 0.36, -0.36, 0.12, 0.62, -0.8, 0.05);
+    const ears = sdTiltEllipse(ax, y, 0.74, -0.16, 0.24, 0.1, 0.3);
+    return smin(head, Math.min(horns, ears), 0.06);
+  },
+  duck(x, y) {
+    const body = smin(sdEllipse(x - 0.12, y - 0.46, 0.76, 0.4), sdCone(x, y, 0.56, 0.38, 0.2, 0.88, 0.08, 0.06), 0.14);
+    const head = length(x + 0.22, y + 0.2) - 0.52;
+    const bill = sdTiltEllipse(x, y, -0.76, -0.12, 0.22, 0.09, -0.12);
+    return smin(smin(body, head, 0.2), bill, 0.04);
+  },
+  seal(x, y) {
+    const body = sdCone(x, y, 0.16, 0.42, 0.44, -0.2, -0.3, 0.36);
+    const nose = sdTiltEllipse(x, y, -0.5, -0.24, 0.16, 0.1, 0.3);
+    const flipper = sdTiltEllipse(x, y, -0.36, 0.66, 0.22, 0.1, -0.5);
+    const tail = Math.min(sdTiltEllipse(x, y, 0.62, 0.74, 0.22, 0.09, -0.3), sdTiltEllipse(x, y, 0.7, 0.58, 0.2, 0.08, -0.9));
+    return smin(body, Math.min(nose, flipper, tail), 0.08);
+  },
+  dragon(x, y) {
+    const head = length(x, y - 0.14) - 0.68;
+    const ax = Math.abs(x);
+    const horns = sdCone(ax, y, 0.34, -0.4, 0.13, 0.66, -0.88, 0.03);
+    const frill = sdPoly(ax, y, DRAGON_FRILL) - 0.02;
+    return smin(head, Math.min(horns, frill), 0.06);
+  },
+  dino(x, y, t) {
+    const body = sdEllipse(x - 0.16, y - 0.34, 0.66, 0.44);
+    const neck = sdCone(x, y, -0.16, 0.16, 0.26, -0.56, -0.5, 0.15);
+    const head = sdTiltEllipse(x, y, -0.66, -0.6, 0.26, 0.17, -0.2);
+    const swish = Math.sin(t * 1.6) * 0.03;
+    const tail = sdCone(x, y, 0.6, 0.42, 0.2, 0.96, 0.66 + swish, 0.04);
+    const legs = Math.min(sdRoundBox(x + 0.2, y - 0.72, 0.12, 0.14, 0.06), sdRoundBox(x - 0.42, y - 0.72, 0.12, 0.14, 0.06));
+    return smin(smin(body, Math.min(neck, tail), 0.12), Math.min(head, legs), 0.08);
+  },
+  deer(x, y) {
+    const head = smin(length(x, y - 0.04) - 0.54, sdEllipse(x, y - 0.5, 0.34, 0.34), 0.2);
+    const ax = Math.abs(x);
+    const ears = sdTiltEllipse(ax, y, 0.6, -0.16, 0.24, 0.1, -0.4);
+    const antler = Math.min(
+      sdCapsule(ax, y, 0.22, -0.42, 0.46, -0.9, 0.05),
+      sdCapsule(ax, y, 0.36, -0.68, 0.66, -0.72, 0.045),
+      sdCapsule(ax, y, 0.3, -0.56, 0.14, -0.84, 0.04),
+    );
+    return Math.min(smin(head, ears, 0.06), antler);
+  },
+  giraffe(x, y) {
+    const head = smin(sdEllipse(x, y + 0.04, 0.56, 0.5), sdEllipse(x, y - 0.38, 0.42, 0.32), 0.16);
+    const neck = sdRoundBox(x, y - 0.66, 0.26, 0.2, 0.06);
+    const ax = Math.abs(x);
+    const horns = Math.min(sdCapsule(ax, y, 0.18, -0.4, 0.24, -0.76, 0.05), length(ax - 0.24, y + 0.8) - 0.09);
+    const ears = sdTiltEllipse(ax, y, 0.6, -0.22, 0.2, 0.08, -0.35);
+    return Math.min(smin(smin(head, neck, 0.1), ears, 0.05), horns);
+  },
+  monkey(x, y) {
+    const head = length(x, y - 0.2) - 0.64;
+    const ears = length(Math.abs(x) - 0.72, y - 0.12) - 0.22;
+    const tuft = sdCone(x, y, 0, -0.36, 0.1, 0.08, -0.62, 0.03);
+    return smin(head, Math.min(ears, tuft), 0.06);
+  },
+  mole(x, y) {
+    const body = sdEllipse(x, y - 0.18, 0.64, 0.6);
+    const mound = Math.max(sdEllipse(x, y - 0.86, 0.94, 0.3), y - 0.86);
+    const paws = sdTiltEllipse(Math.abs(x), y, 0.64, 0.4, 0.24, 0.13, 0.5);
+    const nose = length(x, y - 0.44) - 0.12;
+    return Math.min(smin(body, Math.min(mound, paws), 0.06), nose);
+  },
+  squid(x, y, t) {
+    const mantle = sdCone(x, y, 0, 0.1, 0.52, 0, -0.62, 0.1);
+    const ax = Math.abs(x);
+    const fins = sdPoly(ax, y, SQUID_FIN) - 0.03;
+    const sway = Math.sin(t * 2.2 + ax * 4) * 0.03;
+    const arms = Math.min(
+      sdCapsule(ax, y, 0.12, 0.4, 0.14 + sway, 0.78, 0.07),
+      sdCapsule(ax, y, 0.34, 0.36, 0.5 + sway, 0.76, 0.07),
+    );
+    return smin(smin(mantle, fins, 0.04), arms, 0.1);
+  },
+  ray(x, y, t) {
+    const wings = sdPoly(x, y, RAY) - 0.08;
+    const horns = sdTiltEllipse(Math.abs(x), y, 0.2, -0.42, 0.08, 0.16, 0.3);
+    const flick = Math.sin(t * 2) * 0.04;
+    const tail = sdCapsule(x, y, 0, 0.5, 0.08 + flick, 0.86, 0.03);
+    return Math.min(smin(wings, horns, 0.04), tail);
+  },
+  butterfly(x, y, t) {
+    const ax = Math.abs(x);
+    const flap = 1 - Math.abs(Math.sin(t * 2.4)) * 0.04;
+    const upper = sdTiltEllipse(ax / flap, y, 0.46, -0.16, 0.44, 0.38, 0.45) * flap;
+    const lower = sdTiltEllipse(ax / flap, y, 0.34, 0.54, 0.3, 0.3, -0.4) * flap;
+    const body = sdCapsule(x, y, 0, -0.38, 0, 0.66, 0.15);
+    const feelers = sdCapsule(ax, y, 0.06, -0.5, 0.26, -0.88, 0.035);
+    return Math.min(smin(Math.min(upper, lower), body, 0.08), feelers);
+  },
+  spider(x, y) {
+    const body = length(x, y - 0.18) - 0.56;
+    const ax = Math.abs(x);
+    let legs = Infinity;
+    for (const [ky, fy] of [[-0.3, 0.3], [0.0, 0.58], [0.3, 0.82]] as const) {
+      legs = Math.min(legs, sdCapsule(ax, y, 0.4, 0.06 + ky * 0.5, 0.78, ky, 0.06), sdCapsule(ax, y, 0.78, ky, 0.88, fy, 0.06));
+    }
+    const thread = sdCapsule(x, y, 0, -0.36, 0, -0.94, 0.025);
+    return Math.min(smin(body, legs, 0.06), thread);
+  },
+  caterpillar(x, y, t) {
+    const wave = (k: number) => Math.sin(t * 2.4 - k) * 0.03;
+    let d = length(x + 0.4, y - 0.04) - 0.5;
+    for (const [cx, cy, r, k] of [[0.14, 0.5, 0.32, 1], [0.46, 0.56, 0.27, 2], [0.72, 0.62, 0.22, 3]] as const) {
+      d = smin(d, length(x - cx, y - cy - wave(k)) - r, 0.12);
+    }
+    const feelers = Math.min(sdCapsule(x, y, -0.56, -0.4, -0.7, -0.76, 0.035), sdCapsule(x, y, -0.3, -0.42, -0.2, -0.8, 0.035));
+    return Math.min(d, feelers);
+  },
+  spikecut(x, y) {
+    // A broad, round face under a short crop of hair swept up into spikes.
+    const head = sdEllipse(x, y - 0.12, 0.74, 0.74);
+    let hair = Infinity;
+    for (const [a, reach, lean] of CROP_SPIKES) {
+      const bx = Math.sin(a) * 0.6, by = 0.12 - Math.cos(a) * 0.6;
+      const tx = Math.sin(a + lean) * (0.62 + reach), ty = 0.12 - Math.cos(a + lean) * (0.66 + reach);
+      hair = Math.min(hair, sdCone(x, y, bx, by, 0.15, tx, ty, 0.04));
+    }
+    return smin(head, hair, 0.04);
+  },
+  tousled(x, y) {
+    const face = sdEllipse(x, y - 0.08, 0.59, 0.72);
+    const jaw = sdEllipse(x, y - 0.49, 0.40, 0.36);
+    const ears = sdEllipse(Math.abs(x) - 0.60, y - 0.10, 0.09, 0.17);
+    const crown = sdTiltEllipse(x, y, 0, -0.50, 0.60, 0.32, 0.04);
+    let locks = Infinity;
+    for (const [bx, by, tx, ty] of TOUSLED_CROWN) locks = Math.min(locks, sdCone(x, y, bx, by, 0.12, tx, ty, 0.025));
+    return smin(smin(smin(smin(face, jaw, 0.06), ears, 0.025), crown, 0.06), locks, 0.04);
+  },
+  shavedbeard(x, y) {
+    const head = sdEllipse(x, y - 0.04, 0.64, 0.74);
+    const beard = sdEllipse(x, y - 0.46, 0.52, 0.40);
+    const ears = sdEllipse(Math.abs(x) - 0.63, y - 0.06, 0.09, 0.17);
+    return smin(smin(head, beard, 0.12), ears, 0.025);
+  },
+  shortquiff(x, y) {
+    const face = sdEllipse(x, y - 0.07, 0.60, 0.72);
+    const jaw = sdEllipse(x, y - 0.49, 0.40, 0.37);
+    const ears = sdEllipse(Math.abs(x) - 0.61, y - 0.10, 0.09, 0.17);
+    const crown = sdTiltEllipse(x, y, 0.015, -0.53, 0.59, 0.30, -0.10);
+    let locks = Infinity;
+    for (const [bx, by, tx, ty] of SHORT_QUIFF_LOCKS) locks = Math.min(locks, sdCone(x, y, bx, by, 0.115, tx, ty, 0.025));
+    return smin(smin(smin(smin(face, jaw, 0.06), ears, 0.025), crown, 0.06), locks, 0.04);
+  },
+  shortfringe(x, y) {
+    const face = sdEllipse(x, y - 0.09, 0.65, 0.77);
+    const jaw = sdTiltEllipse(x, y, 0, 0.48, 0.43, 0.38, 0);
+    const crown = sdTiltEllipse(x, y, -0.025, -0.45, 0.68, 0.44, -0.06);
+    const ears = Math.min(sdEllipse(x - 0.64, y - 0.08, 0.1, 0.2), sdEllipse(x + 0.64, y - 0.08, 0.1, 0.2));
+    return smin(smin(smin(face, jaw, 0.06), crown, 0.055), ears, 0.03);
+  },
+  shortcurls(x, y) {
+    const face = sdEllipse(x, y - 0.18, 0.58, 0.68);
+    const jaw = sdEllipse(x, y - 0.52, 0.38, 0.34);
+    const ears = sdEllipse(Math.abs(x) - 0.58, y - 0.12, 0.09, 0.16);
+    return smin(smin(smin(face, jaw, 0.05), ears, 0.025), shortCurlsHair(x, y), 0.04);
+  },
+  silkfringe(x, y) {
+    const face = sdEllipse(x, y - 0.14, 0.53, 0.58);
+    return Math.min(face, silkFringeHair(x, y));
+  },
+  layeredfringe(x, y) {
+    const face = sdPoly(x, y, [
+      [-0.43, -0.45], [0, -0.57], [0.43, -0.45], [0.54, -0.12],
+      [0.52, 0.31], [0.39, 0.60], [0.17, 0.79], [0, 0.84],
+      [-0.19, 0.79], [-0.41, 0.60], [-0.53, 0.30], [-0.55, -0.12],
+    ]) - 0.015;
+    const ears = sdEllipse(Math.abs(x) - 0.55, y - 0.12, 0.09, 0.16);
+    return smin(smin(face, ears, 0.025), layeredFringeHair(x, y), 0.035);
+  },
+  sidepart(x, y) {
+    const head = sdEllipse(x, y - 0.1, 0.7, 0.8);
+    const cap = sdEllipse(x + 0.03, y + 0.36, 0.75, 0.46);
+    const quiff = length(x + 0.22, y + 0.74) - 0.2;
+    let tufts = Infinity;
+    for (const [bx, lean] of SIDEPART_TUFTS) {
+      const by = -0.36 - Math.sqrt(Math.max(0, 1 - ((bx + 0.03) / 0.75) ** 2)) * 0.42;
+      tufts = Math.min(tufts, sdCone(x, y, bx, by, 0.09, bx + lean, by - 0.1, 0.03));
+    }
+    return smin(smin(smin(head, cap, 0.08), quiff, 0.1), tufts, 0.05);
+  },
+  sculpt(x, y) {
+    // A sculpted head thrown back with its mouth wide open: the upper jaw and skull
+    // tipped up to the left, the crown drawn up into a point behind, and the lower jaw
+    // hanging open over the neck.
+    const skull = sdTiltEllipse(x, y, 0.04, -0.3, 0.66, 0.5, -0.3);
+    const crown = sdTiltEllipse(x, y, 0.3, -0.5, 0.2, 0.36, 0.4);
+    const jaw = sdTiltEllipse(x, y, 0, 0.3, 0.56, 0.36, 0.18);
+    const neck = sdRoundBox(x - 0.1, y - 0.66, 0.32, 0.22, 0.1);
+    const head = smin(smin(smin(skull, crown, 0.1), jaw, 0.16), neck, 0.12);
+    const mouth = sdPolygon(x, y, [[-1.1, -0.2], [-0.2, 0.02], [-1.1, 0.1]]);
+    return smax(head, -mouth, 0.05);
+  },
+  pompadour(x, y) {
+    const head = sdEllipse(x, y - 0.14, 0.66, 0.74);
+    // The mass of the hair, a little narrower than the face so the short sides show.
+    const volume = sdTiltEllipse(x, y, 0, -0.54, 0.6, 0.36, 0.06);
+    // The front, brushed up and rolled back, highest over the left eye where it parts.
+    const crest = sdTiltEllipse(x, y, -0.12, -0.72, 0.4, 0.25, 0.14);
+    return smin(smin(head, volume, 0.16), crest, 0.16);
+  },
+  quiff(x, y) {
+    // The mass of the hair, and the front swept up off it, highest a little right of
+    // centre. Narrower than the face, so the short sides show as a step under it.
+    const volume = sdTiltEllipse(x, y, 0.02, -0.5, 0.56, 0.3, -0.06);
+    const crest = sdTiltEllipse(x, y, 0.1, -0.7, 0.4, 0.21, -0.2);
+    // A few locks along the front, swept up and back, so it reads as hair and not a hat.
+    let locks = Infinity;
+    for (const [bx, by, tx, ty] of QUIFF_LOCKS) locks = Math.min(locks, sdCone(x, y, bx, by, 0.08, tx, ty, 0.02));
+    return smin(smin(smin(quiffHead(x, y), volume, 0.14), crest, 0.14), locks, 0.06);
+  },
+  fullbeard(x, y) {
+    const head = sdEllipse(x, y - 0.04, 0.68, 0.68);
+    const beard = sdEllipse(x, y - 0.46, 0.58, 0.4);
+    let hair = Infinity;
+    for (const [a, reach, lean] of BRUSH_SPIKES) {
+      const bx = Math.sin(a) * 0.56, by = 0.04 - Math.cos(a) * 0.58;
+      const tx = Math.sin(a + lean) * (0.6 + reach), ty = 0.04 - Math.cos(a + lean) * (0.62 + reach);
+      hair = Math.min(hair, sdCone(x, y, bx, by, 0.12, tx, ty, 0.035));
+    }
+    return smin(smin(head, beard, 0.16), hair, 0.04);
+  },
+  waves(x, y) {
+    const head = smin(sdEllipse(x, y - 0.1, 0.6, 0.66), sdEllipse(x, y - 0.5, 0.52, 0.36), 0.14);
+    // One smooth mass swept back off the forehead, fuller over the right where it is
+    // swept across, rather than curls: a wig is what lobes round the edge read as.
+    let hair = smin(sdTiltEllipse(x, y, 0.03, -0.38, 0.68, 0.42, 0.06), sdTiltEllipse(x, y, 0.16, -0.6, 0.44, 0.22, -0.15), 0.14);
+    // The falls down each side to the jaw, blended into the top so the outline runs
+    // down in one line. A bump at the ends reads as the flaps of a hat.
+    for (const side of [-1, 1]) hair = smin(hair, sdTiltEllipse(x, y, side * 0.58, 0.02, 0.2, 0.44, side * 0.1), 0.22);
+    // A slow ripple round the outline, the wave in it.
+    hair += 0.022 * Math.sin(Math.atan2(y + 0.1, x) * 11);
+    return smin(head, hair, 0.06);
+  },
+  longhair(x, y) {
+    const head = longHairFace(x, y);
+    // A smooth crown, and a straight fall down each side to the shoulders, a little
+    // wider at the ends where it lies on them.
+    let hair = sdEllipse(x, y + 0.24, 0.7, 0.52);
+    for (const side of [-1, 1]) hair = smin(hair, sdRoundBox(x - side * 0.56, y - 0.36, 0.22, 0.6, 0.16), 0.18);
+    return smin(head, hair, 0.06);
+  },
+  longwaves(x, y) {
+    const head = longHairFace(x - 0.02, y);
+    // Fuller than the straight fall, with more of it over the right where it is swept.
+    let hair = smin(sdEllipse(x + 0.02, y + 0.24, 0.72, 0.52), sdTiltEllipse(x, y, 0.2, -0.56, 0.42, 0.24, -0.2), 0.14);
+    for (const side of [-1, 1]) hair = smin(hair, sdTiltEllipse(x, y, side * 0.6, 0.34, 0.27, 0.62, -side * 0.08), 0.2);
+    // A slow ripple down the falls, the wave in it, and none on the crown.
+    hair += 0.028 * Math.sin(y * 13) * Math.min(1, Math.max(0, y + 0.2) * 2.5);
+    return smin(head, hair, 0.06);
+  },
+  deepwaves(x, y) {
+    const head = longHairFace(x, y, 0.48);
+    // A fuller crown than either long face, and falls that run longer and lie wider on
+    // the shoulders, so the hair is widest at the bottom.
+    let hair = sdEllipse(x, y + 0.22, 0.74, 0.54);
+    for (const side of [-1, 1]) hair = smin(hair, sdTiltEllipse(x, y, side * 0.64, 0.38, 0.3, 0.6, -side * 0.12), 0.22);
+    // The crimp, as ripples running down the outer edge of each fall rather than ridges
+    // across it: ridges across read as a barrister's wig. None on the crown, and it dies
+    // away at the ends, where a ripple past the tip prints as a loose pixel.
+    const fall = Math.min(1, Math.max(0, y + 0.3) * 2.5, Math.max(0, 0.96 - y) * 5);
+    hair += 0.034 * Math.sin(y * 19 + Math.abs(x) * 6) * fall;
+    return smin(head, hair, 0.06);
+  },
+  tache(x, y) {
+    const head = sdEllipse(x, y - 0.12, 0.68, 0.74);
+    const ears = sdEllipse(Math.abs(x) - 0.68, y - 0.16, 0.09, 0.15);
+    // The hair, close to the head and combed across, with the front lifted on the left.
+    // Narrower than the head at the sides, so it sits close like cut hair, not like a beret.
+    const hair = smin(sdTiltEllipse(x, y, 0.02, -0.36, 0.64, 0.36, -0.04), length(x + 0.18, y + 0.62) - 0.2, 0.14);
+    return smin(smin(head, ears, 0.06), hair, 0.08);
+  },
+  buzzcut: (x, y) => HAIRCUTS.buzzcut.body(x, y),
+  crewcut: (x, y) => HAIRCUTS.crewcut.body(x, y),
+  texturedcrop: (x, y) => HAIRCUTS.texturedcrop.body(x, y),
+  taperedcrop: (x, y) => HAIRCUTS.taperedcrop.body(x, y),
+  softquiff: (x, y) => HAIRCUTS.softquiff.body(x, y),
+  curlycrop: (x, y) => HAIRCUTS.curlycrop.body(x, y),
+  receding: (x, y) => HAIRCUTS.receding.body(x, y),
+  slickback: (x, y) => HAIRCUTS.slickback.body(x, y),
+  fauxhawk: (x, y) => HAIRCUTS.fauxhawk.body(x, y),
+  pixie: (x, y) => HAIRCUTS.pixie.body(x, y),
+  cornrows: (x, y) => HAIRCUTS.cornrows.body(x, y),
+  curtains: (x, y) => HAIRCUTS.curtains.body(x, y),
+  afro: (x, y) => HAIRCUTS.afro.body(x, y),
+  topknot: (x, y) => HAIRCUTS.topknot.body(x, y),
+  twinbuns: (x, y) => HAIRCUTS.twinbuns.body(x, y),
+  bob: (x, y) => HAIRCUTS.bob.body(x, y),
+  lowpony: (x, y) => HAIRCUTS.lowpony.body(x, y),
+  locs: (x, y) => HAIRCUTS.locs.body(x, y),
+  sideswept: (x, y) => HAIRCUTS.sideswept.body(x, y),
+  skinfade: (x, y) => HAIRCUTS.skinfade.body(x, y),
+  undercut: (x, y) => HAIRCUTS.undercut.body(x, y),
+  frenchcrop: (x, y) => HAIRCUTS.frenchcrop.body(x, y),
+  mohawk: (x, y) => HAIRCUTS.mohawk.body(x, y),
+  lob: (x, y) => HAIRCUTS.lob.body(x, y),
+  bluntbangs: (x, y) => HAIRCUTS.bluntbangs.body(x, y),
+  curtainbangs: (x, y) => HAIRCUTS.curtainbangs.body(x, y),
+  shag: (x, y) => HAIRCUTS.shag.body(x, y),
+  longcurls: (x, y) => HAIRCUTS.longcurls.body(x, y),
+  afropuff: (x, y) => HAIRCUTS.afropuff.body(x, y),
+  highpony: (x, y) => HAIRCUTS.highpony.body(x, y),
+  highbun: (x, y) => HAIRCUTS.highbun.body(x, y),
+  messybun: (x, y) => HAIRCUTS.messybun.body(x, y),
+  pigtails: (x, y) => HAIRCUTS.pigtails.body(x, y),
+  boxbraids: (x, y) => HAIRCUTS.boxbraids.body(x, y),
+  halfup: (x, y) => HAIRCUTS.halfup.body(x, y),
+  roundbob: (x, y) => HAIRCUTS.roundbob.body(x, y),
+  softbob(x, y) {
+    const head = longHairFace(x, y, 0.49);
+    // Aiko Dai's portrait stays on this id: a round crown and shoulder-length falls.
+    // The circle-and-box outline that replaced it for a while is roundbob.
+    let hair = sdEllipse(x, y + 0.2, 0.7, 0.54);
+    for (const side of [-1, 1]) hair = smin(hair, sdRoundBox(x - side * 0.54, y - 0.22, 0.22, 0.44, 0.2), 0.18);
+    return smin(head, hair, 0.06);
+  },
+  moptop(x, y) {
+    // A long face under a big, messy mop of curls: clumps out of the crown at odd
+    // lengths and angles, and hair down past the ears.
+    const head = sdEllipse(x, y - 0.26, 0.6, 0.6);
+    let hair = sdEllipse(x, y + 0.2, 0.7, 0.48);
+    for (const [a, reach, lean] of MOP_CLUMPS) {
+      const bx = Math.sin(a) * 0.55, by = -0.12 - Math.cos(a) * 0.38;
+      const tx = Math.sin(a + lean * 0.5) * (0.62 + reach), ty = Math.max(-0.12 - Math.cos(a + lean * 0.5) * (0.42 + reach), -0.94);
+      hair = Math.min(hair, sdCone(x, y, bx, by, 0.17, tx, ty, 0.06));
+    }
+    return smin(head, hair, 0.05);
+  },
+  pyramid(x, y) {
+    // SuperTrip64's picture: a pyramid of green bricks with one great eye, its point a
+    // little blunt, the way the drawing has it. The bricks are the markings below, so
+    // any colour keeps them.
+    return smax(sdPoly(x, y, PYRAMID) - 0.08, y - 0.76, 0.04);
+  },
+  bust(x, y) {
+    // A carved head with a rounded hairline and a long beard, without ears or limbs.
+    const head = sdEllipse(x, y + 0.19, 0.61, 0.61);
+    const hair = sdEllipse(x + 0.025, y + 0.57, 0.62, 0.26);
+    const beard = sdCone(x, y, 0, 0.18, 0.53, 0, 0.72, 0.13);
+    const curls = 0.025 * Math.cos(x * 35) * Math.max(0, Math.min(1, (y - 0.25) * 3));
+    return smin(smin(head, hair, 0.06), beard - curls, 0.07);
+  },
+  yeti(x, y, t) {
+    const shag = 0.04 * Math.max(0, Math.cos(y * 20)) * Math.min(1, Math.abs(x) * 2);
+    const body = sdRoundBox(x, y - 0.1, 0.62, 0.74, 0.5) - shag;
+    const wave = Math.sin(t * 2) * 0.04;
+    const arms = sdCone(Math.abs(x), y, 0.52, 0.1, 0.18, 0.84, -0.42 - wave, 0.14);
+    const horns = sdCone(Math.abs(x), y, 0.3, -0.56, 0.1, 0.4, -0.86, 0.03);
+    return smin(body, Math.min(arms, horns), 0.08);
+  },
+  goose(x, y) {
+    const body = smin(sdEllipse(x - 0.14, y - 0.42, 0.74, 0.44), sdCone(x, y, 0.6, 0.36, 0.2, 0.92, 0.14, 0.05), 0.1);
+    const neck = sdCone(x, y, -0.3, 0.26, 0.22, -0.46, -0.46, 0.15);
+    const head = length(x + 0.46, y + 0.56) - 0.24;
+    const beak = sdTiltEllipse(x, y, -0.76, -0.5, 0.18, 0.07, -0.1);
+    return smin(smin(body, neck, 0.16), Math.min(head, beak), 0.05);
+  },
+  toucan(x, y) {
+    const body = sdEllipse(x - 0.2, y - 0.2, 0.6, 0.64);
+    const beak = sdCone(x, y, -0.32, -0.12, 0.25, -0.94, 0.12, 0.05);
+    const tail = sdCone(x, y, 0.5, 0.6, 0.14, 0.62, 0.78, 0.07);
+    return smin(smin(body, beak, 0.06), tail, 0.06);
+  },
+  parrot(x, y, t) {
+    const body = sdEllipse(x - 0.06, y - 0.1, 0.58, 0.62);
+    const beak = Math.max(length(x + 0.52, y + 0.12) - 0.2, -(length(x + 0.62, y - 0.04) - 0.1));
+    const sway = Math.sin(t * 1.6) * 0.03;
+    const crest = Math.min(sdCapsule(x, y, 0, -0.42, -0.06 + sway, -0.9, 0.06), sdCapsule(x, y, 0.12, -0.42, 0.24 + sway, -0.84, 0.06));
+    const tail = sdCone(x, y, 0.24, 0.5, 0.18, 0.44, 0.84, 0.06);
+    return smin(smin(body, Math.min(beak, tail), 0.08), crest, 0.06);
+  },
+  rhino(x, y) {
+    const body = sdEllipse(x - 0.14, y - 0.3, 0.7, 0.46);
+    const head = sdCone(x, y, -0.36, 0.22, 0.32, -0.78, 0.44, 0.2);
+    const horn = Math.min(sdCone(x, y, -0.76, 0.28, 0.12, -0.84, -0.12, 0.02), sdCone(x, y, -0.5, 0.0, 0.08, -0.5, -0.22, 0.02));
+    const ear = sdTiltEllipse(x, y, -0.3, -0.16, 0.06, 0.13, -0.3);
+    const legs = Math.min(sdRoundBox(x + 0.3, y - 0.72, 0.13, 0.14, 0.05), sdRoundBox(x - 0.44, y - 0.72, 0.13, 0.14, 0.05));
+    return smin(smin(body, head, 0.14), Math.min(horn, ear, legs), 0.06);
+  },
+  hippo(x, y) {
+    const head = sdEllipse(x, y + 0.04, 0.62, 0.5);
+    const muzzle = sdEllipse(x, y - 0.46, 0.84, 0.38);
+    const ax = Math.abs(x);
+    const bumps = Math.min(length(ax - 0.28, y + 0.46) - 0.16, length(ax - 0.5, y + 0.52) - 0.09);
+    return smin(smin(head, muzzle, 0.2), bumps, 0.06);
+  },
+  llama(x, y) {
+    const head = sdEllipse(x, y + 0.2, 0.52, 0.5);
+    const neck = sdCone(x, y, 0, 0.42, 0.44, 0, 0.0, 0.32);
+    const ears = sdTiltEllipse(Math.abs(x), y, 0.32, -0.76, 0.09, 0.22, 0.22);
+    return smin(smin(head, neck, 0.12), ears, 0.06);
+  },
+  camel(x, y) {
+    const body = sdEllipse(x - 0.12, y - 0.3, 0.66, 0.36);
+    const humps = Math.min(length(x + 0.12, y + 0.04) - 0.3, length(x - 0.38, y + 0.04) - 0.3);
+    const neck = sdCone(x, y, -0.46, 0.3, 0.16, -0.76, -0.26, 0.12);
+    const head = sdTiltEllipse(x, y, -0.8, -0.3, 0.18, 0.12, 0.2);
+    const legs = Math.min(sdCapsule(x, y, -0.3, 0.5, -0.32, 0.78, 0.08), sdCapsule(x, y, 0.42, 0.5, 0.44, 0.78, 0.08));
+    return smin(smin(body, humps, 0.16), Math.min(neck, head, legs), 0.08);
+  },
+  ram(x, y) {
+    const head = length(x, y - 0.22) - 0.62;
+    const ax = Math.abs(x);
+    const horns = sdRing(ax, y, 0.64, 0.04, 0.2, 0.09);
+    return smin(head, horns, 0.08);
+  },
+  walrus(x, y) {
+    const body = sdEllipse(x, y - 0.0, 0.7, 0.62);
+    const muzzle = sdEllipse(x, y - 0.42, 0.5, 0.22);
+    const ax = Math.abs(x);
+    const tusks = sdCone(ax, y, 0.18, 0.5, 0.07, 0.22, 0.82, 0.03);
+    const flippers = sdTiltEllipse(ax, y, 0.56, 0.6, 0.28, 0.13, -0.5);
+    return smin(smin(body, muzzle, 0.12), Math.min(tusks, flippers), 0.1);
+  },
+  hen(x, y) {
+    const body = length(x, y - 0.1) - 0.64;
+    const legs = sdCapsule(Math.abs(x), y, 0.2, 0.7, 0.24, 0.8, 0.065);
+    const comb = Math.min(length(x + 0.16, y + 0.58) - 0.12, length(x - 0.04, y + 0.66) - 0.13, length(x - 0.24, y + 0.58) - 0.12);
+    const tail = sdTiltEllipse(x, y, 0.64, -0.16, 0.3, 0.13, -0.9);
+    const beak = sdTiltEllipse(x, y, -0.66, -0.1, 0.14, 0.08, 0.2);
+    return Math.min(smin(body, Math.min(comb, tail, beak), 0.06), legs);
+  },
+  squirrel(x, y, t) {
+    const body = smin(length(x + 0.16, y - 0.4) - 0.46, length(x + 0.22, y + 0.12) - 0.42, 0.24);
+    const flick = Math.sin(t * 2.2) * 0.03;
+    const tail = sdTiltEllipse(x, y, 0.5, -0.04, 0.3, 0.66, 0.25 + flick);
+    const ear = sdCone(x, y, -0.36, -0.36, 0.09, -0.42, -0.62, 0.03);
+    return smin(smin(body, tail, 0.1), ear, 0.05);
+  },
+  golem(x, y) {
+    const torso = sdRoundBox(x, y - 0.14, 0.56, 0.5, 0.16);
+    const ax = Math.abs(x);
+    const shoulders = length(ax - 0.6, y + 0.22) - 0.26;
+    const arms = sdRoundBox(ax - 0.76, y - 0.32, 0.14, 0.28, 0.1);
+    const legs = sdRoundBox(ax - 0.28, y - 0.72, 0.18, 0.14, 0.06);
+    const head = sdRoundBox(x, y + 0.5, 0.24, 0.18, 0.08);
+    return Math.min(smin(torso, Math.min(shoulders, head), 0.06), arms, legs);
+  },
+  cherry(x, y) {
+    const front = length(x + 0.18, y - 0.36) - 0.5;
+    const back = length(x - 0.44, y - 0.46) - 0.38;
+    const stems = Math.min(sdCapsule(x, y, -0.16, -0.12, 0.16, -0.7, 0.06), sdCapsule(x, y, 0.42, 0.06, 0.16, -0.7, 0.06));
+    const leaf = sdTiltEllipse(x, y, 0.4, -0.72, 0.2, 0.09, -0.4);
+    return Math.min(smin(front, back, 0.04), stems, leaf);
+  },
+  banana(x, y) {
+    // Two circles a little apart: thick in the middle for the face, thin at the tips.
+    const bend = Math.max(length(x, y + 0.24) - 1.08, -(length(x, y + 0.96) - 1.2));
+    const ends = Math.abs(x) - 0.82;
+    const stem = sdCapsule(x, y, 0.74, -0.04, 0.84, -0.3, 0.065);
+    return Math.min(smax(bend, ends, 0.16), stem);
+  },
+  carrot(x, y, t) {
+    const root = sdCone(x, y, 0, -0.1, 0.6, 0, 0.78, 0.07);
+    const sway = Math.sin(t * 1.5) * 0.03;
+    const tops = Math.min(
+      sdCapsule(x, y, 0, -0.56, -0.3 + sway, -0.84, 0.08),
+      sdCapsule(x, y, 0, -0.56, sway, -0.9, 0.08),
+      sdCapsule(x, y, 0, -0.56, 0.3 + sway, -0.84, 0.08),
+    );
+    return smin(root, tops, 0.06);
+  },
+  eggplant(x, y) {
+    const body = sdCone(x, y, 0.06, 0.32, 0.54, -0.18, -0.24, 0.36);
+    const cap = sdTiltEllipse(x, y, -0.22, -0.52, 0.36, 0.13, -0.4);
+    const stem = sdCapsule(x, y, -0.24, -0.56, -0.14, -0.88, 0.06);
+    return Math.min(smin(body, cap, 0.04), stem);
+  },
+  corn(x, y) {
+    const cob = sdEllipse(x, y + 0.06, 0.5, 0.82);
+    const husk = sdTiltEllipse(Math.abs(x), y, 0.42, 0.42, 0.2, 0.44, -0.5);
+    return smin(cob, husk, 0.06);
+  },
+  cookie(x, y) {
+    const disc = length(x, y - 0.04) - 0.82;
+    const bite = Math.min(length(x - 0.7, y + 0.6) - 0.34, length(x - 0.92, y + 0.14) - 0.28);
+    return smax(disc, -bite, 0.06);
+  },
+  macaron(x, y) {
+    const top = sdEllipse(x, y - 0.06, 0.84, 0.38);
+    const bottom = sdEllipse(x, y - 0.6, 0.84, 0.26);
+    const filling = sdRoundBox(x, y - 0.36, 0.72, 0.12, 0.08);
+    return Math.min(top, bottom, filling);
+  },
+  popsicle(x, y) {
+    const ice = smax(sdRoundBox(x, y + 0.2, 0.62, 0.62, 0.36), -(length(x - 0.6, y + 0.82) - 0.3), 0.06);
+    const stick = sdRoundBox(x, y - 0.6, 0.11, 0.24, 0.08);
+    return Math.min(ice, stick);
+  },
+  cake(x, y) {
+    const slice = sdPoly(x, y, CAKE) - 0.06;
+    const cherry = length(x - 0.6, y + 0.42) - 0.16;
+    const stalk = sdCapsule(x, y, 0.6, -0.56, 0.7, -0.8, 0.03);
+    return Math.min(smin(slice, cherry, 0.04), stalk);
+  },
+  croissant(x, y) {
+    let d = length(x, y - 0.28) - 0.5;
+    for (const [cx, cy, r] of [[0.44, 0.4, 0.36], [0.7, 0.64, 0.22], [-0.44, 0.4, 0.36], [-0.7, 0.64, 0.22]] as const) {
+      d = smin(d, length(x - cx, y - cy) - r, 0.04);
+    }
+    return d;
+  },
+  boba(x, y) {
+    const cup = sdPoly(x, y, BOBA_CUP) - 0.06;
+    const lid = Math.max(length(x, y + 0.14) - 0.54, y + 0.14);
+    const rim = sdRoundBox(x, y + 0.14, 0.64, 0.06, 0.05);
+    const straw = sdCapsule(x, y, 0.12, -0.5, 0.3, -0.86, 0.06);
+    return Math.min(cup, lid, rim, straw);
+  },
+  pizza(x, y) {
+    const slice = sdPoly(x, y, PIZZA) - 0.06;
+    const crust = sdCapsule(x, y, -0.76, -0.5, 0.76, -0.5, 0.15);
+    return smin(slice, crust, 0.04);
+  },
+  chili(x, y) {
+    const body = smin(sdCone(x, y, -0.22, -0.04, 0.52, 0.28, 0.5, 0.3), sdCone(x, y, 0.28, 0.5, 0.3, 0.8, 0.78, 0.05), 0.08);
+    const cap = sdTiltEllipse(x, y, -0.46, -0.48, 0.3, 0.13, 0.7);
+    const stem = sdCapsule(x, y, -0.52, -0.54, -0.62, -0.88, 0.055);
+    return Math.min(smin(body, cap, 0.04), stem);
+  },
+  grapes(x, y) {
+    let d = Infinity;
+    for (const [cx, cy, r] of [[-0.5, -0.24, 0.3], [0, -0.3, 0.32], [0.5, -0.24, 0.3], [-0.26, 0.2, 0.3], [0.26, 0.2, 0.3], [0, 0.6, 0.26]] as const) {
+      d = smin(d, length(x - cx, y - cy) - r, 0.14);
+    }
+    d = Math.min(d, sdEllipse(x, y + 0.02, 0.62, 0.42));
+    return Math.min(d, sdCapsule(x, y, 0, -0.56, 0.08, -0.86, 0.045), sdTiltEllipse(x, y, 0.3, -0.72, 0.2, 0.09, -0.3));
+  },
+  radish(x, y, t) {
+    const bulb = length(x, y - 0.18) - 0.58;
+    const root = sdCone(x, y, 0, 0.66, 0.1, 0.08, 0.86, 0.02);
+    const sway = Math.sin(t * 1.4) * 0.03;
+    const leaves = Math.min(sdTiltEllipse(x, y, -0.22 + sway, -0.64, 0.15, 0.3, -0.4), sdTiltEllipse(x, y, 0.22 + sway, -0.66, 0.15, 0.3, 0.4));
+    return smin(smin(bulb, root, 0.08), leaves, 0.06);
+  },
+  popcorn(x, y) {
+    const bucket = sdPoly(x, y, POPCORN) - 0.05;
+    let pops = Infinity;
+    for (const [cx, cy, r] of [[-0.44, -0.18, 0.22], [-0.16, -0.36, 0.26], [0.18, -0.34, 0.25], [0.46, -0.16, 0.22], [0.02, -0.6, 0.2]] as const) {
+      pops = Math.min(pops, length(x - cx, y - cy) - r);
+    }
+    return smin(bucket, pops, 0.04);
+  },
+  fries(x, y) {
+    const box = sdPoly(x, y, FRIES_BOX) - 0.06;
+    let fries = Infinity;
+    for (const [fx, top] of [[-0.38, -0.5], [-0.18, -0.76], [0.02, -0.62], [0.22, -0.84], [0.4, -0.54]] as const) {
+      fries = Math.min(fries, sdCapsule(x, y, fx, 0, fx + fx * 0.12, top, 0.075));
+    }
+    return Math.min(box, fries);
+  },
+  hotdog(x, y) {
+    const bun = sdRoundBox(x, y - 0.3, 0.76, 0.52, 0.46);
+    const sausage = sdCapsule(x, y, -0.8, 0.2, 0.8, 0.2, 0.16);
+    return Math.min(bun, sausage);
+  },
+  candy(x, y, t) {
+    const sweet = length(x, y - 0.3) - 0.54;
+    const twist = Math.sin(t * 1.8) * 0.03;
+    const wraps = sdPoly(Math.abs(x), y - twist * Math.sign(x), CANDY_WRAP) - 0.04;
+    return smin(sweet, wraps, 0.04);
+  },
+  teapot(x, y) {
+    const body = sdEllipse(x, y - 0.32, 0.66, 0.52);
+    const lid = Math.min(sdEllipse(x, y + 0.2, 0.38, 0.13), length(x, y + 0.38) - 0.1);
+    const spout = sdCone(x, y, -0.5, 0.38, 0.15, -0.92, -0.04, 0.06);
+    const handle = Math.max(sdRing(x, y, 0.62, 0.28, 0.22, 0.06), 0.52 - x);
+    return Math.min(smin(body, Math.min(lid, spout), 0.06), handle);
+  },
+  cauldron(x, y, t) {
+    const pot = Math.max(length(x, y - 0.2) - 0.66, -0.36 - y);
+    const rim = sdRoundBox(x, y + 0.32, 0.64, 0.08, 0.07);
+    const legs = sdCapsule(Math.abs(x), y, 0.32, 0.7, 0.42, 0.82, 0.05);
+    const pop = Math.sin(t * 2.6) * 0.03;
+    const bubbles = Math.min(length(x + 0.2, y + 0.56 + pop) - 0.15, length(x - 0.18, y + 0.66 - pop) - 0.13);
+    return Math.min(smin(pot, rim, 0.04), legs, bubbles);
+  },
+  bottle(x, y) {
+    const body = smin(sdRoundBox(x, y - 0.34, 0.54, 0.5, 0.22), sdRoundBox(x, y + 0.42, 0.16, 0.3, 0.06), 0.2);
+    const cap = sdRoundBox(x, y + 0.76, 0.2, 0.1, 0.04);
+    return Math.min(body, cap);
+  },
+  jar(x, y) {
+    const body = sdRoundBox(x, y - 0.2, 0.7, 0.64, 0.3);
+    const lid = sdRoundBox(x, y + 0.58, 0.58, 0.14, 0.06);
+    return smin(body, lid, 0.04);
+  },
+  hourglass(x, y) {
+    const bulbs = smin(sdEllipse(x, y + 0.34, 0.5, 0.42), sdEllipse(x, y - 0.38, 0.5, 0.42), 0.12);
+    const frames = Math.min(sdRoundBox(x, y + 0.8, 0.66, 0.07, 0.05), sdRoundBox(x, y - 0.8, 0.66, 0.07, 0.05));
+    const posts = sdCapsule(Math.abs(x), y, 0.58, -0.76, 0.58, 0.76, 0.04);
+    return Math.min(bulbs, frames, posts);
+  },
+  lantern(x, y) {
+    const body = sdRoundBox(x, y - 0.22, 0.56, 0.46, 0.2);
+    const cap = sdPoly(x, y, LANTERN_CAP) - 0.04;
+    const base = sdRoundBox(x, y - 0.74, 0.5, 0.1, 0.04);
+    const handle = Math.max(sdRing(x, y, 0, -0.5, 0.22, 0.065), y + 0.5);
+    return Math.min(smin(body, cap, 0.04), base, handle);
+  },
+  umbrella(x, y) {
+    const scallop = 0.12 - 0.08 * Math.abs(Math.cos(x * Math.PI * 1.25));
+    const canopy = Math.max(length(x, y - 0.12) - 0.92, y - scallop);
+    const shaft = sdCapsule(x, y, 0, 0.1, 0, 0.66, 0.07);
+    const hook = Math.max(sdRing(x, y, 0.17, 0.64, 0.17, 0.07), 0.64 - y);
+    return Math.min(canopy, shaft, hook);
+  },
+  plant(x, y, t) {
+    const pot = smin(sdPoly(x, y, PLANT_POT) - 0.04, sdRoundBox(x, y - 0.02, 0.66, 0.1, 0.05), 0.04);
+    const sway = Math.sin(t * 1.3) * 0.03;
+    const leaves = Math.min(
+      sdTiltEllipse(x, y, -0.36 + sway, -0.4, 0.17, 0.36, -0.6),
+      sdTiltEllipse(x, y, sway, -0.54, 0.17, 0.4, 0),
+      sdTiltEllipse(x, y, 0.36 + sway, -0.4, 0.17, 0.36, 0.6),
+    );
+    return Math.min(pot, leaves);
+  },
+  globe(x, y) {
+    const sphere = length(x, y + 0.02) - 0.64;
+    const base = sdPoly(x, y, GLOBE_BASE) - 0.03;
+    return Math.min(sphere, base);
+  },
+  mailbox(x, y) {
+    const box = sdRoundBox(x, y + 0.1, 0.72, 0.44, 0.36);
+    const post = sdRoundBox(x, y - 0.56, 0.13, 0.3, 0.03);
+    const flag = Math.min(sdCapsule(x, y, 0.7, -0.1, 0.7, -0.6, 0.06), sdRoundBox(x - 0.8, y + 0.52, 0.13, 0.09, 0.03));
+    return Math.min(box, post, flag);
+  },
+  cone(x, y) {
+    const cone = Math.max(sdCone(x, y, 0, 0.4, 0.6, 0, -0.7, 0.12), y - 0.72);
+    const base = sdRoundBox(x, y - 0.76, 0.86, 0.1, 0.05);
+    return Math.min(cone, base);
+  },
+  hydrant(x, y) {
+    const body = sdRoundBox(x, y - 0.24, 0.48, 0.48, 0.08);
+    const cap = Math.max(length(x, y + 0.24) - 0.48, y + 0.24);
+    const nub = sdRoundBox(x, y + 0.76, 0.12, 0.08, 0.04);
+    const nozzles = sdRoundBox(Math.abs(x) - 0.56, y - 0.08, 0.12, 0.12, 0.04);
+    const base = sdRoundBox(x, y - 0.76, 0.6, 0.09, 0.04);
+    return Math.min(smin(body, cap, 0.04), nub, nozzles, base);
+  },
+  rain(x, y) {
+    const cloud = smin(smin(length(x + 0.42, y + 0.04) - 0.36, length(x - 0.42, y + 0.04) - 0.36, 0.1), smin(length(x, y + 0.24) - 0.46, sdRoundBox(x, y - 0.1, 0.8, 0.24, 0.24), 0.12), 0.1);
+    let drops = Infinity;
+    for (const dx of [-0.42, 0, 0.42]) drops = Math.min(drops, sdCone(x, y, dx, 0.74, 0.11, dx, 0.5, 0.03));
+    return Math.min(cloud, drops);
+  },
+  sun(x, y, t) {
+    const core = length(x, y - 0.02) - 0.56;
+    const step = Math.PI / 4;
+    const angle = Math.atan2(x, -(y - 0.02)) + t * 0.2;
+    const a = Math.round(angle / step) * step - t * 0.2;
+    const ux = Math.sin(a), uy = -Math.cos(a);
+    const ray = sdCone(x, y, ux * 0.7, 0.02 + uy * 0.7, 0.1, ux * 0.84, 0.02 + uy * 0.84, 0.03);
+    return Math.min(core, ray);
+  },
+  crystal(x, y) {
+    // Three prisms that overlap, so the face sits on one solid piece.
+    const ax = Math.abs(x);
+    return Math.min(sdPoly(x, y, CRYSTAL_MID) - 0.04, sdPoly(ax, y, CRYSTAL_SIDE) - 0.04);
+  },
+  tree(x, y) {
+    const crown = smin(smin(length(x, y + 0.34) - 0.5, length(Math.abs(x) - 0.38, y + 0.02) - 0.42, 0.12), length(x, y - 0.06) - 0.46, 0.12);
+    const trunk = sdRoundBox(x, y - 0.62, 0.14, 0.24, 0.04);
+    return smin(crown, trunk, 0.06);
+  },
+  pine(x, y) {
+    const tiers = Math.min(sdPoly(x, y, PINE_TOP), sdPoly(x, y, PINE_MID), sdPoly(x, y, PINE_LOW)) - 0.05;
+    const trunk = sdRoundBox(x, y - 0.74, 0.14, 0.12, 0.03);
+    return Math.min(tiers, trunk);
+  },
+  volcano(x, y, t) {
+    const hill = smax(sdPoly(x, y, VOLCANO) - 0.04, -(length(x, y + 0.42) - 0.18), 0.06);
+    const puff = Math.sin(t * 1.4) * 0.03;
+    const smoke = Math.min(length(x - 0.1, y + 0.62 + puff) - 0.15, length(x + 0.1, y + 0.82 + puff * 1.5) - 0.13);
+    return Math.min(hill, smoke);
+  },
+  comet(x, y) {
+    const head = length(x + 0.16, y - 0.3) - 0.56;
+    const tail = Math.min(
+      sdCone(x, y, 0.0, 0.1, 0.42, 0.8, -0.72, 0.05),
+      sdCone(x, y, 0.24, 0.34, 0.12, 0.94, -0.16, 0.03),
+      sdCone(x, y, -0.18, -0.12, 0.12, 0.3, -0.92, 0.03),
+    );
+    return smin(head, tail, 0.06);
+  },
+  knight(x, y, t) {
+    const helm = sdRoundBox(x, y - 0.06, 0.62, 0.64, 0.5);
+    const gorget = sdPoly(x, y, GORGET) - 0.04;
+    const sway = Math.sin(t * 1.6) * 0.04;
+    const plume = sdTiltEllipse(x, y, 0.22 + sway, -0.68, 0.34, 0.13, -0.45);
+    return smin(smin(helm, gorget, 0.06), plume, 0.06);
+  },
+  ninja(x, y, t) {
+    const head = length(x, y - 0.14) - 0.7;
+    const flow = Math.sin(t * 3) * 0.04;
+    const tails = Math.min(sdCone(x, y, 0.6, -0.08, 0.11, 0.94, -0.42 + flow, 0.05), sdCone(x, y, 0.6, -0.04, 0.11, 0.94, 0.2 - flow, 0.05));
+    const knot = length(x - 0.64, y + 0.06) - 0.1;
+    return smin(head, Math.min(tails, knot), 0.04);
+  },
+  tower(x, y) {
+    const body = sdRoundBox(x, y - 0.24, 0.56, 0.6, 0.04);
+    const band = sdRoundBox(x, y + 0.4, 0.68, 0.1, 0.03);
+    const merlons = sdRoundBox(Math.abs(x) < 0.25 ? x : Math.abs(x) - 0.52, y + 0.6, 0.14, 0.14, 0.03);
+    return Math.min(smin(body, band, 0.04), merlons);
+  },
+  lighthouse(x, y) {
+    const tower = sdPoly(x, y, LIGHTHOUSE) - 0.04;
+    const gallery = sdRoundBox(x, y + 0.24, 0.46, 0.06, 0.03);
+    const lamp = sdRoundBox(x, y + 0.44, 0.26, 0.16, 0.04);
+    const dome = Math.max(length(x, y + 0.6) - 0.24, y + 0.6);
+    return Math.min(tower, gallery, lamp, dome);
+  },
+  windmill(x, y, t) {
+    const body = sdPoly(x, y, WINDMILL) - 0.04;
+    const cap = Math.max(length(x, y + 0.04) - 0.36, y + 0.04);
+    const a = t * 0.5 + 0.4;
+    const c = Math.cos(a) * 0.72, s = Math.sin(a) * 0.72;
+    const blades = Math.min(sdCapsule(x, y, -c, -0.22 - s, c, -0.22 + s, 0.09), sdCapsule(x, y, s, -0.22 - c, -s, -0.22 + c, 0.09));
+    return Math.min(smin(body, cap, 0.04), blades);
+  },
+  camera(x, y) {
+    const body = sdRoundBox(x, y - 0.32, 0.9, 0.52, 0.18);
+    const hump = sdRoundBox(x + 0.26, y + 0.24, 0.32, 0.14, 0.08);
+    const button = sdRoundBox(x - 0.54, y + 0.24, 0.14, 0.07, 0.04);
+    return Math.min(smin(body, hump, 0.04), button);
+  },
+  joystick(x, y, t) {
+    const base = sdRoundBox(x, y - 0.48, 0.84, 0.38, 0.26);
+    const tilt = Math.sin(t * 1.4) * 0.06;
+    const stick = sdCapsule(x, y, 0, 0.12, 0.06 + tilt, -0.4, 0.07);
+    const ball = length(x - 0.08 - tilt, y + 0.58) - 0.26;
+    return Math.min(base, stick, ball);
+  },
+  arcade(x, y) {
+    const marquee = sdRoundBox(x, y + 0.66, 0.62, 0.16, 0.06);
+    const screen = sdRoundBox(x, y + 0.06, 0.54, 0.46, 0.06);
+    const panel = sdRoundBox(x, y - 0.4, 0.7, 0.08, 0.04);
+    const cabinet = sdRoundBox(x, y - 0.66, 0.54, 0.2, 0.04);
+    const stick = Math.min(sdCapsule(x, y, -0.28, -0.46, -0.28, -0.6, 0.03), length(x + 0.28, y + 0.62) - 0.07);
+    return Math.min(marquee, screen, panel, cabinet, stick);
+  },
+  medal(x, y) {
+    const ribbon = sdCone(Math.abs(x), y, 0.1, -0.2, 0.15, 0.34, -0.76, 0.15);
+    const disc = length(x, y - 0.3) - 0.56;
+    return smin(disc, ribbon, 0.04);
+  },
+  satellite(x, y) {
+    const body = sdRoundBox(x, y - 0.32, 0.46, 0.52, 0.12);
+    const panels = sdRoundBox(Math.abs(x) - 0.72, y - 0.22, 0.24, 0.34, 0.04);
+    const dish = Math.min(Math.max(length(x, y + 0.42) - 0.34, -0.3 - y), sdCapsule(x, y, 0, -0.3, 0, -0.18, 0.06));
+    const blink = sdCapsule(x, y, 0, -0.5, 0, -0.84, 0.05);
+    return Math.min(body, panels, dish, blink);
+  },
+  tornado(x, y, t) {
+    let d = Infinity;
+    for (const [cy, rx, ry, k] of [[-0.56, 0.86, 0.26, 0], [-0.18, 0.72, 0.24, 1], [0.16, 0.52, 0.2, 2], [0.46, 0.36, 0.17, 3], [0.71, 0.2, 0.15, 4]] as const) {
+      d = smin(d, sdEllipse(x - Math.sin(t * 2 + k) * 0.05 * k * 0.5, y - cy, rx, ry), 0.18);
+    }
+    return d;
+  },
+  stump(x, y) {
+    const trunk = sdRoundBox(x, y - 0.26, 0.58, 0.52, 0.1);
+    const top = sdEllipse(x, y + 0.24, 0.58, 0.14);
+    const roots = sdCone(Math.abs(x), y, 0.38, 0.56, 0.18, 0.84, 0.8, 0.05);
+    const sprout = Math.min(sdCapsule(x, y, 0.2, -0.3, 0.28, -0.62, 0.04), sdTiltEllipse(x, y, 0.42, -0.66, 0.14, 0.07, -0.4));
+    return Math.min(smin(smin(trunk, top, 0.04), roots, 0.1), sprout);
+  },
+  lamp(x, y) {
+    const shade = sdPoly(x, y, LAMP_SHADE) - 0.04;
+    const stem = sdCapsule(x, y, 0, 0, 0, 0.66, 0.08);
+    const base = sdEllipse(x, y - 0.74, 0.5, 0.12);
+    return Math.min(shade, stem, base);
+  },
+  alarm(x, y, t) {
+    const face = length(x, y - 0.12) - 0.64;
+    const ax = Math.abs(x);
+    const ring = Math.sin(t * 14) * 0.02 * Math.max(0, Math.sin(t * 0.9));
+    const bells = sdTiltEllipse(ax, y, 0.5, -0.56 + ring, 0.24, 0.15, -0.7);
+    const legs = sdCapsule(ax, y, 0.36, 0.62, 0.5, 0.82, 0.06);
+    const knob = sdRoundBox(x, y + 0.56, 0.08, 0.06, 0.03);
+    return Math.min(smin(face, knob, 0.04), bells, legs);
+  },
+  hotair(x, y) {
+    const envelope = sdCone(x, y, 0, -0.24, 0.68, 0, 0.36, 0.16);
+    const ropes = sdCapsule(Math.abs(x), y, 0.2, 0.48, 0.17, 0.66, 0.05);
+    const basket = sdRoundBox(x, y - 0.76, 0.22, 0.1, 0.04);
+    return Math.min(envelope, ropes, basket);
+  },
+  car(x, y) {
+    const body = sdRoundBox(x, y - 0.4, 0.92, 0.28, 0.22);
+    const cabin = sdRoundBox(x + 0.06, y - 0.02, 0.58, 0.32, 0.26);
+    const wheels = length(Math.abs(x) - 0.52, y - 0.64) - 0.21;
+    return Math.min(smin(body, cabin, 0.08), wheels);
+  },
+  boat(x, y, t) {
+    const hull = sdPoly(x, y, HULL) - 0.04;
+    const cabin = sdRoundBox(x + 0.1, y - 0.04, 0.5, 0.34, 0.1);
+    const funnel = sdRoundBox(x - 0.32, y + 0.42, 0.12, 0.2, 0.04);
+    const puff = length(x - 0.38, y + 0.76 + Math.sin(t * 1.5) * 0.02) - 0.14;
+    return Math.min(smin(hull, cabin, 0.04), funnel, puff);
+  },
+  sub(x, y) {
+    const hull = sdCapsule(x, y, -0.5, 0.42, 0.48, 0.42, 0.42);
+    const tower = sdRoundBox(x + 0.08, y + 0.06, 0.26, 0.2, 0.1);
+    const scope = Math.min(sdCapsule(x, y, 0.06, -0.24, 0.06, -0.6, 0.055), sdCapsule(x, y, 0.06, -0.6, 0.24, -0.6, 0.055));
+    const prop = sdEllipse(x - 0.92, y - 0.42, 0.07, 0.18);
+    return Math.min(smin(hull, tower, 0.06), scope, prop);
+  },
+  bone(x, y) {
+    const shaft = sdCapsule(x, y, -0.5, 0.36, 0.5, 0.36, 0.34);
+    const knobs = length(Math.abs(x) - 0.66, Math.abs(y - 0.36) - 0.26) - 0.24;
+    return smin(shaft, knobs, 0.08);
+  },
+  sock(x, y) {
+    const leg = sdRoundBox(x - 0.2, y + 0.12, 0.5, 0.56, 0.14);
+    const foot = sdCapsule(x, y, 0.2, 0.56, -0.58, 0.56, 0.28);
+    const cuff = sdRoundBox(x - 0.2, y + 0.66, 0.56, 0.12, 0.06);
+    return Math.min(smin(leg, foot, 0.2), cuff);
+  },
+  tshirt(x, y) {
+    const body = smax(sdRoundBox(x, y - 0.14, 0.56, 0.7, 0.08), -(length(x, y + 0.66) - 0.22), 0.06);
+    const sleeves = sdPoly(Math.abs(x), y, SLEEVE) - 0.04;
+    return smin(body, sleeves, 0.04);
+  },
+  tophat(x, y) {
+    const crown = sdRoundBox(x, y + 0.02, 0.58, 0.62, 0.1);
+    const brim = sdEllipse(x, y - 0.66, 0.92, 0.16);
+    return smin(crown, brim, 0.06);
+  },
+  key(x, y) {
+    const bow = length(x, y + 0.24) - 0.58;
+    const shaft = sdRoundBox(x, y - 0.5, 0.1, 0.34, 0.04);
+    const teeth = Math.min(sdRoundBox(x - 0.18, y - 0.62, 0.12, 0.06, 0.02), sdRoundBox(x - 0.16, y - 0.8, 0.1, 0.06, 0.02));
+    return Math.min(smin(bow, shaft, 0.06), teeth);
+  },
+  raccoon(x, y) {
+    const head = sdEllipse(x, y - 0.24, 0.76, 0.6);
+    const ax = Math.abs(x);
+    const ears = sdCone(ax, y, 0.44, -0.22, 0.2, 0.58, -0.64, 0.06);
+    const cheeks = sdPoly(ax, y, RACCOON_CHEEK) - 0.03;
+    return smin(head, Math.min(ears, cheeks), 0.06);
+  },
+  tiger(x, y) {
+    const head = length(x, y - 0.14) - 0.7;
+    const ax = Math.abs(x);
+    const ears = length(ax - 0.5, y + 0.46) - 0.18;
+    const ruff = sdPoly(ax, y, TIGER_RUFF) - 0.03;
+    return smin(head, Math.min(ears, ruff), 0.06);
+  },
+  koi(x, y, t) {
+    const swish = Math.sin(t * 2.4) * 0.04;
+    const body = sdCone(x, y, 0, -0.06, 0.6, swish * 0.5, 0.52, 0.2);
+    const ax = Math.abs(x - swish);
+    const tail = sdTiltEllipse(ax, y, 0.22, 0.7, 0.26, 0.12, -0.6);
+    const fins = sdTiltEllipse(Math.abs(x), y, 0.54, 0.14, 0.22, 0.1, 0.6);
+    return smin(body, Math.min(tail, fins), 0.06);
+  },
+  dalmatian(x, y) {
+    const head = sdEllipse(x, y - 0.1, 0.62, 0.62);
+    const ax = Math.abs(x);
+    const ears = sdTiltEllipse(ax, y, 0.62, 0.18, 0.18, 0.4, -0.25);
+    const muzzle = sdEllipse(x, y - 0.54, 0.4, 0.3);
+    return smin(smin(head, muzzle, 0.1), ears, 0.06);
+  },
+  zebra(x, y) {
+    const head = sdCone(x, y, 0, -0.06, 0.58, 0, 0.5, 0.36);
+    const ears = sdCone(Math.abs(x), y, 0.32, -0.42, 0.13, 0.5, -0.82, 0.04);
+    const mane = sdRoundBox(x, y + 0.7, 0.1, 0.16, 0.08);
+    return smin(head, Math.min(ears, mane), 0.06);
+  },
+  sprout(x, y, t) {
+    const head = length(x, y - 0.14) - 0.72;
+    const sway = Math.sin(t * 1.5) * 0.04;
+    const stem = sdCone(x, y, 0, -0.5, 0.05, 0.04 + sway * 0.5, -0.76, 0.04);
+    const lx = x - (0.2 + sway);
+    const ly = y + 0.8;
+    const c = Math.cos(0.5), s = Math.sin(0.5);
+    const leaf = sdEllipse(lx * c - ly * s, lx * s + ly * c, 0.22, 0.1);
+    return Math.min(head, stem, leaf);
+  },
+};
+
 export function sdShape(shape: MascotShapeId, x: number, y: number, t: number): number {
-  switch (shape) {
-    case "circle":
-      return length(x, y) - 0.84;
-    case "square":
-      return sdRoundBox(x, y, 0.79, 0.79, 0.3);
-    case "slab":
-      return sdRoundBox(x, y - 0.1, 0.93, 0.62, 0.34);
-    case "tall":
-      return sdRoundBox(x, y + 0.03, 0.6, 0.88, 0.32);
-    case "egg":
-      return sdCone(x, y, 0, 0.2, 0.66, 0, -0.36, 0.46);
-    case "pebble":
-      return sdEllipse(x, y - 0.2, 0.92, 0.64);
-    case "bean": {
-      const s = Math.sin(t * 1.3) * 0.015;
-      const a = length(x + 0.2 + s, y + 0.16) - 0.6;
-      const b = length(x - 0.24 + s, y - 0.18 - s) - 0.57;
-      return smin(a, b, 0.42);
-    }
-    case "drop":
-      return sdCone(x, y, 0, 0.2, 0.66, 0, -0.74, 0.1);
-    case "ghost": {
-      const head = length(x, y + 0.08) - 0.76;
-      const skirt = sdRoundBox(x, y - 0.32, 0.76, 0.5, 0.06);
-      const hem = y - (0.74 + 0.085 * Math.cos(x * 12.5 + t * 2.2));
-      return Math.max(Math.min(head, skirt), hem);
-    }
-    case "puff": {
-      let d = length(x, y) - 0.6;
-      for (let i = 0; i < 6; i += 1) {
-        const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
-        const breathe = Math.sin(t * 1.6 + i * 1.7) * 0.012;
-        d = smin(d, length(x - Math.cos(angle) * 0.46, y - Math.sin(angle) * 0.46) - (0.38 + breathe), 0.2);
-      }
-      return d;
-    }
-    case "flower": {
-      let d = length(x, y - 0.04) - 0.5;
-      for (let i = 0; i < 5; i += 1) {
-        const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
-        const sway = Math.sin(t * 1.4 + i) * 0.01;
-        d = smin(d, length(x - Math.cos(angle) * 0.5, y - 0.04 - Math.sin(angle) * 0.5) - (0.35 + sway), 0.06);
-      }
-      return d;
-    }
-    case "star": {
-      const yy = y - 0.08;
-      const angle = Math.atan2(x, -yy);
-      const r = 0.64 + 0.2 * Math.cos(5 * angle);
-      return (length(x, yy) - r) * 0.78;
-    }
-    case "heart":
-      return heart(x, y + 0.03, 1.74);
-    case "diamond": {
-      const a = 0.78, b = 0.8;
-      const d = (Math.abs(x) / a + Math.abs(y - 0.02) / b - 1) / Math.sqrt(1 / (a * a) + 1 / (b * b));
-      return d - 0.12;
-    }
-    case "hexagon":
-      return sdHexagon(x, y - 0.04, 0.66) - 0.14;
-    case "cat": {
-      const head = length(x, y - 0.12) - 0.74;
-      const ear = Math.min(
-        sdCone(x, y, -0.42, -0.26, 0.24, -0.6, -0.84, 0.06),
-        sdCone(x, y, 0.42, -0.26, 0.24, 0.6, -0.84, 0.06),
-      );
-      return smin(head, ear, 0.08);
-    }
-    case "bear": {
-      const head = length(x, y - 0.12) - 0.73;
-      const ears = Math.min(length(x + 0.52, y + 0.48) - 0.25, length(x - 0.52, y + 0.48) - 0.25);
-      return smin(head, ears, 0.08);
-    }
-    case "bunny": {
-      const head = length(x, y - 0.24) - 0.64;
-      const ear = (side: number) => {
-        const ex = x - side * 0.24;
-        const ey = y + 0.46;
-        const c = Math.cos(side * 0.16), sn = Math.sin(side * 0.16);
-        return sdEllipse(ex * c + ey * sn, -ex * sn + ey * c, 0.13, 0.38);
-      };
-      return smin(head, Math.min(ear(-1), ear(1)), 0.08);
-    }
-    case "devil": {
-      const head = length(x, y - 0.06) - 0.8;
-      const horns = Math.min(
-        sdCone(x, y, -0.42, -0.5, 0.16, -0.62, -0.9, 0.03),
-        sdCone(x, y, 0.42, -0.5, 0.16, 0.62, -0.9, 0.03),
-      );
-      return smin(head, horns, 0.06);
-    }
-    case "alien": {
-      const head = sdEllipse(x, y - 0.16, 0.82, 0.7);
-      const bob = Math.sin(t * 2) * 0.02;
-      const stem = sdCone(x, y, 0, -0.5, 0.045, 0.1, -0.76, 0.035);
-      const ball = length(x - 0.12, y + 0.84 + bob) - 0.1;
-      return Math.min(head, stem, ball);
-    }
-    case "mushroom": {
-      const cap = Math.max(sdEllipse(x, y + 0.14, 0.94, 0.62), y - 0.12);
-      const stem = sdRoundBox(x, y - 0.46, 0.42, 0.4, 0.18);
-      return smin(cap, stem, 0.05);
-    }
-    case "onigiri": {
-      // Inigo Quilez's equilateral triangle, rounded, with y turned to point up.
-      const r = 0.74;
-      const k = Math.sqrt(3);
-      let px = Math.abs(x) - r;
-      let py = -(y - 0.22) + r / k;
-      if (px + k * py > 0) {
-        const nx = (px - k * py) / 2;
-        const ny = (-k * px - py) / 2;
-        px = nx;
-        py = ny;
-      }
-      px -= Math.max(-2 * r, Math.min(0, px));
-      return -length(px, py) * Math.sign(py) - 0.16;
-    }
-    case "slime": {
-      const body = Math.max(sdEllipse(x, y - 0.12, 0.86, 0.7), y - 0.62);
-      const drip = (cx: number, len: number, r: number) => sdCone(x, y, cx, 0.52, r, cx + 0.02, 0.52 + len, r * 0.72);
-      const ooze = Math.sin(t * 1.7) * 0.03;
-      const drips = Math.min(drip(-0.42, 0.24 + ooze, 0.1), drip(0.06, 0.3 - ooze, 0.09), drip(0.48, 0.16 + ooze, 0.08));
-      return smin(body, drips, 0.06);
-    }
-    case "pear":
-      return smin(length(x, y - 0.36) - 0.56, length(x, y + 0.26) - 0.4, 0.3);
-    case "spiky": {
-      const angle = Math.atan2(x, -y);
-      return (length(x, y) - (0.72 + 0.09 * Math.cos(10 * angle + t * 0.6))) * 0.72;
-    }
-    case "pill":
-      return sdRoundBox(x, y, 0.52, 0.86, 0.52);
-    case "dome":
-      return Math.max(sdEllipse(x, y - 0.66, 0.92, 1.4), y - 0.8) - 0.02;
-    case "blob": {
-      const a = Math.atan2(y - 0.04, x);
-      const r = 0.74 * (1 + 0.09 * Math.cos(3 * a + 0.5 + Math.sin(t * 0.9) * 0.25) + 0.06 * Math.cos(5 * a + 1.3));
-      return (length(x, y - 0.04) - r) * 0.85;
-    }
-    case "moon": {
-      const disc = length(x, y - 0.04) - 0.82;
-      const bite = length(x - 0.46, y + 0.24) - 0.66;
-      return Math.max(disc, -bite);
-    }
-    case "octagon": {
-      const ax = Math.abs(x);
-      const ay = Math.abs(y - 0.02);
-      return Math.max(ax, ay, (ax + ay) * Math.SQRT1_2) - 0.74;
-    }
-    case "gem":
-      return sdPolygon(x, y, [[-0.46, -0.58], [0.46, -0.58], [0.84, -0.18], [0, 0.82], [-0.84, -0.18]]) - 0.06;
-    case "shield":
-      return smin(sdRoundBox(x, y + 0.3, 0.78, 0.5, 0.18), sdCone(x, y, 0, 0.02, 0.72, 0, 0.84, 0.04), 0.06);
-    case "lemon":
-      return smin(
-        sdEllipse(x, y - 0.18, 0.72, 0.58),
-        Math.min(sdCone(x, y, 0.5, 0.18, 0.22, 0.94, 0.1, 0.04), sdCone(x, y, -0.5, 0.18, 0.22, -0.94, 0.26, 0.04)),
-        0.14,
-      );
-    case "apple": {
-      const body = smin(length(x - 0.2, y - 0.14) - 0.6, length(x + 0.2, y - 0.14) - 0.6, 0.2);
-      const dimple = length(x, y + 0.58) - 0.16;
-      const stem = sdCapsule(x, y, 0, -0.42, 0.08, -0.82, 0.045);
-      const leaf = sdEllipse((x - 0.3) * 0.86 + (y + 0.74) * 0.5, -(x - 0.3) * 0.5 + (y + 0.74) * 0.86, 0.2, 0.09);
-      return Math.min(Math.max(body, -dimple), stem, leaf);
-    }
-    case "pumpkin": {
-      let d = sdEllipse(x, y - 0.2, 0.34, 0.62);
-      for (const [cx, rx] of [[-0.3, 0.4], [0.3, 0.4], [-0.6, 0.32], [0.6, 0.32]] as const) {
-        d = smin(d, sdEllipse(x - cx, y - 0.24, rx, 0.56), 0.06);
-      }
-      return Math.min(d, sdCapsule(x, y, 0.02, -0.34, 0.1, -0.7, 0.07));
-    }
-    case "acorn": {
-      const nut = sdCone(x, y, 0, 0.1, 0.64, 0, 0.86, 0.05);
-      const cap = Math.max(sdEllipse(x, y + 0.24, 0.84, 0.46), y + 0.02);
-      return Math.min(nut, cap, sdCapsule(x, y, 0, -0.66, 0.06, -0.86, 0.05));
-    }
-    case "cactus": {
-      const body = sdRoundBox(x, y - 0.06, 0.36, 0.8, 0.36);
-      const sway = Math.sin(t * 1.2) * 0.02;
-      const left = Math.min(sdCapsule(x, y, -0.3, 0.22, -0.66, 0.22, 0.13), sdCapsule(x, y, -0.66, 0.22, -0.66 + sway, -0.2, 0.13));
-      const right = Math.min(sdCapsule(x, y, 0.3, 0.02, 0.66, 0.02, 0.13), sdCapsule(x, y, 0.66, 0.02, 0.66 - sway, -0.44, 0.13));
-      return smin(body, Math.min(left, right), 0.06);
-    }
-    case "flame": {
-      const f = Math.sin(t * 5.3) * 0.05;
-      const core = sdCone(x, y, 0, 0.34, 0.54, f, -0.86, 0.03);
-      const tongue = sdCone(x, y, 0.26, 0.16, 0.22, 0.44 - f, -0.44, 0.02);
-      const tongue2 = sdCone(x, y, -0.28, 0.24, 0.2, -0.42 + f, -0.26, 0.02);
-      return smin(core, Math.min(tongue, tongue2), 0.12);
-    }
-    case "snowman":
-      return smin(length(x, y - 0.38) - 0.5, length(x, y + 0.42) - 0.42, 0.08);
-    case "dumpling": {
-      const base = Math.max(sdEllipse(x, y - 0.42, 0.94, 0.86), y - 0.8);
-      const crest = sdEllipse(x, y + 0.38, 0.22, 0.12 + 0.03 * Math.cos(x * 40));
-      return smin(base, crest, 0.1);
-    }
-    case "bell": {
-      const body = sdCone(x, y, 0, 0.36, 0.7, 0, -0.5, 0.38);
-      const lip = sdRoundBox(x, y - 0.66, 0.86, 0.14, 0.1);
-      const knob = length(x, y + 0.84) - 0.1;
-      return Math.min(smin(body, lip, 0.08), knob);
-    }
-    case "ufo": {
-      const dome = Math.max(length(x, y + 0.14) - 0.5, y - 0.1);
-      const saucer = sdEllipse(x, y - 0.26, 0.96, 0.26);
-      const glow = Math.sin(t * 2) * 0.01;
-      return smin(dome, saucer - glow, 0.06);
-    }
-    case "robot": {
-      const head = sdRoundBox(x, y - 0.12, 0.7, 0.62, 0.14);
-      const ears = Math.min(sdRoundBox(x + 0.8, y - 0.12, 0.1, 0.2, 0.05), sdRoundBox(x - 0.8, y - 0.12, 0.1, 0.2, 0.05));
-      const stem = sdCapsule(x, y, 0, -0.5, 0, -0.74, 0.04);
-      const ball = length(x, y + 0.82 + Math.sin(t * 2.4) * 0.015) - 0.09;
-      return Math.min(head, ears, stem, ball);
-    }
-    case "crown": {
-      const head = length(x, y - 0.24) - 0.64;
-      let points = sdRoundBox(x, y + 0.36, 0.56, 0.12, 0.04);
-      for (const px of [-0.42, 0, 0.42]) points = Math.min(points, sdCone(x, y, px, -0.36, 0.14, px * 1.12, -0.86, 0.05));
-      return Math.min(head, points);
-    }
-    case "unicorn": {
-      const head = length(x, y - 0.14) - 0.74;
-      const horn = sdCone(x, y, 0.02, -0.5, 0.14, 0.12, -0.94, 0.02);
-      return smin(head, horn, 0.05);
-    }
-    case "fox": {
-      const head = smin(length(x, y - 0.12) - 0.6, Math.min(sdEllipse(x - 0.42, y - 0.36, 0.34, 0.22), sdEllipse(x + 0.42, y - 0.36, 0.34, 0.22)), 0.1);
-      const ears = Math.min(sdCone(x, y, -0.34, -0.22, 0.2, -0.7, -0.86, 0.04), sdCone(x, y, 0.34, -0.22, 0.2, 0.7, -0.86, 0.04));
-      return smin(head, ears, 0.06);
-    }
-    case "mouse": {
-      const head = length(x, y - 0.24) - 0.6;
-      const ears = Math.min(length(x - 0.54, y + 0.34) - 0.34, length(x + 0.54, y + 0.34) - 0.34);
-      return smin(head, ears, 0.05);
-    }
-    case "frog": {
-      const body = sdEllipse(x, y - 0.32, 0.92, 0.54);
-      const bumps = Math.min(length(x - 0.42, y + 0.18) - 0.28, length(x + 0.42, y + 0.18) - 0.28);
-      return smin(body, bumps, 0.14);
-    }
-    case "chick": {
-      const body = length(x, y - 0.14) - 0.72;
-      let tuft = Infinity;
-      for (const a of [-0.45, 0, 0.45]) {
-        const tx = x - Math.sin(a) * 0.12;
-        const ty = y + 0.7;
-        tuft = Math.min(tuft, sdEllipse(tx * Math.cos(a) - ty * Math.sin(a), tx * Math.sin(a) + ty * Math.cos(a), 0.06, 0.17));
-      }
-      return Math.min(body, tuft);
-    }
-    case "octopus": {
-      let d = sdEllipse(x, y + 0.06, 0.78, 0.66);
-      [-0.54, -0.18, 0.18, 0.54].forEach((tx, i) => {
-        d = smin(d, sdCone(x, y, tx, 0.34, 0.14, tx * 1.12 + Math.sin(t * 2.6 + i * 1.7) * 0.05, 0.84, 0.08), 0.1);
-      });
-      return d;
-    }
-    case "jellyfish": {
-      let d = Math.max(sdEllipse(x, y - 0.12, 0.82, 0.74), y - 0.22);
-      [-0.5, -0.25, 0, 0.25, 0.5].forEach((tx, i) => {
-        const wx = x - (tx + 0.05 * Math.sin(y * 10 + t * 3 + i));
-        const end = 0.82 - (i % 2) * 0.1;
-        d = Math.min(d, Math.max(Math.abs(wx) - 0.045, Math.max(0.16 - y, y - end)));
-      });
-      return d;
-    }
-    case "pentagon":
-      return sdPoly(x, y, PENTAGON) - 0.08;
-    case "plus":
-      return smin(sdRoundBox(x, y - 0.02, 0.86, 0.34, 0.16), sdRoundBox(x, y - 0.02, 0.36, 0.84, 0.16), 0.14);
-    case "peanut": {
-      const s = Math.sin(t * 1.2) * 0.012;
-      return smin(sdEllipse(x + 0.38, y - 0.3 + s, 0.5, 0.54), sdEllipse(x - 0.38, y - 0.26 - s, 0.5, 0.58), 0.26);
-    }
-    case "leaf": {
-      // A vesica tipped over the way a leaf lies, its stalk on the ground at the left.
-      const a = 0.62 + Math.sin(t * 1.3) * 0.03;
-      const c = Math.cos(a), s = Math.sin(a);
-      const yy = y - 0.04;
-      const px = Math.abs(x * c + yy * s);
-      const py = Math.abs(-x * s + yy * c);
-      const b = Math.sqrt(1 - 0.5 * 0.5);
-      const blade = (py - b) * 0.5 > px * b ? length(px, py - b) : length(px + 0.5, py) - 1;
-      return Math.min(blade, sdCapsule(x, y, -0.46, 0.7, -0.62, 0.84, 0.045));
-    }
-    case "shell": {
-      // A scallop: ribs fanning from a hinge on the ground, each ending in a bump.
-      const hy = y - 0.9;
-      const r = length(x, hy);
-      const a = Math.atan2(x, -hy);
-      const rim = r - (1.5 + 0.07 * Math.abs(Math.cos(a * 14)));
-      const wedge = r * Math.sin(Math.min(Math.abs(a) - 0.6, 1.2));
-      const hinge = sdRoundBox(x, y - 0.74, 0.32, 0.1, 0.05);
-      return smin(smax(rim * 0.9, wedge, 0.12), hinge, 0.12);
-    }
-    case "tulip": {
-      const cup = sdEllipse(x, y - 0.02, 0.66, 0.58);
-      const petals = Math.min(
-        sdCone(x, y, 0, -0.12, 0.36, 0, -0.84, 0.06),
-        sdCone(x, y, -0.34, 0.0, 0.32, -0.5, -0.56, 0.1),
-        sdCone(x, y, 0.34, 0.0, 0.32, 0.5, -0.56, 0.1),
-      );
-      const sway = Math.sin(t * 1.4) * 0.02;
-      const stem = sdCapsule(x, y, 0, 0.5, sway, 0.84, 0.08);
-      const leaves = Math.min(sdTiltEllipse(x, y, -0.32, 0.72, 0.3, 0.11, -0.5), sdTiltEllipse(x, y, 0.32, 0.72, 0.3, 0.11, 0.5));
-      return smin(smin(cup, petals, 0.08), smin(stem, leaves, 0.06), 0.08);
-    }
-    case "penguin": {
-      const body = sdEllipse(x, y - 0.02, 0.6, 0.8);
-      const flap = Math.sin(t * 2.4) * 0.06;
-      const wings = Math.min(sdTiltEllipse(x, y, -0.6, 0.14, 0.12, 0.34, -0.5 - flap), sdTiltEllipse(x, y, 0.6, 0.14, 0.12, 0.34, 0.5 + flap));
-      const feet = Math.min(sdEllipse(x + 0.24, y - 0.79, 0.2, 0.07), sdEllipse(x - 0.24, y - 0.79, 0.2, 0.07));
-      return smin(smin(body, wings, 0.08), feet, 0.04);
-    }
-    case "owl": {
-      // The dip in the brow is what makes it an owl and not a cat: the facial disc.
-      const body = smax(sdRoundBox(x, y - 0.14, 0.7, 0.7, 0.46), -(length(x, y + 0.74) - 0.16), 0.12);
-      const tufts = Math.min(sdCone(x, y, -0.5, -0.38, 0.14, -0.84, -0.66, 0.03), sdCone(x, y, 0.5, -0.38, 0.14, 0.84, -0.66, 0.03));
-      const wings = Math.min(sdTiltEllipse(x, y, -0.7, 0.32, 0.15, 0.36, -0.25), sdTiltEllipse(x, y, 0.7, 0.32, 0.15, 0.36, 0.25));
-      const feet = Math.min(sdEllipse(x + 0.22, y - 0.84, 0.14, 0.05), sdEllipse(x - 0.22, y - 0.84, 0.14, 0.05));
-      return Math.min(smin(smin(body, tufts, 0.08), wings, 0.06), feet);
-    }
-    case "pig": {
-      const body = sdEllipse(x, y - 0.14, 0.8, 0.6);
-      // Ears that flop forward over the brow, and a tail with a curl in it.
-      const ears = Math.min(sdTiltEllipse(x, y, -0.5, -0.4, 0.2, 0.13, 0.7), sdTiltEllipse(x, y, 0.5, -0.4, 0.2, 0.13, -0.7));
-      let legs = Infinity;
-      for (const lx of [-0.5, -0.18, 0.18, 0.5]) legs = Math.min(legs, sdRoundBox(x - lx, y - 0.76, 0.1, 0.1, 0.05));
-      const tail = Math.max(sdRing(x, y, 0.88, 0.02, 0.08, 0.035), -(x - 0.84) - (y - 0.02));
-      return Math.min(smin(smin(body, ears, 0.08), legs, 0.08), tail);
-    }
-    case "koala": {
-      const head = sdEllipse(x, y - 0.24, 0.66, 0.6);
-      const ex = Math.abs(x) - 0.62;
-      const ey = y + 0.08;
-      const ears = length(ex, ey) - (0.32 + 0.025 * Math.cos(Math.atan2(ey, ex) * 7));
-      return smin(head, ears * 0.9, 0.06);
-    }
-    case "hamster": {
-      const body = smin(length(x, y - 0.02) - 0.5, sdEllipse(x, y - 0.44, 0.86, 0.42), 0.36);
-      const ears = Math.min(length(x + 0.36, y + 0.4) - 0.13, length(x - 0.36, y + 0.4) - 0.13);
-      return smin(body, ears, 0.06);
-    }
-    case "puppy": {
-      const head = length(x, y - 0.16) - 0.68;
-      const flop = Math.sin(t * 1.6) * 0.03;
-      return smin(head, sdTiltEllipse(Math.abs(x), y, 0.62, 0.08, 0.2, 0.42, 0.35 + flop), 0.06);
-    }
-    case "bat": {
-      const head = length(x, y - 0.24) - 0.6;
-      const ears = Math.min(sdCone(x, y, -0.3, -0.2, 0.14, -0.4, -0.62, 0.03), sdCone(x, y, 0.3, -0.2, 0.14, 0.4, -0.62, 0.03));
-      const flap = Math.sin(t * 3) * 0.03;
-      const wx = Math.abs(x);
-      let scallop = Infinity;
-      for (const sx of [0.42, 0.68, 0.94]) scallop = Math.min(scallop, length(wx - sx, y - 0.4 + flap) - 0.14);
-      const wings = Math.max(sdEllipse(wx - 0.62, y - 0.1 + flap, 0.36, 0.32), -scallop);
-      return smin(Math.min(head, ears), wings, 0.06);
-    }
-    case "hedgehog": {
-      const body = Math.max(sdEllipse(x, y - 0.42, 0.84, 0.66), y - 0.84);
-      // Spines round the top half only, a triangle wave in angle about the middle.
-      const dy = y - 0.42;
-      const a = Math.atan2(x, -dy);
-      const u = a * 3.2 + 0.5 + Math.sin(t * 1.2) * 0.04;
-      const saw = Math.abs(u - Math.floor(u) - 0.5) * 2;
-      const spines = Math.abs(a) < 1.7 ? (length(x, dy) - (0.66 + 0.26 * (1 - saw))) * 0.6 : Infinity;
-      return Math.min(body, Math.max(spines, y - 0.84));
-    }
-    case "axolotl": {
-      const head = sdEllipse(x, y - 0.3, 0.74, 0.54);
-      const sway = Math.sin(t * 2) * 0.03;
-      const ax = Math.abs(x);
-      let gills = Infinity;
-      for (const [gx, gy] of [[0.94, 0.02], [0.88, -0.28], [0.66, -0.5]] as const) gills = Math.min(gills, sdCone(ax, y, 0.56, 0.14, 0.05, gx, gy + sway, 0.09));
-      return smin(head, gills, 0.06);
-    }
-    case "hatch": {
-      // A chick still half in its egg: the shell's broken edge is a zigzag.
-      const head = length(x, y + 0.12) - 0.56;
-      const u = x * 3.2 + 0.5;
-      const crack = 0.02 + 0.14 * Math.abs(u - Math.floor(u) - 0.5) * 2;
-      const shell = Math.max(sdEllipse(x, y - 0.4, 0.74, 0.46), (crack - y) * 0.7);
-      return Math.min(head, shell);
-    }
-    case "bee": {
-      const body = sdEllipse(x, y - 0.3, 0.78, 0.56);
-      const buzz = Math.sin(t * 9) * 0.04;
-      // Wings standing off the back, long and thin, so they read as wings and not ears.
-      const wings = Math.min(sdTiltEllipse(x, y, -0.6, -0.3, 0.13, 0.32, 0.95 + buzz), sdTiltEllipse(x, y, 0.6, -0.3, 0.13, 0.32, -0.95 - buzz));
-      const feelers = Math.min(
-        sdCapsule(x, y, -0.1, -0.2, -0.18, -0.62, 0.035),
-        sdCapsule(x, y, 0.1, -0.2, 0.18, -0.62, 0.035),
-        length(x + 0.19, y + 0.68) - 0.07,
-        length(x - 0.19, y + 0.68) - 0.07,
-      );
-      return Math.min(smin(body, wings, 0.04), feelers);
-    }
-    case "snail": {
-      const shell = length(x - 0.14, y - 0.18) - 0.6;
-      const foot = sdCapsule(x, y, -0.78, 0.72, 0.82, 0.72, 0.13);
-      const neck = sdCone(x, y, -0.6, 0.66, 0.16, -0.7, 0.24, 0.13);
-      const bob = Math.sin(t * 1.8) * 0.02;
-      const horns = Math.min(
-        sdCapsule(x, y, -0.74, 0.2, -0.86, -0.14 + bob, 0.035),
-        sdCapsule(x, y, -0.64, 0.18, -0.6, -0.18 - bob, 0.035),
-        length(x + 0.86, y + 0.16 - bob) - 0.06,
-        length(x + 0.6, y + 0.2 + bob) - 0.06,
-      );
-      return Math.min(smin(Math.min(foot, neck), shell, 0.08), horns);
-    }
-    case "turtle": {
-      const shell = Math.max(sdEllipse(x, y - 0.56, 0.72, 0.96), y - 0.62);
-      const rim = sdRoundBox(x, y - 0.62, 0.8, 0.07, 0.07);
-      const peek = Math.sin(t * 1.1) * 0.02;
-      const head = length(x - 0.76 - peek, y - 0.42) - 0.17;
-      const legs = Math.min(sdRoundBox(x + 0.44, y - 0.76, 0.12, 0.1, 0.05), sdRoundBox(x - 0.38, y - 0.76, 0.12, 0.1, 0.05));
-      return Math.min(smin(shell, rim, 0.04), smin(head, legs, 0.04));
-    }
-    case "crab": {
-      const body = sdEllipse(x, y - 0.42, 0.74, 0.4);
-      const ax = Math.abs(x);
-      const snap = Math.sin(t * 2.2) * 0.04;
-      const arms = sdCapsule(ax, y, 0.5, 0.2, 0.62, -0.2, 0.07);
-      const claws = Math.max(length(ax - 0.62, y + 0.42) - 0.24, -sdCone(ax, y, 0.62, -0.44, 0.01, 0.52 - snap, -0.78, 0.13));
-      let legs = Infinity;
-      for (const [lx, ly] of [[0.9, 0.62], [0.84, 0.82]] as const) legs = Math.min(legs, sdCapsule(ax, y, 0.56, 0.5, lx, ly, 0.045));
-      return smin(body, Math.min(arms, claws, legs), 0.06);
-    }
-    case "fish": {
-      const swish = Math.sin(t * 3) * 0.04;
-      const body = sdEllipse(x + 0.16, y - 0.32, 0.68, 0.5);
-      const tail = Math.max(sdCone(x, y, 0.42, 0.32, 0.05, 0.8, 0.32 + swish, 0.3), -(length(x - 1.08, y - 0.32 - swish) - 0.2));
-      const fin = sdCone(x, y, -0.24, -0.1, 0.14, -0.02, -0.34, 0.04);
-      return smin(body, Math.min(tail, fin), 0.08);
-    }
-    case "whale": {
-      const body = smin(sdEllipse(x + 0.12, y - 0.36, 0.8, 0.5), sdCone(x, y, 0.42, 0.5, 0.24, 0.74, 0.0, 0.08), 0.2);
-      const flukes = Math.min(sdTiltEllipse(x, y, 0.6, -0.12, 0.2, 0.08, 0.6), sdTiltEllipse(x, y, 0.88, -0.08, 0.2, 0.08, -0.6));
-      const spurt = Math.sin(t * 2.6) * 0.03;
-      const spout = Math.min(
-        sdCapsule(x, y, -0.24, -0.24, -0.38, -0.52 - spurt, 0.04),
-        sdCapsule(x, y, -0.24, -0.24, -0.22, -0.6 - spurt, 0.04),
-        sdCapsule(x, y, -0.24, -0.24, -0.08, -0.52 - spurt, 0.04),
-      );
-      return Math.min(smin(body, flukes, 0.06), spout);
-    }
-    case "shark": {
-      // Side on, like the fish, and told apart from it by the fin and the crescent tail.
-      const swish = Math.sin(t * 2.4) * 0.03;
-      const body = smin(sdCone(x, y, 0.06, 0.38, 0.46, -0.66, 0.36, 0.2), sdCone(x, y, 0.3, 0.38, 0.32, 0.7, 0.38 + swish, 0.08), 0.1);
-      const fin = Math.max(sdPoly(x, y, SHARK_FIN) - 0.04, -(length(x - 0.5, y + 0.52) - 0.3));
-      const tail = Math.min(sdCone(x, y, 0.66, 0.38 + swish, 0.07, 0.94, 0.04 + swish, 0.03), sdCone(x, y, 0.66, 0.38 + swish, 0.07, 0.9, 0.66 + swish, 0.03));
-      const flipper = sdCone(x, y, -0.1, 0.66, 0.1, -0.3, 0.86, 0.03);
-      return smin(body, Math.min(fin, tail, flipper), 0.06);
-    }
-    case "strawberry": {
-      const berry = sdCone(x, y, 0, -0.02, 0.66, 0, 0.72, 0.14);
-      let leaves = Infinity;
-      for (const [lx, ly] of [[-0.52, -0.54], [-0.26, -0.84], [0.26, -0.84], [0.52, -0.54]] as const) leaves = Math.min(leaves, sdCone(x, y, 0, -0.62, 0.12, lx, ly, 0.03));
-      return Math.min(smin(berry, leaves, 0.04), sdCapsule(x, y, 0, -0.66, 0.06, -0.92, 0.04));
-    }
-    case "pineapple": {
-      const body = sdEllipse(x, y - 0.3, 0.62, 0.56);
-      let crown = Infinity;
-      for (const [lx, ly] of [[0, -0.92], [-0.28, -0.8], [0.28, -0.8], [-0.46, -0.52], [0.46, -0.52]] as const) crown = Math.min(crown, sdCone(x, y, 0, -0.24, 0.13, lx, ly, 0.03));
-      return smin(body, crown, 0.06);
-    }
-    case "cupcake": {
-      const wrapper = sdPoly(x, y, CUPCAKE_WRAPPER) - 0.06;
-      const swirl = smin(smin(sdEllipse(x, y - 0.06, 0.82, 0.3), sdEllipse(x, y + 0.26, 0.58, 0.24), 0.1), sdCone(x, y, 0, -0.38, 0.3, 0.06, -0.74, 0.05), 0.1);
-      return Math.min(wrapper, swirl, length(x - 0.08, y + 0.8) - 0.08);
-    }
-    case "icecream": {
-      const scoop = sdEllipse(x, y + 0.2, 0.7, 0.56);
-      let drips = Infinity;
-      for (const [dx, dl] of [[-0.5, 0.12], [0.46, 0.18]] as const) drips = Math.min(drips, sdCapsule(x, y, dx, 0.2, dx, 0.2 + dl + Math.sin(t * 1.5 + dx * 9) * 0.02, 0.09));
-      return Math.min(smin(scoop, drips, 0.08), sdCone(x, y, 0, 0.3, 0.36, 0, 0.84, 0.04));
-    }
-    case "pudding": {
-      // A wobble that shears from the plate up, the way a pudding moves.
-      const sx = x - Math.sin(t * 3) * 0.03 * (0.6 - y);
-      const body = sdPoly(sx, y, PUDDING) - 0.1;
-      const drips = Math.min(sdCapsule(Math.abs(sx), y, 0.52, -0.4, 0.58, -0.16, 0.06), sdCapsule(sx, y, 0.1, -0.44, 0.1, -0.3, 0.06));
-      return Math.min(smin(body, drips, 0.04), sdEllipse(x, y - 0.78, 0.94, 0.08));
-    }
-    case "toast": {
-      const crown = smin(length(x + 0.38, y + 0.26) - 0.46, length(x - 0.38, y + 0.26) - 0.46, 0.3);
-      return smin(crown, sdRoundBox(x, y - 0.32, 0.7, 0.52, 0.14), 0.1);
-    }
-    case "burger": {
-      const bun = Math.max(sdEllipse(x, y - 0.06, 0.84, 0.82), y - 0.06);
-      const lettuce = sdRoundBox(x, y - 0.14 - 0.03 * Math.sin(x * 15 + t * 1.4), 0.9, 0.06, 0.05);
-      const patty = sdRoundBox(x, y - 0.33, 0.86, 0.12, 0.1);
-      const base = sdRoundBox(x, y - 0.66, 0.8, 0.18, 0.16);
-      return Math.min(bun, lettuce, patty, base);
-    }
-    case "bowl": {
-      const shell = Math.max(length(x, y + 0.02) - 0.88, -0.04 - y);
-      let filling = Infinity;
-      for (let i = 0; i < 6; i += 1) filling = Math.min(filling, length(x + 0.6 - i * 0.24, y + 0.08 + (i % 2) * 0.04) - 0.15);
-      return smin(shell, filling, 0.06);
-    }
-    case "mitten": {
-      const hand = smin(sdRoundBox(x - 0.1, y + 0.06, 0.52, 0.62, 0.5), sdRoundBox(x - 0.1, y - 0.4, 0.48, 0.2, 0.1), 0.1);
-      const wave = Math.sin(t * 2) * 0.03;
-      const thumb = sdCapsule(x, y, -0.36, 0.2, -0.7, -0.16 + wave, 0.18);
-      return smin(smin(hand, thumb, 0.12), sdRoundBox(x - 0.1, y - 0.7, 0.56, 0.15, 0.06), 0.04);
-    }
-    case "tooth": {
-      const crown = smax(sdRoundBox(x, y + 0.22, 0.76, 0.5, 0.42), -(length(x, y + 0.92) - 0.22), 0.12);
-      const roots = Math.min(sdCone(x, y, -0.36, 0.2, 0.32, -0.3, 0.76, 0.1), sdCone(x, y, 0.36, 0.2, 0.32, 0.3, 0.76, 0.1));
-      return smin(crown, roots, 0.1);
-    }
-    case "candle": {
-      const body = sdRoundBox(x, y - 0.26, 0.56, 0.6, 0.1);
-      const drip = sdCapsule(x, y, 0.5, -0.32, 0.52, -0.06, 0.07);
-      const wick = sdCapsule(x, y, 0, -0.34, 0, -0.48, 0.03);
-      const f = Math.sin(t * 5.3) * 0.03;
-      return Math.min(smin(body, drip, 0.04), wick, sdCone(x, y, 0, -0.58, 0.14, f, -0.94, 0.02));
-    }
-    case "bulb": {
-      const glass = smin(length(x, y + 0.18) - 0.64, sdRoundBox(x, y - 0.4, 0.3, 0.16, 0.1), 0.24);
-      const yy = y - 0.68;
-      const base = sdRoundBox(x, yy, 0.27 + 0.03 * Math.cos(yy * 36), 0.15, 0.05);
-      return Math.min(glass, base);
-    }
-    case "mug": {
-      const body = sdRoundBox(x + 0.14, y - 0.18, 0.62, 0.66, 0.16);
-      const handle = Math.max(sdRing(x, y, 0.5, 0.16, 0.26, 0.08), 0.46 - x);
-      return smin(body, handle, 0.04);
-    }
-    case "potion": {
-      const flask = length(x, y - 0.24) - 0.62;
-      const neck = sdRoundBox(x, y + 0.48, 0.17, 0.2, 0.04);
-      const lip = sdRoundBox(x, y + 0.62, 0.24, 0.05, 0.04);
-      const cork = sdRoundBox(x, y + 0.76, 0.14, 0.1, 0.05);
-      return Math.min(smin(flask, neck, 0.1), lip, cork);
-    }
-    case "balloon": {
-      const sway = Math.sin(t * 1.4) * 0.03;
-      const ball = sdEllipse(x - sway, y + 0.16, 0.66, 0.72);
-      const knot = sdCone(x, y, sway, 0.54, 0.04, sway, 0.66, 0.09);
-      const string = y > 0.66 ? Math.abs(x - sway * 0.5 - 0.04 * Math.sin(y * 14)) - 0.035 : Infinity;
-      return Math.min(ball, knot, string);
-    }
-    case "present": {
-      const box = sdRoundBox(x, y - 0.42, 0.72, 0.44, 0.06);
-      const lid = sdRoundBox(x, y + 0.1, 0.82, 0.12, 0.05);
-      const bow = Math.min(sdTiltEllipse(x, y, -0.26, -0.4, 0.26, 0.15, 0.55), sdTiltEllipse(x, y, 0.26, -0.4, 0.26, 0.15, -0.55), length(x, y + 0.28) - 0.1);
-      return Math.min(box, lid, bow);
-    }
-    case "padlock": {
-      const body = sdRoundBox(x, y - 0.38, 0.74, 0.48, 0.16);
-      const shackle = Math.max(sdRing(x, y, 0, -0.1, 0.44, 0.11), y + 0.06);
-      return Math.min(body, shackle);
-    }
-    case "house": {
-      const walls = sdRoundBox(x, y - 0.42, 0.66, 0.44, 0.06);
-      const roof = sdPoly(x, y, ROOF) - 0.06;
-      const chimney = sdRoundBox(x - 0.48, y + 0.42, 0.1, 0.2, 0.03);
-      return Math.min(walls, roof, chimney);
-    }
-    case "tv": {
-      const box = sdRoundBox(x, y - 0.18, 0.88, 0.58, 0.2);
-      const feet = Math.min(sdRoundBox(x + 0.5, y - 0.8, 0.1, 0.06, 0.03), sdRoundBox(x - 0.5, y - 0.8, 0.1, 0.06, 0.03));
-      const wiggle = Math.sin(t * 1.6) * 0.02;
-      const aerial = Math.min(
-        sdCapsule(x, y, -0.06, -0.42, -0.38, -0.86 + wiggle, 0.035),
-        sdCapsule(x, y, 0.06, -0.42, 0.42, -0.82 - wiggle, 0.035),
-        length(x, y + 0.42) - 0.1,
-      );
-      return Math.min(box, feet, aerial);
-    }
-    case "gamepad": {
-      const bar = sdRoundBox(x, y - 0.22, 0.66, 0.36, 0.3);
-      const grips = Math.min(sdTiltEllipse(x, y, -0.6, 0.46, 0.28, 0.38, 0.5), sdTiltEllipse(x, y, 0.6, 0.46, 0.28, 0.38, -0.5));
-      const shoulders = sdRoundBox(Math.abs(x) - 0.48, y + 0.14, 0.18, 0.06, 0.06);
-      return smin(smin(bar, grips, 0.16), shoulders, 0.06);
-    }
-    case "trophy": {
-      const cup = Math.max(sdEllipse(x, y + 0.56, 0.62, 0.86), -0.66 - y);
-      const handles = Math.max(sdRing(Math.abs(x), y, 0.6, -0.36, 0.2, 0.06), 0.5 - Math.abs(x));
-      const stem = sdCone(x, y, 0, 0.24, 0.1, 0, 0.6, 0.14);
-      const base = sdRoundBox(x, y - 0.74, 0.46, 0.12, 0.06);
-      return Math.min(smin(cup, stem, 0.1), handles, base);
-    }
-    case "chest": {
-      const base = sdRoundBox(x, y - 0.52, 0.84, 0.34, 0.08);
-      const lid = Math.max(sdEllipse(x, y - 0.18, 0.88, 0.52), y - 0.2);
-      return Math.min(base, lid);
-    }
-    case "bomb": {
-      const ball = length(x, y - 0.16) - 0.7;
-      const cx = x - 0.34, cy = y + 0.5;
-      const c = Math.cos(0.6), s = Math.sin(0.6);
-      const cap = sdRoundBox(cx * c + cy * s, -cx * s + cy * c, 0.16, 0.11, 0.04);
-      const fuse = sdCapsule(x, y, 0.42, -0.58, 0.56, -0.76, 0.035);
-      const spark = star(x - 0.62, y + 0.84, 0.1 + Math.sin(t * 9) * 0.02) * 0.6;
-      return Math.min(ball, cap, fuse, spark);
-    }
-    case "pawn": {
-      const head = length(x, y + 0.38) - 0.46;
-      const collar = sdRoundBox(x, y - 0.1, 0.36, 0.06, 0.06);
-      const body = sdCone(x, y, 0, 0.62, 0.44, 0, 0.12, 0.2);
-      const base = sdRoundBox(x, y - 0.76, 0.66, 0.1, 0.08);
-      return Math.min(smin(head, collar, 0.06), smin(smin(body, collar, 0.06), base, 0.1));
-    }
-    case "spade": {
-      const blade = heart(x, -(y + 0.08), 1.4);
-      const stem = Math.max(sdCone(x, y, 0, 0.3, 0.05, 0, 0.78, 0.16), y - 0.86);
-      return smin(blade, stem, 0.06);
-    }
-    case "club": {
-      const top = length(x, y + 0.36) - 0.4;
-      const sides = Math.min(length(x + 0.38, y - 0.16) - 0.4, length(x - 0.38, y - 0.16) - 0.4);
-      const lobes = smin(smin(top, sides, 0.2), length(x, y) - 0.3, 0.1);
-      return smin(lobes, Math.max(sdCone(x, y, 0, 0.4, 0.05, 0, 0.78, 0.16), y - 0.86), 0.06);
-    }
-    case "wizard": {
-      const head = length(x, y - 0.24) - 0.62;
-      const brim = sdEllipse(x, y + 0.34, 0.84, 0.1);
-      const flop = Math.sin(t * 1.3) * 0.03;
-      return Math.min(head, smin(brim, sdCone(x, y, 0, -0.42, 0.44, 0.26 + flop, -0.94, 0.04), 0.04));
-    }
-    case "rocket": {
-      const hull = sdCone(x, y, 0, 0.26, 0.5, 0, -0.62, 0.12);
-      const fins = sdPoly(Math.abs(x), y, ROCKET_FIN) - 0.04;
-      const nozzle = sdRoundBox(x, y - 0.78, 0.2, 0.08, 0.04);
-      return Math.min(smin(hull, fins, 0.04), nozzle);
-    }
-    case "planet": {
-      const ball = length(x, y - 0.22) - 0.62;
-      const dx = x, dy = y - 0.22;
-      const a = -0.32 + Math.sin(t * 0.8) * 0.02;
-      const c = Math.cos(a), s = Math.sin(a);
-      const ring = Math.abs(sdEllipse(dx * c + dy * s, -dx * s + dy * c, 0.94, 0.22)) - 0.045;
-      return Math.min(ball, ring);
-    }
-    case "panda": {
-      // Wider than the bear and with smaller, higher ears, so the two still differ as
-      // silhouettes; the patches are what make it a panda, and they are `MARKINGS`.
-      const head = sdEllipse(x, y - 0.14, 0.82, 0.7);
-      const ears = Math.min(length(x + 0.56, y + 0.46) - 0.21, length(x - 0.56, y + 0.46) - 0.21);
-      return smin(head, ears, 0.06);
-    }
-    case "ladybug": {
-      const shell = sdEllipse(x, y - 0.16, 0.86, 0.7);
-      const head = sdEllipse(x, y + 0.5, 0.4, 0.24);
-      const feelers = Math.min(
-        sdCapsule(x, y, -0.16, -0.66, -0.3, -0.84, 0.035),
-        sdCapsule(x, y, 0.16, -0.66, 0.3, -0.84, 0.035),
-      );
-      return Math.min(smin(shell, head, 0.08), feelers);
-    }
-    case "elephant": {
-      const head = length(x, y - 0.1) - 0.62;
-      const ears = sdTiltEllipse(Math.abs(x), y, 0.64, 0.02, 0.32, 0.44, -0.25);
-      const flap = Math.sin(t * 1.8) * 0.02;
-      const trunk = Math.min(sdCone(x, y, 0, 0.46, 0.2, 0.06, 0.74, 0.1), sdCapsule(x, y, 0.06, 0.76, 0.22 + flap, 0.68, 0.08));
-      return smin(smin(head, ears, 0.06), trunk, 0.08);
-    }
-    case "lion": {
-      // Ten rounded scallops: few enough that each is several cells wide at navbar size.
-      const dy = y - 0.03;
-      const angle = Math.atan2(x, -dy);
-      const mane = (length(x, dy) - (0.74 + 0.08 * Math.cos(10 * angle))) * 0.82;
-      const ears = length(Math.abs(x) - 0.5, y + 0.62) - 0.17;
-      return smin(mane, ears, 0.04);
-    }
-    case "sheep": {
-      const bx = x - 0.08, by = y - 0.12;
-      const wool = (sdEllipse(bx, by, 0.76, 0.52) - 0.045 * Math.cos(13 * Math.atan2(by, bx))) * 0.8;
-      const head = sdTiltEllipse(x, y, -0.66, -0.16, 0.24, 0.32, 0.3);
-      const ear = sdTiltEllipse(x, y, -0.5, -0.34, 0.16, 0.07, -0.5);
-      let legs = Infinity;
-      for (const lx of [-0.42, -0.14, 0.3, 0.56]) legs = Math.min(legs, sdCapsule(x, y, lx, 0.5, lx, 0.78, 0.07));
-      return Math.min(smin(wool, Math.min(head, ear), 0.06), legs);
-    }
-    case "cow": {
-      const head = smin(sdRoundBox(x, y - 0.06, 0.56, 0.5, 0.4), sdEllipse(x, y - 0.56, 0.52, 0.3), 0.14);
-      const ax = Math.abs(x);
-      const horns = sdCone(ax, y, 0.36, -0.36, 0.12, 0.62, -0.8, 0.05);
-      const ears = sdTiltEllipse(ax, y, 0.74, -0.16, 0.24, 0.1, 0.3);
-      return smin(head, Math.min(horns, ears), 0.06);
-    }
-    case "duck": {
-      const body = smin(sdEllipse(x - 0.12, y - 0.46, 0.76, 0.4), sdCone(x, y, 0.56, 0.38, 0.2, 0.88, 0.08, 0.06), 0.14);
-      const head = length(x + 0.22, y + 0.2) - 0.52;
-      const bill = sdTiltEllipse(x, y, -0.76, -0.12, 0.22, 0.09, -0.12);
-      return smin(smin(body, head, 0.2), bill, 0.04);
-    }
-    case "seal": {
-      const body = sdCone(x, y, 0.16, 0.42, 0.44, -0.2, -0.3, 0.36);
-      const nose = sdTiltEllipse(x, y, -0.5, -0.24, 0.16, 0.1, 0.3);
-      const flipper = sdTiltEllipse(x, y, -0.36, 0.66, 0.22, 0.1, -0.5);
-      const tail = Math.min(sdTiltEllipse(x, y, 0.62, 0.74, 0.22, 0.09, -0.3), sdTiltEllipse(x, y, 0.7, 0.58, 0.2, 0.08, -0.9));
-      return smin(body, Math.min(nose, flipper, tail), 0.08);
-    }
-    case "dragon": {
-      const head = length(x, y - 0.14) - 0.68;
-      const ax = Math.abs(x);
-      const horns = sdCone(ax, y, 0.34, -0.4, 0.13, 0.66, -0.88, 0.03);
-      const frill = sdPoly(ax, y, DRAGON_FRILL) - 0.02;
-      return smin(head, Math.min(horns, frill), 0.06);
-    }
-    case "dino": {
-      const body = sdEllipse(x - 0.16, y - 0.34, 0.66, 0.44);
-      const neck = sdCone(x, y, -0.16, 0.16, 0.26, -0.56, -0.5, 0.15);
-      const head = sdTiltEllipse(x, y, -0.66, -0.6, 0.26, 0.17, -0.2);
-      const swish = Math.sin(t * 1.6) * 0.03;
-      const tail = sdCone(x, y, 0.6, 0.42, 0.2, 0.96, 0.66 + swish, 0.04);
-      const legs = Math.min(sdRoundBox(x + 0.2, y - 0.72, 0.12, 0.14, 0.06), sdRoundBox(x - 0.42, y - 0.72, 0.12, 0.14, 0.06));
-      return smin(smin(body, Math.min(neck, tail), 0.12), Math.min(head, legs), 0.08);
-    }
-    case "deer": {
-      const head = smin(length(x, y - 0.04) - 0.54, sdEllipse(x, y - 0.5, 0.34, 0.34), 0.2);
-      const ax = Math.abs(x);
-      const ears = sdTiltEllipse(ax, y, 0.6, -0.16, 0.24, 0.1, -0.4);
-      const antler = Math.min(
-        sdCapsule(ax, y, 0.22, -0.42, 0.46, -0.9, 0.05),
-        sdCapsule(ax, y, 0.36, -0.68, 0.66, -0.72, 0.045),
-        sdCapsule(ax, y, 0.3, -0.56, 0.14, -0.84, 0.04),
-      );
-      return Math.min(smin(head, ears, 0.06), antler);
-    }
-    case "giraffe": {
-      const head = smin(sdEllipse(x, y + 0.04, 0.56, 0.5), sdEllipse(x, y - 0.38, 0.42, 0.32), 0.16);
-      const neck = sdRoundBox(x, y - 0.66, 0.26, 0.2, 0.06);
-      const ax = Math.abs(x);
-      const horns = Math.min(sdCapsule(ax, y, 0.18, -0.4, 0.24, -0.76, 0.05), length(ax - 0.24, y + 0.8) - 0.09);
-      const ears = sdTiltEllipse(ax, y, 0.6, -0.22, 0.2, 0.08, -0.35);
-      return Math.min(smin(smin(head, neck, 0.1), ears, 0.05), horns);
-    }
-    case "monkey": {
-      const head = length(x, y - 0.2) - 0.64;
-      const ears = length(Math.abs(x) - 0.72, y - 0.12) - 0.22;
-      const tuft = sdCone(x, y, 0, -0.36, 0.1, 0.08, -0.62, 0.03);
-      return smin(head, Math.min(ears, tuft), 0.06);
-    }
-    case "mole": {
-      const body = sdEllipse(x, y - 0.18, 0.64, 0.6);
-      const mound = Math.max(sdEllipse(x, y - 0.86, 0.94, 0.3), y - 0.86);
-      const paws = sdTiltEllipse(Math.abs(x), y, 0.64, 0.4, 0.24, 0.13, 0.5);
-      const nose = length(x, y - 0.44) - 0.12;
-      return Math.min(smin(body, Math.min(mound, paws), 0.06), nose);
-    }
-    case "squid": {
-      const mantle = sdCone(x, y, 0, 0.1, 0.52, 0, -0.62, 0.1);
-      const ax = Math.abs(x);
-      const fins = sdPoly(ax, y, SQUID_FIN) - 0.03;
-      const sway = Math.sin(t * 2.2 + ax * 4) * 0.03;
-      const arms = Math.min(
-        sdCapsule(ax, y, 0.12, 0.4, 0.14 + sway, 0.78, 0.07),
-        sdCapsule(ax, y, 0.34, 0.36, 0.5 + sway, 0.76, 0.07),
-      );
-      return smin(smin(mantle, fins, 0.04), arms, 0.1);
-    }
-    case "ray": {
-      const wings = sdPoly(x, y, RAY) - 0.08;
-      const horns = sdTiltEllipse(Math.abs(x), y, 0.2, -0.42, 0.08, 0.16, 0.3);
-      const flick = Math.sin(t * 2) * 0.04;
-      const tail = sdCapsule(x, y, 0, 0.5, 0.08 + flick, 0.86, 0.03);
-      return Math.min(smin(wings, horns, 0.04), tail);
-    }
-    case "butterfly": {
-      const ax = Math.abs(x);
-      const flap = 1 - Math.abs(Math.sin(t * 2.4)) * 0.04;
-      const upper = sdTiltEllipse(ax / flap, y, 0.46, -0.16, 0.44, 0.38, 0.45) * flap;
-      const lower = sdTiltEllipse(ax / flap, y, 0.34, 0.54, 0.3, 0.3, -0.4) * flap;
-      const body = sdCapsule(x, y, 0, -0.38, 0, 0.66, 0.15);
-      const feelers = sdCapsule(ax, y, 0.06, -0.5, 0.26, -0.88, 0.035);
-      return Math.min(smin(Math.min(upper, lower), body, 0.08), feelers);
-    }
-    case "spider": {
-      const body = length(x, y - 0.18) - 0.56;
-      const ax = Math.abs(x);
-      let legs = Infinity;
-      for (const [ky, fy] of [[-0.3, 0.3], [0.0, 0.58], [0.3, 0.82]] as const) {
-        legs = Math.min(legs, sdCapsule(ax, y, 0.4, 0.06 + ky * 0.5, 0.78, ky, 0.06), sdCapsule(ax, y, 0.78, ky, 0.88, fy, 0.06));
-      }
-      const thread = sdCapsule(x, y, 0, -0.36, 0, -0.94, 0.025);
-      return Math.min(smin(body, legs, 0.06), thread);
-    }
-    case "caterpillar": {
-      const wave = (k: number) => Math.sin(t * 2.4 - k) * 0.03;
-      let d = length(x + 0.4, y - 0.04) - 0.5;
-      for (const [cx, cy, r, k] of [[0.14, 0.5, 0.32, 1], [0.46, 0.56, 0.27, 2], [0.72, 0.62, 0.22, 3]] as const) {
-        d = smin(d, length(x - cx, y - cy - wave(k)) - r, 0.12);
-      }
-      const feelers = Math.min(sdCapsule(x, y, -0.56, -0.4, -0.7, -0.76, 0.035), sdCapsule(x, y, -0.3, -0.42, -0.2, -0.8, 0.035));
-      return Math.min(d, feelers);
-    }
-    case "spikecut": {
-      // A broad, round face under a short crop of hair swept up into spikes.
-      const head = sdEllipse(x, y - 0.12, 0.74, 0.74);
-      let hair = Infinity;
-      for (const [a, reach, lean] of CROP_SPIKES) {
-        const bx = Math.sin(a) * 0.6, by = 0.12 - Math.cos(a) * 0.6;
-        const tx = Math.sin(a + lean) * (0.62 + reach), ty = 0.12 - Math.cos(a + lean) * (0.66 + reach);
-        hair = Math.min(hair, sdCone(x, y, bx, by, 0.15, tx, ty, 0.04));
-      }
-      return smin(head, hair, 0.04);
-    }
-    case "tousled": {
-      const face = sdEllipse(x, y - 0.08, 0.59, 0.72);
-      const jaw = sdEllipse(x, y - 0.49, 0.40, 0.36);
-      const ears = sdEllipse(Math.abs(x) - 0.60, y - 0.10, 0.09, 0.17);
-      const crown = sdTiltEllipse(x, y, 0, -0.50, 0.60, 0.32, 0.04);
-      let locks = Infinity;
-      for (const [bx, by, tx, ty] of TOUSLED_CROWN) locks = Math.min(locks, sdCone(x, y, bx, by, 0.12, tx, ty, 0.025));
-      return smin(smin(smin(smin(face, jaw, 0.06), ears, 0.025), crown, 0.06), locks, 0.04);
-    }
-    case "shavedbeard": {
-      const head = sdEllipse(x, y - 0.04, 0.64, 0.74);
-      const beard = sdEllipse(x, y - 0.46, 0.52, 0.40);
-      const ears = sdEllipse(Math.abs(x) - 0.63, y - 0.06, 0.09, 0.17);
-      return smin(smin(head, beard, 0.12), ears, 0.025);
-    }
-    case "shortquiff": {
-      const face = sdEllipse(x, y - 0.07, 0.60, 0.72);
-      const jaw = sdEllipse(x, y - 0.49, 0.40, 0.37);
-      const ears = sdEllipse(Math.abs(x) - 0.61, y - 0.10, 0.09, 0.17);
-      const crown = sdTiltEllipse(x, y, 0.015, -0.53, 0.59, 0.30, -0.10);
-      let locks = Infinity;
-      for (const [bx, by, tx, ty] of SHORT_QUIFF_LOCKS) locks = Math.min(locks, sdCone(x, y, bx, by, 0.115, tx, ty, 0.025));
-      return smin(smin(smin(smin(face, jaw, 0.06), ears, 0.025), crown, 0.06), locks, 0.04);
-    }
-    case "shortfringe": {
-      const face = sdEllipse(x, y - 0.09, 0.65, 0.77);
-      const jaw = sdTiltEllipse(x, y, 0, 0.48, 0.43, 0.38, 0);
-      const crown = sdTiltEllipse(x, y, -0.025, -0.45, 0.68, 0.44, -0.06);
-      const ears = Math.min(sdEllipse(x - 0.64, y - 0.08, 0.1, 0.2), sdEllipse(x + 0.64, y - 0.08, 0.1, 0.2));
-      return smin(smin(smin(face, jaw, 0.06), crown, 0.055), ears, 0.03);
-    }
-    case "shortcurls": {
-      const face = sdEllipse(x, y - 0.18, 0.58, 0.68);
-      const jaw = sdEllipse(x, y - 0.52, 0.38, 0.34);
-      const ears = sdEllipse(Math.abs(x) - 0.58, y - 0.12, 0.09, 0.16);
-      return smin(smin(smin(face, jaw, 0.05), ears, 0.025), shortCurlsHair(x, y), 0.04);
-    }
-    case "silkfringe": {
-      const face = sdEllipse(x, y - 0.14, 0.53, 0.58);
-      return Math.min(face, silkFringeHair(x, y));
-    }
-    case "layeredfringe": {
-      const face = sdPoly(x, y, [
-        [-0.43, -0.45], [0, -0.57], [0.43, -0.45], [0.54, -0.12],
-        [0.52, 0.31], [0.39, 0.60], [0.17, 0.79], [0, 0.84],
-        [-0.19, 0.79], [-0.41, 0.60], [-0.53, 0.30], [-0.55, -0.12],
-      ]) - 0.015;
-      const ears = sdEllipse(Math.abs(x) - 0.55, y - 0.12, 0.09, 0.16);
-      return smin(smin(face, ears, 0.025), layeredFringeHair(x, y), 0.035);
-    }
-    case "sidepart": {
-      const head = sdEllipse(x, y - 0.1, 0.7, 0.8);
-      const cap = sdEllipse(x + 0.03, y + 0.36, 0.75, 0.46);
-      const quiff = length(x + 0.22, y + 0.74) - 0.2;
-      let tufts = Infinity;
-      for (const [bx, lean] of SIDEPART_TUFTS) {
-        const by = -0.36 - Math.sqrt(Math.max(0, 1 - ((bx + 0.03) / 0.75) ** 2)) * 0.42;
-        tufts = Math.min(tufts, sdCone(x, y, bx, by, 0.09, bx + lean, by - 0.1, 0.03));
-      }
-      return smin(smin(smin(head, cap, 0.08), quiff, 0.1), tufts, 0.05);
-    }
-    case "sculpt": {
-      // A sculpted head thrown back with its mouth wide open: the upper jaw and skull
-      // tipped up to the left, the crown drawn up into a point behind, and the lower jaw
-      // hanging open over the neck.
-      const skull = sdTiltEllipse(x, y, 0.04, -0.3, 0.66, 0.5, -0.3);
-      const crown = sdTiltEllipse(x, y, 0.3, -0.5, 0.2, 0.36, 0.4);
-      const jaw = sdTiltEllipse(x, y, 0, 0.3, 0.56, 0.36, 0.18);
-      const neck = sdRoundBox(x - 0.1, y - 0.66, 0.32, 0.22, 0.1);
-      const head = smin(smin(smin(skull, crown, 0.1), jaw, 0.16), neck, 0.12);
-      const mouth = sdPolygon(x, y, [[-1.1, -0.2], [-0.2, 0.02], [-1.1, 0.1]]);
-      return smax(head, -mouth, 0.05);
-    }
-    case "pompadour": {
-      const head = sdEllipse(x, y - 0.14, 0.66, 0.74);
-      // The mass of the hair, a little narrower than the face so the short sides show.
-      const volume = sdTiltEllipse(x, y, 0, -0.54, 0.6, 0.36, 0.06);
-      // The front, brushed up and rolled back, highest over the left eye where it parts.
-      const crest = sdTiltEllipse(x, y, -0.12, -0.72, 0.4, 0.25, 0.14);
-      return smin(smin(head, volume, 0.16), crest, 0.16);
-    }
-    case "quiff": {
-      // The mass of the hair, and the front swept up off it, highest a little right of
-      // centre. Narrower than the face, so the short sides show as a step under it.
-      const volume = sdTiltEllipse(x, y, 0.02, -0.5, 0.56, 0.3, -0.06);
-      const crest = sdTiltEllipse(x, y, 0.1, -0.7, 0.4, 0.21, -0.2);
-      // A few locks along the front, swept up and back, so it reads as hair and not a hat.
-      let locks = Infinity;
-      for (const [bx, by, tx, ty] of QUIFF_LOCKS) locks = Math.min(locks, sdCone(x, y, bx, by, 0.08, tx, ty, 0.02));
-      return smin(smin(smin(quiffHead(x, y), volume, 0.14), crest, 0.14), locks, 0.06);
-    }
-    case "fullbeard": {
-      const head = sdEllipse(x, y - 0.04, 0.68, 0.68);
-      const beard = sdEllipse(x, y - 0.46, 0.58, 0.4);
-      let hair = Infinity;
-      for (const [a, reach, lean] of BRUSH_SPIKES) {
-        const bx = Math.sin(a) * 0.56, by = 0.04 - Math.cos(a) * 0.58;
-        const tx = Math.sin(a + lean) * (0.6 + reach), ty = 0.04 - Math.cos(a + lean) * (0.62 + reach);
-        hair = Math.min(hair, sdCone(x, y, bx, by, 0.12, tx, ty, 0.035));
-      }
-      return smin(smin(head, beard, 0.16), hair, 0.04);
-    }
-    case "waves": {
-      const head = smin(sdEllipse(x, y - 0.1, 0.6, 0.66), sdEllipse(x, y - 0.5, 0.52, 0.36), 0.14);
-      // One smooth mass swept back off the forehead, fuller over the right where it is
-      // swept across, rather than curls: a wig is what lobes round the edge read as.
-      let hair = smin(sdTiltEllipse(x, y, 0.03, -0.38, 0.68, 0.42, 0.06), sdTiltEllipse(x, y, 0.16, -0.6, 0.44, 0.22, -0.15), 0.14);
-      // The falls down each side to the jaw, blended into the top so the outline runs
-      // down in one line. A bump at the ends reads as the flaps of a hat.
-      for (const side of [-1, 1]) hair = smin(hair, sdTiltEllipse(x, y, side * 0.58, 0.02, 0.2, 0.44, side * 0.1), 0.22);
-      // A slow ripple round the outline, the wave in it.
-      hair += 0.022 * Math.sin(Math.atan2(y + 0.1, x) * 11);
-      return smin(head, hair, 0.06);
-    }
-    case "longhair": {
-      const head = longHairFace(x, y);
-      // A smooth crown, and a straight fall down each side to the shoulders, a little
-      // wider at the ends where it lies on them.
-      let hair = sdEllipse(x, y + 0.24, 0.7, 0.52);
-      for (const side of [-1, 1]) hair = smin(hair, sdRoundBox(x - side * 0.56, y - 0.36, 0.22, 0.6, 0.16), 0.18);
-      return smin(head, hair, 0.06);
-    }
-    case "longwaves": {
-      const head = longHairFace(x - 0.02, y);
-      // Fuller than the straight fall, with more of it over the right where it is swept.
-      let hair = smin(sdEllipse(x + 0.02, y + 0.24, 0.72, 0.52), sdTiltEllipse(x, y, 0.2, -0.56, 0.42, 0.24, -0.2), 0.14);
-      for (const side of [-1, 1]) hair = smin(hair, sdTiltEllipse(x, y, side * 0.6, 0.34, 0.27, 0.62, -side * 0.08), 0.2);
-      // A slow ripple down the falls, the wave in it, and none on the crown.
-      hair += 0.028 * Math.sin(y * 13) * Math.min(1, Math.max(0, y + 0.2) * 2.5);
-      return smin(head, hair, 0.06);
-    }
-    case "deepwaves": {
-      const head = longHairFace(x, y, 0.48);
-      // A fuller crown than either long face, and falls that run longer and lie wider on
-      // the shoulders, so the hair is widest at the bottom.
-      let hair = sdEllipse(x, y + 0.22, 0.74, 0.54);
-      for (const side of [-1, 1]) hair = smin(hair, sdTiltEllipse(x, y, side * 0.64, 0.38, 0.3, 0.6, -side * 0.12), 0.22);
-      // The crimp, as ripples running down the outer edge of each fall rather than ridges
-      // across it: ridges across read as a barrister's wig. None on the crown, and it dies
-      // away at the ends, where a ripple past the tip prints as a loose pixel.
-      const fall = Math.min(1, Math.max(0, y + 0.3) * 2.5, Math.max(0, 0.96 - y) * 5);
-      hair += 0.034 * Math.sin(y * 19 + Math.abs(x) * 6) * fall;
-      return smin(head, hair, 0.06);
-    }
-    case "tache": {
-      const head = sdEllipse(x, y - 0.12, 0.68, 0.74);
-      const ears = sdEllipse(Math.abs(x) - 0.68, y - 0.16, 0.09, 0.15);
-      // The hair, close to the head and combed across, with the front lifted on the left.
-      // Narrower than the head at the sides, so it sits close like cut hair, not like a beret.
-      const hair = smin(sdTiltEllipse(x, y, 0.02, -0.36, 0.64, 0.36, -0.04), length(x + 0.18, y + 0.62) - 0.2, 0.14);
-      return smin(smin(head, ears, 0.06), hair, 0.08);
-    }
-    case "buzzcut":
-    case "crewcut":
-    case "texturedcrop":
-    case "taperedcrop":
-    case "softquiff":
-    case "curlycrop":
-    case "receding":
-    case "slickback":
-    case "fauxhawk":
-    case "pixie":
-    case "cornrows":
-    case "curtains":
-    case "afro":
-    case "topknot":
-    case "twinbuns":
-    case "bob":
-    case "lowpony":
-    case "locs":
-    case "sideswept":
-    case "skinfade":
-    case "undercut":
-    case "frenchcrop":
-    case "mohawk":
-    case "lob":
-    case "bluntbangs":
-    case "curtainbangs":
-    case "shag":
-    case "longcurls":
-    case "afropuff":
-    case "highpony":
-    case "highbun":
-    case "messybun":
-    case "pigtails":
-    case "boxbraids":
-    case "halfup":
-    case "roundbob":
-      return HAIRCUTS[shape].body(x, y);
-    case "softbob": {
-      const head = longHairFace(x, y, 0.49);
-      // Aiko Dai's portrait stays on this id: a round crown and shoulder-length falls.
-      // The circle-and-box outline that replaced it for a while is roundbob.
-      let hair = sdEllipse(x, y + 0.2, 0.7, 0.54);
-      for (const side of [-1, 1]) hair = smin(hair, sdRoundBox(x - side * 0.54, y - 0.22, 0.22, 0.44, 0.2), 0.18);
-      return smin(head, hair, 0.06);
-    }
-    case "moptop": {
-      // A long face under a big, messy mop of curls: clumps out of the crown at odd
-      // lengths and angles, and hair down past the ears.
-      const head = sdEllipse(x, y - 0.26, 0.6, 0.6);
-      let hair = sdEllipse(x, y + 0.2, 0.7, 0.48);
-      for (const [a, reach, lean] of MOP_CLUMPS) {
-        const bx = Math.sin(a) * 0.55, by = -0.12 - Math.cos(a) * 0.38;
-        const tx = Math.sin(a + lean * 0.5) * (0.62 + reach), ty = Math.max(-0.12 - Math.cos(a + lean * 0.5) * (0.42 + reach), -0.94);
-        hair = Math.min(hair, sdCone(x, y, bx, by, 0.17, tx, ty, 0.06));
-      }
-      return smin(head, hair, 0.05);
-    }
-    case "pyramid": {
-      // SuperTrip64's picture: a pyramid of green bricks with one great eye, its point a
-      // little blunt, the way the drawing has it. The bricks are the markings below, so
-      // any colour keeps them.
-      return smax(sdPoly(x, y, PYRAMID) - 0.08, y - 0.76, 0.04);
-    }
-    case "bust": {
-      // A carved head with a rounded hairline and a long beard, without ears or limbs.
-      const head = sdEllipse(x, y + 0.19, 0.61, 0.61);
-      const hair = sdEllipse(x + 0.025, y + 0.57, 0.62, 0.26);
-      const beard = sdCone(x, y, 0, 0.18, 0.53, 0, 0.72, 0.13);
-      const curls = 0.025 * Math.cos(x * 35) * Math.max(0, Math.min(1, (y - 0.25) * 3));
-      return smin(smin(head, hair, 0.06), beard - curls, 0.07);
-    }
-    case "yeti": {
-      const shag = 0.04 * Math.max(0, Math.cos(y * 20)) * Math.min(1, Math.abs(x) * 2);
-      const body = sdRoundBox(x, y - 0.1, 0.62, 0.74, 0.5) - shag;
-      const wave = Math.sin(t * 2) * 0.04;
-      const arms = sdCone(Math.abs(x), y, 0.52, 0.1, 0.18, 0.84, -0.42 - wave, 0.14);
-      const horns = sdCone(Math.abs(x), y, 0.3, -0.56, 0.1, 0.4, -0.86, 0.03);
-      return smin(body, Math.min(arms, horns), 0.08);
-    }
-    case "goose": {
-      const body = smin(sdEllipse(x - 0.14, y - 0.42, 0.74, 0.44), sdCone(x, y, 0.6, 0.36, 0.2, 0.92, 0.14, 0.05), 0.1);
-      const neck = sdCone(x, y, -0.3, 0.26, 0.22, -0.46, -0.46, 0.15);
-      const head = length(x + 0.46, y + 0.56) - 0.24;
-      const beak = sdTiltEllipse(x, y, -0.76, -0.5, 0.18, 0.07, -0.1);
-      return smin(smin(body, neck, 0.16), Math.min(head, beak), 0.05);
-    }
-    case "toucan": {
-      const body = sdEllipse(x - 0.2, y - 0.2, 0.6, 0.64);
-      const beak = sdCone(x, y, -0.32, -0.12, 0.25, -0.94, 0.12, 0.05);
-      const tail = sdCone(x, y, 0.5, 0.6, 0.14, 0.62, 0.78, 0.07);
-      return smin(smin(body, beak, 0.06), tail, 0.06);
-    }
-    case "parrot": {
-      const body = sdEllipse(x - 0.06, y - 0.1, 0.58, 0.62);
-      const beak = Math.max(length(x + 0.52, y + 0.12) - 0.2, -(length(x + 0.62, y - 0.04) - 0.1));
-      const sway = Math.sin(t * 1.6) * 0.03;
-      const crest = Math.min(sdCapsule(x, y, 0, -0.42, -0.06 + sway, -0.9, 0.06), sdCapsule(x, y, 0.12, -0.42, 0.24 + sway, -0.84, 0.06));
-      const tail = sdCone(x, y, 0.24, 0.5, 0.18, 0.44, 0.84, 0.06);
-      return smin(smin(body, Math.min(beak, tail), 0.08), crest, 0.06);
-    }
-    case "rhino": {
-      const body = sdEllipse(x - 0.14, y - 0.3, 0.7, 0.46);
-      const head = sdCone(x, y, -0.36, 0.22, 0.32, -0.78, 0.44, 0.2);
-      const horn = Math.min(sdCone(x, y, -0.76, 0.28, 0.12, -0.84, -0.12, 0.02), sdCone(x, y, -0.5, 0.0, 0.08, -0.5, -0.22, 0.02));
-      const ear = sdTiltEllipse(x, y, -0.3, -0.16, 0.06, 0.13, -0.3);
-      const legs = Math.min(sdRoundBox(x + 0.3, y - 0.72, 0.13, 0.14, 0.05), sdRoundBox(x - 0.44, y - 0.72, 0.13, 0.14, 0.05));
-      return smin(smin(body, head, 0.14), Math.min(horn, ear, legs), 0.06);
-    }
-    case "hippo": {
-      const head = sdEllipse(x, y + 0.04, 0.62, 0.5);
-      const muzzle = sdEllipse(x, y - 0.46, 0.84, 0.38);
-      const ax = Math.abs(x);
-      const bumps = Math.min(length(ax - 0.28, y + 0.46) - 0.16, length(ax - 0.5, y + 0.52) - 0.09);
-      return smin(smin(head, muzzle, 0.2), bumps, 0.06);
-    }
-    case "llama": {
-      const head = sdEllipse(x, y + 0.2, 0.52, 0.5);
-      const neck = sdCone(x, y, 0, 0.42, 0.44, 0, 0.0, 0.32);
-      const ears = sdTiltEllipse(Math.abs(x), y, 0.32, -0.76, 0.09, 0.22, 0.22);
-      return smin(smin(head, neck, 0.12), ears, 0.06);
-    }
-    case "camel": {
-      const body = sdEllipse(x - 0.12, y - 0.3, 0.66, 0.36);
-      const humps = Math.min(length(x + 0.12, y + 0.04) - 0.3, length(x - 0.38, y + 0.04) - 0.3);
-      const neck = sdCone(x, y, -0.46, 0.3, 0.16, -0.76, -0.26, 0.12);
-      const head = sdTiltEllipse(x, y, -0.8, -0.3, 0.18, 0.12, 0.2);
-      const legs = Math.min(sdCapsule(x, y, -0.3, 0.5, -0.32, 0.78, 0.08), sdCapsule(x, y, 0.42, 0.5, 0.44, 0.78, 0.08));
-      return smin(smin(body, humps, 0.16), Math.min(neck, head, legs), 0.08);
-    }
-    case "ram": {
-      const head = length(x, y - 0.22) - 0.62;
-      const ax = Math.abs(x);
-      const horns = sdRing(ax, y, 0.64, 0.04, 0.2, 0.09);
-      return smin(head, horns, 0.08);
-    }
-    case "walrus": {
-      const body = sdEllipse(x, y - 0.0, 0.7, 0.62);
-      const muzzle = sdEllipse(x, y - 0.42, 0.5, 0.22);
-      const ax = Math.abs(x);
-      const tusks = sdCone(ax, y, 0.18, 0.5, 0.07, 0.22, 0.82, 0.03);
-      const flippers = sdTiltEllipse(ax, y, 0.56, 0.6, 0.28, 0.13, -0.5);
-      return smin(smin(body, muzzle, 0.12), Math.min(tusks, flippers), 0.1);
-    }
-    case "hen": {
-      const body = length(x, y - 0.1) - 0.64;
-      const legs = sdCapsule(Math.abs(x), y, 0.2, 0.7, 0.24, 0.8, 0.065);
-      const comb = Math.min(length(x + 0.16, y + 0.58) - 0.12, length(x - 0.04, y + 0.66) - 0.13, length(x - 0.24, y + 0.58) - 0.12);
-      const tail = sdTiltEllipse(x, y, 0.64, -0.16, 0.3, 0.13, -0.9);
-      const beak = sdTiltEllipse(x, y, -0.66, -0.1, 0.14, 0.08, 0.2);
-      return Math.min(smin(body, Math.min(comb, tail, beak), 0.06), legs);
-    }
-    case "squirrel": {
-      const body = smin(length(x + 0.16, y - 0.4) - 0.46, length(x + 0.22, y + 0.12) - 0.42, 0.24);
-      const flick = Math.sin(t * 2.2) * 0.03;
-      const tail = sdTiltEllipse(x, y, 0.5, -0.04, 0.3, 0.66, 0.25 + flick);
-      const ear = sdCone(x, y, -0.36, -0.36, 0.09, -0.42, -0.62, 0.03);
-      return smin(smin(body, tail, 0.1), ear, 0.05);
-    }
-    case "golem": {
-      const torso = sdRoundBox(x, y - 0.14, 0.56, 0.5, 0.16);
-      const ax = Math.abs(x);
-      const shoulders = length(ax - 0.6, y + 0.22) - 0.26;
-      const arms = sdRoundBox(ax - 0.76, y - 0.32, 0.14, 0.28, 0.1);
-      const legs = sdRoundBox(ax - 0.28, y - 0.72, 0.18, 0.14, 0.06);
-      const head = sdRoundBox(x, y + 0.5, 0.24, 0.18, 0.08);
-      return Math.min(smin(torso, Math.min(shoulders, head), 0.06), arms, legs);
-    }
-    case "cherry": {
-      const front = length(x + 0.18, y - 0.36) - 0.5;
-      const back = length(x - 0.44, y - 0.46) - 0.38;
-      const stems = Math.min(sdCapsule(x, y, -0.16, -0.12, 0.16, -0.7, 0.06), sdCapsule(x, y, 0.42, 0.06, 0.16, -0.7, 0.06));
-      const leaf = sdTiltEllipse(x, y, 0.4, -0.72, 0.2, 0.09, -0.4);
-      return Math.min(smin(front, back, 0.04), stems, leaf);
-    }
-    case "banana": {
-      // Two circles a little apart: thick in the middle for the face, thin at the tips.
-      const bend = Math.max(length(x, y + 0.24) - 1.08, -(length(x, y + 0.96) - 1.2));
-      const ends = Math.abs(x) - 0.82;
-      const stem = sdCapsule(x, y, 0.74, -0.04, 0.84, -0.3, 0.065);
-      return Math.min(smax(bend, ends, 0.16), stem);
-    }
-    case "carrot": {
-      const root = sdCone(x, y, 0, -0.1, 0.6, 0, 0.78, 0.07);
-      const sway = Math.sin(t * 1.5) * 0.03;
-      const tops = Math.min(
-        sdCapsule(x, y, 0, -0.56, -0.3 + sway, -0.84, 0.08),
-        sdCapsule(x, y, 0, -0.56, sway, -0.9, 0.08),
-        sdCapsule(x, y, 0, -0.56, 0.3 + sway, -0.84, 0.08),
-      );
-      return smin(root, tops, 0.06);
-    }
-    case "eggplant": {
-      const body = sdCone(x, y, 0.06, 0.32, 0.54, -0.18, -0.24, 0.36);
-      const cap = sdTiltEllipse(x, y, -0.22, -0.52, 0.36, 0.13, -0.4);
-      const stem = sdCapsule(x, y, -0.24, -0.56, -0.14, -0.88, 0.06);
-      return Math.min(smin(body, cap, 0.04), stem);
-    }
-    case "corn": {
-      const cob = sdEllipse(x, y + 0.06, 0.5, 0.82);
-      const husk = sdTiltEllipse(Math.abs(x), y, 0.42, 0.42, 0.2, 0.44, -0.5);
-      return smin(cob, husk, 0.06);
-    }
-    case "cookie": {
-      const disc = length(x, y - 0.04) - 0.82;
-      const bite = Math.min(length(x - 0.7, y + 0.6) - 0.34, length(x - 0.92, y + 0.14) - 0.28);
-      return smax(disc, -bite, 0.06);
-    }
-    case "macaron": {
-      const top = sdEllipse(x, y - 0.06, 0.84, 0.38);
-      const bottom = sdEllipse(x, y - 0.6, 0.84, 0.26);
-      const filling = sdRoundBox(x, y - 0.36, 0.72, 0.12, 0.08);
-      return Math.min(top, bottom, filling);
-    }
-    case "popsicle": {
-      const ice = smax(sdRoundBox(x, y + 0.2, 0.62, 0.62, 0.36), -(length(x - 0.6, y + 0.82) - 0.3), 0.06);
-      const stick = sdRoundBox(x, y - 0.6, 0.11, 0.24, 0.08);
-      return Math.min(ice, stick);
-    }
-    case "cake": {
-      const slice = sdPoly(x, y, CAKE) - 0.06;
-      const cherry = length(x - 0.6, y + 0.42) - 0.16;
-      const stalk = sdCapsule(x, y, 0.6, -0.56, 0.7, -0.8, 0.03);
-      return Math.min(smin(slice, cherry, 0.04), stalk);
-    }
-    case "croissant": {
-      let d = length(x, y - 0.28) - 0.5;
-      for (const [cx, cy, r] of [[0.44, 0.4, 0.36], [0.7, 0.64, 0.22], [-0.44, 0.4, 0.36], [-0.7, 0.64, 0.22]] as const) {
-        d = smin(d, length(x - cx, y - cy) - r, 0.04);
-      }
-      return d;
-    }
-    case "boba": {
-      const cup = sdPoly(x, y, BOBA_CUP) - 0.06;
-      const lid = Math.max(length(x, y + 0.14) - 0.54, y + 0.14);
-      const rim = sdRoundBox(x, y + 0.14, 0.64, 0.06, 0.05);
-      const straw = sdCapsule(x, y, 0.12, -0.5, 0.3, -0.86, 0.06);
-      return Math.min(cup, lid, rim, straw);
-    }
-    case "pizza": {
-      const slice = sdPoly(x, y, PIZZA) - 0.06;
-      const crust = sdCapsule(x, y, -0.76, -0.5, 0.76, -0.5, 0.15);
-      return smin(slice, crust, 0.04);
-    }
-    case "chili": {
-      const body = smin(sdCone(x, y, -0.22, -0.04, 0.52, 0.28, 0.5, 0.3), sdCone(x, y, 0.28, 0.5, 0.3, 0.8, 0.78, 0.05), 0.08);
-      const cap = sdTiltEllipse(x, y, -0.46, -0.48, 0.3, 0.13, 0.7);
-      const stem = sdCapsule(x, y, -0.52, -0.54, -0.62, -0.88, 0.055);
-      return Math.min(smin(body, cap, 0.04), stem);
-    }
-    case "grapes": {
-      let d = Infinity;
-      for (const [cx, cy, r] of [[-0.5, -0.24, 0.3], [0, -0.3, 0.32], [0.5, -0.24, 0.3], [-0.26, 0.2, 0.3], [0.26, 0.2, 0.3], [0, 0.6, 0.26]] as const) {
-        d = smin(d, length(x - cx, y - cy) - r, 0.14);
-      }
-      d = Math.min(d, sdEllipse(x, y + 0.02, 0.62, 0.42));
-      return Math.min(d, sdCapsule(x, y, 0, -0.56, 0.08, -0.86, 0.045), sdTiltEllipse(x, y, 0.3, -0.72, 0.2, 0.09, -0.3));
-    }
-    case "radish": {
-      const bulb = length(x, y - 0.18) - 0.58;
-      const root = sdCone(x, y, 0, 0.66, 0.1, 0.08, 0.86, 0.02);
-      const sway = Math.sin(t * 1.4) * 0.03;
-      const leaves = Math.min(sdTiltEllipse(x, y, -0.22 + sway, -0.64, 0.15, 0.3, -0.4), sdTiltEllipse(x, y, 0.22 + sway, -0.66, 0.15, 0.3, 0.4));
-      return smin(smin(bulb, root, 0.08), leaves, 0.06);
-    }
-    case "popcorn": {
-      const bucket = sdPoly(x, y, POPCORN) - 0.05;
-      let pops = Infinity;
-      for (const [cx, cy, r] of [[-0.44, -0.18, 0.22], [-0.16, -0.36, 0.26], [0.18, -0.34, 0.25], [0.46, -0.16, 0.22], [0.02, -0.6, 0.2]] as const) {
-        pops = Math.min(pops, length(x - cx, y - cy) - r);
-      }
-      return smin(bucket, pops, 0.04);
-    }
-    case "fries": {
-      const box = sdPoly(x, y, FRIES_BOX) - 0.06;
-      let fries = Infinity;
-      for (const [fx, top] of [[-0.38, -0.5], [-0.18, -0.76], [0.02, -0.62], [0.22, -0.84], [0.4, -0.54]] as const) {
-        fries = Math.min(fries, sdCapsule(x, y, fx, 0, fx + fx * 0.12, top, 0.075));
-      }
-      return Math.min(box, fries);
-    }
-    case "hotdog": {
-      const bun = sdRoundBox(x, y - 0.3, 0.76, 0.52, 0.46);
-      const sausage = sdCapsule(x, y, -0.8, 0.2, 0.8, 0.2, 0.16);
-      return Math.min(bun, sausage);
-    }
-    case "candy": {
-      const sweet = length(x, y - 0.3) - 0.54;
-      const twist = Math.sin(t * 1.8) * 0.03;
-      const wraps = sdPoly(Math.abs(x), y - twist * Math.sign(x), CANDY_WRAP) - 0.04;
-      return smin(sweet, wraps, 0.04);
-    }
-    case "teapot": {
-      const body = sdEllipse(x, y - 0.32, 0.66, 0.52);
-      const lid = Math.min(sdEllipse(x, y + 0.2, 0.38, 0.13), length(x, y + 0.38) - 0.1);
-      const spout = sdCone(x, y, -0.5, 0.38, 0.15, -0.92, -0.04, 0.06);
-      const handle = Math.max(sdRing(x, y, 0.62, 0.28, 0.22, 0.06), 0.52 - x);
-      return Math.min(smin(body, Math.min(lid, spout), 0.06), handle);
-    }
-    case "cauldron": {
-      const pot = Math.max(length(x, y - 0.2) - 0.66, -0.36 - y);
-      const rim = sdRoundBox(x, y + 0.32, 0.64, 0.08, 0.07);
-      const legs = sdCapsule(Math.abs(x), y, 0.32, 0.7, 0.42, 0.82, 0.05);
-      const pop = Math.sin(t * 2.6) * 0.03;
-      const bubbles = Math.min(length(x + 0.2, y + 0.56 + pop) - 0.15, length(x - 0.18, y + 0.66 - pop) - 0.13);
-      return Math.min(smin(pot, rim, 0.04), legs, bubbles);
-    }
-    case "bottle": {
-      const body = smin(sdRoundBox(x, y - 0.34, 0.54, 0.5, 0.22), sdRoundBox(x, y + 0.42, 0.16, 0.3, 0.06), 0.2);
-      const cap = sdRoundBox(x, y + 0.76, 0.2, 0.1, 0.04);
-      return Math.min(body, cap);
-    }
-    case "jar": {
-      const body = sdRoundBox(x, y - 0.2, 0.7, 0.64, 0.3);
-      const lid = sdRoundBox(x, y + 0.58, 0.58, 0.14, 0.06);
-      return smin(body, lid, 0.04);
-    }
-    case "hourglass": {
-      const bulbs = smin(sdEllipse(x, y + 0.34, 0.5, 0.42), sdEllipse(x, y - 0.38, 0.5, 0.42), 0.12);
-      const frames = Math.min(sdRoundBox(x, y + 0.8, 0.66, 0.07, 0.05), sdRoundBox(x, y - 0.8, 0.66, 0.07, 0.05));
-      const posts = sdCapsule(Math.abs(x), y, 0.58, -0.76, 0.58, 0.76, 0.04);
-      return Math.min(bulbs, frames, posts);
-    }
-    case "lantern": {
-      const body = sdRoundBox(x, y - 0.22, 0.56, 0.46, 0.2);
-      const cap = sdPoly(x, y, LANTERN_CAP) - 0.04;
-      const base = sdRoundBox(x, y - 0.74, 0.5, 0.1, 0.04);
-      const handle = Math.max(sdRing(x, y, 0, -0.5, 0.22, 0.065), y + 0.5);
-      return Math.min(smin(body, cap, 0.04), base, handle);
-    }
-    case "umbrella": {
-      const scallop = 0.12 - 0.08 * Math.abs(Math.cos(x * Math.PI * 1.25));
-      const canopy = Math.max(length(x, y - 0.12) - 0.92, y - scallop);
-      const shaft = sdCapsule(x, y, 0, 0.1, 0, 0.66, 0.07);
-      const hook = Math.max(sdRing(x, y, 0.17, 0.64, 0.17, 0.07), 0.64 - y);
-      return Math.min(canopy, shaft, hook);
-    }
-    case "plant": {
-      const pot = smin(sdPoly(x, y, PLANT_POT) - 0.04, sdRoundBox(x, y - 0.02, 0.66, 0.1, 0.05), 0.04);
-      const sway = Math.sin(t * 1.3) * 0.03;
-      const leaves = Math.min(
-        sdTiltEllipse(x, y, -0.36 + sway, -0.4, 0.17, 0.36, -0.6),
-        sdTiltEllipse(x, y, sway, -0.54, 0.17, 0.4, 0),
-        sdTiltEllipse(x, y, 0.36 + sway, -0.4, 0.17, 0.36, 0.6),
-      );
-      return Math.min(pot, leaves);
-    }
-    case "globe": {
-      const sphere = length(x, y + 0.02) - 0.64;
-      const base = sdPoly(x, y, GLOBE_BASE) - 0.03;
-      return Math.min(sphere, base);
-    }
-    case "mailbox": {
-      const box = sdRoundBox(x, y + 0.1, 0.72, 0.44, 0.36);
-      const post = sdRoundBox(x, y - 0.56, 0.13, 0.3, 0.03);
-      const flag = Math.min(sdCapsule(x, y, 0.7, -0.1, 0.7, -0.6, 0.06), sdRoundBox(x - 0.8, y + 0.52, 0.13, 0.09, 0.03));
-      return Math.min(box, post, flag);
-    }
-    case "cone": {
-      const cone = Math.max(sdCone(x, y, 0, 0.4, 0.6, 0, -0.7, 0.12), y - 0.72);
-      const base = sdRoundBox(x, y - 0.76, 0.86, 0.1, 0.05);
-      return Math.min(cone, base);
-    }
-    case "hydrant": {
-      const body = sdRoundBox(x, y - 0.24, 0.48, 0.48, 0.08);
-      const cap = Math.max(length(x, y + 0.24) - 0.48, y + 0.24);
-      const nub = sdRoundBox(x, y + 0.76, 0.12, 0.08, 0.04);
-      const nozzles = sdRoundBox(Math.abs(x) - 0.56, y - 0.08, 0.12, 0.12, 0.04);
-      const base = sdRoundBox(x, y - 0.76, 0.6, 0.09, 0.04);
-      return Math.min(smin(body, cap, 0.04), nub, nozzles, base);
-    }
-    case "rain": {
-      const cloud = smin(smin(length(x + 0.42, y + 0.04) - 0.36, length(x - 0.42, y + 0.04) - 0.36, 0.1), smin(length(x, y + 0.24) - 0.46, sdRoundBox(x, y - 0.1, 0.8, 0.24, 0.24), 0.12), 0.1);
-      let drops = Infinity;
-      for (const dx of [-0.42, 0, 0.42]) drops = Math.min(drops, sdCone(x, y, dx, 0.74, 0.11, dx, 0.5, 0.03));
-      return Math.min(cloud, drops);
-    }
-    case "sun": {
-      const core = length(x, y - 0.02) - 0.56;
-      const step = Math.PI / 4;
-      const angle = Math.atan2(x, -(y - 0.02)) + t * 0.2;
-      const a = Math.round(angle / step) * step - t * 0.2;
-      const ux = Math.sin(a), uy = -Math.cos(a);
-      const ray = sdCone(x, y, ux * 0.7, 0.02 + uy * 0.7, 0.1, ux * 0.84, 0.02 + uy * 0.84, 0.03);
-      return Math.min(core, ray);
-    }
-    case "crystal": {
-      // Three prisms that overlap, so the face sits on one solid piece.
-      const ax = Math.abs(x);
-      return Math.min(sdPoly(x, y, CRYSTAL_MID) - 0.04, sdPoly(ax, y, CRYSTAL_SIDE) - 0.04);
-    }
-    case "tree": {
-      const crown = smin(smin(length(x, y + 0.34) - 0.5, length(Math.abs(x) - 0.38, y + 0.02) - 0.42, 0.12), length(x, y - 0.06) - 0.46, 0.12);
-      const trunk = sdRoundBox(x, y - 0.62, 0.14, 0.24, 0.04);
-      return smin(crown, trunk, 0.06);
-    }
-    case "pine": {
-      const tiers = Math.min(sdPoly(x, y, PINE_TOP), sdPoly(x, y, PINE_MID), sdPoly(x, y, PINE_LOW)) - 0.05;
-      const trunk = sdRoundBox(x, y - 0.74, 0.14, 0.12, 0.03);
-      return Math.min(tiers, trunk);
-    }
-    case "volcano": {
-      const hill = smax(sdPoly(x, y, VOLCANO) - 0.04, -(length(x, y + 0.42) - 0.18), 0.06);
-      const puff = Math.sin(t * 1.4) * 0.03;
-      const smoke = Math.min(length(x - 0.1, y + 0.62 + puff) - 0.15, length(x + 0.1, y + 0.82 + puff * 1.5) - 0.13);
-      return Math.min(hill, smoke);
-    }
-    case "comet": {
-      const head = length(x + 0.16, y - 0.3) - 0.56;
-      const tail = Math.min(
-        sdCone(x, y, 0.0, 0.1, 0.42, 0.8, -0.72, 0.05),
-        sdCone(x, y, 0.24, 0.34, 0.12, 0.94, -0.16, 0.03),
-        sdCone(x, y, -0.18, -0.12, 0.12, 0.3, -0.92, 0.03),
-      );
-      return smin(head, tail, 0.06);
-    }
-    case "knight": {
-      const helm = sdRoundBox(x, y - 0.06, 0.62, 0.64, 0.5);
-      const gorget = sdPoly(x, y, GORGET) - 0.04;
-      const sway = Math.sin(t * 1.6) * 0.04;
-      const plume = sdTiltEllipse(x, y, 0.22 + sway, -0.68, 0.34, 0.13, -0.45);
-      return smin(smin(helm, gorget, 0.06), plume, 0.06);
-    }
-    case "ninja": {
-      const head = length(x, y - 0.14) - 0.7;
-      const flow = Math.sin(t * 3) * 0.04;
-      const tails = Math.min(sdCone(x, y, 0.6, -0.08, 0.11, 0.94, -0.42 + flow, 0.05), sdCone(x, y, 0.6, -0.04, 0.11, 0.94, 0.2 - flow, 0.05));
-      const knot = length(x - 0.64, y + 0.06) - 0.1;
-      return smin(head, Math.min(tails, knot), 0.04);
-    }
-    case "tower": {
-      const body = sdRoundBox(x, y - 0.24, 0.56, 0.6, 0.04);
-      const band = sdRoundBox(x, y + 0.4, 0.68, 0.1, 0.03);
-      const merlons = sdRoundBox(Math.abs(x) < 0.25 ? x : Math.abs(x) - 0.52, y + 0.6, 0.14, 0.14, 0.03);
-      return Math.min(smin(body, band, 0.04), merlons);
-    }
-    case "lighthouse": {
-      const tower = sdPoly(x, y, LIGHTHOUSE) - 0.04;
-      const gallery = sdRoundBox(x, y + 0.24, 0.46, 0.06, 0.03);
-      const lamp = sdRoundBox(x, y + 0.44, 0.26, 0.16, 0.04);
-      const dome = Math.max(length(x, y + 0.6) - 0.24, y + 0.6);
-      return Math.min(tower, gallery, lamp, dome);
-    }
-    case "windmill": {
-      const body = sdPoly(x, y, WINDMILL) - 0.04;
-      const cap = Math.max(length(x, y + 0.04) - 0.36, y + 0.04);
-      const a = t * 0.5 + 0.4;
-      const c = Math.cos(a) * 0.72, s = Math.sin(a) * 0.72;
-      const blades = Math.min(sdCapsule(x, y, -c, -0.22 - s, c, -0.22 + s, 0.09), sdCapsule(x, y, s, -0.22 - c, -s, -0.22 + c, 0.09));
-      return Math.min(smin(body, cap, 0.04), blades);
-    }
-    case "camera": {
-      const body = sdRoundBox(x, y - 0.32, 0.9, 0.52, 0.18);
-      const hump = sdRoundBox(x + 0.26, y + 0.24, 0.32, 0.14, 0.08);
-      const button = sdRoundBox(x - 0.54, y + 0.24, 0.14, 0.07, 0.04);
-      return Math.min(smin(body, hump, 0.04), button);
-    }
-    case "joystick": {
-      const base = sdRoundBox(x, y - 0.48, 0.84, 0.38, 0.26);
-      const tilt = Math.sin(t * 1.4) * 0.06;
-      const stick = sdCapsule(x, y, 0, 0.12, 0.06 + tilt, -0.4, 0.07);
-      const ball = length(x - 0.08 - tilt, y + 0.58) - 0.26;
-      return Math.min(base, stick, ball);
-    }
-    case "arcade": {
-      const marquee = sdRoundBox(x, y + 0.66, 0.62, 0.16, 0.06);
-      const screen = sdRoundBox(x, y + 0.06, 0.54, 0.46, 0.06);
-      const panel = sdRoundBox(x, y - 0.4, 0.7, 0.08, 0.04);
-      const cabinet = sdRoundBox(x, y - 0.66, 0.54, 0.2, 0.04);
-      const stick = Math.min(sdCapsule(x, y, -0.28, -0.46, -0.28, -0.6, 0.03), length(x + 0.28, y + 0.62) - 0.07);
-      return Math.min(marquee, screen, panel, cabinet, stick);
-    }
-    case "medal": {
-      const ribbon = sdCone(Math.abs(x), y, 0.1, -0.2, 0.15, 0.34, -0.76, 0.15);
-      const disc = length(x, y - 0.3) - 0.56;
-      return smin(disc, ribbon, 0.04);
-    }
-    case "satellite": {
-      const body = sdRoundBox(x, y - 0.32, 0.46, 0.52, 0.12);
-      const panels = sdRoundBox(Math.abs(x) - 0.72, y - 0.22, 0.24, 0.34, 0.04);
-      const dish = Math.min(Math.max(length(x, y + 0.42) - 0.34, -0.3 - y), sdCapsule(x, y, 0, -0.3, 0, -0.18, 0.06));
-      const blink = sdCapsule(x, y, 0, -0.5, 0, -0.84, 0.05);
-      return Math.min(body, panels, dish, blink);
-    }
-    case "tornado": {
-      let d = Infinity;
-      for (const [cy, rx, ry, k] of [[-0.56, 0.86, 0.26, 0], [-0.18, 0.72, 0.24, 1], [0.16, 0.52, 0.2, 2], [0.46, 0.36, 0.17, 3], [0.71, 0.2, 0.15, 4]] as const) {
-        d = smin(d, sdEllipse(x - Math.sin(t * 2 + k) * 0.05 * k * 0.5, y - cy, rx, ry), 0.18);
-      }
-      return d;
-    }
-    case "stump": {
-      const trunk = sdRoundBox(x, y - 0.26, 0.58, 0.52, 0.1);
-      const top = sdEllipse(x, y + 0.24, 0.58, 0.14);
-      const roots = sdCone(Math.abs(x), y, 0.38, 0.56, 0.18, 0.84, 0.8, 0.05);
-      const sprout = Math.min(sdCapsule(x, y, 0.2, -0.3, 0.28, -0.62, 0.04), sdTiltEllipse(x, y, 0.42, -0.66, 0.14, 0.07, -0.4));
-      return Math.min(smin(smin(trunk, top, 0.04), roots, 0.1), sprout);
-    }
-    case "lamp": {
-      const shade = sdPoly(x, y, LAMP_SHADE) - 0.04;
-      const stem = sdCapsule(x, y, 0, 0, 0, 0.66, 0.08);
-      const base = sdEllipse(x, y - 0.74, 0.5, 0.12);
-      return Math.min(shade, stem, base);
-    }
-    case "alarm": {
-      const face = length(x, y - 0.12) - 0.64;
-      const ax = Math.abs(x);
-      const ring = Math.sin(t * 14) * 0.02 * Math.max(0, Math.sin(t * 0.9));
-      const bells = sdTiltEllipse(ax, y, 0.5, -0.56 + ring, 0.24, 0.15, -0.7);
-      const legs = sdCapsule(ax, y, 0.36, 0.62, 0.5, 0.82, 0.06);
-      const knob = sdRoundBox(x, y + 0.56, 0.08, 0.06, 0.03);
-      return Math.min(smin(face, knob, 0.04), bells, legs);
-    }
-    case "hotair": {
-      const envelope = sdCone(x, y, 0, -0.24, 0.68, 0, 0.36, 0.16);
-      const ropes = sdCapsule(Math.abs(x), y, 0.2, 0.48, 0.17, 0.66, 0.05);
-      const basket = sdRoundBox(x, y - 0.76, 0.22, 0.1, 0.04);
-      return Math.min(envelope, ropes, basket);
-    }
-    case "car": {
-      const body = sdRoundBox(x, y - 0.4, 0.92, 0.28, 0.22);
-      const cabin = sdRoundBox(x + 0.06, y - 0.02, 0.58, 0.32, 0.26);
-      const wheels = length(Math.abs(x) - 0.52, y - 0.64) - 0.21;
-      return Math.min(smin(body, cabin, 0.08), wheels);
-    }
-    case "boat": {
-      const hull = sdPoly(x, y, HULL) - 0.04;
-      const cabin = sdRoundBox(x + 0.1, y - 0.04, 0.5, 0.34, 0.1);
-      const funnel = sdRoundBox(x - 0.32, y + 0.42, 0.12, 0.2, 0.04);
-      const puff = length(x - 0.38, y + 0.76 + Math.sin(t * 1.5) * 0.02) - 0.14;
-      return Math.min(smin(hull, cabin, 0.04), funnel, puff);
-    }
-    case "sub": {
-      const hull = sdCapsule(x, y, -0.5, 0.42, 0.48, 0.42, 0.42);
-      const tower = sdRoundBox(x + 0.08, y + 0.06, 0.26, 0.2, 0.1);
-      const scope = Math.min(sdCapsule(x, y, 0.06, -0.24, 0.06, -0.6, 0.055), sdCapsule(x, y, 0.06, -0.6, 0.24, -0.6, 0.055));
-      const prop = sdEllipse(x - 0.92, y - 0.42, 0.07, 0.18);
-      return Math.min(smin(hull, tower, 0.06), scope, prop);
-    }
-    case "bone": {
-      const shaft = sdCapsule(x, y, -0.5, 0.36, 0.5, 0.36, 0.34);
-      const knobs = length(Math.abs(x) - 0.66, Math.abs(y - 0.36) - 0.26) - 0.24;
-      return smin(shaft, knobs, 0.08);
-    }
-    case "sock": {
-      const leg = sdRoundBox(x - 0.2, y + 0.12, 0.5, 0.56, 0.14);
-      const foot = sdCapsule(x, y, 0.2, 0.56, -0.58, 0.56, 0.28);
-      const cuff = sdRoundBox(x - 0.2, y + 0.66, 0.56, 0.12, 0.06);
-      return Math.min(smin(leg, foot, 0.2), cuff);
-    }
-    case "tshirt": {
-      const body = smax(sdRoundBox(x, y - 0.14, 0.56, 0.7, 0.08), -(length(x, y + 0.66) - 0.22), 0.06);
-      const sleeves = sdPoly(Math.abs(x), y, SLEEVE) - 0.04;
-      return smin(body, sleeves, 0.04);
-    }
-    case "tophat": {
-      const crown = sdRoundBox(x, y + 0.02, 0.58, 0.62, 0.1);
-      const brim = sdEllipse(x, y - 0.66, 0.92, 0.16);
-      return smin(crown, brim, 0.06);
-    }
-    case "key": {
-      const bow = length(x, y + 0.24) - 0.58;
-      const shaft = sdRoundBox(x, y - 0.5, 0.1, 0.34, 0.04);
-      const teeth = Math.min(sdRoundBox(x - 0.18, y - 0.62, 0.12, 0.06, 0.02), sdRoundBox(x - 0.16, y - 0.8, 0.1, 0.06, 0.02));
-      return Math.min(smin(bow, shaft, 0.06), teeth);
-    }
-    case "raccoon": {
-      const head = sdEllipse(x, y - 0.24, 0.76, 0.6);
-      const ax = Math.abs(x);
-      const ears = sdCone(ax, y, 0.44, -0.22, 0.2, 0.58, -0.64, 0.06);
-      const cheeks = sdPoly(ax, y, RACCOON_CHEEK) - 0.03;
-      return smin(head, Math.min(ears, cheeks), 0.06);
-    }
-    case "tiger": {
-      const head = length(x, y - 0.14) - 0.7;
-      const ax = Math.abs(x);
-      const ears = length(ax - 0.5, y + 0.46) - 0.18;
-      const ruff = sdPoly(ax, y, TIGER_RUFF) - 0.03;
-      return smin(head, Math.min(ears, ruff), 0.06);
-    }
-    case "koi": {
-      const swish = Math.sin(t * 2.4) * 0.04;
-      const body = sdCone(x, y, 0, -0.06, 0.6, swish * 0.5, 0.52, 0.2);
-      const ax = Math.abs(x - swish);
-      const tail = sdTiltEllipse(ax, y, 0.22, 0.7, 0.26, 0.12, -0.6);
-      const fins = sdTiltEllipse(Math.abs(x), y, 0.54, 0.14, 0.22, 0.1, 0.6);
-      return smin(body, Math.min(tail, fins), 0.06);
-    }
-    case "dalmatian": {
-      const head = sdEllipse(x, y - 0.1, 0.62, 0.62);
-      const ax = Math.abs(x);
-      const ears = sdTiltEllipse(ax, y, 0.62, 0.18, 0.18, 0.4, -0.25);
-      const muzzle = sdEllipse(x, y - 0.54, 0.4, 0.3);
-      return smin(smin(head, muzzle, 0.1), ears, 0.06);
-    }
-    case "zebra": {
-      const head = sdCone(x, y, 0, -0.06, 0.58, 0, 0.5, 0.36);
-      const ears = sdCone(Math.abs(x), y, 0.32, -0.42, 0.13, 0.5, -0.82, 0.04);
-      const mane = sdRoundBox(x, y + 0.7, 0.1, 0.16, 0.08);
-      return smin(head, Math.min(ears, mane), 0.06);
-    }
-    case "sprout": {
-      const head = length(x, y - 0.14) - 0.72;
-      const sway = Math.sin(t * 1.5) * 0.04;
-      const stem = sdCone(x, y, 0, -0.5, 0.05, 0.04 + sway * 0.5, -0.76, 0.04);
-      const lx = x - (0.2 + sway);
-      const ly = y + 0.8;
-      const c = Math.cos(0.5), s = Math.sin(0.5);
-      const leaf = sdEllipse(lx * c - ly * s, lx * s + ly * c, 0.22, 0.1);
-      return Math.min(head, stem, leaf);
-    }
-  }
+  return SHAPE_DISTANCE[shape](x, y, t);
 }
 
 /** Where the face sits on each body, so eyes stay inside a ghost's head and a drop's belly. */

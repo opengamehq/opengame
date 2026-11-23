@@ -1,5 +1,9 @@
 # opengame-all-in-one changelog
 
+## 1.0.17
+
+Carries the new `opengame-brush-stroke-shader-style` 1.0.0, for a game that looks and plays as if painted by hand, and `opengame-router` 1.0.12, which routes to it. The table of skills by task points at it too. (22 Nov 2026)
+
 ## 1.0.16
 
 Carries `opengame-cli` 1.9.4, with `opengame details --models` for changing what a game says it was made with. (19 Nov 2026)

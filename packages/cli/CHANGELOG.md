@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.8
+
+- Skills 1.8.0, which adds `opengame-brush-stroke-shader-style`: making a game look and play as
+  if it were painted by hand, built into the game and not laid over its frame. `opengame setup`
+  installs it with the rest, and `opengame skills add . --skill
+  opengame-brush-stroke-shader-style` adds it to one project.
+
 ## 0.13.7
 
 - `opengame details` prints the models and tools the game says it was made with, the list

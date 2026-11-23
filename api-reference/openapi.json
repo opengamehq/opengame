@@ -6227,6 +6227,23 @@
               "type": "string"
             }
           },
+          "bannerStyle": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "directed",
+                  "classic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bannerRedrawing": {
+            "type": "boolean"
+          },
           "url": {
             "type": "string"
           }
@@ -6303,6 +6320,27 @@
               ],
               "additionalProperties": false
             }
+          },
+          "bannerStyle": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "directed",
+                  "classic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "defaultBannerStyle": {
+            "type": "string",
+            "enum": [
+              "directed",
+              "classic"
+            ]
           },
           "url": {
             "type": "string"
@@ -19721,8 +19759,8 @@
             "browserSession": []
           }
         ],
-        "summary": "Change a game's title, tagline, description or models",
-        "description": "Save a game's title, tagline, description or the models it says it was made with on the website, as the Details tab on its page does, through the same functions: the same limits, the same account check, and on a published game an audit record with both sides. Send any of them; a field left out keeps what the game has. On a published game players see the change at once. A change to the words moves the game's metadata revision, so the next `opengame deploy` from a folder with older words keeps the website's and `opengame pull` brings them into opengame.json. `models` replaces the whole list, on the live version and on any update still in review, and an empty list clears it; a game whose jam entry stands keeps that jam's minimum and a model from each sponsor track's maker. Requires the `submit` scope on this game; the `deploy` scope cannot change what players read. What `opengame details` sends.",
+        "summary": "Change a game's title, tagline, description, models or banner style",
+        "description": "Save a game's title, tagline, description, the models it says it was made with, or its banner style on the website, as the Details tab on its page does, through the same functions: the same limits, the same account check, and on a published game an audit record with both sides. Send any of them; a field left out keeps what the game has. On a published game players see the change at once. A change to the words moves the game's metadata revision, so the next `opengame deploy` from a folder with older words keeps the website's and `opengame pull` brings them into opengame.json. `models` replaces the whole list, on the live version and on any update still in review, and an empty list clears it; a game whose jam entry stands keeps that jam's minimum and a model from each sponsor track's maker. Requires the `submit` scope on this game; the `deploy` scope cannot change what players read. What `opengame details` sends.",
         "parameters": [
           {
             "name": "id",
@@ -19780,6 +19818,17 @@
                         "claude-code"
                       ]
                     ]
+                  },
+                  "bannerStyle": {
+                    "type": "string",
+                    "enum": [
+                      "directed",
+                      "classic"
+                    ],
+                    "description": "How OpenGame draws the game's banner: `directed`, art directed in several passes from its frames and code, or `classic`, one picture made from its frames. On a published game a change redraws the banner in a few minutes (`bannerRedrawing` in the answer), and the current one stays until then; a game can be restyled 3 times a UTC day. Saved after the words and models.",
+                    "examples": [
+                      "classic"
+                    ]
                   }
                 }
               },
@@ -19813,7 +19862,7 @@
             }
           },
           "400": {
-            "description": "`invalid_request`: the body is not one or more of `title`, `tagline` and `description` as text, or `models` as a list of keys. `invalid_details`: one of the words breaks the website's own limit, which the message names. `invalid_models`: a key is not on the list, the list is too long, or a standing jam entry could not keep it. Nothing was saved, except when the message says the words were.",
+            "description": "`invalid_request`: the body is not one or more of `title`, `tagline` and `description` as text, `models` as a list of keys, or `bannerStyle` as `directed` or `classic`. `invalid_details`: one of the words breaks the website's own limit, which the message names. `invalid_models`: a key is not on the list, the list is too long, or a standing jam entry could not keep it. Nothing was saved, except when the message says the words were.",
             "content": {
               "application/json": {
                 "schema": {
@@ -19821,7 +19870,7 @@
                 },
                 "example": {
                   "error": "invalid_request",
-                  "message": "Send a title, a tagline, a description or the models, as text."
+                  "message": "Send a title, a tagline, a description, the models or a banner style."
                 }
               }
             }
@@ -19913,7 +19962,7 @@
             }
           },
           "429": {
-            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "description": "`rate_limited`: this token made too many requests, or the banner style asked for a redraw while one is being drawn (wait a minute) or after the day's restyles of this game (wait until midnight UTC). Wait `retryAfterSeconds`. The message says what else the request saved. A browser session is not counted against a token's allowance.",
             "content": {
               "application/json": {
                 "schema": {
@@ -34839,6 +34888,14 @@
                     "type": "boolean",
                     "description": "Whether the game supports a gamepad."
                   },
+                  "bannerStyle": {
+                    "type": "string",
+                    "enum": [
+                      "directed",
+                      "classic"
+                    ],
+                    "description": "How OpenGame draws the game's banner: `directed`, art directed in several passes from its frames and code, or `classic`, one picture made from its frames. Left out: the game's own choice, or the account's default. Saved before the release is published, so its banner is drawn that way; a change on a game that is already live also redraws its live banner, which can be refused with `rate_limited`."
+                  },
                   "players": {
                     "description": "How the game is played, as `players` in opengame.json says it. Left out: what the deploy said, or review's reading when the deploy left it to Auto.",
                     "oneOf": [
@@ -35065,7 +35122,7 @@
             }
           },
           "409": {
-            "description": "A refusal the message explains: `review_pending` (review has not passed it yet, so wait and send it again), `publish_not_possible` (nothing confirmed could put this release live, and the message says why), `jam_answers_required`, `marketplace_closed`, `submission_destination_mismatch` (jam answers for a release the jam is not offered to, `jam: null` for a release already entered in a jam, or another track or sponsors for one entered already), `jam_closed`, `jam_not_open`, `at_entry_limit`, `invalid_jam_answers`, `kind_not_in_jam`, `jam_entry_judged`, `jam_entry_in_review`, `certification_replaced` (a newer release replaced this one), `models_locked` (the entry is being judged, so its models stay), `game_removed`, or `legacy_game_words`.",
+            "description": "A refusal the message explains: `review_pending` (review has not passed it yet, so wait and send it again), `publish_not_possible` (nothing confirmed could put this release live, and the message says why), `jam_answers_required`, `marketplace_closed`, `submission_destination_mismatch` (jam answers for a release the jam is not offered to, `jam: null` for a release already entered in a jam, or another track or sponsors for one entered already), `jam_closed`, `jam_not_open`, `at_entry_limit`, `invalid_jam_answers`, `kind_not_in_jam`, `jam_entry_judged`, `jam_entry_in_review`, `certification_replaced` (a newer release replaced this one), `models_locked` (the entry is being judged, so its models stay), `game_removed`, `restore_refused` (the game is off the gallery and cannot go back up from the creator's side yet, so this release was not published; Your games says why), or `legacy_game_words`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35108,7 +35165,7 @@
             }
           },
           "429": {
-            "description": "`rate_limited`: this token made too many requests. Wait `retryAfterSeconds`. A browser session is not counted.",
+            "description": "`rate_limited`: this token made too many requests, or `bannerStyle` changed the style of a game that is already live while its banner is being drawn (wait a minute) or after the day's restyles of this game (wait until midnight UTC). Wait `retryAfterSeconds`. Nothing was published. A browser session is not counted against a token's allowance.",
             "content": {
               "application/json": {
                 "schema": {
@@ -37410,13 +37467,13 @@
           {
             "name": "v",
             "in": "query",
-            "description": "The drawing version. An old or missing one is redirected to the current one, 1.",
+            "description": "The drawing version. An old or missing one is redirected to the current one, 2.",
             "schema": {
               "type": "integer",
               "enum": [
-                1
+                2
               ],
-              "default": 1
+              "default": 2
             }
           }
         ],
@@ -37432,7 +37489,7 @@
                 "schema": {
                   "type": "string",
                   "examples": [
-                    "/api/avatars/circle.classic.black/portrait?size=256&theme=light&v=1"
+                    "/api/avatars/circle.classic.black/portrait?size=256&theme=light&v=2"
                   ]
                 }
               }

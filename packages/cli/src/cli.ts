@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { z } from "zod";
 import { ANALYTICS_WINDOW_KINDS, DEFAULT_GAME_KIND, GAME_KIND_SLUGS, LIMITS, REMOVED_ANALYTICS_FILTERS } from "@opengame/shared";
-import { ANALYTICS_FILTERS_REMOVED, CREATOR_TOKEN_PATTERN, EXIT, cliUsageCommand, repairFindingSchema } from "@opengame/protocol";
+import { ANALYTICS_FILTERS_REMOVED, BANNER_STYLE_CHOICES, CREATOR_TOKEN_PATTERN, EXIT, cliUsageCommand, repairFindingSchema } from "@opengame/protocol";
 import { tokensCommand } from "./tokens";
 import { pullCommand } from "./pull";
 import { gamesCommand } from "./games";
@@ -64,7 +64,13 @@ const publishFlags = (when: string): Flag[] => [
   { name: "models", type: "string", description: `${when}Comma-separated models the game was made with, from the jam's form.` },
   { name: "sponsor", type: "string", description: `${when}Comma-separated sponsor tracks to enter.` },
   { name: "sponsor-email", type: "string", description: `${when}The email of the account you used at each sponsor, as sponsor=email, separated by commas.` },
+  bannerStyleFlag(`${when}How the banner OpenGame draws for the game is made. Without it, the game's own choice, or your account's default. `),
 ];
+/* How the house banner is drawn (22 Nov 2026): the choice the publish step and the Details tab
+   offer. `values` is help only; publishAnswers and detailsCommand refuse anything else. */
+function bannerStyleFlag(lead: string): Flag {
+  return { name: "banner-style", type: "string", values: [...BANNER_STYLE_CHOICES], description: `${lead}directed: art directed in several passes from the game's frames and code, in a few minutes. classic: one picture made from its frames.` };
+}
 /* How the game is played (17 Nov 2026): the flags for what `players` in opengame.json says
    (packages/protocol playersSchema). Metadata only: the game brings its own netcode. */
 const playersFlags = (lead: string): Flag[] => [
@@ -173,14 +179,15 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "title", type: "string", description: "The game's title, typed out, which the server checks against the game. Required with --yes." },
     { name: "yes", type: "boolean", description: "Delete without the prompt a person types the title into. Agents and scripts pass it with --title." }, stdin, json],
     examples: ["opengame delete", "opengame delete --game <id> --title \"Tide runner\" --yes --json"] },
-  details: { args: "[dir]", description: "Print the linked game's title, tagline, description and the models it says it was made with, as the website shows them, or change any of them, as the Details tab on its page does. A field you leave out stays as it is. On a published game players see the change at once. Printing needs a token with read or deploy, and saving needs submit too; opengame login has all three.", flags: [
+  details: { args: "[dir]", description: "Print the linked game's title, tagline, description, the models it says it was made with and its banner style, as the website shows them, or change any of them, as the Details tab on its page does. A field you leave out stays as it is. On a published game players see the change at once. Printing needs a token with read or deploy, and saving needs submit too; opengame login has all three.", flags: [
     { name: "game", type: "string", description: "A game ID or public ID from opengame games, instead of the linked folder's." },
     { name: "title", type: "string", description: "The new title." }, { name: "tagline", type: "string", description: "The new tagline, the line under the title on a card." },
     { name: "description", type: "string", description: "The new description, the copy on the game's page." },
     { name: "clear-tagline", type: "boolean", description: "Remove the tagline, as emptying its box on the Details tab does." },
     { name: "models", type: "string", description: "The models and tools you made the game with, separated by commas, as in gemini,claude-code. Replaces the list under Made with on the game's page. opengame details prints the keys it takes." },
-    { name: "clear-models", type: "boolean", description: "Empty the Made with list. Not for a jam entry, which needs at least one." }, stdin, json],
-    examples: ["opengame details", "opengame details --title \"Tide runner\" --tagline \"Race the rain to the river.\" --json", "opengame details --models gemini,claude-code --json"] },
+    { name: "clear-models", type: "boolean", description: "Empty the Made with list. Not for a jam entry, which needs at least one." },
+    bannerStyleFlag("How the game's banner is drawn. On a published game the banner is redrawn in the new style in a few minutes, and the current one stays until then. "), stdin, json],
+    examples: ["opengame details", "opengame details --title \"Tide runner\" --tagline \"Race the rain to the river.\" --json", "opengame details --models gemini,claude-code --json", "opengame details --banner-style classic --json"] },
   handle: { args: "<name>", description: "Rename your handle, as Settings does. Your old handle becomes free for anyone to claim, your games keep their /g links, and your profile address changes. Renames are limited per day. Only the opengame login token can do this, not a token made in settings.", flags: [
     { name: "yes", type: "boolean", description: "Rename without the question a person is asked. Required for agents and scripts." }, stdin, json],
     examples: ["opengame handle stormcaller", "opengame handle stormcaller --yes --json"] },
@@ -293,10 +300,12 @@ const ENV = [
   { name: "CODEX_HOME", description: "Codex's folder, read to detect it. Defaults to ~/.codex." },
   { name: "NODE_ENV", description: "production makes package installs leave out devDependencies, where build tools such as Vite usually are. Then deploy and --build do not install a project's packages themselves, and the error says why. npm's omit=dev, set as npm_config_omit, counts the same." },
 ];
-/* OPENGAME_TEST_SKIP_LAUNCH_CHECK (launch.ts) is read and deliberately not listed here. It is
-   for this package's own test suite, and this list is what `help`, `help --json` and the
+/* OPENGAME_TEST_SKIP_LAUNCH_CHECK (launch.ts), and OPENGAME_TEST_STDIN_WAIT_MS (credentials.ts)
+   and OPENGAME_TEST_RETRY_PAUSE_MS (http.ts), which can only shorten --token-stdin's wait and
+   the pause between upload tries, are read and deliberately not listed here. They
+   are for this package's own test suite, and this list is what `help`, `help --json` and the
    generated CLI reference in the docs print, so a row here told every stranger how to turn
-   the launch sentence off. agent-shells.test.ts names it as the one unlisted variable. */
+   the launch sentence off. agent-shells.test.ts names all three as the unlisted variables. */
 
 /** The command nearest a mistyped one, when it is close enough to be the likely meaning:
  * `tokens` is `token`, `stauts` is `status`. Edit distance, at most two, and only one.

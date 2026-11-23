@@ -14,7 +14,7 @@ import { emitReview, followReview, readSubmission, reviewLine, sendAgain } from 
 import { publishAnswers, publishGame } from "./publish";
 import { authCommand } from "./auth";
 import { readBootstrap } from "./bootstrap";
-import { Api, ApiError, UploadInterrupted } from "./http";
+import { Api, ApiError, UploadInterrupted, uploadRetryPauseMs } from "./http";
 import { activeToken } from "./credentials";
 import { collectFiles, loadManifest, outputFolder, replaceFile } from "./files";
 import { archiveDigest, createArchive, readArchiveRange, type PackedArchive } from "./archive";
@@ -117,7 +117,7 @@ type Ran = { code: number | null; error?: boolean; timedOut: boolean; tail: stri
  * to a person and the output captured in --json, in a process group of its own when piped,
  * and stopped with everything it started at the time limit. `noun` names it in the notice.
  */
-async function runProjectCommand(command: string, root: string, output: Output, timeoutMs: number, noun: string): Promise<Ran> {
+async function runProjectCommand(command: string, root: string, output: Output, timeoutMs: number, noun: string, graceMs = BUILD_STOP_GRACE_MS): Promise<Ran> {
   // A project's build is its own code. It has no reason to inherit the API token.
   const env = { ...process.env }; delete env.OPENGAME_TOKEN;
   const capture = output.json;
@@ -143,7 +143,7 @@ async function runProjectCommand(command: string, root: string, output: Output, 
        outlived the shell, and it is unref'd so it never keeps the CLI open by itself. */
     const stop = () => {
       stopBuild(child, grouped);
-      setTimeout(() => stopBuild(child, grouped, "SIGKILL"), BUILD_STOP_GRACE_MS).unref();
+      setTimeout(() => stopBuild(child, grouped, "SIGKILL"), graceMs).unref();
     };
     // The terminal's Ctrl-C does not reach a group of its own, so it is passed on, and
     // then the signal's own default runs with the listener gone. Only when grouped, which
@@ -174,7 +174,7 @@ async function runProjectCommand(command: string, root: string, output: Output, 
     child.on("exit", () => {
       if (settled) return;
       timers.push(setTimeout(() => { if (!settled && grouped && groupAlive(child.pid)) { leftRunning = !timedOut; stop(); } }, 100));
-      timers.push(setTimeout(() => { child.stdout?.destroy(); child.stderr?.destroy(); finish({ code: child.exitCode }); }, BUILD_STOP_GRACE_MS + 600));
+      timers.push(setTimeout(() => { child.stdout?.destroy(); child.stderr?.destroy(); finish({ code: child.exitCode }); }, graceMs + 600));
     });
     child.on("close", code => finish({ code }));
   });
@@ -204,6 +204,10 @@ export type BuildOptions = {
   install?: boolean;
   /** The command a person runs again once they have fixed what stopped this one. */
   rerun?: string;
+  /** How long a build being stopped gets before SIGKILL, BUILD_STOP_GRACE_MS unless given. Only
+   * this package's tests pass it: repair-build.test.ts sat out the 5 s grace three times, 15 s
+   * of a CLI row spent idle, to prove the same ordering a shorter grace proves (round 66A). */
+  stopGraceMs?: number;
 };
 
 /** Why an install would leave devDependencies out, when this process's environment says it
@@ -252,7 +256,7 @@ async function installDependencies(root: string, output: Output, timeoutMs: numb
   if (omitted) throw refuse(`Dependencies are not installed.`, plan.install);
   const { command } = needed.install;
   output.emit({ type: "progress", stage: "install", message: `Installing dependencies (${command})` });
-  const ran = await runProjectCommand(command, root, output, timeoutMs, "install");
+  const ran = await runProjectCommand(command, root, output, timeoutMs, "install", options.stopGraceMs);
   if (ran.code === 0) {
     /* An install that succeeded and still left packages out was told to by a setting this
        process cannot see (an .npmrc omit=dev, say). Building now would only fail on the
@@ -295,7 +299,7 @@ export async function build(command: string, root: string, output: Output, timeo
   const diagnostic = (value: string) => buildCommandLabel(value, secrets);
   output.emit({ type: "progress", stage: "build", message: `Running build command: ${diagnostic(command)}` });
   const capture = output.json;
-  const outcome = await runProjectCommand(command, root, output, timeoutMs, "build command");
+  const outcome = await runProjectCommand(command, root, output, timeoutMs, "build command", options.stopGraceMs);
   if (outcome.code === 0) return;
   const timedOut = outcome.timedOut;
   const minutes = Math.max(1, Math.round(timeoutMs / 60_000));
@@ -761,9 +765,10 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
      answers are read before anything is uploaded, so a flag the server would refuse costs
      nothing; the jam's flags mean nothing without it. */
   if (flags.publish && flags["no-wait"]) throw new CliError("conflicting_flags", "Use --publish or --no-wait, not both. --publish waits for review and publishes when it passes.", 2);
-  /* Only the jam's flags: deploy's own --title, --description and --genre write a missing
-     opengame.json, so the game then has those words and publishing them again would be refused. */
-  const jamFlags = ["no-jam", "track", "models", "sponsor", "sponsor-email"];
+  /* Only the jam's flags and the banner style: deploy's own --title, --description and --genre
+     write a missing opengame.json, so the game then has those words and publishing them again
+     would be refused. The banner style is never in opengame.json, so it only answers the publish. */
+  const jamFlags = ["no-jam", "track", "models", "sponsor", "sponsor-email", "banner-style"];
   const publishing = command === "deploy" && flags.publish ? publishAnswers(Object.fromEntries(Object.entries(flags).filter(([name]) => jamFlags.includes(name)))) : null;
   const strayJam = jamFlags.find(name => flags[name] !== undefined);
   if (command === "deploy" && !publishing && strayJam) throw new CliError("conflicting_flags", `--${strayJam} answers the publish step, so it goes with --publish.`, 2);
@@ -1052,7 +1057,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
                   throw error;
                 }
                 output.emit({ type: "notice", code: "upload_retrying", message: `The upload was interrupted (${error.cause}). Trying again, ${attempt + 1} of ${tries}.` });
-                await sleep(Math.min(8000, 1000 * 2 ** (attempt - 1)));
+                await sleep(uploadRetryPauseMs(attempt));
                 const fresh = await api.json(`/api/v1/operations/${op.id}/upload`, { token, method: "POST" }).catch((reason: unknown) => {
                   // The server is the one who cannot answer now: keep the honest cause.
                   // Unless it said retrying cannot help: that answer, with its request id, is the news.

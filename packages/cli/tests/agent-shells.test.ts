@@ -106,9 +106,9 @@ test("help --json describes every command, flag, exit code and environment varia
       .filter(name => /^(CI|CLAUDECODE|CODEX_|CURSOR_|OPENCODE|AI_AGENT)/.test(name))));
   const documented = new Set(schema.env.map(row => row.name));
   // Read by the CLI and kept out of the public list on purpose: help --json feeds the docs,
-  // and this one exists only for this package's tests (cli.ts, beside ENV, says why). Any
+  // and these exist only for this package's tests (cli.ts, beside ENV, says why). Any
   // other test-only variable belongs in tests/, not in src/.
-  const testOnly = ["OPENGAME_TEST_SKIP_LAUNCH_CHECK"];
+  const testOnly = ["OPENGAME_TEST_SKIP_LAUNCH_CHECK", "OPENGAME_TEST_STDIN_WAIT_MS", "OPENGAME_TEST_RETRY_PAUSE_MS"];
   for (const name of testOnly) {
     assert.ok(read.has(name), `${name} is no longer read; drop it from testOnly`);
     assert.ok(!schema.env.some(row => JSON.stringify(row).includes(name)) && !JSON.stringify(schema).includes(name), `${name} is test-only and must not appear in help --json`);

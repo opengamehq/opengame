@@ -236,3 +236,22 @@ test("storage answering 404 for a part is asked about rather than re-signed: an 
     assert.equal(fake.state(), "queued");
   } finally { await fake.close(); }
 });
+
+/* The pause between an interrupted upload's tries is 1 s, doubling, at most 8 s, for every
+   upload route (http.ts). This package's `npm test` sets OPENGAME_TEST_RETRY_PAUSE_MS=100, which
+   only this file's runs above and the other upload tests feel; here it is held to the schedule,
+   and to shortening it only, so a typo cannot quietly put the real pauses back or lengthen them. */
+test("the pause between upload tries is 1, 2, 4 and then 8 s, and the test variable can only shorten it", async () => {
+  const { uploadRetryPauseMs } = await import("../src/http");
+  const before = process.env.OPENGAME_TEST_RETRY_PAUSE_MS;
+  try {
+    delete process.env.OPENGAME_TEST_RETRY_PAUSE_MS;
+    assert.deepEqual([1, 2, 3, 4, 5, 9].map(uploadRetryPauseMs), [1000, 2000, 4000, 8000, 8000, 8000]);
+    process.env.OPENGAME_TEST_RETRY_PAUSE_MS = "100";
+    assert.deepEqual([1, 2, 3, 4, 5].map(uploadRetryPauseMs), [100, 200, 400, 800, 800]);
+    for (const ignored of ["5000", "0", "-1", "fast", "2.5"]) {
+      process.env.OPENGAME_TEST_RETRY_PAUSE_MS = ignored;
+      assert.equal(uploadRetryPauseMs(1), 1000, `OPENGAME_TEST_RETRY_PAUSE_MS=${ignored}`);
+    }
+  } finally { if (before === undefined) delete process.env.OPENGAME_TEST_RETRY_PAUSE_MS; else process.env.OPENGAME_TEST_RETRY_PAUSE_MS = before; }
+});

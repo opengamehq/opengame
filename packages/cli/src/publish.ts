@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { GENRE_SLUGS, LIMITS } from "@opengame/shared";
-import { EXIT, SUBMISSION_OPEN, deploymentPath, submissionSchema, type CreatorGame, type OperationSummary, type Submission } from "@opengame/protocol";
+import { BANNER_STYLE_CHOICES, EXIT, SUBMISSION_OPEN, deploymentPath, submissionSchema, type CreatorGame, type OperationSummary, type Submission } from "@opengame/protocol";
 import { trustedBrowserUrl } from "./browser";
 import { activeToken } from "./credentials";
 import { linkedGameId, readGame, refuseRemoved } from "./games";
@@ -20,7 +20,18 @@ export interface PublishAnswers {
   genre?: string; subgenre?: string | null; controller?: boolean;
   /** How the game is played (17 Nov 2026), as opengame.json's `players` says it. */
   players?: { mode: "single" } | { mode: "private" | "online"; min: number; max: number };
+  /** How the game's house banner is drawn (22 Nov 2026). */
+  bannerStyle?: BannerStyleChoice;
   jam?: { track: string; models: string[]; sponsors: string[]; sponsorEmails: Record<string, string> } | null;
+}
+
+export type BannerStyleChoice = (typeof BANNER_STYLE_CHOICES)[number];
+
+/** `--banner-style`, for publish, deploy --publish and details alike: one of the two the
+ * server takes, refused here so a typo costs no request. */
+export function bannerStyleFlag(value: string | boolean): BannerStyleChoice {
+  if (typeof value === "string" && (BANNER_STYLE_CHOICES as readonly string[]).includes(value)) return value as BannerStyleChoice;
+  throw new CliError("invalid_flag", "Use --banner-style directed or --banner-style classic. Directed is art directed in several passes; classic is one picture made from the game's frames.", EXIT.input);
 }
 
 /** The flags `publish` and `deploy --publish` share, read into answers. Refused here when a
@@ -43,6 +54,7 @@ export function publishAnswers(flags: Flags): PublishAnswers {
   // Auto is what leaving the flags out already means: what opengame.json said, or review's reading.
   const players = playersFlags(flags);
   if (players !== undefined && players !== "auto") answers.players = players;
+  if (flags["banner-style"] !== undefined) answers.bannerStyle = bannerStyleFlag(flags["banner-style"]);
   const jamFlags = ["track", "models", "sponsor", "sponsor-email"].filter(name => flags[name] !== undefined);
   if (flags["no-jam"] && jamFlags.length) throw new CliError("conflicting_flags", `Use --no-jam to publish to the gallery, or ${jamFlags.map(f => `--${f}`).join(", ")} to enter the jam, not both.`, EXIT.input);
   if (flags["no-jam"]) answers.jam = null;

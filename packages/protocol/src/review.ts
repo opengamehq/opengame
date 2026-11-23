@@ -94,6 +94,10 @@ export interface QualityJudgement {
   mobilePortrait?: number;
   /** How sure the code review is that it does not run on a supported web runtime or engine. */
   unsupportedRuntime?: number;
+  /** How sure the code review is that the game breaks a game rule: a crypto wallet or blockchain, a
+   *  real-money payment, gambling or a sign-in to play (since 22 Nov 2026), and which. */
+  rulesBreach?: number;
+  rulesBreachKind?: "none" | "crypto" | "payments" | "gambling" | "accounts";
   source: "code" | "runtime";
   reasons: string[];
 }
@@ -125,6 +129,11 @@ const judgementSchema = z.object({
      export, WebAssembly or a supported game engine. The database refuses publication on either at
      the policy's primary confidence (20261113030000); kept here so a parse does not drop them. */
   mobilePortrait: z.number().min(0).max(1).optional(), unsupportedRuntime: z.number().min(0).max(1).optional(),
+  /* Since 22 Nov 2026, after Goat City 3D went live with a crypto wallet sign-in: how sure the code
+     review is that the game breaks a game rule, and which. Refused on at the same confidence
+     (20261122170000). */
+  rulesBreach: z.number().min(0).max(1).optional(),
+  rulesBreachKind: z.enum(["none", "crypto", "payments", "gambling", "accounts"]).optional(),
 });
 const receiptStateSchema = z.enum(["passed", "failed", "inconclusive", "not run", "provider unavailable"]);
 const qualitySchema = z.object({

@@ -40,6 +40,10 @@
       "family": "craft"
     },
     {
+      "name": "opengame-brush-stroke-shader-style",
+      "family": "craft"
+    },
+    {
       "name": "opengame-world-physics",
       "family": "craft"
     },

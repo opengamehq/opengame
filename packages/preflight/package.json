@@ -12,7 +12,7 @@
     "./node-compression": "./src/node-compression.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ../../scripts/typecheck-native.mjs",
     "test": "node --import tsx --test tests/*.test.ts",
     "sync:engines": "node scripts/sync-engine-registry.mjs"
   },

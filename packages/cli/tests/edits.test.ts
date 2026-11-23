@@ -24,10 +24,13 @@ const game: CreatorGame = { id: GAME, publicId: "tiderunner", title: "Tide runne
 
 type Answer = { status: number; body: unknown };
 /** `models`: the server knows a game's declared models (since 19 Nov 2026). An older one does not. */
-interface Fake { origin: string; requests: { method: string; url: string; body: unknown }[]; answer: Answer | null; models: boolean; getAnswer: Answer | null; close(): Promise<void> }
+/** `style`: the server reads a game's banner style (since 22 Nov 2026). */
+interface Fake { origin: string; requests: { method: string; url: string; body: unknown }[]; answer: Answer | null; models: boolean; getAnswer: Answer | null;
+  style: { own: string | null; fallback: string } | null; close(): Promise<void> }
 
 async function fake({ models = true } = {}): Promise<Fake> {
-  const state = { requests: [] as { method: string; url: string; body: unknown }[], answer: null as Answer | null, models, getAnswer: null as Answer | null };
+  const state = { requests: [] as { method: string; url: string; body: unknown }[], answer: null as Answer | null, models, getAnswer: null as Answer | null,
+    style: null as { own: string | null; fallback: string } | null };
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     assert.equal(req.headers.authorization, `Bearer ${token}`);
     let text = "";
@@ -44,13 +47,15 @@ async function fake({ models = true } = {}): Promise<Fake> {
     if (req.method === "GET" && req.url === `/api/v1/games/${GAME}/details` && state.getAnswer) return send(state.getAnswer);
     if (req.method === "GET" && req.url === `/api/v1/games/${GAME}/details` && state.models) {
       return send({ status: 200, body: { apiVersion: "1", gameId: GAME, publicId: "tiderunner", models: [{ key: "gemini", name: "Gemini" }, { key: "claude-code", name: "Claude Code" }],
-        choices: [{ key: "claude", name: "Claude" }, { key: "claude-code", name: "Claude Code" }, { key: "gemini", name: "Gemini" }], url: "https://opengame.io/settings/games/tiderunner" } });
+        choices: [{ key: "claude", name: "Claude" }, { key: "claude-code", name: "Claude Code" }, { key: "gemini", name: "Gemini" }],
+        ...(state.style ? { bannerStyle: state.style.own, defaultBannerStyle: state.style.fallback } : {}), url: "https://opengame.io/settings/games/tiderunner" } });
     }
     if (req.method === "PATCH" && req.url === `/api/v1/games/${GAME}/details`) {
       const body = state.requests.at(-1)!.body as Record<string, string> & { models?: string[] };
       return send(state.answer ?? { status: 200, body: { apiVersion: "1", gameId: GAME, publicId: "tiderunner", live: true, revision: 4,
         title: body.title ?? "Tide runner", tagline: body.tagline ?? "Race the rain.", description: body.description ?? "A river game.",
-        ...(body.models && state.models ? { models: body.models.map(key => key.toLowerCase()) } : {}), url: "https://opengame.io/settings/games/tiderunner" } });
+        ...(body.models && state.models ? { models: body.models.map(key => key.toLowerCase()) } : {}),
+        ...(body.bannerStyle ? { bannerStyle: body.bannerStyle, bannerRedrawing: true } : {}), url: "https://opengame.io/settings/games/tiderunner" } });
     }
     if (req.method === "POST" && req.url === "/api/v1/account/handle") {
       const body = state.requests.at(-1)!.body as { handle: string };
@@ -204,6 +209,35 @@ test("details --models against a server that saves no models says so rather than
     // Words alone keep that server's own refusal.
     const words = await cli(server.origin, root).last("details", "--title", "x");
     assert.deepEqual([words.code, words.event.code], [2, "invalid_request"]);
+  } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test("details prints the banner style, and --banner-style sends only that and says the banner is being redrawn", async () => {
+  const server = await fake();
+  const root = await linkedFolder(server.origin);
+  try {
+    server.style = { own: null, fallback: "classic" };
+    const read = await cli(server.origin, root).last("details");
+    assert.match(read.event.data.message, /\nBanner style: Classic \(your account's default\)\n/);
+    assert.match(read.event.data.message, /or --banner-style\./);
+    assert.deepEqual([read.event.data.bannerStyle, read.event.data.defaultBannerStyle], [null, "classic"]);
+    const saved = await cli(server.origin, root).last("details", "--banner-style", "directed");
+    assert.equal(saved.code, 0);
+    assert.deepEqual(writes(server).map(r => r.body), [{ bannerStyle: "directed" }]);
+    assert.match(saved.event.data.message, /^Saved\. Its banner is being redrawn in the directed style, in a few minutes, and the current one stays until then\./);
+    // A value that is not a style is refused here, and nothing is sent.
+    const bad = await cli(server.origin, root).last("details", "--banner-style", "painted");
+    assert.deepEqual([bad.code, bad.event.code], [2, "invalid_flag"]);
+    assert.equal(writes(server).length, 1);
+    // A server from before 22 Nov 2026 refuses the body whole; the CLI says the style cannot be set from here.
+    server.answer = { status: 400, body: { error: "invalid_request", message: "Send a title, a tagline, a description or the models, as text." } };
+    const older = await cli(server.origin, root).last("details", "--banner-style", "classic");
+    assert.deepEqual([older.code, older.event.code], [5, "edit_unavailable"]);
+    assert.match(older.event.message, /banner style from the CLI yet, so nothing was saved/);
+    // And its refusal of a redraw comes back in its words.
+    server.answer = { status: 429, body: { error: "rate_limited", message: "A game’s banner style can change 3 times a day. Try again tomorrow.", retry: "later", retryAfterSeconds: 3600 } };
+    const limited = await cli(server.origin, root).last("details", "--banner-style", "classic");
+    assert.deepEqual([limited.event.code, limited.event.message], ["rate_limited", "A game’s banner style can change 3 times a day. Try again tomorrow."]);
   } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
 });
 

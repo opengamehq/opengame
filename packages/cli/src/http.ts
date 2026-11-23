@@ -401,6 +401,20 @@ export function uploadFailureCause(error: unknown): string {
 /** Headers the upload routes read: the transport's capabilities, never a credential. */
 export type UploadHeaders = Record<"x-opengame-upload-checksum" | "x-opengame-upload-page-files", string>;
 
+/**
+ * The pause before an interrupted upload's next try: 1 s, doubling, at most 8 s. It was written
+ * out four times (the archive's parts, the whole archive, a whole file, the incremental pages),
+ * and is here so the four cannot drift apart. OPENGAME_TEST_RETRY_PAUSE_MS replaces the 1 s
+ * and can only shorten it, for this package's own tests, which retried dropped uploads on the
+ * real schedule: 1, 2, 4 and 8 s a run, much of the CLI rows' idle time (round 66A, 21 Nov
+ * 2026). Kept out of the public list for the reason cli.ts gives beside ENV.
+ */
+export function uploadRetryPauseMs(attempt: number): number {
+  const asked = Number(process.env.OPENGAME_TEST_RETRY_PAUSE_MS);
+  const first = Number.isInteger(asked) && asked > 0 ? Math.min(asked, 1000) : 1000;
+  return Math.min(8 * first, first * 2 ** (attempt - 1));
+}
+
 /** One PUT that did not land. The deploy asks for a fresh URL and tries again, and
  * only the last one reaches the person, so the cause travels with it. */
 export class UploadInterrupted extends CliError {

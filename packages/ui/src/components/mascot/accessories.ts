@@ -109,6 +109,8 @@ export const MASCOT_ACCESSORIES = [
   { id: "crosspin", label: "Cross pin" },
   { id: "frontcap", label: "Cap, facing forward" },
   { id: "cangaceiro", label: "Cangaceiro hat" },
+  { id: "samurai", label: "Samurai helmet" },
+  { id: "ninja", label: "Ninja headband" },
 ] as const;
 
 export type MascotAccessoryId = (typeof MASCOT_ACCESSORIES)[number]["id"];
@@ -374,13 +376,22 @@ export const ACCESSORY_ART: Record<Exclude<MascotAccessoryId, "none">, Accessory
   /* Hats with a brim. The brim is listed before the crown so it reads as in front of it,
      and every width goes through `span`, so the widest sombrero stops at the frame. */
 
+  /* Taller than it is wide, as a top hat is. Until 20 Nov 2026 the crown was 0.46 high and
+     0.8 across on a circle, and a player who put one on said it was not nearly as tall as
+     they expected. It is narrower now, flares a little at the crown, and stands as tall as
+     the dressed frame leaves room for over that head, up to 0.72: the one hat allowed past
+     the 0.5 * k rule at the top of this list, because its height is the whole of what
+     makes it a top hat. */
   tophat: {
     main: "#4A4A54",
     alt: "#E8423A",
     parts: [
-      part("alt", (u, v, h) => Math.max(sdRoundBox(u, v + 0.27, span(h, 0.68, 0.3), 0.23, 0.04), Math.abs(v + 0.14) - 0.05), { depth: 0.08 }),
-      part("main", (u, v, h) => sdRoundBox(u, v + 0.03, span(h, 1.05, 0.46), 0.065, 0.06), { depth: 0.06 }),
-      part("main", (u, v, h) => sdRoundBox(u, v + 0.27, span(h, 0.68, 0.3), 0.23, 0.04)),
+      part("alt", (u, v, h) => Math.max(topHatCrown(u, v, h), Math.abs(v + 0.1) - 0.055), { depth: 0.08 }),
+      part("main", (u, v, h) => {
+        const b = span(h, 0.86, 0.4);
+        return sdRoundBox(u, v - 0.01 + 0.07 * (u / b) ** 2, b, 0.055, 0.055);
+      }, { depth: 0.06 }),
+      part("main", topHatCrown),
     ],
   },
   bowler: {
@@ -1015,6 +1026,46 @@ export const ACCESSORY_ART: Record<Exclude<MascotAccessoryId, "none">, Accessory
       part("main", cangaceiroCrescent),
     ],
   },
+  /* A samurai's kabuto: a lacquered bowl with a peak across the brow, a neck guard of
+     three plates that step out over the ears, and a gilt crest of two horns rising from a
+     disc on the brow. The crest is what makes it a kabuto; without it the bowl is the
+     knight's helmet. The plates hang beside the face, from the bowl's edge inward to the
+     temples and no further, so the face stays open in the middle. */
+  samurai: {
+    main: "#9E2A2B",
+    alt: "gold",
+    parts: [
+      part("alt", (u, v) => length(u, v + 0.1) - 0.08),
+      part("alt", (u, v) => {
+        const au = Math.abs(u);
+        return smin(sdCone(au, v, 0.06, -0.12, 0.07, 0.2, -0.33, 0.06), sdCone(au, v, 0.2, -0.33, 0.06, 0.3, -0.49, 0.06), 0.04);
+      }),
+      part("main", (u, v, h) => sdRoundBox(u, v - 0.01, kabutoWidth(h) * 1.05, 0.05, 0.045), { depth: 0.05 }),
+      part("main", (u, v, h) => kabutoPlate(u, v, h, 0), { depth: 0.06 }),
+      part("main", (u, v, h) => kabutoPlate(u, v, h, 1), { depth: 0.06 }),
+      part("main", (u, v, h) => kabutoPlate(u, v, h, 2), { depth: 0.06 }),
+      part("main", (u, v, h) => above(sdEllipse(u, v + 0.02, kabutoWidth(h), 0.36), v, -0.02)),
+    ],
+  },
+  /* A ninja's cloth headband: a band across the forehead, a steel plate on the brow with no
+     emblem on it, and a knot at one side with its two tails streaming out behind the head.
+     The band sits where `w` is measured, so it is as wide as the head it is tied round. */
+  ninja: {
+    main: "#25262D",
+    alt: "silver",
+    parts: [
+      part("alt", (u, v, h) => sdRoundBox(u, v - ninjaBandV(h), Math.min(0.26, headW(h) * 0.45), 0.1, 0.035), { depth: 0.05 }),
+      part("main", (u, v, h) => length(u - ninjaKnotU(h), v - ninjaBandV(h)) - 0.085),
+      part("main", (u, v, h, t) => {
+        const ku = ninjaKnotU(h), bv = ninjaBandV(h), sway = Math.sin(t * 3) * 0.02;
+        return Math.min(
+          sdCone(u, v, ku, bv, 0.07, ku + 0.32, bv - 0.06 + sway, 0.06),
+          sdCone(u, v, ku, bv + 0.02, 0.07, ku + 0.26, bv + 0.18 - sway, 0.06),
+        );
+      }, { behind: true }),
+      part("main", (u, v, h) => sdRoundBox(u, v - ninjaBandV(h), headW(h) + 0.03, 0.08, 0.05), { depth: 0.08 }),
+    ],
+  },
   racingcap: {
     // A black cap worn straight, brim to the front: seen face on, the brim is a band
     // across the forehead a little wider than the crown, not a peak off to one side.
@@ -1036,6 +1087,43 @@ export const ACCESSORY_ART: Record<Exclude<MascotAccessoryId, "none">, Accessory
     ],
   },
 };
+
+/**
+ * How far above the seat a part may reach before the top of the dressed frame cuts it, in
+ * head units, less the half cell an edge needs. The frame's top is -1.4
+ * (`MASCOT_FRAME.dressed` in render.ts, which imports this file, so it is a number here).
+ */
+const headroom = (h: MascotHead) => (h.seat + 1.4 - 0.06) / h.k;
+
+/** The top hat's crown: narrower than the head, flaring a little at the top. */
+function topHatCrown(u: number, v: number, h: MascotHead) {
+  const c = span(h, 0.42, 0.22);
+  const top = Math.min(0.72, Math.max(0.5, headroom(h))) - 0.03;
+  return sdPoly(u, v, [[-c, 0.02], [c, 0.02], [c * 1.1, -top], [-c * 1.1, -top]]) - 0.03;
+}
+
+/** The kabuto's bowl, narrow enough that the widest neck plate stays in the frame. */
+const kabutoWidth = (h: MascotHead) => Math.min(span(h, 0.95, 0.38), room(h) - 0.34);
+
+/**
+ * One of the kabuto's three neck plates, `i` from the top: a band either side of the face
+ * from inside the bowl's edge out past it, each a little lower and wider than the last.
+ */
+function kabutoPlate(u: number, v: number, h: MascotHead, i: number) {
+  const b = kabutoWidth(h);
+  const drop = Math.min(Math.max(earV(h) * 0.7, 0.24), 0.36) / 3;
+  const inner = b * 0.74, outer = b + 0.06 + 0.07 * i;
+  const top = -0.02 + drop * i;
+  return sdRoundBox(Math.abs(u) - (inner + outer) / 2, v - (top + drop / 2 + 0.01), (outer - inner) / 2, drop / 2 + 0.01, 0.025);
+}
+
+/**
+ * Where the headband crosses the forehead, in head units below the seat: the line `w` is
+ * measured on, 0.22 under the top of the skull, which is 0.12 under the seat. And where its
+ * knot is tied, at the side, pulled in on wide heads so the tails stay in the frame.
+ */
+const ninjaBandV = (h: MascotHead) => 0.12 / h.k;
+const ninjaKnotU = (h: MascotHead) => Math.min(headW(h) + 0.02, room(h) - 0.38);
 
 /* The crowns of the brimmed hats, each used twice: once for itself and once to clip its
    band to. */

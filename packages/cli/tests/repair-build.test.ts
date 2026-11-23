@@ -31,6 +31,10 @@ test("a build past its time limit is stopped with everything it started, and --j
 });
 
 const quiet = () => new Output(true, () => {}, () => {});
+/* The grace a stopped build gets before SIGKILL, shortened from the CLI's 5 s (deploy.ts's
+   stopGraceMs says why). Each case below asserts an order of events, not a length of time,
+   so a shorter grace proves what the 5 s one did in a third of the time. */
+const GRACE_MS = 1000;
 const pidFrom = async (file: string) => Number(await readFile(file, "utf8"));
 const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 async function gone(pid: number, ms: number) {
@@ -45,7 +49,7 @@ test("a build child that ignores SIGTERM is killed after the grace, although the
   const dir = await mkdtemp(join(tmpdir(), "og-build-kill-"));
   try {
     const marker = join(dir, "pid");
-    const failed = await build(`${holder(marker, true)}; true`, dir, quiet(), 1500).catch((error: unknown) => error as { code: string });
+    const failed = await build(`${holder(marker, true)}; true`, dir, quiet(), 1500, { stopGraceMs: GRACE_MS }).catch((error: unknown) => error as { code: string });
     assert.equal(failed.code, "build_timeout");
     assert.ok(await gone(await pidFrom(marker), 3000), "SIGKILL never reached the process that ignored SIGTERM");
   } finally { await rm(dir, { recursive: true, force: true }); }
@@ -74,8 +78,10 @@ test("a build that failed before its limit is a failure, not a timeout, whatever
        timer firing after the shell has gone. It used to be 1300 ms against a one-second
        shell, which left 300 ms for a shell to start, sleep and exit; beside other suites
        that ran out, the shell was still running at the limit, and a correct build read as
-       a timeout (the contention note in AGENTS.md). */
-    const failed = await build(`${holder(marker, true)} & sleep 1; exit 3`, dir, quiet(), 3000).catch((error: unknown) => error as { code: string; finding: RepairFinding });
+       a timeout (the contention note in AGENTS.md). Now a half-second shell, a 2 s limit
+       and a 3 s grace: 1.5 s for the shell to exit before the limit, where there were 2 s
+       before, and the limit 1.5 s after the exit, inside the 3.1 s until the SIGKILL. */
+    const failed = await build(`${holder(marker, true)} & sleep 0.5; exit 3`, dir, quiet(), 2000, { stopGraceMs: 3000 }).catch((error: unknown) => error as { code: string; finding: RepairFinding });
     assert.equal(failed.code, "build_failed", failed.finding?.evidence.observed);
     assert.ok(await gone(await pidFrom(marker), 3000));
   } finally { await rm(dir, { recursive: true, force: true }); }

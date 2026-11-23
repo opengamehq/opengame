@@ -240,6 +240,15 @@ export const gameTakeDownSchema = z.object({
   message: z.string(),
 });
 
+/**
+ * How a game's house banner is drawn: directed (the cover director) or classic (one picture from
+ * its frames). The same tuple as `BANNER_STYLES` in packages/shared/src/banner-style.ts, written
+ * out here rather than imported, because this file is in the og-games Worker's inputs and the
+ * public mirror, and neither carries that module. A test of the details API fails
+ * if the two differ.
+ */
+export const BANNER_STYLE_CHOICES = ["directed", "classic"] as const;
+
 /** A game's title, tagline and description on the website: what `opengame details` sends.
  * The Details tab on the game's page, through the same function. */
 export function gameDetailsApiPath(gameId: string): string {
@@ -248,14 +257,16 @@ export function gameDetailsApiPath(gameId: string): string {
 /** The body of `PATCH /api/v1/games/<id>/details`: any of the three words and the models,
  * and the rest stay as they are. The server holds each to the website's own limits. `models`
  * replaces what the game says it was made with (catalogue keys, `opengame details --models`);
- * an empty list clears it (19 Nov 2026). */
+ * an empty list clears it (19 Nov 2026). `bannerStyle` is how the game's house banner is drawn
+ * (22 Nov 2026); a change on a published game redraws its banner in a few minutes. */
 export const gameDetailsRequestSchema = z.strictObject({
   title: z.string().max(4096).optional(),
   tagline: z.string().max(4096).optional(),
   description: z.string().max(65536).optional(),
   models: z.array(z.string().max(80)).max(256).optional(),
-}).refine(body => body.title !== undefined || body.tagline !== undefined || body.description !== undefined || body.models !== undefined,
-  "Send a title, a tagline, a description or the models.");
+  bannerStyle: z.enum(BANNER_STYLE_CHOICES).optional(),
+}).refine(body => body.title !== undefined || body.tagline !== undefined || body.description !== undefined || body.models !== undefined || body.bannerStyle !== undefined,
+  "Send a title, a tagline, a description, the models or a banner style.");
 /** What the website now shows for the game, once saved. */
 export const gameDetailsSchema = z.object({
   gameId: z.uuid(),
@@ -270,6 +281,12 @@ export const gameDetailsSchema = z.object({
   /** The catalogue keys the game declares now, when the request changed them. Absent from a
    * server before 19 Nov 2026. */
   models: z.array(z.string()).optional(),
+  /** The game's own banner style, or null when it takes its creator's default. Absent from a
+   * server before 22 Nov 2026. */
+  bannerStyle: z.enum(BANNER_STYLE_CHOICES).nullable().optional(),
+  /** The request changed the style of a published game, whose banner is redrawn in a few minutes;
+   * the one it shows stays until then. */
+  bannerRedrawing: z.boolean().optional(),
   url: z.string(),
 });
 
@@ -282,6 +299,10 @@ export const gameDeclaredModelsSchema = z.object({
   publicId: z.string().min(1),
   models: z.array(declaredModelSchema),
   choices: z.array(declaredModelSchema),
+  /** The game's own banner style, or null when it takes the account's, which `defaultBannerStyle`
+   * names. Both absent from a server before 22 Nov 2026. */
+  bannerStyle: z.enum(BANNER_STYLE_CHOICES).nullable().optional(),
+  defaultBannerStyle: z.enum(BANNER_STYLE_CHOICES).optional(),
   url: z.string(),
 });
 

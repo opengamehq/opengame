@@ -77,6 +77,14 @@ export function returnedMessage(input: { findings: number; release?: string | nu
   return input.findings > 0 ? RELEASE_STATUS.returned.message : `Read ${what}, then deploy an updated release.`;
 }
 
+/** Said for a release the publication decision holds because its game is off the gallery
+ * (`game_unavailable`, 20261121090000). One that passes on a game its owner took down goes to its
+ * details step instead, so what is left is a game the creator cannot put back from their side (a
+ * report, a hold, our take-down), where Your games says why beside Put it back, or a release
+ * certified before its decision, which goes live by itself once Put it back has run. Worded to be
+ * true of both. The deploy page's timeline matches it exactly, so no other sentence is drawn there. */
+export const OFF_GALLERY_HOLD = "Your game is off the gallery, so this release waits. Your games is where it goes back up, or says why it cannot yet.";
+
 /** What "On hold" says, for the hold it is about: a hold over a check that did not pass
  * must not say the game passed, and must not promise there is nothing to change. Only a
  * hold that says outright that everything passed gets the sentence that says so; one

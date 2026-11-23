@@ -2,7 +2,7 @@
 name: opengame-router
 description: Build, test and submit a browser game on OpenGame. Routes game work to the deploy guide, whole-game review and relevant craft skills. Use when someone asks to make a game, improve a game, check it, deploy it or enter an OpenGame jam.
 metadata:
-  version: "1.0.11"
+  version: "1.0.12"
 ---
 
 # Work on an OpenGame game
@@ -31,6 +31,7 @@ see the installed CLI's catalog, and add a specialist to the project with
 | Review the whole game | `opengame-quality-bar` |
 | Controls, feedback, camera motion | `opengame-game-feel` |
 | Lighting or color | `opengame-lighting`, `opengame-look` |
+| A painted look: brush strokes, ink line, lettered HUD, drawn hits | `opengame-brush-stroke-shader-style` |
 | Collision and movement | `opengame-world-physics` |
 | Maps and levels: spawns, sightlines, guidance, a map that plays wrong | `opengame-maps` |
 | Geometry, props or stairs | `opengame-scene-audit` |

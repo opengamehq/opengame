@@ -1,7 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { archivePartBytes, archivePartsSchema, archivePartUploadSchema, type ArchivePartUpload, type ArchiveParts } from "@opengame/protocol";
 import { LIMITS } from "@opengame/shared";
-import { Api, UploadInterrupted } from "./http";
+import { Api, UploadInterrupted, uploadRetryPauseMs } from "./http";
 import { retryShortly } from "./incremental";
 import { Meter } from "./transport";
 import { CliError, type Output } from "./output";
@@ -114,7 +114,7 @@ export async function uploadArchiveParts(api: Api, token: string, operation: str
           if (attempt >= tries) throw error;
           output.emit({ type: "notice", code: "upload_retrying", message: `Part ${part} of ${parts.partCount} was interrupted (${error.cause}). Trying again, ${attempt + 1} of ${tries}.` });
           // react-doctor-disable-next-line react-doctor/async-await-in-loop
-          await sleep(Math.min(8000, 1000 * 2 ** (attempt - 1)));
+          await sleep(uploadRetryPauseMs(attempt));
         }
       }
     };

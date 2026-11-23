@@ -31,6 +31,7 @@
         "./skills/opengame-accessibility",
         "./skills/opengame-assets",
         "./skills/opengame-audio",
+        "./skills/opengame-brush-stroke-shader-style",
         "./skills/opengame-capture",
         "./skills/opengame-characters",
         "./skills/opengame-depth",

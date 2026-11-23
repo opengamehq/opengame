@@ -1,5 +1,9 @@
 # opengame-all-in-one changelog
 
+## 1.0.19
+
+Carries `opengame-brush-stroke-shader-style` 1.0.2, whose helpers no longer contain a double brace in their type comments. (23 Nov 2026)
+
 ## 1.0.18
 
 Carries `opengame-brush-stroke-shader-style` 1.0.1, whose capture check fails a measure that is not a number, whose calm mode drops a hit frame already asked for, and whose three.js pass cuts an `alphaMap` by its green channel. (23 Nov 2026)

@@ -57,7 +57,7 @@ let installed = false;
 /**
  * Adds the styles and the edge filter once. Give the element that holds the HUD the
  * class "brush-hud" (or pass it as root and it is added).
- * @param {{ root?: HTMLElement, font?: string, paper?: string, ink?: string, accent?: string }} [options]
+ * @param { { root?: HTMLElement, font?: string, paper?: string, ink?: string, accent?: string } } [options]
  */
 export function installBrushHud(options = {}) {
   if (!installed) {
@@ -98,7 +98,7 @@ export function tornEdge(seed, teeth = 5) {
  * (lettering alone). Every strip is torn its own way, the same way each time for the
  * same text.
  * @param {string} text
- * @param {{ tone?: "paper" | "ink" | "accent" | "bare", tilt?: number, seed?: number, tag?: string }} [options]
+ * @param { { tone?: "paper" | "ink" | "accent" | "bare", tilt?: number, seed?: number, tag?: string } } [options]
  */
 export function tape(text, options = {}) {
   const el = document.createElement(options.tag ?? "span");
@@ -117,7 +117,7 @@ export function tape(text, options = {}) {
  * one frame, is redrawn twice a little differently (drawn on threes, never tweened),
  * then is gone. Returns the element; it removes itself.
  * @param {string} text
- * @param {{ at: [number, number], parent?: HTMLElement, size?: number, life?: number, colour?: string, seed?: number }} options
+ * @param { { at: [number, number], parent?: HTMLElement, size?: number, life?: number, colour?: string, seed?: number } } options
  *        at: pixels from the parent's top left. size: em. life: seconds.
  */
 export function word(text, options) {

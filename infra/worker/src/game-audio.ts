@@ -21,12 +21,16 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-22-record-pace";
+export const GAME_AUDIO_VERSION = "audio-25-record-hevc";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 /** The recording block the receiver reads (`limits.play.recording`), less the page's own numbers. */
-const RECORDING = (({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs }) =>
-  ({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs }))(limits.play.recording);
+const RECORDING = (({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs,
+  layerScanMs, domMinIntervalMs, domCostFactor, domWalkMs, domSliceMs, domBackoffMs, domRefreshMs, reshapeMs,
+  hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond, netLiveMs }) =>
+  ({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs,
+    layerScanMs, domMinIntervalMs, domCostFactor, domWalkMs, domSliceMs, domBackoffMs, domRefreshMs, reshapeMs,
+    hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond, netLiveMs }))(limits.play.recording);
 
 const SCREENSHOT = (({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }) =>
   ({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }))(limits.studio.preview.screenshot);
@@ -665,6 +669,34 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // (RECORD AND INSTANT REPLAY, below), so a clip sounds like the game whatever the slider
   // or the mute says, and no change of either is undone after the fact. Until a recording
   // attaches a tap, nothing pulls on it, so a browser does no work for it.
+  // A GAME'S LIVE CONNECTION, FOR THE CLIP'S UPLOAD (23 Nov 2026). Saving a clip to the
+  // player's account is paced only while the game is using the network in real time, so an
+  // upload never takes the bandwidth a match needs, and goes at full speed otherwise (a
+  // single-player game, a menu, a lobby nobody is in). Real time here is a send on a
+  // WebSocket or a WebRTC data channel in the last netLiveMs, or a connected peer carrying a
+  // microphone or camera. Bookkeeping only: one timestamp per send, nothing read or held.
+  let netAt = -Infinity;
+  const mediaPeers = new Set();
+  const markNet = () => { netAt = performance.now(); };
+  for (const [owner, name] of [[globalThis.WebSocket, 'send'], [globalThis.RTCDataChannel, 'send']]) {
+    const proto = owner && owner.prototype;
+    const native = proto && proto[name];
+    if (typeof native !== 'function') continue;
+    proto[name] = passFor(function(...args) { markNet(); return native.apply(this, args); }, native);
+  }
+  if (globalThis.RTCPeerConnection && typeof RTCPeerConnection.prototype.addTrack === 'function') {
+    const nativeAddTrack = RTCPeerConnection.prototype.addTrack;
+    RTCPeerConnection.prototype.addTrack = passFor(function(...args) { mediaPeers.add(new WeakRef(this)); return nativeAddTrack.apply(this, args); }, nativeAddTrack);
+  }
+  const netLive = () => {
+    if (performance.now() - netAt < rec.netLiveMs) return true;
+    for (const reference of mediaPeers) {
+      const peer = reference.deref();
+      if (!peer || peer.connectionState === 'closed') { mediaPeers.delete(reference); continue; }
+      if (peer.connectionState === 'connected') return true;
+    }
+    return false;
+  };
   const tapInputs = new Map();
   const tapInputFor = (context) => {
     let input = tapInputs.get(context);
@@ -877,7 +909,14 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     }, nativeCreate);
   }
   const nativePlay = HTMLMediaElement.prototype.play;
-  HTMLMediaElement.prototype.play = passFor(function(...args) { track(this); return nativePlay.apply(this, args); }, nativePlay);
+  // A recording hears a media element from its first play (SOUND FROM <audio> AND <video>,
+  // below), so a gunshot shorter than the recorder's once-a-second look is not missed.
+  let heardPlay = null;
+  HTMLMediaElement.prototype.play = passFor(function(...args) {
+    track(this);
+    if (heardPlay) { try { heardPlay(this); } catch { /* The recording's loss, never the game's. */ } }
+    return nativePlay.apply(this, args);
+  }, nativePlay);
   const scan = () => document.querySelectorAll('audio,video').forEach(track);
   new MutationObserver(scan).observe(document, { childList: true, subtree: true });
   scan();
@@ -1208,7 +1247,8 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // walk skips it. A custom element is probed as a span: it has no rules of its own in the
   // browser's sheet, and making one in this document would run the game's constructor.
   const probe = { host: null, root: null, cache: new Map() };
-  const openProbe = () => {
+  const probeHosts = new WeakSet();
+  const openProbe = (keepCache) => {
     const host = createHtml('div');
     // Every declaration important, or a page rule such as *{color:#fff !important} reaches the
     // host, the probes inherit it, and the root element, compared against them, is copied
@@ -1219,8 +1259,10 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     const root = createHtml('span');
     root.setAttribute('style', 'visibility:visible !important');
     shadow.appendChild(root);
+    probeHosts.add(host);
     document.documentElement.appendChild(host);
-    probe.host = host; probe.root = root; probe.cache = new Map();
+    probe.host = host; probe.root = root;
+    if (!keepCache) probe.cache = new Map();
   };
   const closeProbe = () => { if (probe.host) probe.host.remove(); probe.host = null; probe.root = null; };
   const defaultsOf = (namespace, tag) => {
@@ -1301,14 +1343,51 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     const rules = found.filter((item) => faces.has(item.key) || !matched.has(item.family)).map((item) => inlineCss(item.rule.cssText, job, item.base));
     return (await Promise.all(rules)).join('\n');
   };
-  const drawPage = async (snapshots, width, height, job) => {
+  // Whether an element's own box puts anything on screen, so a layer holding nothing but
+  // transparent boxes is not drawn at all.
+  const SIDES = ['Top', 'Right', 'Bottom', 'Left'];
+  const paints = (style) => !/^(transparent|rgba\([^)]*,\s*0\))$/.test(style.backgroundColor) || style.backgroundImage !== 'none' || style.boxShadow !== 'none'
+    || SIDES.some((side) => Number.parseFloat(style['border' + side + 'Width']) > 0 && !/^(none|hidden)$/.test(style['border' + side + 'Style']));
+  const walkWhole = (walk) => {
+    for (;;) { const step = walk.next(); if (step.done) return step.value; }
+  };
+  const idleSlice = () => new Promise((resolve) => {
+    const idle = globalThis.requestIdleCallback;
+    if (typeof idle === 'function') idle.call(globalThis, () => resolve(), { timeout: 100 });
+    else nativeSetTimeout.call(globalThis, resolve, 16);
+  });
+  const walkSliced = async (walk, job, began) => {
+    job.spent = job.spent || 0;
+    for (let started = began; ; started = performance.now()) {
+      let step;
+      // The probe is in the document only within a slice, never across the game's own code.
+      openProbe(true);
+      try {
+        do { step = walk.next(); } while (!step.done && performance.now() - started < job.sliceMs);
+      } finally {
+        closeProbe();
+        job.spent += performance.now() - started;
+      }
+      if (step.done) return step.value;
+      if (performance.now() > job.deadline || job.stop.signal.aborted) throw new Error('over budget');
+      await idleSlice();
+    }
+  };
+  // LAYERS, FOR A RECORDING. Given layers (RECORD AND INSTANT REPLAY, below), the page is
+  // copied once with every canvas and video left out, each element and run of text marked
+  // with the layer it paints in (how many of the recorded canvases and videos paint under
+  // it), and drawn once per layer that holds anything, every other layer hidden. Those
+  // pictures go between the canvases and videos, which are drawn fresh every frame, so a
+  // loading screen, a menu or a HUD in HTML sits where the player saw it, over or under them.
+  const drawPage = async (snapshots, width, height, job, layers) => {
     // A document with no window: elements made in it are never upgraded by the game's
     // custom element definitions and never load anything, so copying runs no game code.
     const inert = document.implementation.createHTMLDocument('');
     // The copying is synchronous, so a timer cannot interrupt it; it watches the job's
     // deadline itself, or a slow machine with a big page would hold the main thread past
     // the parent's whole wait and the creator would be told the game did not answer.
-    const late = () => performance.now() > job.deadline;
+    const late = () => performance.now() > (job.walk || job.deadline);
+    const began = performance.now();
     // Each still is already at the size it is drawn at (see takeShot), so encoding it costs
     // what the picture needs and no more.
     const stills = new Map();
@@ -1321,12 +1400,15 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     let elements = 0;
     const waits = [];
     const pseudo = [];
-    const copy = (node, scrolled, parent) => {
+    // A generator, so a recording can walk the page a few milliseconds at a time (walkSliced,
+    // below) while the screenshot still walks it in one go, exactly as before (walkWhole).
+    const copy = function* (node, scrolled, parent) {
       if (node.nodeType === 3) { spend(job, node.nodeValue.length); return inert.createTextNode(node.nodeValue); }
       if (node.nodeType !== 1 || node === probe.host) return null;
       const tag = node.localName;
       if (SKIPPED.test(tag)) return null;
       if (++elements > shot.domElementsMax) throw new Error(CROWDED);
+      yield;
       if (late()) throw new Error('over budget');
       const style = getComputedStyle(node);
       if (style.display === 'none') return null;
@@ -1344,10 +1426,16 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
         const text = styleText(style, prefix, defaultsOf(SVG_NS, 'svg'), parent);
         spend(job, text.length);
         svg.setAttribute('style', text);
+        if (layers) {
+          const at = style.visibility !== 'visible' ? 'h' : layers.of(node);
+          svg.setAttribute('data-l', String(at));
+          if (at !== 'h') layers.used.add(at);
+        }
         return svg;
       }
       if (node instanceof SVGElement) return null;
       let out;
+      const own = !layers ? null : node instanceof HTMLCanvasElement || node instanceof HTMLVideoElement || style.visibility !== 'visible' ? 'h' : layers.of(node);
       if (node instanceof HTMLCanvasElement || node instanceof HTMLVideoElement) {
         out = inert.createElement('img');
         const still = stills.get(node);
@@ -1374,10 +1462,15 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       spend(job, text.length);
       out.setAttribute('style', text);
       if (text.includes('url(')) waits.push(inlineCss(text, job).then((done) => { out.setAttribute('style', done); }));
+      if (layers) {
+        out.setAttribute('data-l', String(own));
+        if (own !== 'h' && (out.localName === 'img' || out.localName === 'input' || out.localName === 'textarea' || out.localName === 'select' || paints(style))) layers.used.add(own);
+      }
       for (const which of ['::before', '::after']) {
         const generated = getComputedStyle(node, which);
         const content = generated.getPropertyValue('content');
         if (!content || content === 'none' || content === 'normal') continue;
+        if (layers && own !== 'h') layers.used.add(own);
         const name = 'og-shot-' + pseudo.length;
         out.classList.add(name);
         const rule = '.' + name + which + '{' + styleText(generated, '', plainDefaults(), style) + '}';
@@ -1387,21 +1480,71 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       if (out.localName !== 'img' && !(node instanceof HTMLTextAreaElement)) {
         const inner = node.scrollTop || node.scrollLeft ? 'translate(' + -node.scrollLeft + 'px,' + -node.scrollTop + 'px) ' : '';
         for (const child of node.childNodes) {
-          const made = copy(child, inner, style);
-          if (made) out.appendChild(made);
+          const made = yield* copy(child, inner, style);
+          if (!made) continue;
+          // Text paints in the layer of where it sits, which is its element's unless one of
+          // the recorded canvases or videos comes between them; it then gets a span to carry it.
+          if (layers && own !== 'h' && made.nodeType === 3 && /\S/.test(made.nodeValue)) {
+            const at = layers.of(child);
+            layers.used.add(at);
+            if (at !== own) {
+              const carrier = inert.createElement('span');
+              carrier.setAttribute('data-l', String(at));
+              carrier.appendChild(made);
+              out.appendChild(carrier);
+              continue;
+            }
+          }
+          out.appendChild(made);
         }
       }
       return out;
     };
     let root;
-    try { openProbe(); root = copy(document.documentElement, '', null); }
-    finally { closeProbe(); }
+    if (layers) {
+      // A recording walks in slices of domSliceMs in idle time, so no one step holds the game's
+      // thread long enough to cost it a frame: a page of a hundred elements took 35 to 40 ms to
+      // read whole on a machine without a GPU (OG Snipes' start screen, 23 Nov 2026). The page
+      // may change between slices; the watch sees that and draws it again next time.
+      root = await walkSliced(copy(document.documentElement, '', null), job, began);
+    } else {
+      try { openProbe(); root = walkWhole(copy(document.documentElement, '', null)); }
+      finally { closeProbe(); }
+      job.spent = (job.spent || 0) + performance.now() - began;
+    }
     if (!root) throw new Error('nothing to draw');
+    job.walk = 0;
     const [faces, rules] = await Promise.all([fontFaces(job), Promise.all(pseudo), Promise.all(waits)]);
     if (late() || job.stop.signal.aborted) throw new Error('over budget');
     const sheet = inert.createElement('style');
     sheet.textContent = faces + '\n' + rules.join('\n');
     root.insertBefore(sheet, root.firstChild);
+    if (layers) {
+      // One copy of the page, drawn once per layer with every other layer hidden. Hidden by
+      // visibility, so each element keeps its box and its children lay out as they did.
+      const serialized = performance.now();
+      const shown = inert.createElement('style');
+      root.insertBefore(shown, root.firstChild);
+      const pictures = [];
+      // Each layer is serialised whole, files inlined again, so the layers are bounded too: a
+      // page past maxLayers or past the walk's own time again is left out, as a slow walk is.
+      if (layers.used.size > layers.maxLayers) throw new Error(CROWDED);
+      for (let at = 0; at <= layers.count; at++) {
+        if (performance.now() - serialized > layers.serializeMs) throw new Error('over budget');
+        if (!layers.used.has(at)) { pictures.push(null); continue; }
+        shown.textContent = '[data-l]{visibility:hidden!important}[data-l="' + at + '"]{visibility:visible!important}';
+        const markup = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">'
+          + '<foreignObject x="0" y="0" width="100%" height="100%">' + serialize(root) + '</foreignObject></svg>';
+        if (markup.length > shot.domBytesMax) throw new Error(CROWDED);
+        const picture = new Image();
+        picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(markup);
+        pictures.push(picture);
+      }
+      job.spent += performance.now() - serialized;
+      await Promise.all(pictures.map((picture) => picture && picture.decode()));
+      if (late()) throw new Error('over budget');
+      return pictures;
+    }
     const markup = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">'
       + '<foreignObject x="0" y="0" width="100%" height="100%">' + serialize(root) + '</foreignObject></svg>';
     // The markup is the copy that is actually held, so it is what the budget is checked
@@ -1519,10 +1662,11 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // no rendering. The page treats every piece as the game's claim, as it does a screenshot.
   //
   // Frames are paced to fpsMax and dropped, never queued, while the encoder is behind, so a
-  // slow machine records fewer frames rather than playing slower. Known gaps, accepted: an
-  // HTML HUD over the canvas is not in the picture (a screenshot draws the page; sixty a
-  // second cannot), sound played through a media element rather than Web Audio is not in
-  // the track, and a game that draws outside requestAnimationFrame records its last frame.
+  // slow machine records fewer frames rather than playing slower. Canvases and videos are
+  // drawn every frame and the page's HTML in layers between them, redrawn only as it changes
+  // (WHAT THE PLAYER SEES, below), and media elements are heard as well as Web Audio (SOUND
+  // FROM <audio> AND <video>). Known gap, accepted: a game that draws outside
+  // requestAnimationFrame records its last frame.
   const rec = __OG_RECORDING__;
   const recordId = /^[A-Za-z0-9_-]{16,64}$/;
   let recording = null;
@@ -1545,18 +1689,32 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   const videoConfigFor = async (compactOnly) => {
     if (typeof VideoEncoder !== 'function' || typeof VideoFrame !== 'function' || typeof OffscreenCanvas !== 'function') return null;
     const sizes = [];
-    if (!compactOnly) sizes.push({ size: outputSize(rec.edge, rec.shortEdge), bitrate: rec.bitsPerSecond, hardware: ['prefer-hardware'] });
-    sizes.push({ size: outputSize(rec.compactEdge, rec.compactShortEdge), bitrate: rec.compactBitsPerSecond, hardware: ['prefer-hardware', 'no-preference'] });
+    // HEVC FIRST, WHERE THE HARDWARE ENCODES IT (23 Nov 2026). About the picture H.264 gives at
+    // half the bits, so 1440p fits in what 1080p H.264 took, and a stage drawn at 1440 or more
+    // physical pixels records at 1440p. The browser's hardware encoder only, never software:
+    // a software HEVC encoder at 1440p60 would cost the game its frames. Chosen deliberately over
+    // the playback cost, since Firefox on Mac and Linux and some older Android phones cannot
+    // play the file; the site, iPhone, Mac and Chrome or Edge on Windows can.
+    if (!compactOnly) {
+      const physical = Math.max(innerWidth || 0, innerHeight || 0) * (devicePixelRatio || 1);
+      const edges = physical >= rec.hevcScreenPx ? [rec.hevcEdge, rec.hevcShortEdge] : [rec.edge, rec.shortEdge];
+      sizes.push({ size: outputSize(edges[0], edges[1]), edges: edges, bitrate: edges[0] === rec.hevcEdge ? rec.hevcBitsPerSecond : rec.hevcCompactBitsPerSecond,
+        hardware: ['prefer-hardware'], codecs: ['hvc1.1.6.L153.B0', 'hvc1.1.6.L150.B0', 'hvc1.1.6.L123.B0'] });
+      sizes.push({ size: outputSize(rec.edge, rec.shortEdge), edges: [rec.edge, rec.shortEdge], bitrate: rec.bitsPerSecond, hardware: ['prefer-hardware'] });
+    }
+    sizes.push({ size: outputSize(rec.compactEdge, rec.compactShortEdge), edges: [rec.compactEdge, rec.compactShortEdge], bitrate: rec.compactBitsPerSecond, hardware: ['prefer-hardware', 'no-preference'] });
     // High, Main, then Constrained Baseline, at level 4.2, which covers 1080p at 60.
-    const codecs = ['avc1.64002A', 'avc1.4D002A', 'avc1.42E02A'];
+    const avc = ['avc1.64002A', 'avc1.4D002A', 'avc1.42E02A'];
     for (const choice of sizes) {
       for (const hardwareAcceleration of choice.hardware) {
-        for (const codec of codecs) {
+        for (const codec of choice.codecs || avc) {
+          const hevc = codec.startsWith('hvc1');
           const config = { codec: codec, width: choice.size.width, height: choice.size.height, bitrate: choice.bitrate,
-            framerate: rec.fpsMax, hardwareAcceleration: hardwareAcceleration, latencyMode: 'realtime', avc: { format: 'avc' } };
+            framerate: rec.fpsMax, hardwareAcceleration: hardwareAcceleration, latencyMode: 'realtime' };
+          if (hevc) config.hevc = { format: 'hevc' }; else config.avc = { format: 'avc' };
           try {
             const answer = await VideoEncoder.isConfigSupported(config);
-            if (answer && answer.supported) return { config: config, hardware: hardwareAcceleration === 'prefer-hardware' };
+            if (answer && answer.supported) return { config: config, edges: choice.edges, hardware: hardwareAcceleration === 'prefer-hardware' };
           } catch { /* Try the next. */ }
         }
       }
@@ -1628,6 +1786,8 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     return [left, right];
   };
   const paceTap = (session) => {
+    // A running context first: one the game suspended (often while a cutscene video plays)
+    // never runs its worklet.
     let open = null;
     for (const tap of session.taps.values()) {
       if (!tap) continue;
@@ -1719,9 +1879,85 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       session.taps.delete(context);
     }
   };
-  // Every context that has sent sound to the speakers, now and as the game makes more.
+  // SOUND FROM <audio> AND <video> (23 Nov 2026). OG Snipes plays its loading music, its menu
+  // sounds and its cutscenes' sound through media elements, which never pass through a Web
+  // Audio context, so none of it was in the track. Each one the game plays (tracked by play
+  // and muted above, detached new Audio() included) is captured with captureStream, which
+  // copies the element's sound without changing what reaches the speakers, into one context
+  // of the recording's own that the tap below listens to like any other. An element the game
+  // routed into Web Audio itself is already heard there and is left alone. A file from
+  // another origin cannot be captured and stays out. Firefox's mozCaptureStream moves the
+  // sound off the speakers rather than copying it, so it is not used.
+  // The game's own level for the element, which the player's volume never touches (the
+  // receiver scales the element by the player's level on top, and the copy is taken before
+  // that): a muted cutscene stays silent and music at 0.2 stays at 0.2.
+  const ownLevel = (element) => desired.get(element) ? 0 : ownVolume.has(element) ? ownVolume.get(element) : 1;
+  const tapElement = (session, element) => {
+    if (session.mix === false || session.stopped || routed.has(element) || session.mediaTaps.has(element)) return;
+    if (typeof element.captureStream !== 'function' || typeof AudioContext !== 'function') return;
+    let stream;
+    try { stream = element.captureStream(); } catch { return; }
+    if (!session.mediaContext) {
+      try { session.mediaContext = new AudioContext(); } catch { return; }
+    }
+    const context = session.mediaContext;
+    const level = context.createGain();
+    level.gain.value = ownLevel(element);
+    nativeConnect.call(level, tapInputFor(context));
+    const entry = { stream: stream, level: level, sources: new Map(), done: null };
+    session.mediaTaps.set(element, entry);
+    const attach = (track) => {
+      if (session.stopped || track.kind !== 'audio' || entry.sources.has(track)) return;
+      try {
+        const source = context.createMediaStreamSource(new MediaStream([track]));
+        nativeConnect.call(source, level);
+        entry.sources.set(track, source);
+      } catch { /* Not capturable; the rest of the track goes on. */ }
+    };
+    const detach = (track) => {
+      const source = entry.sources.get(track);
+      if (source) { try { source.disconnect(); } catch { /* Gone. */ } entry.sources.delete(track); }
+    };
+    stream.getAudioTracks().forEach(attach);
+    stream.addEventListener('addtrack', (event) => attach(event.track));
+    stream.addEventListener('removetrack', (event) => detach(event.track));
+    // An element that finished lets go of its copy, so a game that makes a new Audio() for
+    // every shot does not pile them up over a long recording; playing again taps it again.
+    entry.done = () => releaseElement(session, element);
+    element.addEventListener('ended', entry.done);
+    element.addEventListener('emptied', entry.done);
+    if (context.state === 'suspended') context.resume().catch(() => {});
+    void tapContext(session, context);
+  };
+  const releaseElement = (session, element) => {
+    const entry = session.mediaTaps.get(element);
+    if (!entry) return;
+    session.mediaTaps.delete(element);
+    element.removeEventListener('ended', entry.done);
+    element.removeEventListener('emptied', entry.done);
+    for (const source of entry.sources.values()) { try { source.disconnect(); } catch { /* Gone. */ } }
+    try { entry.level.disconnect(); } catch { /* Gone. */ }
+    for (const track of entry.stream.getTracks()) { try { track.stop(); } catch { /* Gone. */ } }
+  };
+  const tapMedia = (session) => {
+    if (session.mix === false || session.stopped) return;
+    for (const reference of media) {
+      const element = reference.deref();
+      if (element && !element.paused) tapElement(session, element);
+    }
+    for (const [element, entry] of session.mediaTaps) entry.level.gain.value = ownLevel(element);
+    const context = session.mediaContext;
+    if (context && context.state === 'suspended') context.resume().catch(() => {});
+  };
+  const untapMedia = (session) => {
+    for (const element of [...session.mediaTaps.keys()]) releaseElement(session, element);
+    if (session.mediaContext) { try { void session.mediaContext.close(); } catch { /* Closed. */ } session.mediaContext = null; }
+  };
+  // Every context that has sent sound to the speakers, now and as the game makes more, and
+  // every media element it plays.
   const tapAudio = (session) => {
-    for (const context of tapInputs.keys()) if (context.state !== 'closed') void tapContext(session, context);
+    for (const context of tapInputs.keys()) if (context.state !== 'closed' && context !== session.mediaContext) void tapContext(session, context);
+    tapMedia(session);
   };
   const queueChunk = (session, kind, chunk, meta) => {
     if (session.closed) return;
@@ -1764,7 +2000,252 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       transfer.push(item.data);
       if (item.config && item.config.description) transfer.push(item.config.description);
     }
-    tellRecord(session, { op: 'chunks', items: items }, transfer);
+    tellRecord(session, { op: 'chunks', items: items, net: netLive() }, transfer);
+  };
+  // WHAT THE PLAYER SEES, EVERY FRAME (23 Nov 2026). Until audio-23 a recording drew the
+  // canvases and nothing else, so OG Snipes' cutscenes (videos laid over its canvas) and its
+  // loading screen (HTML over it) came out as the bare canvas colour, a grey rectangle for
+  // as long as they ran. Now every canvas and video on screen is drawn each frame, in the
+  // order the browser paints them, with its opacity, filter, blend mode and object-fit, and
+  // the page's HTML is drawn into the layers between them (drawPage, above).
+  //
+  // The HTML is the costly part: a walk of the whole document on the game's own thread. So
+  // it is redrawn only when the page has changed (a mutation, a running CSS animation, or
+  // every domRefreshMs in case something like :hover changed it), in idle time, no sooner
+  // than domCostFactor times what the last walk took, and never for longer than domWalkMs: a
+  // page that takes longer is left out for domBackoffMs rather than allowed to stutter the
+  // game. A game that is one canvas and nothing else walks once, finds nothing to draw, and
+  // costs no more than it did.
+  //
+  // Paint order is approximated. Each canvas, video and element paints at the z-index of the
+  // outermost stacking context it sits in (negative under what flows, positioned or z 0 over
+  // it, positive over those), and in document order within one. Rotations and skews are not
+  // drawn (a box is drawn where it sits, at its size), and a blend mode set on HTML blends
+  // only within its own layer.
+  const FOLLOWS = 4;
+  const stackOf = (element, memo) => {
+    if (!element || element === document.documentElement) return { tier: 0, fixed: false };
+    if (memo.has(element)) return memo.get(element);
+    const above = stackOf(element.parentElement, memo);
+    let state = above;
+    if (!above.fixed) {
+      const style = getComputedStyle(element);
+      const positioned = style.position !== 'static';
+      const z = Number.parseInt(style.zIndex, 10);
+      if (positioned && Number.isFinite(z)) state = { tier: z < 0 ? z - 1 : z > 0 ? z + 1 : 1, fixed: true };
+      else if (style.opacity !== '1' || style.transform !== 'none' || style.filter !== 'none' || style.mixBlendMode !== 'normal' || style.isolation === 'isolate') state = { tier: 1, fixed: true };
+      else if (positioned) state = { tier: 1, fixed: false };
+    }
+    memo.set(element, state);
+    return state;
+  };
+  const paintsBefore = (a, b) => a.tier < b.tier || (a.tier === b.tier && a.node !== b.node && Boolean(a.node.compareDocumentPosition(b.node) & FOLLOWS));
+  const layersFor = (scene) => {
+    const memo = new Map();
+    const marks = scene.map((item) => ({ node: item.el, tier: item.tier }));
+    return {
+      count: marks.length,
+      used: new Set(),
+      maxLayers: 6,
+      serializeMs: rec.domWalkMs,
+      of: (node) => {
+        // The root and the body paint the page's ground, under everything.
+        if (node === document.documentElement || node === document.body) return 0;
+        const mine = { node: node, tier: stackOf(node.nodeType === 1 ? node : node.parentElement, memo).tier };
+        let at = 0;
+        for (const mark of marks) if (paintsBefore(mark, mine)) at++;
+        return at;
+      },
+    };
+  };
+  const BLENDS = new Set(['multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity']);
+  // A video from another origin would mark the picture as one the page may not read, and
+  // every frame after it would be refused; one the game made itself, or fetched with CORS, is
+  // drawn.
+  const drawable = (video) => !video.currentSrc || video.crossOrigin !== null || Boolean(sameSite(video.currentSrc));
+  const sceneOf = (session) => {
+    const memo = new Map();
+    const found = [];
+    document.querySelectorAll('canvas,video').forEach((el) => {
+      const video = el instanceof HTMLVideoElement;
+      if (session.skip.has(el) || (video ? !el.videoWidth || !drawable(el) : !el.width || !el.height)) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 1 || rect.height < 1 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= innerWidth || rect.top >= innerHeight) return;
+      const style = getComputedStyle(el);
+      if (style.visibility !== 'visible') return;
+      // Opacity multiplies down the tree, so a fading container fades the video in it.
+      let alpha = Number(style.opacity);
+      for (let up = el.parentElement; up && alpha > 0.004; up = up.parentElement) alpha *= Number(getComputedStyle(up).opacity);
+      if (!(alpha > 0.004)) return;
+      found.push({ el: el, rect: rect, alpha: Math.min(1, alpha), tier: stackOf(el, memo).tier, fit: style.objectFit, place: style.objectPosition,
+        filter: style.filter && style.filter !== 'none' && !style.filter.includes('url(') ? style.filter : 'none',
+        blend: BLENDS.has(style.mixBlendMode) ? style.mixBlendMode : 'source-over' });
+    });
+    return found.sort((a, b) => a.tier - b.tier || (a.el.compareDocumentPosition(b.el) & FOLLOWS ? -1 : 1));
+  };
+  const placeOf = (value) => {
+    const parts = String(value || '').split(/\s+/);
+    const at = (part) => /%$/.test(part || '') ? Math.min(1, Math.max(0, Number.parseFloat(part) / 100)) : 0.5;
+    return [at(parts[0]), at(parts[1] || parts[0])];
+  };
+  const drawMedia = (context, item, left, top, scale) => {
+    const el = item.el;
+    const video = el instanceof HTMLVideoElement;
+    if (video && el.readyState < 2) return false;
+    const sw = video ? el.videoWidth : el.width;
+    const sh = video ? el.videoHeight : el.height;
+    if (!sw || !sh) return false;
+    const dx = left + item.rect.left * scale;
+    const dy = top + item.rect.top * scale;
+    const dw = item.rect.width * scale;
+    const dh = item.rect.height * scale;
+    context.globalAlpha = item.alpha;
+    context.globalCompositeOperation = item.blend;
+    context.filter = item.filter;
+    try {
+      if (item.fit === 'cover' || item.fit === 'contain' || item.fit === 'scale-down' || item.fit === 'none') {
+        const [px, py] = placeOf(item.place);
+        const contain = Math.min(dw / sw, dh / sh);
+        const ratio = item.fit === 'cover' ? Math.max(dw / sw, dh / sh) : item.fit === 'none' ? scale : item.fit === 'scale-down' ? Math.min(contain, scale) : contain;
+        if (item.fit === 'cover' || ratio * sw > dw || ratio * sh > dh) {
+          // Larger than its box (cover, or none on a small box): the part that shows.
+          const cw = Math.min(sw, dw / ratio);
+          const ch = Math.min(sh, dh / ratio);
+          context.drawImage(el, (sw - cw) * px, (sh - ch) * py, cw, ch, dx + (dw - cw * ratio) * px, dy + (dh - ch * ratio) * py, cw * ratio, ch * ratio);
+        } else {
+          context.drawImage(el, dx + (dw - sw * ratio) * px, dy + (dh - sh * ratio) * py, sw * ratio, sh * ratio);
+        }
+      } else {
+        context.drawImage(el, dx, dy, dw, dh);
+      }
+    } finally {
+      context.globalAlpha = 1;
+      context.globalCompositeOperation = 'source-over';
+      context.filter = 'none';
+    }
+    return true;
+  };
+  // Whether the browser lets a picture holding this source leave the document.
+  const readable = (source) => {
+    try {
+      const probe = new OffscreenCanvas(1, 1);
+      probe.getContext('2d').drawImage(source, 0, 0, 1, 1);
+      new VideoFrame(probe, { timestamp: 0 }).close();
+      return true;
+    } catch { return false; }
+  };
+  const releaseDom = (dom) => {
+    for (const layer of dom.images) if (layer) { layer.width = 0; layer.height = 0; }
+    dom.images = [];
+    dom.any = false;
+  };
+  const refreshDom = (session) => {
+    const dom = session.dom;
+    const now = performance.now();
+    if (dom.busy || dom.broken || session.stopped || now < dom.next) return;
+    if (!dom.dirty && now - dom.last < rec.domRefreshMs) return;
+    dom.busy = true;
+    dom.dirty = false;
+    const run = async () => {
+      if (session.stopped) { dom.busy = false; return; }
+      // Watching again from here: it stopped at the first change, so a page that changes every
+      // frame costs one mutation record per walk rather than one per change.
+      watchPage(session);
+      const job = { deadline: performance.now() + shot.domBudgetMs, sliceMs: rec.domSliceMs, spent: 0,
+        bytes: 0, cache: dom.cache, stop: new AbortController(), active: 0, queue: [], reading: 0 };
+      if (dom.cache.size > 24) dom.cache.clear();
+      const scene = session.scene;
+      const sceneId = session.sceneId;
+      const width = Math.max(1, Math.round((innerWidth || 1) * session.scale));
+      const height = Math.max(1, Math.round((innerHeight || 1) * session.scale));
+      let images = [];
+      try {
+        const pictures = await withBudget(drawPage(new Map(), innerWidth, innerHeight, job, layersFor(scene)), job);
+        // Painted once, here, so each frame copies pixels rather than laying out HTML again. Onto
+        // a canvas of this document's: Chrome marks an ImageBitmap made from a drawn page as
+        // foreign, and keeps a canvas it is drawn on readable (the screenshot relies on it).
+        const painted = performance.now();
+        images = pictures.map((picture) => {
+          if (!picture) return null;
+          const layer = makeCanvas();
+          layer.width = width;
+          layer.height = height;
+          layer.getContext('2d').drawImage(picture, 0, 0, width, height);
+          return layer;
+        });
+        job.spent += performance.now() - painted;
+        dom.next = performance.now() + Math.max(rec.domMinIntervalMs, job.spent * rec.domCostFactor);
+      } catch {
+        // Over the walk's time, over budget, or refused: the HTML is left out for a while,
+        // rather than a stale picture of it held over a page that has moved on. The files the
+        // walk was fetching were cut off, so none of them is kept as missing.
+        images = [];
+        dom.cache.clear();
+        dom.next = performance.now() + rec.domBackoffMs;
+      }
+      // A file refused for want of room in one walk may fit the next.
+      for (const [href, fetched] of dom.cache) fetched.then((data) => { if (!data && dom.cache.get(href) === fetched) dom.cache.delete(href); });
+      dom.busy = false;
+      if (session.stopped || dom.broken) return;
+      releaseDom(dom);
+      dom.images = images;
+      dom.sceneId = sceneId;
+      dom.any = images.some(Boolean);
+      dom.last = performance.now();
+    };
+    const idle = globalThis.requestIdleCallback;
+    if (typeof idle === 'function') idle.call(globalThis, () => void run(), { timeout: 250 });
+    else nativeSetTimeout.call(globalThis, () => void run(), 0);
+  };
+  // Any change to the page but the probe drawPage adds for itself, or a canvas or video
+  // resizing (drawn fresh each frame anyway), is a reason to draw the HTML again. The watch
+  // stops at the first one and starts again when the page is next drawn (refreshDom).
+  const markDirty = (session) => {
+    session.dom.dirty = true;
+    if (session.watch) { session.watch.disconnect(); session.watch = null; }
+  };
+  const watchPage = (session) => {
+    if (session.watch || session.stopped || typeof MutationObserver !== 'function') return;
+    try {
+      const watch = new MutationObserver((records) => {
+        for (const record of records) {
+          const target = record.target;
+          if (record.type === 'attributes' && (target instanceof HTMLCanvasElement || target instanceof HTMLVideoElement)) continue;
+          if (record.type === 'childList' && [...record.addedNodes, ...record.removedNodes].every((node) => probeHosts.has(node))) continue;
+          if (session.watch === watch) markDirty(session);
+          return;
+        }
+      });
+      watch.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+      session.watch = watch;
+    } catch { session.watch = null; }
+  };
+  const rescan = (session, now) => {
+    const scene = sceneOf(session);
+    const before = session.scene;
+    if (scene.length !== before.length || scene.some((item, at) => item.el !== before[at].el || item.tier !== before[at].tier)) {
+      markDirty(session);
+      session.sceneId++;
+    }
+    if (innerWidth !== session.viewport[0] || innerHeight !== session.viewport[1]) {
+      session.viewport = [innerWidth, innerHeight];
+      markDirty(session);
+    }
+    if (!session.reshaping && session.edges && shapeChanged(session)) {
+      if (!session.reshapeSince) session.reshapeSince = now;
+      else if (now - session.reshapeSince >= rec.reshapeMs) void reshape(session);
+    } else if (!session.reshaping) {
+      session.reshapeSince = 0;
+    }
+    session.scene = scene;
+    session.ground = groundOf();
+    session.lastScan = now;
+    if (!session.dom.dirty && typeof document.getAnimations === 'function') {
+      try {
+        if (document.getAnimations().some((animation) => animation.playState === 'running' && !(animation.effect && (animation.effect.target instanceof HTMLCanvasElement || animation.effect.target instanceof HTMLVideoElement)))) markDirty(session);
+      } catch { /* No answer; the timed refresh still comes. */ }
+    }
+    refreshDom(session);
   };
   // THE CAPTURE RUNS AFTER THE GAME, EVERY FRAME. WebGL clears a canvas once its frame is
   // shown, so a copy taken before the game draws is the cleared buffer. Callbacks run in the
@@ -1773,35 +2254,109 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // So while a session runs, every requestAnimationFrame the page makes moves the pending
   // capture to the back of the queue, and the capture is always the frame's last callback.
   // Outside a session the replacement only passes the call through.
+  // THE STAGE CHANGED SHAPE (23 Nov 2026). The picture's size is chosen from the stage's shape
+  // when the session starts, and a stage that then went fullscreen, or a window that was
+  // resized, used to be drawn inside the old shape with bars beside or above it: the first OG
+  // Snipes clip recorded on the site went from 1920x852 content to 1584x852 inside bars. So once the
+  // stage has held another shape for reshapeMs, the encoder is drained and set to the new size,
+  // and its next picture is a keyframe carrying the new configuration. An MP4 track has one
+  // size, so the page starts a new stretch there (store.ts) and no clip spans the change.
+  const reshape = async (session) => {
+    session.reshaping = true;
+    try {
+      const size = outputSize(session.edges[0], session.edges[1]);
+      if (size.width === session.size.width && size.height === session.size.height) return;
+      const config = Object.assign({}, session.config, { width: size.width, height: size.height });
+      const answer = await VideoEncoder.isConfigSupported(config).catch(() => null);
+      if (!answer || !answer.supported || session.stopped) return;
+      await session.encoder.flush();
+      if (session.stopped || session.encoder.state !== 'configured') return;
+      session.encoder.configure(config);
+      session.config = config;
+      session.size = size;
+      session.canvas = new OffscreenCanvas(size.width, size.height);
+      session.context = session.canvas.getContext('2d', { alpha: false });
+      session.lastKey = -1;
+      markDirty(session);
+    } catch { /* It keeps the shape it has. */ }
+    finally {
+      session.reshaping = false;
+      session.reshapeSince = 0;
+    }
+  };
+  const shapeChanged = (session) => {
+    const size = outputSize(session.edges[0], session.edges[1]);
+    return Math.abs((size.width / size.height) / (session.size.width / session.size.height) - 1) > 0.02;
+  };
   const captureFrame = (session, now) => {
     if (session.stopped) return;
     queueCapture((time) => captureFrame(session, time));
+    if (session.reshaping) return;
     // Paced to fpsMax on any display: a frame is due every 1000 / fpsMax ms, so a 144 Hz
     // screen records 60 a second rather than every second refresh, 48.
     if (now < session.due - 2) return;
     session.due = Math.max(session.due + 1000 / rec.fpsMax, now - 1000 / rec.fpsMax);
     const encoder = session.encoder;
     if (encoder.state !== 'configured' || encoder.encodeQueueSize > 2) return;
-    if (now - session.lastScan > 500) { session.canvases = visibleCanvases(); session.ground = groundOf(); session.lastScan = now; }
-    if (!session.canvases.length) return;
+    if (now - session.lastScan > rec.layerScanMs) rescan(session, now);
+    const dom = session.dom;
+    if (!session.scene.length && !dom.any) return;
     const { width, height } = session.size;
+    const pageWidth = innerWidth || width;
+    const pageHeight = innerHeight || height;
+    const scale = Math.min(width / pageWidth, height / pageHeight);
+    session.scale = scale;
+    const left = (width - pageWidth * scale) / 2;
+    const top = (height - pageHeight * scale) / 2;
     const context = session.context;
-    const scale = Math.min(width / (innerWidth || width), height / (innerHeight || height));
-    const left = (width - (innerWidth || width) * scale) / 2;
-    const top = (height - (innerHeight || height) * scale) / 2;
-    context.fillStyle = session.ground;
-    context.fillRect(0, 0, width, height);
+    // The HTML's layers were cut around the canvases and videos on screen when it was drawn;
+    // until it is drawn again after they change, they are drawn over it, as they stand now.
+    const aligned = dom.sceneId === session.sceneId;
+    const drawn = [];
     try {
-      for (const item of session.canvases) {
-        context.drawImage(item.canvas, left + item.rect.left * scale, top + item.rect.top * scale, item.rect.width * scale, item.rect.height * scale);
+      context.fillStyle = session.ground;
+      context.fillRect(0, 0, width, height);
+      const steps = Math.max(session.scene.length, dom.images.length - 1);
+      for (let at = 0; at <= steps; at++) {
+        const layer = aligned || at === 0 ? dom.images[at] : null;
+        if (layer) context.drawImage(layer, left, top, pageWidth * scale, pageHeight * scale);
+        const item = session.scene[at];
+        if (item && drawMedia(context, item, left, top, scale)) drawn.push(item.el);
       }
-      const timestamp = Math.max(0, Math.round((now - session.start) * 1000));
+      if (!aligned) for (let at = 1; at < dom.images.length; at++) if (dom.images[at]) context.drawImage(dom.images[at], left, top, pageWidth * scale, pageHeight * scale);
+    } catch { return; /* A canvas mid-resize: the next frame tries again. */ }
+    let frame;
+    const timestamp = Math.max(0, Math.round((now - session.start) * 1000));
+    try {
+      frame = new VideoFrame(session.canvas, { timestamp: timestamp, duration: Math.round(1e6 / rec.fpsMax) });
+    } catch (error) {
+      // A picture the browser will not let leave this document. Each source in it is tried
+      // alone and only the ones refused are left out from now on: a game's own canvas holding
+      // a sprite from a CDN without CORS is refused, while the page's layers, which Chrome
+      // keeps readable, are not. The canvas, which stays marked once marked, is replaced. Past
+      // a few refusals nobody can be blamed for, everything drawn is left out, so a frame is
+      // never rebuilt sixty times a second for nothing.
+      if (error && error.name === 'SecurityError') {
+        let found = false;
+        for (const el of drawn) if (!readable(el)) { session.skip.add(el); found = true; }
+        if (dom.images.some((layer) => layer && !readable(layer))) { dom.broken = true; releaseDom(dom); found = true; }
+        if (!found && ++session.refused > 3) {
+          for (const el of drawn) session.skip.add(el);
+          dom.broken = true;
+          releaseDom(dom);
+        }
+        session.canvas = new OffscreenCanvas(width, height);
+        session.context = session.canvas.getContext('2d', { alpha: false });
+        session.lastScan = -Infinity;
+      }
+      return;
+    }
+    try {
       const key = session.lastKey < 0 || timestamp - session.lastKey >= rec.keyframeSeconds * 1e6;
-      const frame = new VideoFrame(session.canvas, { timestamp: timestamp, duration: Math.round(1e6 / rec.fpsMax) });
       encoder.encode(frame, { keyFrame: key });
-      frame.close();
       if (key) session.lastKey = timestamp;
-    } catch { /* A canvas mid-resize or tainted: the next frame tries again. */ }
+    } catch { /* The next frame tries again. */ }
+    frame.close();
   };
   const stopRecord = async (session, reason) => {
     if (session.stopped) return;
@@ -1817,6 +2372,10 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       try { mix.encoder.close(); } catch { /* Closed. */ }
     }
     try { session.encoder.close(); } catch { /* Closed. */ }
+    if (heardPlay) heardPlay = null;
+    if (session.watch) { session.watch.disconnect(); session.watch = null; }
+    releaseDom(session.dom);
+    untapMedia(session);
     flushRecord(session);
     session.closed = true;
     if (recording === session) recording = null;
@@ -1828,7 +2387,10 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       return;
     }
     const session = { id: data.id, origin: origin, stopped: false, closed: false, pending: [], mix: null, taps: new Map(),
-      due: -Infinity, lastKey: -1, lastScan: -Infinity, canvases: [], ground: '#000' };
+      due: -Infinity, lastKey: -1, lastScan: -Infinity, scene: [], sceneId: 0, scale: 1, skip: new WeakSet(), ground: '#000', viewport: [0, 0], refused: 0,
+      reshaping: false, reshapeSince: 0,
+      dom: { images: [], any: false, dirty: true, busy: false, broken: false, next: 0, last: -Infinity, sceneId: -1, cache: new Map() },
+      watch: null, mediaTaps: new Map(), mediaContext: null };
     recording = session;
     const chosen = nativeRequestFrame ? await videoConfigFor(data.compact === true) : null;
     if (!chosen || session.stopped) {
@@ -1837,6 +2399,8 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       return;
     }
     session.size = { width: chosen.config.width, height: chosen.config.height };
+    session.config = chosen.config;
+    session.edges = chosen.edges;
     session.canvas = new OffscreenCanvas(session.size.width, session.size.height);
     session.context = session.canvas.getContext('2d', { alpha: false });
     session.encoder = new VideoEncoder({
@@ -1853,9 +2417,11 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     tellRecord(session, { op: 'started', width: session.size.width, height: session.size.height, fps: rec.fpsMax,
       codec: chosen.config.codec, hardware: chosen.hardware });
     session.flusher = setInterval(() => flushRecord(session), rec.flushMs);
+    watchPage(session);
     // A game that makes its sound only after the first press has no context yet, and one may
     // make another later; look again every second.
     session.audioWatch = setInterval(() => tapAudio(session), 1000);
+    heardPlay = (element) => tapElement(session, element);
     tapAudio(session);
     queueCapture((time) => captureFrame(session, time));
   };

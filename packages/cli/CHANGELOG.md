@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.9
+
+- When `publish` or `deploy --publish` cannot save `--banner-style` after a release goes live,
+  the command it offers to save it again names the game (`opengame details --game <id>
+  --banner-style <style>`), and so does the one that reads back an answer it could not read. A
+  bare `opengame details` picks the folder's own game, which is not always the one published.
+
 ## 0.13.8
 
 - Skills 1.8.0, which adds `opengame-brush-stroke-shader-style`: making a game look and play as

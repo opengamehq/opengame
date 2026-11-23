@@ -221,6 +221,23 @@ test("a server that cannot save a banner style says the update is live and the s
   assert.match(String(last.message), /^SUB-1456: published\. Version 2, release 77777777 is live\..* the style was not saved\. Choose it on the Details tab: http:\/\/127\.0\.0\.1:\d+\/settings\/games\/paperboat1$/);
 });
 
+/* Greptile on opengamehq/opengame#27, second review: a publish can name another game than the
+   folder's (--game), so the retry it offers names the game too. A bare `opengame details` there
+   would change the folder's game instead. */
+test("a banner style that failed to save after an update offers a retry naming the game", async () => {
+  const { run, last } = await publishUpdate(() => ({ status: 500, value: { error: "internal_error", message: "The database did not answer." } }));
+  assert.notEqual(run.code, 0, run.stdout + run.stderr);
+  assert.equal(last.next, `opengame details --game ${gameId} --banner-style classic`);
+  assert.ok(String(last.message).includes(`Run opengame details --game ${gameId} --banner-style classic to save it.`), String(last.message));
+});
+
+test("a banner style saved with an unreadable answer points at the game it saved", async () => {
+  const { run, last } = await publishUpdate(() => ({ status: 200, value: { nonsense: true } }));
+  assert.notEqual(run.code, 0, run.stdout + run.stderr);
+  assert.equal(last.code, "invalid_response");
+  assert.equal(last.next, `opengame details --game ${gameId}`);
+});
+
 test("a first publish carries the banner style in its answers and saves no details", async () => {
   let published = false;
   const api = await fakeApi((req, res) => {

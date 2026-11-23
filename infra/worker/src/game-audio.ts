@@ -21,7 +21,7 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-21-record-drain";
+export const GAME_AUDIO_VERSION = "audio-22-record-pace";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 /** The recording block the receiver reads (`limits.play.recording`), less the page's own numbers. */
@@ -1607,8 +1607,12 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   };
   // ONE TRACK FROM EVERY CONTEXT. A game may play music on one context and effects on
   // another, or close one and make the next. Each context gets its own tap, resampled to the
-  // track's rate; the first live one sets the pace, and the others' sound is added to it as
-  // it arrives, up to half a second of it, so a context that stalls cannot drag the track.
+  // track's rate; the first running one sets the pace, and the others' sound is added to it
+  // as it arrives, up to half a second of it, so a context that stalls cannot drag the track.
+  // Running, not merely open: a suspended context renders nothing, so pacing on one left
+  // every other context queueing and dropping its sound, and the clip went silent while
+  // the game played on (Greptile on opengamehq/opengame#27). The pace is chosen again for
+  // every block, so a context suspended or resumed mid-recording hands it on.
   const takeFrames = (tap, count) => {
     const left = new Float32Array(count);
     const right = new Float32Array(count);
@@ -1624,8 +1628,13 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     return [left, right];
   };
   const paceTap = (session) => {
-    for (const tap of session.taps.values()) if (tap && tap.context.state !== 'closed') return tap;
-    return null;
+    let open = null;
+    for (const tap of session.taps.values()) {
+      if (!tap) continue;
+      if (tap.context.state === 'running') return tap;
+      if (!open && tap.context.state !== 'closed') open = tap;
+    }
+    return open;
   };
   const encodeMix = (session, tap, left, right) => {
     const mix = session.mix;
@@ -1638,6 +1647,9 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       while (tap.queued > mix.config.sampleRate / 2 && tap.queue.length) tap.queued -= tap.queue.shift()[0].length;
       return;
     }
+    // What this tap queued while another set the pace is older than this block: dropped,
+    // or it would be mixed in later, out of time, should the pace move back.
+    if (tap.queued) { tap.queue = []; tap.queued = 0; }
     const data = new Float32Array(frames * 2);
     data.set(left, 0); data.set(right, frames);
     for (const other of session.taps.values()) {

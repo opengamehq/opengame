@@ -135,13 +135,21 @@ precision highp float;
 #include <clipping_planes_pars_fragment>
 in vec4 vAnchor;
 in vec2 vCut;
-uniform sampler2D tCut;   // the thing's own texture, when its shape is cut out of it
-uniform float uCut;       // the alpha below which a pixel is not there (0 when the shape is the mesh)
+uniform sampler2D tCut;      // the thing's own texture (map), when its shape is cut out of it: alpha
+uniform sampler2D tCutMask;  // its alphaMap, read from green as three.js reads one
+uniform vec2 uCutFrom;       // x: tCut is set, y: tCutMask is set
+uniform float uCut;          // the alpha below which a pixel is not there (0 when the shape is the mesh)
 out vec4 outAnchor;
 void main() {
   #include <clipping_planes_fragment>
   #include <logdepthbuf_fragment>
-  if (uCut > 0.0 && texture(tCut, vCut).a < uCut) discard;
+  if (uCut > 0.0) {
+    // As the visible material cuts it: the map's alpha times the alphaMap's green.
+    float alpha = 1.0;
+    if (uCutFrom.x > 0.5) alpha *= texture(tCut, vCut).a;
+    if (uCutFrom.y > 0.5) alpha *= texture(tCutMask, vCut).g;
+    if (alpha < uCut) discard;
+  }
   outAnchor = vAnchor;
 }
 `;
@@ -180,9 +188,30 @@ export function brushRoleOf(object, say, moved) {
  * child, a thing that moves and then stops flipping back to the world (which re-lays
  * its strokes), and a hero losing its role to the moving-thing default.
  */
+/**
+ * How the anchor pass cuts a material's shape, as the visible material does: `map` is read
+ * for its alpha and `mask`, the alphaMap, for its GREEN, which is the channel three.js reads
+ * an alphaMap from. A grey mask has opaque alpha everywhere, so reading its alpha painted
+ * over the holes in a fence or a leaf card (Greptile on opengamehq/opengame#27). `cut` is the
+ * alpha below which a pixel is not there, 0 when the shape is the mesh's own.
+ */
+export function brushCutOf(mat) {
+  const map = mat?.map ?? null, mask = mat?.alphaMap ?? null;
+  const cut = (map || mask) && (mat.alphaTest > 0 || mat.transparent) ? (mat.alphaTest > 0 ? mat.alphaTest : 0.5) : 0;
+  return cut > 0 ? { map, mask, cut } : { map: null, mask: null, cut: 0 };
+}
+
 export function selfTest() {
   const failures = [];
   let examined = 0;
+  // A grey alphaMap is read from green, never as the map's alpha.
+  const mask = { isTexture: true }, colour = { isTexture: true };
+  const fence = brushCutOf({ alphaMap: mask, alphaTest: 0.4 });
+  examined++; if (fence.map !== null || fence.mask !== mask || fence.cut !== 0.4) failures.push("an alphaMap was not cut by its green channel");
+  const leaves = brushCutOf({ map: colour, alphaMap: mask, transparent: true });
+  examined++; if (leaves.map !== colour || leaves.mask !== mask || leaves.cut !== 0.5) failures.push("a map and an alphaMap together did not both cut");
+  examined++; if (brushCutOf({ map: colour }).cut !== 0) failures.push("an opaque material was cut");
+  examined++; if (!/texture\(tCutMask, vCut\)\.g/.test(ANCHOR_FRAG) || /texture\(tCutMask, vCut\)\.a/.test(ANCHOR_FRAG)) failures.push("the anchor shader does not read the alphaMap's green");
   const thing = (extra = {}) => { const o = new THREE.Object3D(); Object.assign(o, extra); o.updateMatrixWorld(true); return o; };
   const moved = new WeakMap();
   const enemy = thing(); enemy.userData.brushRole = "hero";
@@ -262,7 +291,7 @@ export class BrushStrokeStyle {
 
     this.anchorMaterial = new THREE.ShaderMaterial({
       glslVersion: THREE.GLSL3, vertexShader: ANCHOR_VERT, fragmentShader: ANCHOR_FRAG,
-      uniforms: { uObject: { value: new THREE.Vector4(1, 1, 1, 1) }, uOffset: { value: new THREE.Vector3() }, uAirFar: { value: 120 }, tCut: { value: null }, uCut: { value: 0 } },
+      uniforms: { uObject: { value: new THREE.Vector4(1, 1, 1, 1) }, uOffset: { value: new THREE.Vector3() }, uAirFar: { value: 120 }, tCut: { value: null }, tCutMask: { value: null }, uCutFrom: { value: new THREE.Vector2() }, uCut: { value: 0 } },
       side: THREE.DoubleSide, blending: THREE.NoBlending, toneMapped: false, fog: false,
     });
 
@@ -372,15 +401,15 @@ export class BrushStrokeStyle {
       const skip = this.options.skip?.(object) ?? (said === "skip" || object.userData.brushSkip || (said === undefined && ghost));
       if (skip) { hidden.push(object); object.visible = false; return; }
       // A shape cut out of a texture (leaves, a fence, a reticle) is cut the same way here.
-      const cutMap = mat.alphaMap ?? mat.map ?? null;
-      const cut = cutMap && (mat.alphaTest > 0 || mat.transparent) ? (mat.alphaTest > 0 ? mat.alphaTest : 0.5) : 0;
+      const { map: cutMap, mask: cutMask, cut } = brushCutOf(mat);
       const kind = Math.max(this._kind(object), forceFigure ? 2 : 1);
       const before = object.onBeforeRender;
       patched.push([object, before]);
       object.onBeforeRender = function (r, s, c, g, m, group) {
         if (m === material) {
           const u = material.uniforms;
-          u.tCut.value = cut > 0 ? cutMap : null; u.uCut.value = cut;
+          u.tCut.value = cutMap; u.tCutMask.value = cutMask; u.uCut.value = cut;
+          u.uCutFrom.value.set(cutMap ? 1 : 0, cutMask ? 1 : 0);
           if (kind > 1) { object.matrixWorld.decompose(_position, _quaternion, _scale); u.uObject.value.set(_scale.x, _scale.y, _scale.z, kind); const id = object.id; u.uOffset.value.set((id * 7.31) % 23, (id * 3.77) % 19, (id * 5.13) % 17); }
           else u.uObject.value.set(1, 1, 1, 1);
           material.uniformsNeedUpdate = true;

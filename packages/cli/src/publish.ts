@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { GENRE_SLUGS, LIMITS } from "@opengame/shared";
-import { BANNER_STYLE_CHOICES, EXIT, SUBMISSION_OPEN, deploymentPath, submissionSchema, type CreatorGame, type OperationSummary, type Submission } from "@opengame/protocol";
+import { BANNER_STYLE_CHOICES, EXIT, SUBMISSION_OPEN, deploymentPath, gameDetailsApiPath, gameDetailsSchema, submissionSchema, type CreatorGame, type OperationSummary, type Submission } from "@opengame/protocol";
 import { trustedBrowserUrl } from "./browser";
 import { activeToken } from "./credentials";
 import { linkedGameId, readGame, refuseRemoved } from "./games";
@@ -231,7 +231,10 @@ export async function publishGame(api: Api, token: string, gameId: string, optio
     if (!wait) throw await pending(api, token, gameId, current);
     current = await followReview(api, token, current, output, reviewDeadline);
   }
+  // Whether the answers reached the server: only the details step sends them.
+  let answered = false;
   if (current.state === "awaiting_details") {
+    answered = true;
     let raw: Record<string, unknown>;
     try { raw = await api.json(`/api/v1/submissions/${encodeURIComponent(current.id)}/publish`, { token, body: answers }); }
     catch (error) {
@@ -247,7 +250,53 @@ export async function publishGame(api: Api, token: string, gameId: string, optio
   if ((SUBMISSION_OPEN as readonly string[]).includes(current.state) && current.state !== "publishing") throw await pending(api, token, gameId, current);
   const result = outcome(current, output, current.state === "published" ? await liveVersion(api, token, gameId, current.releaseId) : null, already);
   if (already && failed) result.message += ` Your newest deploy${failed.releaseId ? `, release ${failed.releaseId.slice(0, 8)},` : ""} did not pass its checks: run opengame status to read why.`;
+  /* An update of a live game publishes by itself once it passes review, and a release already
+     live has no details step, so the publish never carried the banner style: `deploy --publish
+     --banner-style classic` on an update reported success and saved nothing (Greptile on
+     opengamehq/opengame#27). It is saved through the Details tab's own save, as `opengame
+     details --banner-style` does, and only once the release is going live, so a release that
+     is returned or blocked leaves the style as it was. */
+  if (answers.bannerStyle && !answered) result.message += await saveBannerStyle(api, token, gameId, current.gamePublicId, answers.bannerStyle, result.message);
   return result;
+}
+
+export const BANNER_STYLE_NAMES: Record<BannerStyleChoice, string> = { directed: "Directed", classic: "Classic" };
+
+/** A server from before 22 Nov 2026 refuses a body with a banner style as not one it takes, in
+ * either of the two sentences it had. Nothing was saved: its schema refuses the whole body. */
+export function refusesBannerStyle(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 400 && error.code === "invalid_request"
+    && (error.data.message === "Send a title, a tagline or a description, as text." || error.data.message === "Send a title, a tagline, a description or the models, as text.");
+}
+
+/** What the banner does after a save that named its style: redrawn on a live game whose style
+ * changed, kept on one already in that style, and drawn that way at the first publish otherwise. */
+export function bannerSentence(style: BannerStyleChoice, saved: { live: boolean; bannerRedrawing?: boolean | undefined }): string {
+  const name = BANNER_STYLE_NAMES[style].toLowerCase();
+  return saved.bannerRedrawing ? ` Its banner is being redrawn in the ${name} style, in a few minutes, and the current one stays until then.`
+    : saved.live ? ` Its banner keeps the ${name} style.` : ` Its banner will be drawn in the ${name} style when it is published.`;
+}
+
+/** Saves `style` as the game's banner style after a publish that could not carry it, and says
+ * what the banner does now. The release is live either way, so a refusal says that first. */
+async function saveBannerStyle(api: Api, token: string, gameId: string, publicId: string, style: BannerStyleChoice, published: string): Promise<string> {
+  const page = `${api.origin}/settings/games/${encodeURIComponent(publicId)}`;
+  const next = `opengame details --banner-style ${style}`;
+  let raw: unknown;
+  try { raw = await api.json(gameDetailsApiPath(gameId), { token, method: "PATCH", body: { bannerStyle: style } }); }
+  catch (error) {
+    if (refusesBannerStyle(error) || error instanceof ApiError && error.code === "api_unavailable") {
+      throw new CliError("edit_unavailable", `${published} This OpenGame server cannot change a game's banner style from the CLI yet, so the style was not saved. Choose it on the Details tab: ${page}`, 5, { retry: "after-fix" });
+    }
+    if (error instanceof CliError) {
+      throw new CliError(error.code, `${published} The banner style was not saved: ${error.message} Run ${next} to save it.`, error.exitCode,
+        { ...(error.retry ? { retry: error.retry } : {}), next });
+    }
+    throw error;
+  }
+  const parsed = gameDetailsSchema.safeParse(raw);
+  if (!parsed.success) throw new CliError("invalid_response", `${published} The banner style was saved, but the answer could not be read. Run opengame details to see it.`, 5, { next: "opengame details" });
+  return bannerSentence(style, parsed.data);
 }
 
 /** A review still running, said with the version that stays live meanwhile and the command

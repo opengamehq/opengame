@@ -807,6 +807,9 @@ export class BrushState {
       uRush: [this.calm ? Math.min(e.rush, 0.25) : e.rush, e.rushCentre[0], e.rushCentre[1], e.rushCount],
       uHit: [0, 0, 0.5, 0.5], uPunch: [0, 0, 0, 0], uHitColour: this.hitColour,
     };
+    // Calm turned on with a hit already asked for, or part drawn: it is dropped, flash and
+    // push alike, not played out (Greptile on opengamehq/opengame#27).
+    if (this.calm) e.hit = null;
     const hit = e.hit;
     if (hit) {
       // A stage ends when its time is up AND it has been drawn once, so a slow frame
@@ -876,5 +879,15 @@ export function selfTest() {
   if (calm.hit() !== false) failures.push("calm mode drew a hit frame");
   calm.rush(1);
   if (calm.pack(1 / 60).uRush[0] > 0.25) failures.push("calm mode drew full rush lines");
+  // Calm turned on with a hit queued, and with one part drawn: neither flashes again.
+  examined += 1;
+  for (const drawnFirst of [false, true]) {
+    const late = new BrushState(); late.pack(1 / 60);
+    late.hit();
+    if (drawnFirst) late.pack(1 / 60);
+    late.calm = true;
+    const after = late.pack(1 / 60);
+    if (after.uHit[0] !== 0 || after.uPunch[0] !== 0 || late.events.hit) failures.push(`calm mode kept drawing a hit ${drawnFirst ? "already showing" : "queued before it"}`);
+  }
   return { ok: failures.length === 0, examined, failures };
 }

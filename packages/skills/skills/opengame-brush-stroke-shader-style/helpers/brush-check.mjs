@@ -72,6 +72,14 @@ function blur(src, W, H, R) {
 export function measurePair(before, after, W, H, { every = 4, gates = GATES } = {}) {
   const px = W * H, n = Math.min(before.length, after.length);
   if (n < 3) throw new Error(`brush-check: ${n} matching frames; need at least 3`);
+  if (!Number.isInteger(W) || !Number.isInteger(H) || W < 1 || H < 1) throw new Error(`brush-check: a frame size of ${W}x${H}; need whole pixels`);
+  if (!Number.isInteger(every) || every < 1) throw new Error(`brush-check: every ${every}; need a whole number of frames, 1 or more`);
+  for (let k = 0; k < n; k++) {
+    for (const [side, frames] of [["game", before], ["painted", after]]) {
+      const length = frames[k]?.length;
+      if (length !== px * 3) throw new Error(`brush-check: ${side} frame ${k} has ${length ?? "no"} bytes; a ${W}x${H} RGB frame has ${px * 3}`);
+    }
+  }
   const R = Math.max(2, Math.round(H / 22)); // about a broad stroke's width at the default size
   let paint = 0, grade = 0, strokes = 0, sampled = 0;
   const motion = [];
@@ -114,6 +122,11 @@ export function measurePair(before, after, W, H, { every = 4, gates = GATES } = 
     gameQuietChange: round(sum("db") / quiet.length),
   };
   const fails = [];
+  /* NaN passes every comparison below as false, so a capture that could not be measured would
+     pass every gate (Greptile on opengamehq/opengame#27). Each measure must be a number. */
+  for (const [name, value] of Object.entries(r)) {
+    if (!Number.isFinite(value)) fails.push(`${name} is ${value}, not a number: the captures could not be measured, so nothing passed`);
+  }
   if (r.paint < gates.paintMin) fails.push(`paint ${r.paint} < ${gates.paintMin}: too subtle, it will not read as painted`);
   if (r.strokes < gates.strokesMin) fails.push(`strokes ${r.strokes} < ${gates.strokesMin}: little brushwork at stroke scale, it reads as a colour grade`);
   if (r.flicker > gates.flickerMax) fails.push(`flicker ${r.flicker} > ${gates.flickerMax}: strokes boil, it will not be playable`);

@@ -1,5 +1,9 @@
 # opengame-all-in-one changelog
 
+## 1.0.18
+
+Carries `opengame-brush-stroke-shader-style` 1.0.1, whose capture check fails a measure that is not a number, whose calm mode drops a hit frame already asked for, and whose three.js pass cuts an `alphaMap` by its green channel. (23 Nov 2026)
+
 ## 1.0.17
 
 Carries the new `opengame-brush-stroke-shader-style` 1.0.0, for a game that looks and plays as if painted by hand, and `opengame-router` 1.0.12, which routes to it. The table of skills by task points at it too. (22 Nov 2026)

@@ -2,7 +2,7 @@
 name: opengame-brush-stroke-shader-style
 description: Make a game look and play as if it were painted by hand, in any engine. Covers a colour scheme per level, roles that keep the player, enemies and pickups readable, brush strokes that sit on surfaces and stay there, stepped values with coloured shade, an ink line, halftone, bare paper, a lettered HUD, and drawn feedback such as rush lines and hit frames. Use when the person asks for a painterly, brush stroke, hand painted, gouache, comic or ink look, or wants an existing game restyled.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Brush stroke style

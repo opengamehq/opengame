@@ -9,7 +9,7 @@
     "./jam-time": "./src/jam-time.ts"
   },
   "scripts": {
-    "typecheck": "node ../../scripts/typecheck-native.mjs",
+    "typecheck": "tsc --noEmit -p .",
     "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {

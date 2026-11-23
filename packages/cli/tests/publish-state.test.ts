@@ -182,6 +182,61 @@ test("a newest deploy that failed is said beside the version that is live", asyn
   assert.match((last.data as { message: string }).message, /already live as version 1.*Your newest deploy, release 77777777, did not pass its checks: run opengame status to read why\.$/);
 });
 
+/* Greptile on opengamehq/opengame#27: an update of a live game publishes by itself once it
+   passes review, so it never reaches the details step that carries the answers, and
+   `deploy --publish --banner-style classic` on one reported success and saved nothing. The
+   style is saved through the details endpoint once the release is live. Named with
+   --release, as deploy --publish names its own release. */
+async function publishUpdate(details: (body: string) => { status: number; value: unknown }, flags: string[] = ["--banner-style", "classic"]) {
+  const api = await fakeApi((req, res, body) => {
+    if (req.url === `/api/v1/games/${gameId}`) return reply(res, 200, { game: game(operation("ready", update), submission("published", update, "SUB-1456"), { ...live, releaseId: update, version: 2 }) });
+    if (req.method === "PATCH" && req.url === `/api/v1/games/${gameId}/details`) { const answer = details(body); return reply(res, answer.status, answer.value); }
+  });
+  const root = await linked(api.origin);
+  try {
+    const run = await spawnCli(["publish", root.dir, "--release", update, ...flags, "--json"], { env: cleanEnv({ OPENGAME_API_URL: api.origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" }), deadlineMs: 60_000 });
+    return { run, last: events(run.stdout).at(-1)! as Record<string, unknown>, seen: api.seen.filter(seen => seen.method !== "GET") };
+  } finally { await api.close(); await root.remove(); }
+}
+const savedDetails = { gameId, publicId: "paperboat1", live: true, revision: 3, title: "Paper Boat Rapids", tagline: null, description: "Race the rapids.",
+  bannerStyle: "classic", bannerRedrawing: true, url: "http://127.0.0.1/g/paperboat1" };
+
+test("a banner style for an update that went live by itself is saved through the details endpoint", async () => {
+  const { run, last, seen } = await publishUpdate(() => ({ status: 200, value: savedDetails }));
+  assert.equal(run.code, 0, run.stdout + run.stderr);
+  assert.deepEqual(seen.map(({ method, url, body }) => [method, url, JSON.parse(body)]), [["PATCH", `/api/v1/games/${gameId}/details`, { bannerStyle: "classic" }]]);
+  assert.match((last.data as { message: string }).message, /^SUB-1456: published\. Version 2, release 77777777 is live\..* Its banner is being redrawn in the classic style, in a few minutes/);
+});
+
+test("without --banner-style, an update that went live by itself saves no details", async () => {
+  const { run, seen } = await publishUpdate(() => ({ status: 500, value: {} }), []);
+  assert.equal(run.code, 0, run.stdout + run.stderr);
+  assert.deepEqual(seen, []);
+});
+
+test("a server that cannot save a banner style says the update is live and the style was not saved", async () => {
+  const { run, last } = await publishUpdate(() => ({ status: 400, value: { error: "invalid_request", message: "Send a title, a tagline, a description or the models, as text." } }));
+  assert.equal(run.code, 5, run.stdout + run.stderr);
+  assert.equal(last.code, "edit_unavailable");
+  assert.match(String(last.message), /^SUB-1456: published\. Version 2, release 77777777 is live\..* the style was not saved\. Choose it on the Details tab: http:\/\/127\.0\.0\.1:\d+\/settings\/games\/paperboat1$/);
+});
+
+test("a first publish carries the banner style in its answers and saves no details", async () => {
+  let published = false;
+  const api = await fakeApi((req, res) => {
+    if (req.url === `/api/v1/games/${gameId}`) return reply(res, 200, { game: published ? game(operation("ready", firstRelease), submission("published")) : game(operation("ready", firstRelease), submission("awaiting_details"), null) });
+    if (req.method === "POST" && req.url === "/api/v1/submissions/55555555-5555-4555-8555-555555555555/publish") { published = true; return reply(res, 200, { submission: submission("published") }); }
+  });
+  const root = await linked(api.origin);
+  try {
+    const run = await spawnCli(["publish", root.dir, "--banner-style", "classic", "--json"], { env: cleanEnv({ OPENGAME_API_URL: api.origin, OPENGAME_TOKEN: token, NO_PROXY: "127.0.0.1" }) });
+    assert.equal(run.code, 0, run.stdout + run.stderr);
+    const sent = api.seen.filter(seen => seen.method !== "GET");
+    assert.deepEqual(sent.map(seen => seen.method), ["POST"]);
+    assert.equal(JSON.parse(sent[0]!.body).bannerStyle, "classic");
+  } finally { await api.close(); await root.remove(); }
+});
+
 test("jams and a jam's form point at publish, not at submit", async () => {
   const jam = { slug: "fixture-jam", name: "Fixture jam", state: "open", acceptingEntries: true, startsAt: null, endsAt: null,
     rulesUrl: "https://opengame.io/rules", tracks: [{ key: "rpg", name: "RPG", kind: "theme" }] };

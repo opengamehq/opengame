@@ -4,7 +4,7 @@ import { linkedGameId, readGame } from "./games";
 import { Api, ApiError } from "./http";
 import { CliError, Output, agentMode, terminalText } from "./output";
 import { confirm } from "./prompt";
-import { bannerStyleFlag, type BannerStyleChoice } from "./publish";
+import { BANNER_STYLE_NAMES as STYLE_NAMES, bannerSentence, bannerStyleFlag, refusesBannerStyle, type BannerStyleChoice } from "./publish";
 
 type Flags = Record<string, string | boolean>;
 
@@ -37,8 +37,6 @@ async function declaredModels(api: Api, token: string, gameId: string) {
     throw error;
   }
 }
-
-const STYLE_NAMES: Record<BannerStyleChoice, string> = { directed: "Directed", classic: "Classic" };
 
 /** "Gemini and Claude Code", or "(none)". */
 const madeWith = (models: readonly { name: string }[]) =>
@@ -116,8 +114,7 @@ export async function detailsCommand(root: string, flags: Flags, output: Output)
       }
       /* And one from before 22 Nov 2026 refuses a banner style the same way, in either of the
          two sentences it had. Nothing was saved: its schema refuses the whole body. */
-      if (body.bannerStyle && error instanceof ApiError && error.status === 400 && error.code === "invalid_request"
-        && (error.data.message === "Send a title, a tagline or a description, as text." || error.data.message === "Send a title, a tagline, a description or the models, as text.")) {
+      if (body.bannerStyle && refusesBannerStyle(error)) {
         throw new CliError("edit_unavailable", `This OpenGame server cannot change a game's banner style from the CLI yet, so nothing was saved. Choose it on the Details tab: ${page}`, 5, { retry: "after-fix" });
       }
       throw olderServer(error, body.models || body.bannerStyle ? "change a game's details" : "change a game's words", page);
@@ -129,11 +126,8 @@ export async function detailsCommand(root: string, flags: Flags, output: Output)
        that comes back without them changed only the words. */
     if (body.models && !done.models) throw new CliError("edit_unavailable", `This OpenGame server cannot change a game's models from the CLI yet. Change them on the Details tab: ${page}`, 5, { retry: "after-fix" });
     const said = body.models ? (done.models!.length ? ` Its page lists ${done.models!.map(terminalText).join(", ")} under Made with.` : " Its page lists no models now.") : "";
-    const style = typeof body.bannerStyle === "string" ? STYLE_NAMES[body.bannerStyle as BannerStyleChoice].toLowerCase() : null;
-    /* What the banner does now: redrawn on a live game whose style changed, kept on one already in
-       that style, and drawn that way at the first publish otherwise. */
-    const banner = !style ? "" : done.bannerRedrawing ? ` Its banner is being redrawn in the ${style} style, in a few minutes, and the current one stays until then.`
-      : done.live ? ` Its banner keeps the ${style} style.` : ` Its banner will be drawn in the ${style} style when it is published.`;
+    const style = typeof body.bannerStyle === "string" ? body.bannerStyle as BannerStyleChoice : null;
+    const banner = style ? bannerSentence(style, done) : "";
     const onlyStyle = Object.keys(body).length === 1 && style !== null;
     const saved = onlyStyle ? "Saved." : done.live ? `Saved. Players see the ${body.models ? "change" : "new words"} now.` : `Saved. The game's page will use ${body.models ? "these details" : "these words"}.`;
     output.emit({ type: "result", command: "details", data: { ...done, message: `${saved}${said}${banner}\n${done.url}` } });

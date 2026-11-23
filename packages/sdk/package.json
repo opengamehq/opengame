@@ -67,7 +67,7 @@
   },
   "scripts": {
     "build": "node build.mjs && tsc --emitDeclarationOnly",
-    "typecheck": "node ../../scripts/typecheck-native.mjs",
+    "typecheck": "tsc --noEmit -p .",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "npm run build && ../../scripts/slot.sh node --test --test-concurrency=1 tests/browser/*.e2e.mjs",
     "test:bridge:browser": "npm run build && ../../scripts/slot.sh node --test --test-concurrency=1 tests/browser/bridge.e2e.mjs",

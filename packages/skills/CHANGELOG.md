@@ -2,14 +2,14 @@
 
 ## 1.8.0
 
-- `opengame-brush-stroke-shader-style` 1.0.0 is new: making a game look and play as if it were
+- `opengame-brush-stroke-shader-style` 1.0.1 is new: making a game look and play as if it were
   painted by hand, built into the game and not laid over its frame. A colour scheme per level,
   roles that keep the player, enemies and pickups readable, strokes that stay on surfaces,
   stepped values with coloured shade, an ink line, halftone, bare paper, a lettered HUD and
   drawn feedback. The stroke pass ships as helpers for three.js; the plan for other engines is
   a porting plan, tested in one engine of its own. `helpers/brush-check.mjs` measures any
   engine's before and after captures: painted enough to be seen, steady enough to play.
-- `opengame-router` 1.0.12 routes a painted look to it, and `opengame-all-in-one` 1.0.17
+- `opengame-router` 1.0.12 routes a painted look to it, and `opengame-all-in-one` 1.0.18
   carries both.
 
 ## 1.7.6

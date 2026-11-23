@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "c8f9c5b7b767d603b89ce545b68a6fdac874ca1e"
+    "commit": "a231d468cb2626fac054deaa17a0b3198c8c0434"
   },
-  "digest": "9299181941c703d6b442e02769ff5e869ff19356f555ed5e61cf1ae325130edd",
+  "digest": "3a9c1632e12049c4d52a9e5703b2995ae2e64dd2a12333881198cdb671d909d4",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -195,8 +195,8 @@
     },
     {
       "path": "infra/worker/src/game-audio.ts",
-      "bytes": 120613,
-      "sha256": "2b842fbcd4a619b401000e73ea1ded8042a1974b35ee9c22b1f9803764ba99b8",
+      "bytes": 121306,
+      "sha256": "10ecf784e410175239b48bc63e2e0ff169da20df87b9541567f0c6d3b1ed8106",
       "executable": false
     },
     {
@@ -219,8 +219,8 @@
     },
     {
       "path": "packages/cli/CHANGELOG.md",
-      "bytes": 26592,
-      "sha256": "3ee034cba6c8b3519e6bea944748dbd2cdbc3258b7aed69a68d35e30031c90cd",
+      "bytes": 27172,
+      "sha256": "e13a5f474ebf6c292256d5ab03a50c0eef76d06486fe469848df2de031885bfb",
       "executable": false
     },
     {
@@ -237,8 +237,8 @@
     },
     {
       "path": "packages/cli/package.json",
-      "bytes": 1881,
-      "sha256": "c09566cbc49ef00ee822eebfa80ba2b04dad14e170cac0683134126d6bc21f2b",
+      "bytes": 1859,
+      "sha256": "e7bb61c84eb15d77bd63f2b4c31fd1c6d2dcf45b51461d7b78679a90d6f50376",
       "executable": false
     },
     {
@@ -351,8 +351,8 @@
     },
     {
       "path": "packages/cli/src/edits.ts",
-      "bytes": 12836,
-      "sha256": "362c067a15b423a44fd81a3b4802bb5399225788803845389274e6794cfdef78",
+      "bytes": 12125,
+      "sha256": "109f35fdbd4ede094ee31f216338e4a0ea2bad5ca6870333f6a5e4fc542fdacd",
       "executable": false
     },
     {
@@ -495,8 +495,8 @@
     },
     {
       "path": "packages/cli/src/publish.ts",
-      "bytes": 23443,
-      "sha256": "ab25478f11859543563ef511527068e85905f4deb249b5f774bd902222e56d0b",
+      "bytes": 27150,
+      "sha256": "a2bd321c84e916a71d54ab1861b8e983ff2c7a849eee7dc2f8f01b6fd59f14e6",
       "executable": false
     },
     {
@@ -1713,8 +1713,8 @@
     },
     {
       "path": "packages/cli/tests/publish-state.test.ts",
-      "bytes": 13834,
-      "sha256": "8ca98c937c8db2df0c9989007cf8147f34b1fe8588f106439244d325a513cbf4",
+      "bytes": 18202,
+      "sha256": "3141282ba62bae47206107c72ae6ed2f63a38fe04db083fed3fa5f474e87f364",
       "executable": false
     },
     {
@@ -1899,8 +1899,8 @@
     },
     {
       "path": "packages/preflight/package.json",
-      "bytes": 1001,
-      "sha256": "c9ba06c9a26a081a5ff2b6d63054d2672b0a96835b234b2debe490da7a228296",
+      "bytes": 979,
+      "sha256": "2ddc8c1fff216a2a3bd02c2f82f21358572004252db29b331810f60ed57adf65",
       "executable": false
     },
     {
@@ -2265,8 +2265,8 @@
     },
     {
       "path": "packages/protocol/package.json",
-      "bytes": 812,
-      "sha256": "ed0658dbf8c52ad190a576ace5e1600c71b11ab1e11733d378e1c65be974f37e",
+      "bytes": 790,
+      "sha256": "2548bdce75e8e78f5f7f8123d635b2dbd657d8f2fd12614840000e446b1bce07",
       "executable": false
     },
     {
@@ -2565,8 +2565,8 @@
     },
     {
       "path": "packages/sdk/package.json",
-      "bytes": 2317,
-      "sha256": "db024820a81818ad2047555ad3d613e183d652f11a2910d3a1a774da5f0ab704",
+      "bytes": 2295,
+      "sha256": "c40283977713ba897cd285cbad9fc49a15114555c9d0a04a46fe0582bf38831a",
       "executable": false
     },
     {
@@ -3238,7 +3238,7 @@
     {
       "path": "packages/skills/CHANGELOG.md",
       "bytes": 8306,
-      "sha256": "ee6145480179da0666317b14de2b1c4a2d04b7a5ed2793aed78462e5c7552ecc",
+      "sha256": "f6fc34bdb2677b9ec2bf6696c20fd438a8ecfbeef75cf49e4314dacf5c8eff2d",
       "executable": false
     },
     {
@@ -3280,7 +3280,7 @@
     {
       "path": "packages/skills/skills.lock.json",
       "bytes": 9049,
-      "sha256": "8fed0b5b695cc894376f9f915d38b63c4dc632220bbceb0b78cdf55f04c460d9",
+      "sha256": "085145c5ab2c32b6f166b9a52472f7b971216f5994061e4996950def3d301a8e",
       "executable": false
     },
     {
@@ -3297,14 +3297,14 @@
     },
     {
       "path": "packages/skills/skills/opengame-all-in-one/CHANGELOG.md",
-      "bytes": 2789,
-      "sha256": "2d193f2887910c2e63eea365d9da2df0554b96e78132a3468557b89981456e50",
+      "bytes": 3043,
+      "sha256": "abc38910c72ebbc51c75b6903cdf63f2f40e1592d553d21d43e123e0209575b6",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-all-in-one/SKILL.md",
       "bytes": 13338,
-      "sha256": "8e16d70c59d3485cdcb76e0e5ef972ae2d34423fd503d3e0c99f77e551a802de",
+      "sha256": "a74005cac21a2f3659b64ecafb9c4db3dca4a0b9fe45cfe7acc45a62ea874ab2",
       "executable": false
     },
     {
@@ -3369,32 +3369,32 @@
     },
     {
       "path": "packages/skills/skills/opengame-brush-stroke-shader-style/CHANGELOG.md",
-      "bytes": 452,
-      "sha256": "3d7994c5acbf837889c36e748a374efc75437e15ce581ff87208c70ab5f485f4",
+      "bytes": 1064,
+      "sha256": "965e7506177dd8fb2e2cf4fef320aadce7854a16d5b52aa9405444dc4713fe60",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-brush-stroke-shader-style/SKILL.md",
       "bytes": 24678,
-      "sha256": "a5a16ebc541b9878983dc857e4bd28c6c02ad5719ce20a044f0813cd1ae14a2b",
+      "sha256": "f22c9ed8b93a2855cd24749c67bafb3dbcfdd126364e0f75e2e49f02c3e0c19e",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-brush-stroke-shader-style/helpers/brush-check.mjs",
-      "bytes": 10516,
-      "sha256": "e94c8852b7a26151dea6400469a143c2b351439fd79be53449443af772c54787",
+      "bytes": 11482,
+      "sha256": "b7a0b0358883e29e76592784e9c724f34f73d515b51a4d114ccd5b357cdf9e7b",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-brush-stroke-shader-style/helpers/brush-check.test.mjs",
-      "bytes": 1146,
-      "sha256": "d55a753fc4cdcaf85af0a1156f5b6cc6c51e7df58c2b303fc7f186518758e7ef",
+      "bytes": 2482,
+      "sha256": "0d6e28cb6efcb68e65c008b28951485b3bf84a835725477bb0c745afb9ff2220",
       "executable": false
     },
     {
       "path": "packages/skills/skills/opengame-brush-stroke-shader-style/helpers/brush-core.js",
-      "bytes": 48786,
-      "sha256": "64f322634ccc02dda20f4018fe643aaead410bb2380fea1423d96210c71e09c0",
+      "bytes": 49478,
+      "sha256": "3e69c24a606e252fa8d39b14a970718421785d67d73ed0d752ba1884ff6df1cc",
       "executable": false
     },
     {
@@ -3411,8 +3411,8 @@
     },
     {
       "path": "packages/skills/skills/opengame-brush-stroke-shader-style/helpers/brush-three.js",
-      "bytes": 25910,
-      "sha256": "a89876e6b05c2a5dfd52f92658366db1d4f69b1f43cbf505de2cf7cdce04899a",
+      "bytes": 27967,
+      "sha256": "5f1571a22a203a181705585be9b18f09ed49f457c0c4110a3f1f22647ecc7f90",
       "executable": false
     },
     {
@@ -5061,14 +5061,14 @@
     },
     {
       "path": "skills/opengame-all-in-one/CHANGELOG.md",
-      "bytes": 2789,
-      "sha256": "2d193f2887910c2e63eea365d9da2df0554b96e78132a3468557b89981456e50",
+      "bytes": 3043,
+      "sha256": "abc38910c72ebbc51c75b6903cdf63f2f40e1592d553d21d43e123e0209575b6",
       "executable": false
     },
     {
       "path": "skills/opengame-all-in-one/SKILL.md",
       "bytes": 13338,
-      "sha256": "8e16d70c59d3485cdcb76e0e5ef972ae2d34423fd503d3e0c99f77e551a802de",
+      "sha256": "a74005cac21a2f3659b64ecafb9c4db3dca4a0b9fe45cfe7acc45a62ea874ab2",
       "executable": false
     },
     {
@@ -5122,19 +5122,19 @@
     {
       "path": "skills/opengame-all-in-one/references/opengame-brush-stroke-shader-style/README.md",
       "bytes": 24661,
-      "sha256": "64489071002b98b13fc9e2929890787e1ae2daf627bc1ce55dfa9b5d6ae32d85",
+      "sha256": "11a9b13bb87c3d2cb8b7313060af0b91d018392dff6d072bc4c2f3604ea0dbc3",
       "executable": false
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-brush-stroke-shader-style/helpers/brush-check.mjs",
-      "bytes": 10516,
-      "sha256": "e94c8852b7a26151dea6400469a143c2b351439fd79be53449443af772c54787",
+      "bytes": 11482,
+      "sha256": "b7a0b0358883e29e76592784e9c724f34f73d515b51a4d114ccd5b357cdf9e7b",
       "executable": false
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-brush-stroke-shader-style/helpers/brush-core.js",
-      "bytes": 48786,
-      "sha256": "64f322634ccc02dda20f4018fe643aaead410bb2380fea1423d96210c71e09c0",
+      "bytes": 49478,
+      "sha256": "3e69c24a606e252fa8d39b14a970718421785d67d73ed0d752ba1884ff6df1cc",
       "executable": false
     },
     {
@@ -5151,8 +5151,8 @@
     },
     {
       "path": "skills/opengame-all-in-one/references/opengame-brush-stroke-shader-style/helpers/brush-three.js",
-      "bytes": 25910,
-      "sha256": "a89876e6b05c2a5dfd52f92658366db1d4f69b1f43cbf505de2cf7cdce04899a",
+      "bytes": 27967,
+      "sha256": "5f1571a22a203a181705585be9b18f09ed49f457c0c4110a3f1f22647ecc7f90",
       "executable": false
     },
     {
@@ -6237,26 +6237,26 @@
     },
     {
       "path": "skills/opengame-brush-stroke-shader-style/CHANGELOG.md",
-      "bytes": 452,
-      "sha256": "3d7994c5acbf837889c36e748a374efc75437e15ce581ff87208c70ab5f485f4",
+      "bytes": 1064,
+      "sha256": "965e7506177dd8fb2e2cf4fef320aadce7854a16d5b52aa9405444dc4713fe60",
       "executable": false
     },
     {
       "path": "skills/opengame-brush-stroke-shader-style/SKILL.md",
       "bytes": 24678,
-      "sha256": "a5a16ebc541b9878983dc857e4bd28c6c02ad5719ce20a044f0813cd1ae14a2b",
+      "sha256": "f22c9ed8b93a2855cd24749c67bafb3dbcfdd126364e0f75e2e49f02c3e0c19e",
       "executable": false
     },
     {
       "path": "skills/opengame-brush-stroke-shader-style/helpers/brush-check.mjs",
-      "bytes": 10516,
-      "sha256": "e94c8852b7a26151dea6400469a143c2b351439fd79be53449443af772c54787",
+      "bytes": 11482,
+      "sha256": "b7a0b0358883e29e76592784e9c724f34f73d515b51a4d114ccd5b357cdf9e7b",
       "executable": false
     },
     {
       "path": "skills/opengame-brush-stroke-shader-style/helpers/brush-core.js",
-      "bytes": 48786,
-      "sha256": "64f322634ccc02dda20f4018fe643aaead410bb2380fea1423d96210c71e09c0",
+      "bytes": 49478,
+      "sha256": "3e69c24a606e252fa8d39b14a970718421785d67d73ed0d752ba1884ff6df1cc",
       "executable": false
     },
     {
@@ -6273,8 +6273,8 @@
     },
     {
       "path": "skills/opengame-brush-stroke-shader-style/helpers/brush-three.js",
-      "bytes": 25910,
-      "sha256": "a89876e6b05c2a5dfd52f92658366db1d4f69b1f43cbf505de2cf7cdce04899a",
+      "bytes": 27967,
+      "sha256": "5f1571a22a203a181705585be9b18f09ed49f457c0c4110a3f1f22647ecc7f90",
       "executable": false
     },
     {

@@ -986,7 +986,7 @@
       "bitsPerSecond": 12000000,
       "compactBitsPerSecond": 6000000,
       "audioBitsPerSecond": 160000,
-      "keyframeSeconds": 1,
+      "keyframeSeconds": 2,
       "pieceSeconds": 10,
       "replaySeconds": [
         15,
@@ -1002,7 +1002,35 @@
       "startTimeoutMs": 4000,
       "drainTimeoutMs": 3000,
       "bytesPerSecondMax": 5000000,
-      "packetsPerSecondMax": 600
+      "packetsPerSecondMax": 600,
+      "layerScanMs": 200,
+      "domMinIntervalMs": 100,
+      "domCostFactor": 20,
+      "domWalkMs": 40,
+      "domSliceMs": 4,
+      "domBackoffMs": 10000,
+      "domRefreshMs": 2000,
+      "reshapeMs": 800,
+      "hevcEdge": 2560,
+      "hevcShortEdge": 1440,
+      "hevcScreenPx": 2400,
+      "hevcBitsPerSecond": 12000000,
+      "hevcCompactBitsPerSecond": 7000000,
+      "netLiveMs": 2000,
+      "cloud": {
+        "keepDays": 7,
+        "perPersonBytesMax": 2147483648,
+        "clipBytesMax": 1610612736,
+        "partBytes": 8388608,
+        "partsPerRequestMax": 8,
+        "pacedBitsPerSecond": 4000000,
+        "pacedShare": 0.5,
+        "partsAtOnce": 3,
+        "presignTtlSeconds": 900,
+        "listMax": 200,
+        "titleCharsMax": 120,
+        "uploadStaleHours": 24
+      }
     },
     "frameEventStringCharsMax": 120,
     "frameEventDigitRunMin": 9,
@@ -1113,6 +1141,10 @@
     "jamWaitlistEmail": {
       "min": 3,
       "max": 320
+    },
+    "gameRecordingTitle": {
+      "min": 1,
+      "max": 120
     },
     "gameTitle": {
       "min": 1,

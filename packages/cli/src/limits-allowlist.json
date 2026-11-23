@@ -199,6 +199,8 @@
     "text.gameLanguage.max",
     "text.gameLanguage.min",
     "text.gameModelNote.max",
+    "text.gameRecordingTitle.max",
+    "text.gameRecordingTitle.min",
     "text.gameTagline.max",
     "text.gameTitle.max",
     "text.gameTitle.min",

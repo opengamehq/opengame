@@ -281,7 +281,10 @@ export function bannerSentence(style: BannerStyleChoice, saved: { live: boolean;
  * what the banner does now. The release is live either way, so a refusal says that first. */
 async function saveBannerStyle(api: Api, token: string, gameId: string, publicId: string, style: BannerStyleChoice, published: string): Promise<string> {
   const page = `${api.origin}/settings/games/${encodeURIComponent(publicId)}`;
-  const next = `opengame details --banner-style ${style}`;
+  // Name the game: a publish can target one other than the folder's own (--game), and a bare
+  // `opengame details` would pick the folder's game instead.
+  const next = `opengame details --game ${gameId} --banner-style ${style}`;
+  const readBack = `opengame details --game ${gameId}`;
   let raw: unknown;
   try { raw = await api.json(gameDetailsApiPath(gameId), { token, method: "PATCH", body: { bannerStyle: style } }); }
   catch (error) {
@@ -295,7 +298,7 @@ async function saveBannerStyle(api: Api, token: string, gameId: string, publicId
     throw error;
   }
   const parsed = gameDetailsSchema.safeParse(raw);
-  if (!parsed.success) throw new CliError("invalid_response", `${published} The banner style was saved, but the answer could not be read. Run opengame details to see it.`, 5, { next: "opengame details" });
+  if (!parsed.success) throw new CliError("invalid_response", `${published} The banner style was saved, but the answer could not be read. Run ${readBack} to see it.`, 5, { next: readBack });
   return bannerSentence(style, parsed.data);
 }
 

@@ -21,7 +21,7 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-25-record-hevc";
+export const GAME_AUDIO_VERSION = "audio-26-record-levels";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 /** The recording block the receiver reads (`limits.play.recording`), less the page's own numbers. */
@@ -815,9 +815,18 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     descriptor.set.call(element, silent() || desired.get(element));
     applyVolume(element);
   };
+  // A recording's copy of an element is taken before the element's own volume and mute
+  // (SOUND FROM <audio> AND <video>, below), so the game's level for it is set again on the
+  // recording's side. Told here the moment the game or the person changes it, so a fade or a
+  // mute lands in the clip when the player heard it, not up to a second later at the
+  // recorder's next look (Greptile on opengamehq/opengame#29, #2289).
+  let heardLevel = null;
+  const levelChanged = (element) => {
+    if (heardLevel) { try { heardLevel(element); } catch { /* The recording's loss, never the game's. */ } }
+  };
   Object.defineProperty(HTMLMediaElement.prototype, 'muted', {
     ...descriptor,
-    set: passFor(function(value) { track(this); desired.set(this, !!value); descriptor.set.call(this, silent() || !!value); }, descriptor?.set)
+    set: passFor(function(value) { track(this); desired.set(this, !!value); descriptor.set.call(this, silent() || !!value); levelChanged(this); }, descriptor?.set)
   });
   if (volumeDescriptor?.get && volumeDescriptor.set) {
     Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
@@ -828,6 +837,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
         volumeDescriptor.set.call(check, value);
         ownVolume.set(this, volumeDescriptor.get.call(check));
         track(this);
+        levelChanged(this);
       }, volumeDescriptor.set)
     });
     // A change nobody here made is the person's, through the element's own controls, and
@@ -842,6 +852,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       written.set(element, now);
       const scale = routed.has(element) ? 1 : level;
       if (scale > 0) ownVolume.set(element, Math.min(1, now / scale));
+      levelChanged(element);
     }, true);
   }
   // Both ways a game routes an element into Web Audio. The element goes back to its own
@@ -1892,6 +1903,10 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // receiver scales the element by the player's level on top, and the copy is taken before
   // that): a muted cutscene stays silent and music at 0.2 stays at 0.2.
   const ownLevel = (element) => desired.get(element) ? 0 : ownVolume.has(element) ? ownVolume.get(element) : 1;
+  const levelTap = (session, element) => {
+    const entry = session.mediaTaps.get(element);
+    if (entry) entry.level.gain.value = ownLevel(element);
+  };
   const tapElement = (session, element) => {
     if (session.mix === false || session.stopped || routed.has(element) || session.mediaTaps.has(element)) return;
     if (typeof element.captureStream !== 'function' || typeof AudioContext !== 'function') return;
@@ -1945,7 +1960,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       const element = reference.deref();
       if (element && !element.paused) tapElement(session, element);
     }
-    for (const [element, entry] of session.mediaTaps) entry.level.gain.value = ownLevel(element);
+    for (const element of session.mediaTaps.keys()) levelTap(session, element);
     const context = session.mediaContext;
     if (context && context.state === 'suspended') context.resume().catch(() => {});
   };
@@ -2373,6 +2388,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     }
     try { session.encoder.close(); } catch { /* Closed. */ }
     if (heardPlay) heardPlay = null;
+    if (heardLevel) heardLevel = null;
     if (session.watch) { session.watch.disconnect(); session.watch = null; }
     releaseDom(session.dom);
     untapMedia(session);
@@ -2422,6 +2438,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     // make another later; look again every second.
     session.audioWatch = setInterval(() => tapAudio(session), 1000);
     heardPlay = (element) => tapElement(session, element);
+    heardLevel = (element) => levelTap(session, element);
     tapAudio(session);
     queueCapture((time) => captureFrame(session, time));
   };

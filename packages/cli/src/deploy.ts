@@ -20,7 +20,7 @@ import { collectFiles, loadManifest, outputFolder, replaceFile } from "./files";
 import { archiveDigest, createArchive, readArchiveRange, type PackedArchive } from "./archive";
 import { lockfileInstall, missingDependencies, readBuildPackage, siteFramework, type SiteFramework } from "./build-output";
 import { ensureProjectIgnored, ensureDeployManifest, kindPhrase, provisionalFields } from "./init";
-import { readProject, savedSubmit, updateProject, validKey, withProject, type Project } from "./project";
+import { readProject, resumesSavedDeploy, savedSubmit, updateProject, validKey, withProject, type Project } from "./project";
 import { CliError, Output, terminalText } from "./output";
 import { CLI_VERSION, olderThan } from "./version";
 import type { PackagingReceipt } from "./packaging-receipt";
@@ -731,16 +731,6 @@ function resumableDrop(error: unknown): error is CliError {
     ["network", "upload_interrupted", "temporarily_unavailable"].includes(error.code);
 }
 class DeadUpload extends Error { constructor(readonly cause: ApiError) { super(cause.message); } }
-
-/**
- * Whether `opengame deploy` resumes the deploy saved in this folder rather than starting a
- * new one: the same `--idempotency-key`, or no key and a deploy whose bytes have not
- * reached the server. One answer for the deploy below and for the launch clock's check
- * after the close (launch.ts), which lets exactly these through.
- */
-export function resumesSavedDeploy(saved: Project["deploy"] | undefined, key: string | undefined): boolean {
-  return Boolean(saved && (key === saved.key || (!key && !saved.terminal && !saved.uploaded)));
-}
 
 export async function deployCommand(command: "deploy" | "status", root: string, flags: Flags, output: Output) {
   const started = performance.now();

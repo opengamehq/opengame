@@ -692,7 +692,7 @@ test("after the close a new deploy stops at once and a saved one resumes", async
 
     /* The most common folder after a deploy before the close: its bytes reached the server and
        it is queued. Another `opengame deploy` there is a NEW deploy, not a resume, so it stops
-       before it builds, as the deploy's own rule says (deploy.ts, `resumesSavedDeploy`). */
+       before it builds, as the deploy's own rule says (project.ts, `resumesSavedDeploy`). */
     await withProject(h.root, h.origin, async (state, save) => {
       state.deploy = { key: "queued-before-the-close", operationId: id(1), terminal: false, uploaded: true, request: { byteSize: 64, fileCount: 1, sha256: "a".repeat(64), manifest, metadataRevision: null, metadata: "preserve" } };
       await save();

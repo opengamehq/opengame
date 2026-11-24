@@ -3,8 +3,7 @@ import { LIMITS } from "@opengame/shared";
 import { activeToken } from "./credentials";
 import { Api, ApiError } from "./http";
 import { CliError } from "./output";
-import { readProject } from "./project";
-import { resumesSavedDeploy } from "./deploy";
+import { readProject, resumesSavedDeploy } from "./project";
 
 /**
  * Before the creator platform opens, the first thing a stranger who installed this sees is
@@ -86,7 +85,13 @@ export async function launchNotice(tokenStdin: boolean): Promise<string | null> 
 /* The opening's day in Eastern time since 17 Nov 2026, when the opening moved to 9:00 pm PT on
    the 17th, 12:00 am ET on the 18th: the day the site names, "18 November". In Pacific time this
    said the 17th beside every page saying the 18th. */
-const OPENING_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "America/New_York" });
+let openingDay: Intl.DateTimeFormat | undefined;
+/* The formatter is made on first use rather than when this module loads. Building an Intl
+   formatter or collator is the expensive part, about 5 ms the first time a process asks for one
+   (time zone or collation data), and every process that imports this module paid it at load,
+   the CLI on every start, whether or not it ever printed the date (round 173A, 24 Nov 2026).
+   The output is the same. */
+const OPENING_DAY = () => openingDay ??= new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "America/New_York" });
 
 /**
  * The sentence with the day the server reports, so an owner hold past the kickoff is not
@@ -95,7 +100,7 @@ const OPENING_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "l
  */
 export function notLaunchedMessage(creatorsOpenAt: unknown): string {
   const at = typeof creatorsOpenAt === "string" ? Date.parse(creatorsOpenAt) : NaN;
-  return Number.isFinite(at) ? `OpenGame opens for creators on ${OPENING_DAY.format(new Date(at))}.` : ERRORS.not_launched!.message!;
+  return Number.isFinite(at) ? `OpenGame opens for creators on ${OPENING_DAY().format(new Date(at))}.` : ERRORS.not_launched!.message!;
 }
 
 /**

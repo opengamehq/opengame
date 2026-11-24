@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "6753badce517f3814f5eca36463c36aa3749b49a"
+    "commit": "43c7eeccb10005d7c861a40195d6db51ce8ee736"
   },
-  "digest": "8aadaf0bdd5b7db0cee6a5e3db59a83d8e2c5545eef4bcc0f49630827b2ac7d0",
+  "digest": "9563d47c8aa03b59de07024111fd00dd328ba810fcd8fb29bd5d05e4876cf531",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -195,8 +195,8 @@
     },
     {
       "path": "infra/worker/src/game-audio.ts",
-      "bytes": 153606,
-      "sha256": "4b35efc44c9f8cc381c5564c733d64d59e0f91481780c24769ff852939386664",
+      "bytes": 154530,
+      "sha256": "fae5d878af404fc956a7a9724e718628886026620992a1d0a22ffb95f461c320",
       "executable": false
     },
     {

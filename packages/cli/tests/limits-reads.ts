@@ -69,7 +69,7 @@ const indexedReads: IndexedRead[] = [{
   why: "largeAssetLimits and laneHeldBytes read LANE_FIELDS of platform[plan.limits], and plan comes from platform.largeAssetPlans",
 }, {
   file: "../shared/src/limits-browser.ts", owner: "text", uses: 1, keys: textKeys,
-  why: "TEXT is built from Object.entries(raw.text), and every reader of it takes TEXT_FIELDS (TextLimit, BrowserTextLimit)",
+  why: "TEXT is textTable(raw.text), a view of every key of text (src/text-table.ts), and every reader of it takes TEXT_FIELDS (TextLimit, BrowserTextLimit)",
 }, {
   file: "../shared/src/limits.ts", owner: "text", uses: 1, keys: textKeys,
   why: "the server's TEXT, built the same way; nothing the CLI bundles reads a constraint name from it",

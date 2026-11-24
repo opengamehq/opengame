@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "4b571c9957c8219a14cd321b88040c0ed9b858de"
+    "commit": "18dcf44cb1c5aed6a557cb00edbf906c05fc69cb"
   },
-  "digest": "e4c55b70ffa7c0c9a1aaeb0a762f99d9cddd05c61953977dac2dd60f027ab105",
+  "digest": "4aa0adcc626de8cc56dd2b8ad1a019d9ef7e79ab4ef805b9e628353e3816033f",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -435,8 +435,8 @@
     },
     {
       "path": "packages/cli/src/limits-allowlist.json",
-      "bytes": 9167,
-      "sha256": "8c3d82929e342e083368f468e1d844f65ada96fa88a0702677e6853708aae103",
+      "bytes": 9241,
+      "sha256": "a12a0d3d91327578203f6a42fe2481f33ff797274bc98da7eaba8da87d08a302",
       "executable": false
     },
     {
@@ -2871,20 +2871,20 @@
     },
     {
       "path": "packages/shared/limits.browser.json",
-      "bytes": 50366,
-      "sha256": "2e83b37381e459786e6fd91212764cec0a0a96a30a6766b60b414d2b0dd60e4c",
+      "bytes": 50832,
+      "sha256": "88a2356b83a88903ce745bd359b12c6b74c45913bfcb23aae2b4eaa809d7ea79",
       "executable": false
     },
     {
       "path": "packages/shared/limits.json",
-      "bytes": 67976,
-      "sha256": "f24e42df68d94a880037359e2b7b1673dde8f1830bb9709a402517deaaf2b108",
+      "bytes": 68442,
+      "sha256": "0cfd69f27981c9d144c68c1ad6b51e78a620fca884a938df5ba879379160de60",
       "executable": false
     },
     {
       "path": "packages/shared/limits.values.json",
-      "bytes": 67976,
-      "sha256": "f24e42df68d94a880037359e2b7b1673dde8f1830bb9709a402517deaaf2b108",
+      "bytes": 68442,
+      "sha256": "0cfd69f27981c9d144c68c1ad6b51e78a620fca884a938df5ba879379160de60",
       "executable": false
     },
     {

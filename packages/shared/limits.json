@@ -1053,6 +1053,20 @@
         "listMax": 200,
         "titleCharsMax": 120,
         "uploadStaleHours": 24
+      },
+      "publish": {
+        "bitsPerSecond": 12000000,
+        "minBitsPerSecond": 2500000,
+        "audioBitsPerSecond": 160000,
+        "maxEdge": 2560,
+        "maxShortEdge": 1440,
+        "keyframeSeconds": 2,
+        "posterEdge": 1280,
+        "posterQuality": 0.85,
+        "posterBytesMax": 2097152,
+        "captionCharsMax": 500,
+        "cutsMax": 20,
+        "cutMsMin": 250
       }
     },
     "frameEventStringCharsMax": 120,
@@ -1186,6 +1200,10 @@
     "gameRecordingTitle": {
       "min": 1,
       "max": 120
+    },
+    "gameRecordingCaption": {
+      "min": 1,
+      "max": 500
     },
     "gameTitle": {
       "min": 1,

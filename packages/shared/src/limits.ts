@@ -35,6 +35,7 @@
 
 import raw from "../limits.values.json";
 import type { CheckDefinition, TextLimit, TextLimitKey, Viewport } from "./limits-browser";
+import { textTable } from "./text-table";
 
 export * from "./limits-browser";
 
@@ -53,6 +54,4 @@ export const JAM = raw.jam;
 export const STUDIO = raw.studio;
 
 /** Every cap on prose a person types, with the constraint each one mirrors. */
-export const TEXT = Object.fromEntries(
-  Object.entries(raw.text).filter(([key]) => !key.startsWith("_")),
-) as unknown as Record<TextLimitKey, TextLimit>;
+export const TEXT = textTable<Record<TextLimitKey, TextLimit>>(raw.text);

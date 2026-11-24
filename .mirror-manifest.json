@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "18dcf44cb1c5aed6a557cb00edbf906c05fc69cb"
+    "commit": "6753badce517f3814f5eca36463c36aa3749b49a"
   },
-  "digest": "4aa0adcc626de8cc56dd2b8ad1a019d9ef7e79ab4ef805b9e628353e3816033f",
+  "digest": "8aadaf0bdd5b7db0cee6a5e3db59a83d8e2c5545eef4bcc0f49630827b2ac7d0",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -237,8 +237,8 @@
     },
     {
       "path": "packages/cli/package.json",
-      "bytes": 1859,
-      "sha256": "6d3c128d9c477c915f73d209c835b570d75ae6624fef93d51a5371d659fe52e2",
+      "bytes": 1965,
+      "sha256": "3579b01c42c4b1f331140ce2aff217f5c905cf535f908d21aa04e8553d2e39dc",
       "executable": false
     },
     {
@@ -1665,8 +1665,8 @@
     },
     {
       "path": "packages/cli/tests/limits-reads.ts",
-      "bytes": 21472,
-      "sha256": "fdc35cab3912e4a9e3a06fd4d2347a20eb95d649811090fede732f16726706c0",
+      "bytes": 21505,
+      "sha256": "1dc108ee86b2e002e4863d45b8d8da52ebcd55516adb698f1687befd9e7b865f",
       "executable": false
     },
     {
@@ -3129,14 +3129,14 @@
     },
     {
       "path": "packages/shared/src/limits-browser.ts",
-      "bytes": 33893,
-      "sha256": "a5e66c54662420be9ec983288877158f42fb99a97f9278607057ab99c73a9913",
+      "bytes": 33852,
+      "sha256": "db1963f566a9eed67cdb1ddf2c98b0408fc4cba8f8712f520bf6b116d2c36aad",
       "executable": false
     },
     {
       "path": "packages/shared/src/limits.ts",
-      "bytes": 3245,
-      "sha256": "9df7b6932b1aaa91dc749f9cf68424dcea6916e479d596906e29098fc2fdbbc6",
+      "bytes": 3204,
+      "sha256": "975108e4015ddf3f0865a7566c9225b0ceb740cbab1fc2aac17d697fbd2a5b4f",
       "executable": false
     },
     {
@@ -3221,6 +3221,12 @@
       "path": "packages/shared/src/text-policy.ts",
       "bytes": 5055,
       "sha256": "ae2bf3871de90414d5d0d90842d62aa9babf6adc9e28ea23050c773238223f4a",
+      "executable": false
+    },
+    {
+      "path": "packages/shared/src/text-table.ts",
+      "bytes": 2581,
+      "sha256": "b8f1d4d2660814efbfa96eee3128f6030913bd7041b46c565056fc87728782ec",
       "executable": false
     },
     {

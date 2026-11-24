@@ -22,6 +22,7 @@
 
 import raw from "../limits.browser.json";
 import { slurTextProblem } from "./text-policy";
+import { textTable } from "./text-table";
 
 export type CheckKind = "auto" | "manual";
 
@@ -341,9 +342,7 @@ export type TextLimitKey = Exclude<keyof typeof raw.text & string, `_${string}`>
 export type BrowserTextLimit = Pick<TextLimit, "min" | "max" | "productMin">;
 
 /** Every cap on prose a person types, keyed by the field rather than the column. */
-export const TEXT = Object.fromEntries(
-  Object.entries(raw.text).filter(([key]) => !key.startsWith("_")),
-) as unknown as Record<TextLimitKey, BrowserTextLimit>;
+export const TEXT = textTable<Record<TextLimitKey, BrowserTextLimit>>(raw.text);
 
 export function textLimit(key: TextLimitKey): BrowserTextLimit {
   const limit = TEXT[key];

@@ -21,16 +21,16 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-25-record-hevc";
+export const GAME_AUDIO_VERSION = "audio-27-record-key";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 /** The recording block the receiver reads (`limits.play.recording`), less the page's own numbers. */
 const RECORDING = (({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs,
   layerScanMs, domMinIntervalMs, domCostFactor, domWalkMs, domSliceMs, domBackoffMs, domRefreshMs, reshapeMs,
-  hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond, netLiveMs }) =>
+  hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond }) =>
   ({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs,
     layerScanMs, domMinIntervalMs, domCostFactor, domWalkMs, domSliceMs, domBackoffMs, domRefreshMs, reshapeMs,
-    hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond, netLiveMs }))(limits.play.recording);
+    hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond }))(limits.play.recording);
 
 const SCREENSHOT = (({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }) =>
   ({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }))(limits.studio.preview.screenshot);
@@ -669,34 +669,6 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // (RECORD AND INSTANT REPLAY, below), so a clip sounds like the game whatever the slider
   // or the mute says, and no change of either is undone after the fact. Until a recording
   // attaches a tap, nothing pulls on it, so a browser does no work for it.
-  // A GAME'S LIVE CONNECTION, FOR THE CLIP'S UPLOAD (23 Nov 2026). Saving a clip to the
-  // player's account is paced only while the game is using the network in real time, so an
-  // upload never takes the bandwidth a match needs, and goes at full speed otherwise (a
-  // single-player game, a menu, a lobby nobody is in). Real time here is a send on a
-  // WebSocket or a WebRTC data channel in the last netLiveMs, or a connected peer carrying a
-  // microphone or camera. Bookkeeping only: one timestamp per send, nothing read or held.
-  let netAt = -Infinity;
-  const mediaPeers = new Set();
-  const markNet = () => { netAt = performance.now(); };
-  for (const [owner, name] of [[globalThis.WebSocket, 'send'], [globalThis.RTCDataChannel, 'send']]) {
-    const proto = owner && owner.prototype;
-    const native = proto && proto[name];
-    if (typeof native !== 'function') continue;
-    proto[name] = passFor(function(...args) { markNet(); return native.apply(this, args); }, native);
-  }
-  if (globalThis.RTCPeerConnection && typeof RTCPeerConnection.prototype.addTrack === 'function') {
-    const nativeAddTrack = RTCPeerConnection.prototype.addTrack;
-    RTCPeerConnection.prototype.addTrack = passFor(function(...args) { mediaPeers.add(new WeakRef(this)); return nativeAddTrack.apply(this, args); }, nativeAddTrack);
-  }
-  const netLive = () => {
-    if (performance.now() - netAt < rec.netLiveMs) return true;
-    for (const reference of mediaPeers) {
-      const peer = reference.deref();
-      if (!peer || peer.connectionState === 'closed') { mediaPeers.delete(reference); continue; }
-      if (peer.connectionState === 'connected') return true;
-    }
-    return false;
-  };
   const tapInputs = new Map();
   const tapInputFor = (context) => {
     let input = tapInputs.get(context);
@@ -815,9 +787,18 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     descriptor.set.call(element, silent() || desired.get(element));
     applyVolume(element);
   };
+  // A recording's copy of an element is taken before the element's own volume and mute
+  // (SOUND FROM <audio> AND <video>, below), so the game's level for it is set again on the
+  // recording's side. Told here the moment the game or the person changes it, so a fade or a
+  // mute lands in the clip when the player heard it, not up to a second later at the
+  // recorder's next look (Greptile on opengamehq/opengame#29, #2289).
+  let heardLevel = null;
+  const levelChanged = (element) => {
+    if (heardLevel) { try { heardLevel(element); } catch { /* The recording's loss, never the game's. */ } }
+  };
   Object.defineProperty(HTMLMediaElement.prototype, 'muted', {
     ...descriptor,
-    set: passFor(function(value) { track(this); desired.set(this, !!value); descriptor.set.call(this, silent() || !!value); }, descriptor?.set)
+    set: passFor(function(value) { track(this); desired.set(this, !!value); descriptor.set.call(this, silent() || !!value); levelChanged(this); }, descriptor?.set)
   });
   if (volumeDescriptor?.get && volumeDescriptor.set) {
     Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
@@ -828,6 +809,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
         volumeDescriptor.set.call(check, value);
         ownVolume.set(this, volumeDescriptor.get.call(check));
         track(this);
+        levelChanged(this);
       }, volumeDescriptor.set)
     });
     // A change nobody here made is the person's, through the element's own controls, and
@@ -842,6 +824,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       written.set(element, now);
       const scale = routed.has(element) ? 1 : level;
       if (scale > 0) ownVolume.set(element, Math.min(1, now / scale));
+      levelChanged(element);
     }, true);
   }
   // Both ways a game routes an element into Web Audio. The element goes back to its own
@@ -1892,6 +1875,10 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // receiver scales the element by the player's level on top, and the copy is taken before
   // that): a muted cutscene stays silent and music at 0.2 stays at 0.2.
   const ownLevel = (element) => desired.get(element) ? 0 : ownVolume.has(element) ? ownVolume.get(element) : 1;
+  const levelTap = (session, element) => {
+    const entry = session.mediaTaps.get(element);
+    if (entry) entry.level.gain.value = ownLevel(element);
+  };
   const tapElement = (session, element) => {
     if (session.mix === false || session.stopped || routed.has(element) || session.mediaTaps.has(element)) return;
     if (typeof element.captureStream !== 'function' || typeof AudioContext !== 'function') return;
@@ -1945,7 +1932,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       const element = reference.deref();
       if (element && !element.paused) tapElement(session, element);
     }
-    for (const [element, entry] of session.mediaTaps) entry.level.gain.value = ownLevel(element);
+    for (const element of session.mediaTaps.keys()) levelTap(session, element);
     const context = session.mediaContext;
     if (context && context.state === 'suspended') context.resume().catch(() => {});
   };
@@ -2000,7 +1987,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       transfer.push(item.data);
       if (item.config && item.config.description) transfer.push(item.config.description);
     }
-    tellRecord(session, { op: 'chunks', items: items, net: netLive() }, transfer);
+    tellRecord(session, { op: 'chunks', items: items }, transfer);
   };
   // WHAT THE PLAYER SEES, EVERY FRAME (23 Nov 2026). Until audio-23 a recording drew the
   // canvases and nothing else, so OG Snipes' cutscenes (videos laid over its canvas) and its
@@ -2373,6 +2360,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     }
     try { session.encoder.close(); } catch { /* Closed. */ }
     if (heardPlay) heardPlay = null;
+    if (heardLevel) heardLevel = null;
     if (session.watch) { session.watch.disconnect(); session.watch = null; }
     releaseDom(session.dom);
     untapMedia(session);
@@ -2422,11 +2410,75 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     // make another later; look again every second.
     session.audioWatch = setInterval(() => tapAudio(session), 1000);
     heardPlay = (element) => tapElement(session, element);
+    heardLevel = (element) => levelTap(session, element);
     tapAudio(session);
     queueCapture((time) => captureFrame(session, time));
   };
   // Registered near the top (recordingLeft), ahead of the receiver's other pagehide work.
   function recordingLeft() { if (recording) void stopRecord(recording, 'left'); }
+
+  // RECORD WITH TAB (24 Nov 2026). A key pressed in this frame never reaches the page around
+  // it, so the record shortcut is heard here and told to the page. Tab, because few games
+  // use it and in a frame it only moves focus out of the game, which is never what a player
+  // pressing it mid-match wants. Only once the page asks (record-key on), so a page that shows
+  // no shortcut leaves Tab exactly as it was, and only while focus is in the game: a Tab on
+  // the page is the page's.
+  //
+  // The game gets the press too, and its answer decides. This listener captures on the window
+  // and is added before any game script, so it hears the press before the game can: it marks
+  // the event and cancels it with the native preventDefault, which keeps focus in the frame.
+  // preventDefault (and returnValue) is wrapped below to note a cancel from anybody else on
+  // that marked event. Once the dispatch is over, a timer reads the note: a game that also
+  // cancelled the press uses Tab, so the page is told 'taken' and this document stops
+  // listening for good; otherwise the page is told 'press' and starts or stops the recording.
+  // A Tab in a field the game drew (an input, a textarea, editable text) is left alone, since
+  // there it moves between the game's own fields. Repeats keep focus in and toggle nothing.
+  let keyParent = null;
+  let keyTaken = false;
+  let keyEvent = null;
+  let keyClaimed = false;
+  // A stand-in realm with no Event (the runtime's own tests run this in a bare VM) records
+  // nothing by key; every browser has one.
+  const EventType = typeof Event === 'function' ? Event : null;
+  const nativePreventDefault = EventType ? EventType.prototype.preventDefault : null;
+  if (EventType) {
+    EventType.prototype.preventDefault = passFor(function preventDefault() {
+      if (this === keyEvent) keyClaimed = true;
+      return nativePreventDefault.call(this);
+    }, nativePreventDefault);
+    const returnValue = Object.getOwnPropertyDescriptor(EventType.prototype, 'returnValue');
+    if (returnValue && returnValue.configurable && typeof returnValue.set === 'function') {
+      const nativeSet = returnValue.set;
+      Object.defineProperty(EventType.prototype, 'returnValue', Object.assign({}, returnValue, {
+        set: passFor(function(value) { if (this === keyEvent && !value) keyClaimed = true; return nativeSet.call(this, value); }, nativeSet),
+      }));
+    }
+  }
+  const tellKey = (to, op) => { try { host.postMessage({ og: 1, type: 'record-key', op: op }, to); } catch { /* The page went away. */ } };
+  const typesHere = (target) => target instanceof Element
+    && (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT');
+  addEventListener('keydown', (event) => {
+    if (!nativePreventDefault || !keyParent || keyTaken || !event.isTrusted || event.key !== 'Tab') return;
+    if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+    if (typesHere(event.composedPath()[0])) return;
+    nativePreventDefault.call(event);
+    if (event.repeat) return;
+    keyEvent = event;
+    keyClaimed = false;
+    const to = keyParent;
+    const decide = () => {
+      if (keyEvent === event) keyEvent = null;
+      if (keyTaken) return;
+      if (keyClaimed) { keyTaken = true; tellKey(to, 'taken'); }
+      else tellKey(to, 'press');
+    };
+    if (nativeSetTimeout) nativeSetTimeout.call(globalThis, decide, 0);
+    else decide();
+  }, true);
+  const recordKey = (origin, on) => {
+    keyParent = on ? origin : null;
+    if (on) tellKey(origin, keyTaken ? 'taken' : 'ready');
+  };
 
   // Silence lands at once, as the mute always did. A level change is eased over a few
   // milliseconds where the browser can schedule it, because a slider dragged through
@@ -2495,6 +2547,10 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       // A save asks for what is waiting first, so a replay ends on the frame that was on
       // screen when the player pressed, not up to flushMs before it.
       else if (data.op === 'flush' && recording && recording.id === data.id) void drainRecord(recording);
+      return;
+    }
+    if (data.type === 'record-key') {
+      if (typeof data.on === 'boolean') recordKey(event.origin, data.on);
       return;
     }
     if (data.type === 'volume') {

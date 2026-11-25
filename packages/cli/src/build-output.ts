@@ -1,6 +1,5 @@
 import { realpath, readdir, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { parse as parseHtml } from "parse5";
 import { LIMITS } from "@opengame/shared";
 import { isBundlePath } from "@opengame/protocol";
 import { CliError } from "./output";
@@ -113,6 +112,10 @@ export async function detectBuildOutput(root: string, pkg: Package, explicit?: s
   const inspectSources = Boolean(pkg.scripts?.build) || ["flutter", "flame", "rust", "bevy"].includes(engine?.id ?? "");
   // Every candidate's page in one helper process (engines.ts, projectTexts).
   const pages = inspectSources ? await projectTexts(base, candidates.map(page)) : new Map<string, string>();
+  /* parse5 is loaded here, where a build's output is being looked for, not at the top of the
+     file: every command reaches this file through files.ts and auto.ts, and most of them never
+     read a page (round 173A, 24 Nov 2026). */
+  const { parse: parseHtml } = await import("parse5");
   if (inspectSources) for (const folder of candidates) {
     const text = pages.get(page(folder));
     if (text === undefined) throw new CliError("build_output_required", "A candidate export could not be safely inspected within the source-text limit. Choose --output <folder> after checking that export.", 2);

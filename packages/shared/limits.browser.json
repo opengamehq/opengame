@@ -1016,15 +1016,12 @@
       "hevcScreenPx": 2400,
       "hevcBitsPerSecond": 12000000,
       "hevcCompactBitsPerSecond": 7000000,
-      "netLiveMs": 2000,
       "cloud": {
         "keepDays": 7,
         "perPersonBytesMax": 2147483648,
         "clipBytesMax": 1610612736,
         "partBytes": 8388608,
         "partsPerRequestMax": 8,
-        "pacedBitsPerSecond": 4000000,
-        "pacedShare": 0.5,
         "partsAtOnce": 3,
         "presignTtlSeconds": 900,
         "listMax": 200,
@@ -1043,7 +1040,8 @@
         "posterBytesMax": 2097152,
         "captionCharsMax": 500,
         "cutsMax": 20,
-        "cutMsMin": 250
+        "cutMsMin": 250,
+        "perGameOnPageMax": 3
       }
     },
     "frameEventStringCharsMax": 120,

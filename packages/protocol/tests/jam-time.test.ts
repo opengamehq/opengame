@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   CLOSE_COPY, COMMITTED_ENTRIES_CLOSE_AT, COMMITTED_JAM_KICKOFF_AT, COMMITTED_LAUNCH_AT, KICKOFF_COPY, LAUNCH_COPY,
 } from "@opengame/shared/launch-clock";
-import { whenPacific } from "../src/jam-time";
+import { utcInstant, whenPacific } from "../src/jam-time";
 
 /* The committed instants, with the copy whenPacific says them as by default. */
 const COMMITTED = [
@@ -42,3 +42,19 @@ test("instant and year together write the year into the moment", () => {
   assert.match(withYear, /^\d{1,2} \p{L}+ \d{4}, /u);
   assert.equal(whenPacific(at, { instant: true, year: true }), withYear);
 });
+
+/* The year a moment leaves out is the jam's, read from the close in Pacific time, and only
+   the jam's: these pin that and the UTC formatter, which this file did not, so that building
+   either on first use (round 173A) could not change a word unseen. The strings are what the
+   formatters said when they were built at import. */
+test("a moment in the jam's year leaves the year out, and one in another year says it", () => {
+  const day = 86_400_000, close = COMMITTED_ENTRIES_CLOSE_AT.getTime();
+  assert.equal(whenPacific(close - 3 * day + 3_600_000), "16 December, 1:00 am PT");
+  assert.equal(whenPacific(close + 400 * day), "23 January 2028, 12:00 am PT");
+});
+
+test("utcInstant reads in UTC whatever zone the time was written in", () => {
+  assert.equal(utcInstant("2026-11-24T23:30:00-08:00"), "25 Nov 2026, 07:30 UTC");
+  assert.equal(utcInstant("not a time"), "not a time");
+});
+

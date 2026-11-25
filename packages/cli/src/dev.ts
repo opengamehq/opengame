@@ -2,8 +2,9 @@ import { createServer, type Server } from "node:http";
 import { readFile } from "node:fs/promises";
 import { LIMITS } from "@opengame/shared";
 import { isBundlePath, type GameManifest, type RuntimeSettings } from "@opengame/protocol";
-import { contractFor, CONTRACT_VERSIONS, CURRENT_CONTRACT, needsServingInventory, securityHeaders } from "../../../infra/worker/src/contracts";
-import { contractCapabilities, edgeSdkContract, THREADED_MOVES } from "@opengame/shared/runtime-contracts";
+import { contractFor, CONTRACT_VERSIONS, CURRENT_CONTRACT, securityHeaders } from "../../../infra/worker/src/contracts";
+import { ENGINE_CONTRACT } from "./contract-help";
+import { contractCapabilities, edgeSdkContract } from "@opengame/shared/runtime-contracts";
 import { frameAncestorsOf, GAME_AUDIO_VERSION, gameAudioRuntime } from "../../../infra/worker/src/game-audio";
 import { resolveContentType } from "../../../infra/worker/src/content-types";
 import { assertNoReservedRuntimePaths, loadManifest, outputFolder } from "./files";
@@ -30,16 +31,6 @@ export function devHeaders(version = CURRENT_CONTRACT): Headers {
 }
 
 /**
- * The contract whose releases the pipeline derives, named by the Worker's own rule rather
- * than by a date written out here (`needsServingInventory`). It is 2027-01, the one that
- * also granted eval, and it is deprecated for good: its runtime_contracts row carries
- * deprecated_at and is not default-eligible, and a threaded scan moves a release onto
- * 2027-02 instead. dev still serves it, because a contract the Worker serves is one a
- * pinned release could be on.
- */
-export const ENGINE_CONTRACT = CONTRACT_VERSIONS.find(version => needsServingInventory({ contractVersion: version }))!;
-
-/**
  * Whether production's documents under this contract carry the host runtime and the SDK
  * tag, so dev's should too. Two contracts do, by different routes that end in the same
  * document: 2027-01's derived tree has the tags written into it at scan time, and under
@@ -51,42 +42,6 @@ export const ENGINE_CONTRACT = CONTRACT_VERSIONS.find(version => needsServingInv
 export function injectsPageTags(version: string): boolean {
   const mode = contractCapabilities(version)?.sdkInjection;
   return mode === "derived" || mode === "edge";
-}
-
-/**
- * `dev --contract` help, read from the capability table in limits.json so it cannot go on
- * describing a contract after the table changes. It said 2027-01 was "experimental and has
- * not been tested on the live site yet" for two days after 2027-02 replaced it and went
- * live, because the sentence was typed rather than read from anywhere.
- *
- * The network is read from the same table (`openNetwork`), because 2027-03 and 2027-04 are
- * the first contracts that differ from their neighbours mainly in what a game may reach,
- * and a help line that named only isolation and eval would describe 2027-04 and 2027-01 in
- * identical words. Which contract a threaded release moves to is read from threadedMoves
- * for the same reason: there are two pairs now, and the sentence names its source.
- */
-export function contractHelp(): string {
-  const powers = (version: string) => {
-    const caps = contractCapabilities(version)!;
-    const powers = [["cross-origin isolation", caps.crossOriginIsolated], ["eval", caps.unsafeEval]] as const;
-    const yes = powers.filter(([, on]) => on).map(([name]) => name), no = powers.filter(([, on]) => !on).map(([name]) => name);
-    const allows = !yes.length ? `neither ${no.join(" nor ")}` : yes.join(" and ") + (no.length ? ` but not ${no.join(" or ")}` : "");
-    return { allows, reach: caps.openNetwork ? "any https host" : "only OpenGame's own hosts", sdk: caps.sdkInjection === "none" ? "no SDK" : "the SDK to every page" };
-  };
-  // Neighbouring versions that allow the same things are named together.
-  const groups: { versions: string[]; key: string }[] = [];
-  for (const version of CONTRACT_VERSIONS) {
-    const key = JSON.stringify(powers(version)), last = groups.at(-1);
-    if (last?.key === key) last.versions.push(version); else groups.push({ versions: [version], key });
-  }
-  const sentences = groups.map(({ versions }) => {
-    const { allows, reach, sdk } = powers(versions[0]!), one = versions.length === 1;
-    const movedFrom = Object.entries(THREADED_MOVES).filter(([, to]) => versions.includes(to)).map(([from]) => from);
-    return [`${versions.join(" and ")} ${one ? "allows" : "allow"} ${allows}, ${one ? "lets" : "let"} a game reach ${reach}, and ${one ? "adds" : "add"} ${sdk}.`,
-      versions.includes(ENGINE_CONTRACT) && "It is deprecated, and no new release gets it.",
-      movedFrom.length > 0 && `A release on ${movedFrom.join(" or ")} whose scan finds threads is moved onto it automatically.`].filter(Boolean).join(" ");
-  });
-  return `Runtime contract. Defaults to ${CURRENT_CONTRACT}, which new games are published under. ${sentences.join(" ")}`;
 }
 
 /**

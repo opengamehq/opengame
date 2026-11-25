@@ -53,8 +53,10 @@ export function archiveURL(id, pin) {
 /** A timeout covers body consumption, and redirects never turn an approved host into
  * a credentialed or private-network request. This acquisition runs only at build time. */
 export async function download(url, bounds, fetcher = fetch) {
-  const response = await fetcher(url, { redirect: 'error', signal: AbortSignal.timeout(bounds.timeoutMs), credentials: 'omit' });
-  if (!response.ok || !response.body) throw new Error(`Runtime download failed (${response.status}): ${url}`);
+  let response;
+  try { response = await fetcher(url, { redirect: 'error', signal: AbortSignal.timeout(bounds.timeoutMs), credentials: 'omit' }); }
+  catch (error) { throw networkFailure(url, error); }
+  if (!response.ok || !response.body) throw new Error(`Runtime download failed (HTTP ${response.status}): ${url}`);
   const declared = Number(response.headers.get('content-length'));
   if (declared > bounds.downloadBytesMax) { await response.body.cancel(); throw new Error('Runtime download size limit'); }
   const reader = response.body.getReader();
@@ -68,9 +70,30 @@ export async function download(url, bounds, fetcher = fetch) {
       if (size > bounds.downloadBytesMax) throw new Error('Runtime download size limit');
       chunks.push(Buffer.from(value));
     }
-  } catch (error) { await reader.cancel().catch(() => {}); throw error; }
+  } catch (error) { await reader.cancel().catch(() => {}); throw error.message === 'Runtime download size limit' ? error : networkFailure(url, error); }
   finally { reader.releaseLock(); }
   return Buffer.concat(chunks);
+}
+
+/* A fetch that failed on the network, named by what failed (24 Nov 2026, round 174A, #825). Node's
+   fetch says only "fetch failed", with the reason in `cause`, and our own timeout says "The
+   operation was aborted due to timeout", so a registry that did not answer under load read as a
+   build that failed for no reason. The runtimes job fetches every pin for a gate in a step that
+   runs nothing of the PR's, and classifyFailure did not count that failure as the factory's,
+   since neither sentence is a word TRANSIENT_NETWORK (ci-local.mjs) knows. So a gate red for the
+   factory's reasons elsewhere was not held for its one automatic re-run, which retryPlan gives
+   only when every failed job was the factory's, and waited for a push. Now the code is in the message: the
+   timeouts, ours and undici's, as ETIMEDOUT, a socket the far side closed as ECONNRESET, and any
+   other code as itself. An HTTP status says HTTP, so a 5xx reads as the registry's. A failure with
+   no code at all keeps its own words and stays a real red. */
+const NETWORK_CODES = { UND_ERR_CONNECT_TIMEOUT: 'ETIMEDOUT', UND_ERR_HEADERS_TIMEOUT: 'ETIMEDOUT', UND_ERR_BODY_TIMEOUT: 'ETIMEDOUT', UND_ERR_SOCKET: 'ECONNRESET' };
+function networkFailure(url, error) {
+  // Our timeout first: a DOMException carries a legacy numeric `code` (23 for a timeout), never a name.
+  const named = value => (typeof value === 'string' && value ? value : null);
+  const raw = error?.name === 'TimeoutError' || error?.cause?.name === 'TimeoutError' ? 'ETIMEDOUT' : named(error?.cause?.code) ?? named(error?.code);
+  const code = NETWORK_CODES[raw] ?? raw;
+  const why = code ? `${code}${raw !== code ? `, ${raw}` : ''}` : String(error?.message ?? error);
+  return new Error(`Runtime download failed (network: ${why}): ${url}`, { cause: error });
 }
 
 export function verifyBytes(bytes, pin) {

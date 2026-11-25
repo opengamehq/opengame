@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 import { lstat, readdir, readFile, realpath, rename } from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 import path from "node:path";
@@ -23,11 +24,67 @@ const NPX_LATEST = installsOpen({ scopeOwned, published, packages }) ? ` (or npx
  * "Next:" line said "." whatever folder had been named, so `opengame check games/coil`
  * suggested `opengame dev .`, which runs the wrong folder (area F, 1 Nov 2026).
  */
-export function folderArgument(root: string, cwd = process.cwd()): string {
-  const relative = path.relative(cwd, root) || ".";
+export function folderArgument(root: string, cwd = process.cwd(), platform: NodeJS.Platform = process.platform): string {
+  const api = platform === "win32" ? path.win32 : path.posix;
+  const relative = api.relative(cwd, root) || ".";
   // A folder far from here reads better as its own path than as a climb of ../../../.
-  const shorter = path.isAbsolute(root) && path.resolve(root).length < relative.length ? path.resolve(root) : relative;
-  return /^[A-Za-z0-9._/@+-]+$/.test(shorter) ? shorter : `'${shorter.replace(/'/g, "'\\''")}'`;
+  const shorter = api.isAbsolute(root) && api.resolve(root).length < relative.length ? api.resolve(root) : relative;
+  if (platform === "win32") return windowsFolder(shorter);
+  if (/^[A-Za-z0-9._/@+-]+$/.test(shorter)) return shorter;
+  return `'${shorter.replace(/'/g, "'\\''")}'`;
+}
+
+/**
+ * A Windows folder as an argument. Double quotes, which cmd.exe, PowerShell and Git Bash all
+ * read the same way for a path, and a Windows name cannot contain one; single quotes reach a
+ * cmd.exe program as part of the argument, so `opengame dev 'games\coil'` named a folder that
+ * is not there. PowerShell expands $ and ` inside double quotes, so a name with either gets
+ * single quotes, which PowerShell and Git Bash read literally. A leading @ is quoted too:
+ * PowerShell reads a bare @name as splatting.
+ */
+export function windowsFolder(folder: string): string {
+  // A backslash is quoted too: Git Bash would eat it bare.
+  if (/^[A-Za-z0-9._/:+-][A-Za-z0-9._/:@+-]*$/.test(folder)) return folder;
+  return /[$`]/.test(folder) ? `'${folder.replace(/'/g, "''")}'` : `"${folder}"`;
+}
+
+/**
+ * What a directory entry is, with Windows' directory listing corrected. libuv marks every
+ * entry carrying a reparse point as a link when it lists a folder on Windows (win/fs.c,
+ * fs__scandir), while its lstat calls only a symbolic link or a drive-letter junction one.
+ * OneDrive and other Cloud Files providers put a reparse point on every file they sync, and
+ * Documents and Desktop are OneDrive folders on many machines, so a game kept there could
+ * read as nothing but links: init found no index.html, and check refused the build as a
+ * symlink. On Windows an entry the listing calls a link is asked again: it is a link if
+ * lstat says so, or if its real path is not where it sits, which covers a junction lstat
+ * does not report (one aimed at `\??\Volume{GUID}\...` while that volume has a drive letter
+ * or another mount folder); otherwise it is what lstat says. A volume mounted only at that
+ * folder resolves to it and reads as a folder, as a mount point does on Linux; making one
+ * takes an administrator. Elsewhere the listing is the answer.
+ */
+export type EntryType = { isFile: boolean; isDirectory: boolean; isLink: boolean };
+/* A folder's real path, once per folder rather than once per flagged entry in it: a OneDrive
+   tree of 13k files was about 40k handle opens otherwise (review, 25 Nov 2026). Bounded, and
+   only reached on Windows for entries the listing calls links. */
+const folderReals = new Map<string, Promise<string | null>>();
+function folderReal(dir: string, resolve: typeof realpath): Promise<string | null> {
+  if (resolve !== realpath) return resolve(dir).catch(() => null);
+  if (folderReals.size > 256) folderReals.clear();
+  let found = folderReals.get(dir);
+  if (!found) { found = resolve(dir).catch(() => null); folderReals.set(dir, found); }
+  return found;
+}
+export async function entryType(dir: string, entry: Dirent, platform: NodeJS.Platform = process.platform,
+  fs: { lstat: typeof lstat; realpath: typeof realpath } = { lstat, realpath }): Promise<EntryType> {
+  const listed = { isFile: entry.isFile(), isDirectory: entry.isDirectory(), isLink: entry.isSymbolicLink() };
+  if (!listed.isLink || platform !== "win32") return listed;
+  const link = { isFile: false, isDirectory: false, isLink: true };
+  const full = path.join(dir, entry.name);
+  const stat = await fs.lstat(full).catch(() => null);
+  if (!stat || stat.isSymbolicLink()) return link;
+  const [real, here] = await Promise.all([fs.realpath(full).catch(() => null), folderReal(dir, fs.realpath)]);
+  if (!real || !here || real.toUpperCase() !== path.join(here, entry.name).toUpperCase()) return link;
+  return { isFile: stat.isFile(), isDirectory: stat.isDirectory(), isLink: false };
 }
 import { readableBytes } from "./bytes";
 import { CliError, type Output } from "./output";
@@ -175,8 +232,10 @@ export async function collectFiles(folder: string, options: { externalAssets?: R
     for (const [kind, row] of eligible) if (isLargeAssetPath(bundlePath, kind)) { row.bytes += size; row.count += 1; }
   };
   async function walk(dir: string) {
-    for (const entry of (await readdir(dir, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name, "en"))) {
-      const full = path.join(dir, entry.name);
+    for (const listed of (await readdir(dir, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name, "en"))) {
+      const full = path.join(dir, listed.name);
+      const type = await entryType(dir, listed);
+      const entry = { name: listed.name, isFile: () => type.isFile, isDirectory: () => type.isDirectory, isSymbolicLink: () => type.isLink };
       const bundlePath = bundlePathOf(root, full);
       assertNoReservedRuntimePaths([bundlePath]);
       // The project's own files are never part of the game and are not news:

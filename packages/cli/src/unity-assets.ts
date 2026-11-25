@@ -7,7 +7,7 @@ import { incrementalArchiveBytes, isBundlePath, type GameManifest, type Incremen
 import { LIMITS } from "@opengame/shared";
 import { createArchive } from "./archive";
 import { readableBytes } from "./bytes";
-import { isExcludedPath, loadManifest, outputFolder, withoutBom } from "./files";
+import { entryType, isExcludedPath, loadManifest, outputFolder, withoutBom } from "./files";
 import { safeHashFiles, safeReadFile, safeReadFiles, safeReadLargeFile, safeDirectoryIdentity } from "./safe-fs";
 import { CliError, type Output } from "./output";
 
@@ -79,9 +79,10 @@ async function walkExport(sourceRoot: string, folder: string, visit: (path: stri
     for (const entry of await readdir(full, { withFileTypes: true })) {
       const path = relative ? `${relative}/${entry.name}` : entry.name;
       if (isExcludedPath(path) || entry.name === "opengame.json" || path === "opengame-assets") continue;
-      if (entry.isSymbolicLink()) throw new CliError("symlink", `${path} is a symlink. External assets must be regular files inside the build folder, so copy the actual file there in its place.`, 1);
-      if (entry.isDirectory()) await walk(path);
-      else if (entry.isFile()) visit(path, (await lstat(join(full, entry.name))).size);
+      const type = await entryType(full, entry);
+      if (type.isLink) throw new CliError("symlink", `${path} is a symlink. External assets must be regular files inside the build folder, so copy the actual file there in its place.`, 1);
+      if (type.isDirectory) await walk(path);
+      else if (type.isFile) visit(path, (await lstat(join(full, entry.name))).size);
     }
   };
   await walk(folder);

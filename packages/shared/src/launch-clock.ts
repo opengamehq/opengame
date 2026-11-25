@@ -228,7 +228,13 @@ export function jamOpensAt(heldUntil: Date | null = null, clock: LaunchClock = l
    and LAUNCH_COPY calls it "18 November", its day in Eastern time, UTC and Europe. Read in
    Pacific, an owner hold of an hour named the 17th, a day earlier than the unheld copy. For a
    hold that lands at midnight Pacific or later the two zones name the same day. */
-const OPENING_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "America/New_York" });
+let openingDay: Intl.DateTimeFormat | undefined;
+/* The formatter is made on first use rather than when this module loads. Building an Intl
+   formatter or collator is the expensive part, about 5 ms the first time a process asks for one
+   (time zone or collation data), and every process that imports this module paid it at load,
+   the CLI on every start, whether or not it ever printed the date (round 173A, 24 Nov 2026).
+   The output is the same. */
+const OPENING_DAY = () => openingDay ??= new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "America/New_York" });
 
 /**
  * The day the site opens, as a sentence says it: LAUNCH_COPY, or the held day in Eastern time
@@ -239,7 +245,7 @@ const OPENING_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "l
 export function opensAtCopy(heldUntil: Date | null = null, clock: LaunchClock = launchClock()): string {
   const opens = opensAt(heldUntil, clock);
   if (opens.getTime() === COMMITTED_LAUNCH_AT.getTime()) return LAUNCH_COPY;
-  return OPENING_DAY.format(opens);
+  return OPENING_DAY().format(opens);
 }
 
 /**
@@ -251,7 +257,7 @@ export function opensAtCopy(heldUntil: Date | null = null, clock: LaunchClock = 
 export function jamOpensAtCopy(heldUntil: Date | null = null, clock: LaunchClock = launchClock()): string {
   const opens = jamOpensAt(heldUntil, clock);
   if (opens.getTime() === COMMITTED_JAM_KICKOFF_AT.getTime()) return KICKOFF_COPY;
-  return OPENING_DAY.format(opens);
+  return OPENING_DAY().format(opens);
 }
 
 /** Launched once the clock passes launchAt, unless an owner hold pushes it later. */

@@ -2,40 +2,30 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import { ANALYTICS_WINDOW_KINDS, DEFAULT_GAME_KIND, GAME_KIND_SLUGS, LIMITS, REMOVED_ANALYTICS_FILTERS } from "@opengame/shared";
 import { ANALYTICS_FILTERS_REMOVED, BANNER_STYLE_CHOICES, CREATOR_TOKEN_PATTERN, EXIT, cliUsageCommand, repairFindingSchema } from "@opengame/protocol";
-import { tokensCommand } from "./tokens";
-import { pullCommand } from "./pull";
-import { gamesCommand } from "./games";
-import { authCommand } from "./auth";
-import { assetPlanFlag, deployCommand, prepareDeploy, build, builtExportFolder, frameworkBeforeBuild } from "./deploy";
-import { assetPlanSummary, planDelivery } from "./unity-assets";
 import { largeAssetLimits } from "@opengame/shared/large-assets";
-import { upgradeCommand } from "./upgrade";
-import { submitCommand } from "./submit";
-import { publishCommand } from "./publish";
-import { jamsCommand } from "./jams";
-import { releasesCommand } from "./releases";
-import { deleteCommand, takeDownCommand } from "./take-down";
-import { detailsCommand, handleCommand } from "./edits";
-import { jamEntryCommand } from "./jam-entry";
-import { achievementsCommand } from "./achievements";
 import { AGENT_MARKERS, Output, CliError, agentMode, hang, preferHuman } from "./output";
 import { applyNetworkDefaults } from "./network";
-import { initProject, ensureDeployManifest } from "./init";
 import { AUTO_HELP } from "./auto";
-import { inspectArchive } from "./archive";
 import { folderArgument, loadManifest, projectFor } from "./files";
 import { CLI_VERSION } from "./version";
 import { setClientUsage } from "./http";
 import { skillsCommand } from "./skills";
 import { refreshSkills, setupCommand } from "./setup";
-import { limitsCommand } from "./allowance";
-import { statsCommand } from "./stats";
 import { RANGE_NOT_SUPPORTED, RETIRED_RANGE_OPTIONS } from "./analytics-contract";
-import { contractHelp, devCommand } from "./dev";
-import { vendorCommand } from "./vendor";
+import { contractHelp } from "./contract-help";
 import { ENGINE_IDS, sourceSettingsDiagnostics, THREADED_TARGET } from "./engines";
 import { safeReadFile } from "./safe-fs";
 import { launchNotice, refuseNewDeployAfterClose, requireLaunched } from "./launch";
+
+/* Each command's own modules are imported where main() runs that command, not here. Every
+   `opengame` run is a new process, and an import at the top of this file is evaluated by all
+   of them: `opengame --help` built the deploy's archiver, the preflight's HTML and JavaScript
+   parsers, the dev server's Worker modules and every command's schemas before printing a
+   line, and a test suite that drives the real binary 280 times a row paid for that each
+   time (rounds 172A and 173A, 24 Nov 2026). esbuild keeps the one bundle and evaluates a
+   module the first time an import of it runs, so the same code runs in the same order for
+   the command that needs it. What stays above is what parsing, help and the steps every
+   command takes (the launch check, the project folder, the skills refresh) use. */
 
 /** `only` names the kind of project a flag is for. Help lists those flags under their own
  * heading, after the ones everybody uses, so a Phaser creator reading check --help is not
@@ -542,33 +532,34 @@ async function main() {
   // rollback's argument is the release, so its folder is the one it runs in.
   const root = PROJECT_COMMANDS.has(command)
     ? await projectFor(resolve(command === "rollback" || command === "jam" || command === "achievements" ? "." : positional[0] ?? "."), output, buildNote) : resolve(positional[0] ?? ".");
-  if (command === "token") { tokensCommand(positional[0], flags, output); return; }
+  if (command === "token") { (await import("./tokens")).tokensCommand(positional[0], flags, output); return; }
   if (command === "skills") { await skillsCommand(positional[0], positional[1], flags, output); return; }
   if (command === "setup") { await setupCommand(flags, output); return; }
   /* The skills in the agents' folders, before the command itself (setup.ts): the first run
      installs them, a run after an update refreshes them, and a command on a project brings
      that project's older copies up to date. Never fails the command. */
   if (command !== "upgrade") await refreshSkills(output, REFRESHES_PROJECT_SKILLS.has(command) ? root : null);
-  if (command === "upgrade") { await upgradeCommand(flags, output); return; }
-  if (command === "login" || command === "logout" || command === "whoami") { await authCommand(command, flags, output); return; }
-  if (command === "limits") { await limitsCommand(flags, output); return; }
-  if (command === "stats") { await statsCommand(positional[0], flags, output); return; }
-  if (command === "games" || command === "link" || command === "open" || command === "deployments") { await gamesCommand(command, root, flags, output); return; }
-  if (command === "pull") { await pullCommand(root, flags, output); return; }
-  if (command === "submit") { await submitCommand(root, flags, output); return; }
-  if (command === "publish") { await publishCommand(root, flags, output); return; }
-  if (command === "jams") { await jamsCommand(positional[0], flags, output); return; }
-  if (command === "achievements") { await achievementsCommand(positional[0], positional[1], root, flags, output); return; }
-  if (command === "delete") { await deleteCommand(root, flags, output); return; }
-  if (command === "jam") { await jamEntryCommand(positional[0], root, flags, output); return; }
-  if (command === "details") { await detailsCommand(root, flags, output); return; }
-  if (command === "handle") { await handleCommand(positional[0], flags, output); return; }
-  if (command === "unpublish" || command === "restore") { await takeDownCommand(command, root, flags, output); return; }
-  if (command === "releases" || command === "rollback") { await releasesCommand(command, root, command === "rollback" ? positional[0] : undefined, flags, output); return; }
-  if (command === "dev") { await devCommand(root, flags, output); return; }
-  if (command === "vendor") { await vendorCommand(root, flags, output); return; }
-  if (command === "init") { output.emit({ type: "result", command, data: await initProject(root, flags, { interactive: !output.json && !agentMode() && Boolean(process.stdin.isTTY), output }) }); return; }
+  if (command === "upgrade") { await (await import("./upgrade")).upgradeCommand(flags, output); return; }
+  if (command === "login" || command === "logout" || command === "whoami") { await (await import("./auth")).authCommand(command, flags, output); return; }
+  if (command === "limits") { await (await import("./allowance")).limitsCommand(flags, output); return; }
+  if (command === "stats") { await (await import("./stats")).statsCommand(positional[0], flags, output); return; }
+  if (command === "games" || command === "link" || command === "open" || command === "deployments") { await (await import("./games")).gamesCommand(command, root, flags, output); return; }
+  if (command === "pull") { await (await import("./pull")).pullCommand(root, flags, output); return; }
+  if (command === "submit") { await (await import("./submit")).submitCommand(root, flags, output); return; }
+  if (command === "publish") { await (await import("./publish")).publishCommand(root, flags, output); return; }
+  if (command === "jams") { await (await import("./jams")).jamsCommand(positional[0], flags, output); return; }
+  if (command === "achievements") { await (await import("./achievements")).achievementsCommand(positional[0], positional[1], root, flags, output); return; }
+  if (command === "delete") { await (await import("./take-down")).deleteCommand(root, flags, output); return; }
+  if (command === "jam") { await (await import("./jam-entry")).jamEntryCommand(positional[0], root, flags, output); return; }
+  if (command === "details") { await (await import("./edits")).detailsCommand(root, flags, output); return; }
+  if (command === "handle") { await (await import("./edits")).handleCommand(positional[0], flags, output); return; }
+  if (command === "unpublish" || command === "restore") { await (await import("./take-down")).takeDownCommand(command, root, flags, output); return; }
+  if (command === "releases" || command === "rollback") { await (await import("./releases")).releasesCommand(command, root, command === "rollback" ? positional[0] : undefined, flags, output); return; }
+  if (command === "dev") { await (await import("./dev")).devCommand(root, flags, output); return; }
+  if (command === "vendor") { await (await import("./vendor")).vendorCommand(root, flags, output); return; }
+  if (command === "init") { const { initProject } = await import("./init"); output.emit({ type: "result", command, data: await initProject(root, flags, { interactive: !output.json && !agentMode() && Boolean(process.stdin.isTTY), output }) }); return; }
   if (command === "deploy" && flags["dry-run"]) {
+    const [{ ensureDeployManifest }, { assetPlanFlag, prepareDeploy }, { planDelivery }] = await Promise.all([import("./init"), import("./deploy"), import("./unity-assets")]);
     const initialized = await ensureDeployManifest(root, flags, output);
     if (initialized) output.emit({ type: "notice", code: "initialized", message: initialized.message });
     const assetPlan = assetPlanFlag(flags);
@@ -579,6 +570,8 @@ async function main() {
     return;
   }
   if (command === "check") {
+    const [{ assetPlanFlag, prepareDeploy, build, builtExportFolder, frameworkBeforeBuild }, { assetPlanSummary, planDelivery }, { inspectArchive }] =
+      await Promise.all([import("./deploy"), import("./unity-assets"), import("./archive")]);
     const assetPlan = assetPlanFlag(flags);
     const manifest = await loadManifest(root, output, assetPlan ? safeReadFile : undefined);
     const sourceSettings = await sourceSettingsDiagnostics(root, manifest);
@@ -610,7 +603,7 @@ async function main() {
   if (command === "deploy" && launch.deploysFrozen && !flags["dry-run"]) {
     await refuseNewDeployAfterClose(root, typeof flags["idempotency-key"] === "string" ? flags["idempotency-key"] : undefined);
   }
-  if (command === "deploy" || command === "status") { await deployCommand(command, root, flags, output); return; }
+  if (command === "deploy" || command === "status") { await (await import("./deploy")).deployCommand(command, root, flags, output); return; }
   throw unknownCommand(command);
 }
 

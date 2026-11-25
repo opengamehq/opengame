@@ -211,3 +211,15 @@ export async function updateProject(root: string, origin: string, change: (state
     throw error;
   }
 }
+
+/**
+ * Whether `opengame deploy` resumes the deploy saved in this folder rather than starting a
+ * new one: the same `--idempotency-key`, or no key and a deploy whose bytes have not
+ * reached the server. One answer for the deploy below and for the launch clock's check
+ * after the close (launch.ts), which lets exactly these through. It lives here rather than in
+ * deploy.ts so that launch.ts, which every command runs, does not load the deploy's whole
+ * module graph for a command that never deploys (round 173A).
+ */
+export function resumesSavedDeploy(saved: Project["deploy"] | undefined, key: string | undefined): boolean {
+  return Boolean(saved && (key === saved.key || (!key && !saved.terminal && !saved.uploaded)));
+}

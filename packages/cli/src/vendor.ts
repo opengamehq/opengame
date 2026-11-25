@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { compressedBrowserAsset } from "@opengame/preflight";
 import { compressedTextReaders } from "@opengame/preflight/node-compression";
 import { lstat, realpath, rm } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { join, posix, resolve } from "node:path";
 import { isBundlePath, withoutCover } from "@opengame/protocol";
 import { assertNoReservedRuntimePaths, insideProject, loadManifest, outputFolder, replaceFile } from "./files";
 import type { Output } from "./output";
@@ -393,7 +393,9 @@ export async function vendorCommand(root: string, flags: Record<string, string |
     // The new export is written beside the old one and swapped in, so a failure part way
     // leaves the previous export whole; the old copy goes only after the swap.
     const tag = randomUUID().slice(0, 8);
-    const nextRelative = join(dirname(relative), `.${basename(relative)}-next-${tag}`);
+    // A bundle path like `relative`, so POSIX on every system: the staging reader refuses a
+    // backslash, and on Windows join() would have put one here on every re-vendor.
+    const nextRelative = posix.join(posix.dirname(relative), `.${posix.basename(relative)}-next-${tag}`);
     await writeStage(base, nextRelative, staged);
     const previous = `${target}.previous-${tag}`;
     await replaceFile(target, previous);

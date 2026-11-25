@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.13.10
+
+- `init`, `dev` and `vendor` run on Windows. They stopped there with "This command needs Python 3
+  on macOS or Linux", and installing Python did not help, because the CLI only looked for it where
+  macOS and Linux keep it. `check` and `deploy` ran, but skipped what they read from
+  `package.json` and never sent a large build file by file. On Windows the CLI now reads the
+  build folder itself and refuses a file or folder whose real path is not where it was asked
+  for, which covers symbolic links and junctions. macOS and Linux read through
+  Python 3 as before.
+- Running `opengame vendor` again over an existing export works on Windows. It named its new
+  folder with a backslash, which the staging step refuses.
+
 ## 0.13.9
 
 - When `publish` or `deploy --publish` cannot save `--banner-style` after a release goes live,

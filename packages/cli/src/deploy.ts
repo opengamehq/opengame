@@ -28,7 +28,7 @@ import { showAllowance } from "./allowance";
 import { syncAchievements } from "./achievements";
 import { filesFromArchive, uploadMissingFiles } from "./incremental";
 import { uploadArchiveParts, type ArchiveSource } from "./archive-parts";
-import { pythonAvailable, safeReadFile } from "./safe-fs";
+import { descriptorReaderAvailable, safeReadFile } from "./safe-fs";
 import { assertUnitySourceRoot, createUnityArchive, LARGE_ASSET_DELIVERY, planDelivery, readSmallUnityAssets, readUnityAsset, readUnityAssetPart, readUnityAssetPlan, unityFileUnion, unityInputDigest } from "./unity-assets";
 import { Meter, TRANSPORT_HEADERS } from "./transport";
 
@@ -437,10 +437,11 @@ export async function prepareDeploy(root: string, output: Output, runBuild = tru
      fits the file route keeps it; a bigger one becomes the large-game plan with its
      assets chosen automatically, exactly as --external-assets auto. Measured from sizes
      alone, before a byte is read. Without the server's word it is the archive, as before.
-     The plan hashes its files through the Python helper (safe-fs), and the archive falls back
-     to a Node reader where there is none, so on Windows or a machine without Python 3 a big
-     build keeps going as one archive, as every build did before the plan was chosen here. */
-  const unityAssets = options.unityAssets ?? (options.autoAssets && !options.vendor && await pythonAvailable() && await pastFileRoute(folder) ? "auto" : undefined);
+     The plan hashes its files through the descriptor-held reader (safe-fs: Python, or the
+     in-process reader on Windows), and the archive falls back to a Node copy where neither
+     runs, so on a Mac or Linux machine without Python 3 a big build keeps going as one
+     archive, as every build did before the plan was chosen here. */
+  const unityAssets = options.unityAssets ?? (options.autoAssets && !options.vendor && await descriptorReaderAvailable() && await pastFileRoute(folder) ? "auto" : undefined);
   if (unityAssets && !options.unityAssets) output.emit({ type: "notice", code: "external_assets_chosen",
     message: "This build is large, so its bigger files are sent one at a time. Files OpenGame already has are skipped." });
   const archive = unityAssets

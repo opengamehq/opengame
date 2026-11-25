@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "15ce513f33e2e0a155f3fa45cc173e6336fca653"
+    "commit": "28511782d2afcf057065a9fd7fd7ccc339bad82a"
   },
-  "digest": "e539675b177d0935cf02b7d7a521fa588c3d4bc7f1cbc49992c8483672c5d07d",
+  "digest": "a6d8531a014278edc4a878deaabf942957baa3d5b11b5e996e62bb6515b44039",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -201,8 +201,8 @@
     },
     {
       "path": "package-lock.json",
-      "bytes": 27909,
-      "sha256": "5fc408ca2fd9865a6824ea667e0bc9cb9b54ffcee05739c3bb5f22de514bbcd6",
+      "bytes": 27910,
+      "sha256": "7ef6b668ba6b2d799639c2276e0108559d339b923c7f4979209c6d2b2f3d1841",
       "executable": false
     },
     {
@@ -219,8 +219,8 @@
     },
     {
       "path": "packages/cli/CHANGELOG.md",
-      "bytes": 27555,
-      "sha256": "52c9efc8fe06a020a9e8a4b12f2bc10ae53084e2c4a5b469dbf33f1f33212c86",
+      "bytes": 28289,
+      "sha256": "1f1da7e8acae7c07449f14d0ed4630a2d4505348a8ba9a9083f3103800054bbc",
       "executable": false
     },
     {
@@ -237,8 +237,8 @@
     },
     {
       "path": "packages/cli/package.json",
-      "bytes": 1965,
-      "sha256": "3579b01c42c4b1f331140ce2aff217f5c905cf535f908d21aa04e8553d2e39dc",
+      "bytes": 1966,
+      "sha256": "be1c9e7b294364ef770aea0c9663847b7cf1d8f550fe3240630e5b3ec6d384ae",
       "executable": false
     },
     {
@@ -279,8 +279,8 @@
     },
     {
       "path": "packages/cli/src/archive.ts",
-      "bytes": 29625,
-      "sha256": "83537b229b2b0c870be68fcef8e3bc5516ac707b530925059ecb860ac947ba98",
+      "bytes": 29745,
+      "sha256": "ccd5596c926211078cac04c49ae493e45b2cc216e537b94a64b418ee606375c6",
       "executable": false
     },
     {
@@ -339,8 +339,8 @@
     },
     {
       "path": "packages/cli/src/deploy.ts",
-      "bytes": 95423,
-      "sha256": "92deb9b07093cdb9ac088b70e77fec3a46fc41925fe21c1e014ba31bf2de6b75",
+      "bytes": 95501,
+      "sha256": "bb85d093a028b466dc21fbe8843263e85c9e1deef862cda34f4f5912778614ec",
       "executable": false
     },
     {
@@ -530,6 +530,12 @@
       "executable": false
     },
     {
+      "path": "packages/cli/src/safe-fs-node.ts",
+      "bytes": 20314,
+      "sha256": "1297354d15db5cce7b112846c8b6bc415ab84b3193ebecdbb307e887864e0084",
+      "executable": false
+    },
+    {
       "path": "packages/cli/src/safe-fs.py",
       "bytes": 15351,
       "sha256": "04f9450902d2bc910c8ca02b779ae1b461725fd08bd817ec52b7cc67ae9735b8",
@@ -537,8 +543,8 @@
     },
     {
       "path": "packages/cli/src/safe-fs.ts",
-      "bytes": 22775,
-      "sha256": "fc1e957cc5eff888d799337021219d47b2f5c0aa0212b2e64a3aef4a4f9fd565",
+      "bytes": 24658,
+      "sha256": "0fa23be6fa6b00829fe7ea98f9072baec3d98f98198d6aff0dd421031be2f565",
       "executable": false
     },
     {
@@ -621,8 +627,8 @@
     },
     {
       "path": "packages/cli/src/vendor.ts",
-      "bytes": 31737,
-      "sha256": "d61ad30fed00ad52feded507ccc95169eddc66a856887445acf02cb9d10efef3",
+      "bytes": 31920,
+      "sha256": "84a2710d1d63ecca6301fe3f4db0f3df79202bb00ab98c81f43dc06fc312e921",
       "executable": false
     },
     {
@@ -951,6 +957,24 @@
     },
     {
       "path": "packages/cli/tests/fixtures/manifests/0.13.1/init-vite.json",
+      "bytes": 357,
+      "sha256": "a399eb39131d09916d1a7806c2f2b3e6279bb2fc864da5bc117f8a3bf0293e07",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.10/init-mod.json",
+      "bytes": 316,
+      "sha256": "9cf0b6bb4f5acbcc94b449d34be8a66a3810275c0452ddedb01e31618731acd1",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.10/init-plain.json",
+      "bytes": 276,
+      "sha256": "a5ae52e22a699b3e24fcf3cc7970abd37d6ead679614758edb2637e13330007d",
+      "executable": false
+    },
+    {
+      "path": "packages/cli/tests/fixtures/manifests/0.13.10/init-vite.json",
       "bytes": 357,
       "sha256": "a399eb39131d09916d1a7806c2f2b3e6279bb2fc864da5bc117f8a3bf0293e07",
       "executable": false
@@ -1815,8 +1839,8 @@
     },
     {
       "path": "packages/cli/tests/safe-fs.test.ts",
-      "bytes": 24017,
-      "sha256": "03d7543cea02bf5b3837de7b8910d60f5af9e12d2c5ca92583212ab7f7da3cdb",
+      "bytes": 46649,
+      "sha256": "1c528fef66bf4391bc3a859db54917df09296545feb6333109b5037b79e61786",
       "executable": false
     },
     {

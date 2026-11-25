@@ -10,8 +10,9 @@ import { LARGE_ASSET_DELIVERIES, largeAssetLimits } from "@opengame/shared/large
 const LARGEST_ASSET_BYTES = Math.max(...LARGE_ASSET_DELIVERIES.map(kind => largeAssetLimits(kind)!.fileBytesMax));
 import { collectFiles } from "./files";
 import { CliError } from "./output";
+import { runNodeJob } from "./safe-fs-node";
 
-type Reply = { error?: string; files?: [string, string][]; ok?: boolean; sizes?: unknown; digests?: unknown };
+type Reply = { error?: string; files?: [string, string | Buffer][]; ok?: boolean; sizes?: unknown; digests?: unknown };
 export type DirectoryIdentity = { dev: string; ino: string };
 
 export async function safeDirectoryIdentity(root: string, expected?: DirectoryIdentity): Promise<DirectoryIdentity> {
@@ -42,6 +43,15 @@ export const PYTHON_CANDIDATES = ["/usr/bin/python3", "/opt/homebrew/bin/python3
  * (PEP 538 and 540), and the helper's names are already portable ones. */
 const HELPER_ENV: NodeJS.ProcessEnv = { PATH: "/usr/bin:/bin" };
 const HELPER_FLAGS = ["-I", "-S"];
+
+/** Which reader runs the jobs below. Python's descriptor-held helper wherever it can run,
+ * which is macOS and Linux. Windows has no openat or O_NOFOLLOW for it to use and no Python at
+ * the paths above, and until 25 Nov 2026 every command that read a project stopped there on
+ * PYTHON_MISSING, which told a Windows user to install something that could never be found.
+ * There the same jobs run in-process (safe-fs-node.ts, whose header says what that reader
+ * holds and what it cannot). Exported, and mutable, only so the tests can run every job
+ * through the Node reader on Linux. */
+export const READER = { node: process.platform === "win32" };
 export const PYTHON_MISSING = "This command needs Python 3 on macOS or Linux for its file reads. Install Python 3 from python.org or Homebrew (brew install python), then retry.";
 
 /** True when the candidate starts and imports os. Existing is not enough: on a Mac without
@@ -81,18 +91,24 @@ async function python(): Promise<string> {
   return interpreter;
 }
 
-/** Whether a working interpreter was found, for the one caller that has a fallback. Check
- * and deploy read through Node when this is false; nothing else does. */
-export async function pythonAvailable(): Promise<boolean> {
+/** Whether the jobs below can run here: always on Windows, through the in-process reader, and
+ * elsewhere when a working interpreter was found. For the callers that have a fallback: check
+ * and deploy read through snapshot.ts's Node copy when this is false; nothing else does. */
+export async function descriptorReaderAvailable(): Promise<boolean> {
+  if (READER.node) return true;
   return python().then(() => true, () => false);
 }
+
+/** A read reply's bytes: base64 from the Python helper, a Buffer from the in-process one. */
+const bytesOf = (value: string | Buffer) => typeof value === "string" ? Buffer.from(value, "base64") : value;
 
 async function helper() {
   return spawn(await python(), [...HELPER_FLAGS, fileURLToPath(new URL("./safe-fs.py", import.meta.url))], { stdio: ["pipe", "pipe", "pipe"], env: HELPER_ENV });
 }
 
-/** The subprocess owns the directory descriptors for the whole operation. There
- * is no path-based fallback: Windows and a missing Python fail before I/O. */
+/** The subprocess owns the directory descriptors for the whole operation. There is no
+ * path-based fallback on macOS or Linux: a missing Python fails before I/O. Windows runs the
+ * same job through runNodeJob instead (READER). */
 /** What a refused read says, by caller. The default is the staging sentence vendor and dev
  * have always printed; check and deploy pass their own, because "retry with a new output
  * folder" names a folder neither of them writes. */
@@ -101,8 +117,13 @@ export const BUILD_CHANGED = "The build changed while being read. Finish buildin
 const STAGE_CHANGED = "The export or staging path changed during I/O. Stop concurrent writers and retry with a new output folder. A partial stage may remain; inspect it before removing it.";
 
 async function filesystem(job: Record<string, unknown>, words: ReadWords = {}, payload?: Iterable<Uint8Array>): Promise<Reply> {
+  const result: Reply = READER.node ? await runNodeJob(job, payload) : await pythonJob(job, payload);
+  return replyOf(job, result, words);
+}
+
+async function pythonJob(job: Record<string, unknown>, payload?: Iterable<Uint8Array>): Promise<Reply> {
   const child = await helper();
-  const result = await new Promise<Reply>((resolve, reject) => {
+  return new Promise<Reply>((resolve, reject) => {
     let text = "";
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", chunk => { text += chunk; });
@@ -128,6 +149,9 @@ async function filesystem(job: Record<string, unknown>, words: ReadWords = {}, p
       })().catch(() => child.stdin.destroy());
     }
   });
+}
+
+function replyOf(job: Record<string, unknown>, result: Reply, words: ReadWords): Reply {
   if (result.error === "file_missing") throw Object.assign(new Error("The requested file is absent."), { code: "ENOENT" });
   // Over the limit: the caller's own refusal when it has one, or else a change, which is
   // what an over-limit file in an already-collected, already-measured export means.
@@ -158,7 +182,7 @@ export async function safeSnapshot(folder: string, options: { externalAssets?: R
   for (const files of readGroups(rows, LIMITS.bundle.fileBytesMax)) {
     const reply = await filesystem({ operation: "read", root: collected.root, identity, maximum: left, files }, options.words);
     for (const [name, bytes] of reply.files!) {
-      const buffer = Buffer.from(bytes, "base64");
+      const buffer = bytesOf(bytes);
       snapshot.set(name, buffer);
       left -= buffer.byteLength;
     }
@@ -237,7 +261,7 @@ export async function safeReadFile(root: string, name: string, maximum: number, 
   const base = await realpath(root);
   const identity = await lstat(base, { bigint: true });
   const reply = await filesystem({ operation: "read", root: base, identity: { dev: String(identity.dev), ino: String(identity.ino) }, maximum, allowMissing: true, files: [{ path: name, relative: name }] }, words);
-  return Buffer.from(reply.files![0]![1], "base64");
+  return bytesOf(reply.files![0]![1]);
 }
 
 /** Binary output avoids base64's string-size ceiling for an explicit large asset.
@@ -250,6 +274,17 @@ export async function safeReadLargeFile(root: string, name: string, maximum: num
     throw new CliError("build_changed", "The external asset has an invalid path or size. Finish building, then run the command again.", 1);
   }
   const base = root, identity = await safeDirectoryIdentity(base, expectedRoot);
+  /* With a range, only that slice comes back, from a file that must still be `size` long: a
+     large asset sent in parts is read a part at a time (transport.ts), so memory holds the
+     parts in flight rather than the file. The slice is never longer than `maximum`. */
+  const job = { operation: "read-binary", root: base, identity,
+    maximum, files: [{ path: name, relative: name, ...(range ? { size: range.size } : {}) }],
+    ...(range ? { range: { offset: range.offset, length: range.length } } : {}) };
+  if (READER.node) {
+    const reply = await runNodeJob(job);
+    if (!reply.bytes || reply.bytes.byteLength > maximum) throw new CliError("build_changed", ASSET_CHANGED, 1);
+    return reply.bytes;
+  }
   const child = await helper();
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -262,15 +297,10 @@ export async function safeReadLargeFile(root: string, name: string, maximum: num
     child.stderr.resume(); child.stdin.on("error", () => {});
     child.once("error", () => reject(new CliError("filesystem_unsupported", PYTHON_MISSING, 2)));
     child.once("close", code => {
-      if (code !== 0 || overflow) reject(new CliError("build_changed", "An external asset is missing, changed, or exceeds its size limit. Finish building and retry.", 1));
+      if (code !== 0 || overflow) reject(new CliError("build_changed", ASSET_CHANGED, 1));
       else resolve(Buffer.concat(chunks, received));
     });
-    /* With a range, only that slice comes back, from a file that must still be `size` long: a
-       large asset sent in parts is read a part at a time (transport.ts), so memory holds the
-       parts in flight rather than the file. The slice is never longer than `maximum`. */
-    child.stdin.end(JSON.stringify({ operation: "read-binary", root: base, identity,
-      maximum, files: [{ path: name, relative: name, ...(range ? { size: range.size } : {}) }],
-      ...(range ? { range: { offset: range.offset, length: range.length } } : {}) }));
+    child.stdin.end(JSON.stringify(job));
   });
 }
 
@@ -281,7 +311,11 @@ const ASSET_CHANGED = "An external asset is missing, changed, or exceeds its siz
  * file and the reply stays a few hundred kilobytes on thousands of small ones. */
 const HASH_BATCH_FILES = 1024;
 const HASH_BATCH_BYTES = 256 * 1024 * 1024;
-const helperBroke = () => new CliError("filesystem_unsupported", "The local export filesystem helper could not run. " + PYTHON_MISSING, 2);
+/* Only Python can answer malformed; the in-process reader builds its replies itself, so on
+   Windows this means a fault in the CLI and says nothing about installing Python. */
+const helperBroke = () => new CliError("filesystem_unsupported", READER.node
+  ? "The CLI could not read the build folder. Run the command again; if it keeps failing, reinstall the latest OpenGame CLI."
+  : "The local export filesystem helper could not run. " + PYTHON_MISSING, 2);
 
 /** Size and SHA-256 of many files under one export root, for an external-asset plan.
  * Reading each file through safeReadLargeFile started one interpreter per file, and OG
@@ -345,5 +379,5 @@ export async function safeReadFiles(root: string, files: readonly { path: string
   const identity = await safeDirectoryIdentity(root);
   const reply = await filesystem({ operation: "read", root, identity, maximum: files.reduce((sum, file) => sum + file.byteSize, 0),
     files: files.map(file => ({ path: file.path, relative: file.path, size: file.byteSize })) }, words);
-  return new Map(reply.files!.map(([name, bytes]) => [name, Buffer.from(bytes, "base64")]));
+  return new Map(reply.files!.map(([name, bytes]) => [name, bytesOf(bytes)]));
 }

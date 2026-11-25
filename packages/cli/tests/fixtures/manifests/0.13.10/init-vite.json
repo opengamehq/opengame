@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opengame.io/schema/opengame.json",
+  "title": "Paper lantern city",
+  "tagline": "auto",
+  "description": "Light every lantern in a folded paper town before the wind does.",
+  "genre": "puzzle-casual",
+  "kind": "game",
+  "build": {
+    "command": "pnpm run build",
+    "output": "."
+  },
+  "controls": "auto",
+  "players": "auto"
+}

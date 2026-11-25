@@ -17,7 +17,7 @@ import { readableBytes } from "./bytes";
 import { vendorDependencies } from "./vendor";
 import { canonicalFiles } from "./incremental";
 import { removeAtExit, removed, Snapshot } from "./snapshot";
-import { BUILD_CHANGED, pythonAvailable, type DirectoryIdentity } from "./safe-fs";
+import { BUILD_CHANGED, descriptorReaderAvailable, type DirectoryIdentity } from "./safe-fs";
 import { prepareRuntimeAssets, validateDeclaredRuntimes, type RuntimeArtifacts } from "./runtime-artifacts";
 
 /** Check and package one snapshot. A build tool editing files after this read
@@ -27,14 +27,15 @@ export async function inspectArchive(folder: string, manifest: GameManifest, out
     await validateDeclaredRuntimes(manifest.runtimes, options.artifacts);
     output.emit({ type: "notice", code: "runtime_acquisition_deferred", message: "Runtime declarations match this CLI's reviewed inventory. Runtime bytes have not been acquired by this check; use vendor or dev to acquire and verify them locally. Server runtime derivation still runs before preview." });
   }
-  /* Python first. The descriptor-relative helper walks each path from a held directory,
-     so an ancestor swapped for a symlink mid-read is caught; Node has no openat, and its
-     reader below pins only the last component. Vendor, dev and Unity assets require the
-     helper. Check and deploy use it wherever a working interpreter is found, and fall back
-     to the Node reader only where none is (Windows, slim images, a pyenv-only shell), so
-     that the command people run most still works there. The person is told once, because
-     a weaker reader nobody hears about is how the weaker one stays on the common path. */
-  const descriptorReader = Boolean(options.vendor || options.externalAssets) || await pythonAvailable();
+  /* The descriptor-held reader first: Python's helper, which walks each path from a held
+     directory, so an ancestor swapped for a symlink mid-read is caught, or on Windows the
+     in-process reader that checks every folder on the way (safe-fs-node.ts). snapshot.ts's
+     Node copy pins only the last component. Vendor, dev and Unity assets require the
+     helper. Check and deploy use it wherever it runs, and fall back to the Node copy only
+     where it does not (a Mac or Linux machine without Python: slim images, a pyenv-only
+     shell), so that the command people run most still works there. The person is told once,
+     because a weaker reader nobody hears about is how the weaker one stays on the common path. */
+  const descriptorReader = Boolean(options.vendor || options.externalAssets) || await descriptorReaderAvailable();
   if (!descriptorReader) nodeReaderNotice(output);
   const { snapshot, excluded } = await Snapshot.read(folder, { descriptorReader, workDirectory: options.workDirectory, externalAssets: options.externalAssets,
     externalDelivery: options.externalDelivery, rootIdentity: options.rootIdentity, words: options.vendor ? {} : { changed: BUILD_CHANGED } });

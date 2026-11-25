@@ -23,14 +23,21 @@ import { CLOSE_COPY, COMMITTED_ENTRIES_CLOSE_AT, COMMITTED_JAM_KICKOFF_AT, COMMI
    the day first like the copy, a lower-case `am`/`pm` like CLOSE_COPY, and `PT` written
    out, never PST or PDT, because the reader should not have to know which half of the year
    the deadline falls in. */
-const PACIFIC = new Intl.DateTimeFormat("en-US", {
+let pacificFormat: Intl.DateTimeFormat | undefined, pacificYearFormat: Intl.DateTimeFormat | undefined;
+/* The three formatters here, and JAM_YEAR, which one of them formats, are made on first use
+   rather than when this module loads. Building an Intl formatter or collator is the expensive
+   part, about 5 ms the first time a process asks for one (time zone or collation data), and
+   every process that imports this module paid it at load, the CLI on every start, whether or
+   not it ever printed the date (round 173A, 24 Nov 2026). The output is the same. */
+const PACIFIC = () => pacificFormat ??= new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Los_Angeles", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true,
 });
-const PACIFIC_YEAR = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", year: "numeric" });
+const PACIFIC_YEAR = () => pacificYearFormat ??= new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", year: "numeric" });
 
 /* The year the copy leaves unsaid: the close's, in Pacific time. A millisecond before the
    instant, because the close is the first minute of the day after the one it names. */
-const JAM_YEAR = PACIFIC_YEAR.format(new Date(COMMITTED_ENTRIES_CLOSE_AT.getTime() - 1));
+let jamYear: string | undefined;
+const JAM_YEAR = () => jamYear ??= PACIFIC_YEAR().format(new Date(COMMITTED_ENTRIES_CLOSE_AT.getTime() - 1));
 
 /* The committed instants, said the way the site says them. The launch and the kickoff are
    days with no time; the close is the last minute of the day before, so nobody misses it by
@@ -43,9 +50,9 @@ function committedCopy(ms: number): string | null {
 }
 
 function pacific(at: Date, withYear: boolean): string {
-  const parts = PACIFIC.formatToParts(at);
+  const parts = PACIFIC().formatToParts(at);
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(p => p.type === type)?.value ?? "";
-  const year = withYear || part("year") !== JAM_YEAR ? ` ${part("year")}` : "";
+  const year = withYear || part("year") !== JAM_YEAR() ? ` ${part("year")}` : "";
   return `${part("day")} ${part("month")}${year}, ${part("hour")}:${part("minute")} ${part("dayPeriod").toLowerCase()} PT`;
 }
 
@@ -77,7 +84,7 @@ export function whenPacific(at: string | number, options: { year?: boolean; inst
   if (!copy) return pacific(parsed, options.year === true);
   if (!options.year) return copy;
   /* The year of the day the copy names, which for the close is the day before its instant. */
-  const year = PACIFIC_YEAR.format(new Date(parsed.getTime() - 1));
+  const year = PACIFIC_YEAR().format(new Date(parsed.getTime() - 1));
   return copy.replace(/^(\d{1,2} \p{L}+)/u, `$1 ${year}`);
 }
 
@@ -91,13 +98,14 @@ export const whenUtc = whenPacific;
 /* A time that belongs to a UTC day rather than to the jam: the submission allowance resets at
    midnight UTC and says so ("Submissions today (UTC)"), so its reset reads in the same zone.
    Not for anything a creator compares with the deadline; that is `whenPacific`. */
-const UTC_INSTANT = new Intl.DateTimeFormat("en-GB", {
+let utcInstantFormat: Intl.DateTimeFormat | undefined;
+const UTC_INSTANT = () => utcInstantFormat ??= new Intl.DateTimeFormat("en-GB", {
   day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short",
 });
 export function utcInstant(at: string | number): string {
   const parsed = new Date(at);
   if (Number.isNaN(parsed.getTime())) return typeof at === "string" ? at : "";
-  return UTC_INSTANT.format(parsed);
+  return UTC_INSTANT().format(parsed);
 }
 
 /* What a jam that is not taking entries is doing, in words. Only read once acceptingEntries

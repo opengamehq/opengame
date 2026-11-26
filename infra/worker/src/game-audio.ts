@@ -21,7 +21,7 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-28-no-record-key";
+export const GAME_AUDIO_VERSION = "audio-29-worker-canvas";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 /** The recording block the receiver reads (`limits.play.recording`), less the page's own numbers. */
@@ -481,10 +481,195 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     }
     changed();
   }
+  // WHAT THE BROWSER NEVER TIMES IS READ. First contentful paint is the browser's answer, and
+  // for two kinds of canvas it never gives one. Both were measured in Chromium on 26 Nov 2026,
+  // on pages that are a canvas and nothing else.
+  //
+  // A canvas handed off with transferControlToOffscreen. Drawn here with 2D, WebGL, WebGL2 or
+  // WebGPU a canvas is timed; the same four drawn from a worker never are. A Kaigen game on
+  // production, WebGPU from a worker and no other element in its body, was playable 3.7 s
+  // after Play and stayed under the parent's cover until the stage said, at thirty seconds,
+  // that it had not started (the owner's screenshots, 26 Nov 2026).
+  //
+  // And a WebGL canvas on this thread whose context was made before the document's first
+  // paint and first drawn after it, which is an engine that makes its renderer in an inline
+  // script and draws once its assets are in. Made after the first paint, the same context is
+  // timed on its first draw, three seconds later or not; made before it and drawn from the
+  // first frame, it is timed too.
+  //
+  // In both, what the canvas shows can still be copied: drawing it into a 2D canvas takes the
+  // last frame a worker presented, or, inside an animation frame, the one this thread has just
+  // drawn. So until the document has counted a paint some other way, canvases are copied into
+  // a 64 by 36 probe, and the first that holds a picture, in a box somebody could see, is the
+  // paint. Not a WebGPU canvas on this thread, which copies out empty even inside its own
+  // frame; Unreal's page is one, and says for itself when it has drawn (above).
+  //
+  // A PICTURE, NOT A FRAME: more than one flat colour. The first cut counted any pixel that
+  // was not transparent, and a WebGL context made with alpha: false, which is three.js's
+  // default, copies out as opaque black before it has drawn anything: 'painted' went out
+  // 272 ms after such a context was made, four seconds ahead of its first draw (review,
+  // 26 Nov 2026). A cleared buffer and an engine's one-colour first frames now wait as an
+  // empty canvas does, so the parent's cover never lifts onto a blank one. The browser is
+  // easier on a canvas it does time, and counts a bare clear; this is the second opinion and
+  // can afford to be stricter. The copy is scaled with the browser's best smoothing, which
+  // averages every pixel of the canvas into the probe: a plain scaled copy samples a few
+  // points, and at 1920 by 1080 a game of Pong, white paddles and a ball on black, fell
+  // between them and read as one colour (review of the second cut, same day).
+  //
+  // AND ONLY WHAT SHOWS NOW. A canvas is asked whether it shows before it is copied, every
+  // time, and nothing is remembered about it. The second cut remembered a canvas it had seen
+  // a picture in, to save the copy, and one that drew a frame while hidden and was then shown
+  // cleared to black counted on that memory (the same review). A hidden canvas now costs a
+  // style read and no copy.
+  //
+  // WHICH CANVASES, AND WHEN. One handed off is noted by a replaced transferControlToOffscreen,
+  // passing for the native as every replacement here does, and read four times a second from
+  // then on (once a second a minute into the document): a worker's frame stays put between
+  // readings, and nothing is copied until one has been presented. Every other canvas is looked
+  // at once a second, inside an animation frame asked for after the game's own so its drawing
+  // is still there, and only once the browser has timed this document's first paint. A frame
+  // warming under the parent's poster never gets one, nor a single animation frame (none in
+  // 2.5 s, measured), so the page's rule that a warm game on this thread reports no paint
+  // before Play (player.tsx) stands, and the look stays in the engine the gap was measured
+  // in, since the others time no first paint. A worker's game can report from under the
+  // poster, as a game's own ready does. All of it ends with the first paint however it was
+  // counted, slows again five minutes into the document, since a copy is a whole frame read
+  // back, and skips a tab nobody is looking at. createElement, getContext,
+  // requestAnimationFrame and IntersectionObserver are taken now, before any game script,
+  // because engines replace them.
+  //
+  // WHETHER A CANVAS SHOWS IS THE BROWSER'S ANSWER TOO. A box of some size inside the viewport
+  // is not enough: a worker's scratch canvas inside a parent of no height with overflow:
+  // hidden has one and is clipped away entirely, and its picture would have lifted the cover
+  // over a stage still blank (Greptile on #2431). Which ancestors clip which descendants
+  // turns on positioning, transforms and containment, so it is not worked out here: an
+  // IntersectionObserver reports how much of each canvas is left in view once every ancestor
+  // has clipped it, and a canvas counts only after that report says some of it is. Where
+  // there is no observer a canvas is taken on its box, as it was.
+  const probeCanvas = document.createElement.bind(document, 'canvas');
+  const canvasProto = typeof HTMLCanvasElement === 'function' ? HTMLCanvasElement.prototype : null;
+  const probeContext = canvasProto ? canvasProto.getContext : null;
+  const nativeHandOff = canvasProto ? canvasProto.transferControlToOffscreen : null;
+  const probeFrame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame.bind(globalThis) : null;
+  const ViewObserver = typeof IntersectionObserver === 'function' ? IntersectionObserver : null;
+  // The canvases handed off and not yet counted, eight at most.
+  let handedOff = [];
+  let reading = false;
+  let looking = false;
+  let lookFrom = 0;
+  let paintProbe = null;
+  const holdsPicture = (canvas) => {
+    if (!canvas.width || !canvas.height) return false;
+    if (!paintProbe) {
+      const made = probeCanvas();
+      made.width = 64; made.height = 36;
+      paintProbe = probeContext.call(made, '2d', { willReadFrequently: true });
+      paintProbe.imageSmoothingEnabled = true;
+      paintProbe.imageSmoothingQuality = 'high';
+    }
+    paintProbe.clearRect(0, 0, 64, 36);
+    paintProbe.drawImage(canvas, 0, 0, 64, 36);
+    let pixels;
+    try { pixels = paintProbe.getImageData(0, 0, 64, 36).data; } catch (error) {
+      // The copy tainted the probe, so the game drew another site's image into this canvas
+      // without CORS. Only drawing one taints a canvas, so it holds a picture; the probe is
+      // spent, and the next reading makes another.
+      paintProbe = null;
+      return Boolean(error && error.name === 'SecurityError');
+    }
+    // More than one colour: some channel, alpha among them, runs wider across the probe than
+    // a scaled copy of one flat colour rounds to.
+    for (let channel = 0; channel < 4; channel++) {
+      let low = 255, high = 0;
+      for (let at = channel; at < pixels.length; at += 4) {
+        if (pixels[at] < low) low = pixels[at];
+        if (pixels[at] > high) high = pixels[at];
+      }
+      if (high - low > 2) return true;
+    }
+    return false;
+  };
+  // How much of each watched canvas is in view, as the browser last reported it: true once a
+  // pixel or more each way is left after every ancestor's clipping. Sixty-four canvases at
+  // most; one past that is never counted.
+  const inView = new WeakMap();
+  let viewWatcher = null;
+  let viewWatched = 0;
+  const endViewWatch = () => { if (viewWatcher) { try { viewWatcher.disconnect(); } catch { /* Already gone. */ } viewWatcher = null; } };
+  const watchView = (canvas) => {
+    if (inView.has(canvas) || viewWatched >= 64) return;
+    if (!viewWatcher) {
+      viewWatcher = new ViewObserver((entries) => {
+        for (const entry of entries) inView.set(entry.target, entry.isIntersecting && entry.intersectionRect.width >= 1 && entry.intersectionRect.height >= 1);
+      }, { threshold: [0, 0.001, 0.01, 0.1, 0.5, 1] });
+    }
+    inView.set(canvas, false);
+    viewWatched++;
+    viewWatcher.observe(canvas);
+  };
+  // Somewhere the player could see it: some of it in view, by the browser's report or, with
+  // no observer, by its box, and not hidden by its own style or anything around it. A worker's
+  // scratch canvas parked off screen or clipped away is not what the player is looking at.
+  const canvasShows = (canvas) => {
+    if (ViewObserver) {
+      watchView(canvas);
+      if (inView.get(canvas) !== true) return false;
+    } else {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width < 1 || rect.height < 1 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= innerWidth || rect.top >= innerHeight) return false;
+    }
+    // Both spellings of the two options: Chromium 105 to 120 knew only the older pair, and an
+    // option a browser does not know is ignored, which would leave the canvas unchecked.
+    if (typeof canvas.checkVisibility === 'function') return canvas.checkVisibility({ opacityProperty: true, visibilityProperty: true, checkOpacity: true, checkVisibilityCSS: true });
+    const style = getComputedStyle(canvas);
+    return style.visibility !== 'hidden' && Number(style.opacity) !== 0;
+  };
+  const showsPicture = (canvas) => {
+    try { return canvasShows(canvas) && holdsPicture(canvas); } catch { return false; /* Not readable: left to the browser's own timing. */ }
+  };
+  // How long until the next reading, given the quickest it may come.
+  const readAgain = (soonest) => { const age = performance.now(); return age < 60000 ? soonest : age < 300000 ? 1000 : 5000; };
+  const readHandedOff = () => {
+    if (contentful) { handedOff = []; reading = false; endViewWatch(); return; }
+    if (document.visibilityState !== 'hidden' && handedOff.some(showsPicture)) {
+      contentful = true; handedOff = []; reading = false; endViewWatch();
+      reportPaint();
+      return;
+    }
+    setTimeout(readHandedOff, readAgain(250));
+  };
+  const lookAtCanvases = () => {
+    if (contentful) { looking = false; endViewWatch(); return; }
+    const again = () => setTimeout(lookAtCanvases, readAgain(1000));
+    if (document.visibilityState === 'hidden') { again(); return; }
+    probeFrame(() => {
+      if (contentful) { looking = false; endViewWatch(); return; }
+      // Eight a look, taking up where the last one stopped: a page that makes hundreds of
+      // small canvases is not copied hundreds of times, and its stage, wherever it comes in
+      // the document, is still reached.
+      const canvases = document.getElementsByTagName('canvas');
+      const count = canvases.length;
+      for (let read = 0; read < count && read < 8; read++) {
+        const canvas = canvases[(lookFrom + read) % count];
+        if (handedOff.includes(canvas) || !showsPicture(canvas)) continue;
+        contentful = true; looking = false; endViewWatch();
+        reportPaint();
+        return;
+      }
+      lookFrom = count > 8 ? (lookFrom + 8) % count : 0;
+      again();
+    });
+  };
+  const startLooking = () => {
+    if (looking || contentful || !probeContext || !probeFrame || typeof setTimeout !== 'function') return;
+    looking = true;
+    setTimeout(lookAtCanvases, 1000);
+  };
   try {
     if (typeof PerformanceObserver === 'function' && (PerformanceObserver.supportedEntryTypes || []).includes('paint')) {
       new PerformanceObserver((list, observer) => {
-        if (!list.getEntries().some((entry) => entry.name === 'first-contentful-paint')) return;
+        const timed = list.getEntries().map((entry) => entry.name);
+        if (!timed.includes('first-contentful-paint')) { if (timed.includes('first-paint')) startLooking(); return; }
         observer.disconnect();
         contentful = true;
         reportPaint();
@@ -492,6 +677,22 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       paintTimed = true;
     }
   } catch { /* No paint timing: the report below says nothing about painting. */ }
+  // Only where paints are timed, as everything about 'painted' is: elsewhere the parent lifts
+  // its cover on parsing and waits for no report.
+  if (paintTimed && probeContext && typeof nativeHandOff === 'function') {
+    canvasProto.transferControlToOffscreen = function() {
+      // The browser's own answer first, thrown or returned, so a refused hand-off is the
+      // game's to hear exactly as it was and notes nothing.
+      const offscreen = nativeHandOff.apply(this, arguments);
+      if (!contentful && handedOff.length < 8) {
+        handedOff.push(this);
+        // Watched from now, so the browser's report on it is in by the first reading.
+        try { if (ViewObserver) watchView(this); } catch { /* Not watchable: it is never counted. */ }
+        if (!reading) { reading = true; setTimeout(readHandedOff, 250); }
+      }
+      return offscreen;
+    };
+  }
   // Only where paints are timed: a parent that cannot be told when the engine started lifts
   // its cover on parsing, and there Godot's own loader is better than a black frame.
   //
@@ -628,6 +829,8 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // The scroll guard's attachShadow went in above, before this table existed, and passes
   // for the native the same way. Nothing a game runs can come between the two.
   if (nativeAttachShadow) passFor(Element.prototype.attachShadow, nativeAttachShadow);
+  // The same for the paint reading's transferControlToOffscreen, where it was replaced.
+  if (canvasProto && typeof nativeHandOff === 'function' && canvasProto.transferControlToOffscreen !== nativeHandOff) passFor(canvasProto.transferControlToOffscreen, nativeHandOff);
   const nativeConnect = AudioNode.prototype.connect;
   const nativeDisconnect = AudioNode.prototype.disconnect;
   // Kept for the recorder's frame ordering (RECORD AND INSTANT REPLAY, below), which

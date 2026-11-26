@@ -27,8 +27,10 @@ const jam = { slug: "fixture-jam", name: "Fixture jam", state: "open", accepting
   rulesUrl: "https://opengame.io/rules", tracks: [{ key: "rpg", name: "RPG", kind: "theme" }] };
 const form = { formVersion: 1, jam: { ...jam, entriesPerCreator: 3, termsVersion: "2026-09-27" },
   track: { flag: "--track", label: "Genre track", options: [{ value: "rpg", label: "RPG" }, { value: "platformer", label: "Platformer" }] },
-  models: { flag: "--models", label: "Models used", min: 1, options: [{ value: "claude", label: "Claude", provider: "Anthropic" }, { value: "flux", label: "FLUX", provider: "fal.ai" }] },
-  sponsors: { flag: "--sponsor", label: "Sponsor tracks", options: [{ value: "fal", label: "Best use of fal.ai", provider: "fal.ai", evidenceLabel: "What fal.ai did", evidenceCharsMax: 2000 }] },
+  models: { flag: "--models", label: "Models used", min: 1, options: [{ value: "claude", label: "Claude", provider: "Anthropic" }, { value: "flux", label: "FLUX", provider: "fal.ai" },
+    { value: "meshy-6", label: "Meshy 6", provider: "Meshy" }] },
+  sponsors: { flag: "--sponsor", label: "Sponsor tracks", options: [{ value: "fal", label: "Best use of fal.ai", provider: "fal.ai", evidenceLabel: "What fal.ai did", evidenceCharsMax: 2000 },
+    { value: "meshy", label: "Best use of Meshy", provider: "Meshy", xPostRequired: true }] },
   evidence: { flagPrefix: "--evidence-", label: "What the sponsor's model did" } };
 const view = (state: string) => ({ id: submissionId, ref: "SUB-1042", state, releaseId, gameId, gamePublicId: "abc123",
   submittedAt: "2026-10-05T00:00:00Z", certifiedAt: null, jam: null,
@@ -267,6 +269,25 @@ test("the operator selects the jam without a destination prompt, and missing ans
     assert.equal(entered.code, 0, JSON.stringify(entered.events));
     assert.deepEqual(api.posts[0]!.body, { releaseId, jam: { slug: "fixture-jam", track: "rpg", models: ["claude", "flux"], sponsors: ["fal"], evidence: { fal: "Every prop texture" } } });
     assert.ok(entered.events.some(e => e.type === "notice" && /Genre track\s+RPG/.test(e.message)));
+  } finally { api.close(); await rm(cwd, { recursive: true, force: true }); }
+});
+
+/* Meshy's track asks for a post on X (26 Nov 2026). Submit takes --sponsor-post, refuses a link
+   that is not a post, and sends the link the one way the server stores it. Whether a post is
+   owed is the server's, which holds it against the game's standing entry. */
+test("a link that is not a post is refused, and the post goes on the jam's sponsorDetails", async () => {
+  const api = await harness({ jams: [jam], states: ["playtesting"] });
+  const cwd = await mkdtemp(join(tmpdir(), "og-submit-"));
+  try {
+    const profile = await api.execute(cwd, "submit", "--release", releaseId, "--track", "rpg", "--models", "meshy-6", "--sponsor", "meshy", "--sponsor-post", "meshy=https://x.com/maker");
+    assert.equal(profile.code, 2);
+    assert.match(profile.events.at(-1).message, /is not a link to a post on X/);
+    assert.equal(api.posts.length, 0, "nothing is sent without the post");
+    const entered = await api.execute(cwd, "submit", "--release", releaseId, "--track", "rpg", "--models", "meshy-6", "--sponsor", "meshy",
+      "--sponsor-post", "meshy=https://twitter.com/maker/status/42?s=20");
+    assert.equal(entered.code, 0, JSON.stringify(entered.events));
+    assert.deepEqual(api.posts[0]!.body, { releaseId, jam: { slug: "fixture-jam", track: "rpg", models: ["meshy-6"], sponsors: ["meshy"], evidence: {},
+      sponsorDetails: { meshy: { postUrl: "https://x.com/maker/status/42" } } } });
   } finally { api.close(); await rm(cwd, { recursive: true, force: true }); }
 });
 
@@ -510,7 +531,7 @@ test("--qa beside a jam flag or a jam answer is refused before any request", asy
   const api = await harness({ jams: [jam] });
   const cwd = await mkdtemp(join(tmpdir(), "og-submit-qa-"));
   try {
-    for (const extra of [["--jam", "fixture-jam"], ["--no-jam"], ["--track", "rpg"], ["--models", "claude"], ["--sponsor", "fal"], ["--evidence-fal", "Every texture"]]) {
+    for (const extra of [["--jam", "fixture-jam"], ["--no-jam"], ["--track", "rpg"], ["--models", "claude"], ["--sponsor", "fal"], ["--evidence-fal", "Every texture"], ["--sponsor-post", "meshy=https://x.com/maker/status/42"]]) {
       const result = await api.execute(cwd, "submit", "--release", releaseId, "--qa", ...extra);
       const error = result.events.at(-1);
       assert.equal(result.code, 2, JSON.stringify(error));

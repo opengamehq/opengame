@@ -54,6 +54,7 @@ const publishFlags = (when: string): Flag[] => [
   { name: "models", type: "string", description: `${when}Comma-separated models the game was made with, from the jam's form.` },
   { name: "sponsor", type: "string", description: `${when}Comma-separated sponsor tracks to enter.` },
   { name: "sponsor-email", type: "string", description: `${when}The email of the account you used at each sponsor, as sponsor=email, separated by commas.` },
+  { name: "sponsor-post", type: "string", description: `${when}A link to your post on X about the game, for a sponsor track that asks for one, such as Meshy's, as sponsor=link, separated by commas. opengame jams <slug> says which tracks ask.` },
   bannerStyleFlag(`${when}How the banner OpenGame draws for the game is made. Without it, the game's own choice, or your account's default. `),
 ];
 /* How the house banner is drawn (22 Nov 2026): the choice the publish step and the Details tab
@@ -222,6 +223,7 @@ const commands: Record<string, { args?: string; description: string; flags: Flag
     { name: "models", type: "string", description: "Comma-separated models the game was made with, from the jam's form." },
     { name: "sponsor", type: "string", description: "Comma-separated sponsor tracks to enter." },
     { name: "evidence-<sponsor>", type: "string", description: "What that sponsor's model did in the game, one flag per sponsor, for example --evidence-fal." },
+    { name: "sponsor-post", type: "string", description: "A link to your post on X about the game, for a sponsor track that asks for one, such as Meshy's, as sponsor=link, separated by commas." },
     { name: "yes", type: "boolean", description: "Skip the confirmation a person is asked for." },
     { name: "idempotency-key", type: "string", description: "Retry key. Reuse it to check on one submission; a new one starts another." },
     { name: "no-wait", type: "boolean", description: "Return once sent, without waiting for you to confirm the details in the browser." },
@@ -323,6 +325,16 @@ function nearestCommand(typed: string): string | null {
   return best && best.cost <= 2 && best.cost < typed.length && !(next && next.cost === best.cost && next.stretch === best.stretch) ? best.name : null;
 }
 function unknownCommand(typed: string): CliError {
+  /* A folder written against the command, `opengame deploy.` for `opengame deploy .`: the
+     nearest-command guess named deploy, which is what was typed, and left the person to spot
+     the missing space themselves (jam feedback, 25 Nov 2026). */
+  const glued = /^([a-z]+)((?:\.{1,2}|~)(?:[/\\].*)?|[/\\].*)$/.exec(typed);
+  if (glued && Object.hasOwn(commands, glued[1]!) && commands[glued[1]!]?.args?.includes("dir")) {
+    // `deploy/dist` meant the dist folder here, not /dist at the root of the disk.
+    const folder = /^[/\\]/.test(glued[2]!) ? `.${glued[2]}` : glued[2];
+    const meant = `opengame ${glued[1]} ${folder}`;
+    return new CliError("unknown_command", `Unknown command ${typed}. Put a space between the command and the folder: ${meant}`, undefined, { next: meant });
+  }
   const near = nearestCommand(typed);
   return new CliError("unknown_command", `Unknown command ${typed}.${near ? ` Did you mean opengame ${near}?` : ""} Run opengame help to see every command.`,
     undefined, { next: near ? `opengame ${near} --help` : "opengame help" });

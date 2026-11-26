@@ -16,12 +16,13 @@ import { authCommand } from "./auth";
 import { readBootstrap } from "./bootstrap";
 import { Api, ApiError, UploadInterrupted, uploadRetryPauseMs } from "./http";
 import { activeToken } from "./credentials";
-import { collectFiles, loadManifest, outputFolder, replaceFile } from "./files";
+import { collectFiles, loadManifest, outputFolder, replaceFile, windowsFolder } from "./files";
 import { archiveDigest, createArchive, readArchiveRange, type PackedArchive } from "./archive";
 import { lockfileInstall, missingDependencies, readBuildPackage, siteFramework, type SiteFramework } from "./build-output";
 import { ensureProjectIgnored, ensureDeployManifest, kindPhrase, provisionalFields } from "./init";
-import { readProject, resumesSavedDeploy, savedSubmit, updateProject, validKey, withProject, type Project } from "./project";
+import { readProject, resumesSavedDeploy, savedSubmit, updateProject, validKey, withProject, type DeployRefusal, type Project } from "./project";
 import { CliError, Output, terminalText } from "./output";
+import { EXIT } from "@opengame/protocol";
 import { CLI_VERSION, olderThan } from "./version";
 import type { PackagingReceipt } from "./packaging-receipt";
 import { showAllowance } from "./allowance";
@@ -117,9 +118,67 @@ type Ran = { code: number | null; error?: boolean; timedOut: boolean; tail: stri
  * to a person and the output captured in --json, in a process group of its own when piped,
  * and stopped with everything it started at the time limit. `noun` names it in the notice.
  */
-async function runProjectCommand(command: string, root: string, output: Output, timeoutMs: number, noun: string, graceMs = BUILD_STOP_GRACE_MS): Promise<Ran> {
-  // A project's build is its own code. It has no reason to inherit the API token.
-  const env = { ...process.env }; delete env.OPENGAME_TOKEN;
+/**
+ * A build command as cmd.exe can run it. Node's shell on Windows is cmd.exe, and opengame.json
+ * is often written on a Mac: init writes Go's `GOOS=js GOARCH=wasm go build ...` and Godot's
+ * `godot --headless --export-release 'Web' 'build/web/index.html'`, and a person writes
+ * `NODE_ENV=production vite build`. cmd.exe runs `GOOS=js` as a program and hands `'Web'` to
+ * Godot quotes and all, so each failed on every Windows machine (audit, 25 Nov 2026). Leading
+ * NAME=value assignments become environment variables, as a POSIX shell makes them; the
+ * program's own path takes backslashes, since cmd.exe reads `hz/hzbuild` or
+ * `./node_modules/.bin/vite` as a program and a /switch; and a single-quoted word outside
+ * double quotes becomes a double-quoted one when that means the same thing to cmd.exe and to
+ * the program: no %, ! or " inside it, and no trailing backslash, which a program's own
+ * parser would read as escaping the closing quote. A line for cmd.exe's own `for` or for
+ * PowerShell keeps its quotes, since there single quotes mean something. Anything else is
+ * left exactly as written; only the first program's path is turned round.
+ */
+export function forWindowsShell(command: string): { command: string; env: Record<string, string> } {
+  const env: Record<string, string> = {};
+  let rest = command.trimStart();
+  for (;;) {
+    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(?:'([^']*)'|"([^"]*)"|([^\s'"]*))\s+(?=\S)/.exec(rest);
+    if (!match) break;
+    env[match[1]!] = match[2] ?? match[3] ?? match[4] ?? "";
+    rest = rest.slice(match[0].length);
+  }
+  const program = /^[^\s'"&|<>()^]+/.exec(rest)?.[0];
+  if (program && program.includes("/") && !program.includes("://")) rest = program.replace(/\//g, "\\") + rest.slice(program.length);
+  if (/^(?:for|powershell(?:\.exe)?|pwsh(?:\.exe)?)(?=\s|$)/i.test(rest)) return { command: rest, env };
+  let out = "", inDouble = false;
+  for (let index = 0; index < rest.length; index += 1) {
+    const char = rest[index]!;
+    if (char === '"') inDouble = !inDouble;
+    if (char === "'" && !inDouble) {
+      const end = rest.indexOf("'", index + 1);
+      const inner = end === -1 ? "" : rest.slice(index + 1, end);
+      if (end !== -1 && !/[%!"]/.test(inner) && !inner.endsWith("\\")) { out += `"${inner}"`; index = end; continue; }
+    }
+    out += char;
+  }
+  return { command: out, env };
+}
+
+/**
+ * The command and environment a project's build runs with. A build is the project's own code
+ * and has no reason to inherit the API token. Windows names variables without case, and Node
+ * there keeps the first of each spelling it finds, so the token is removed in every spelling
+ * and a variable the command sets replaces the one already there whatever its case.
+ */
+export function projectCommand(command: string, platform: NodeJS.Platform = process.platform, base: NodeJS.ProcessEnv = process.env) {
+  const windows = platform === "win32" ? forWindowsShell(command) : undefined;
+  const env: NodeJS.ProcessEnv = { ...base };
+  const same = (a: string, b: string) => platform === "win32" ? a.toUpperCase() === b.toUpperCase() : a === b;
+  for (const [name, value] of Object.entries(windows?.env ?? {})) {
+    for (const key of Object.keys(env)) if (same(key, name)) delete env[key];
+    env[name] = value;
+  }
+  for (const key of Object.keys(env)) if (same(key, "OPENGAME_TOKEN")) delete env[key];
+  return { command: windows?.command ?? command, env };
+}
+
+async function runProjectCommand(original: string, root: string, output: Output, timeoutMs: number, noun: string, graceMs = BUILD_STOP_GRACE_MS): Promise<Ran> {
+  const { command, env } = projectCommand(original);
   const capture = output.json;
   let tail = "";
   let leftRunning = false;
@@ -196,7 +255,8 @@ export function commandNotFound(code: number | null, tail: string): { tool?: str
     ?? /command not found: ([^\s'"]+)/.exec(text)?.[1]
     ?? /'([^'\n]+)' is not recognized as an internal or external command/.exec(text)?.[1];
   if (tool) return { tool };
-  return code === 127 ? {} : undefined;
+  // 127 from a POSIX shell, 9009 from cmd.exe, which no POSIX exit status can be.
+  return code === 127 || code === 9009 ? {} : undefined;
 }
 
 export type BuildOptions = {
@@ -221,6 +281,22 @@ function devOmitted(): string | undefined {
 
 /** A folder for a shell command, quoted only when it has to be. */
 const shellPath = (path: string) => /^[\w./-]+$/.test(path) ? path : `'${path.replace(/'/g, "'\\''")}'`;
+
+/**
+ * The install to run in another folder, as one command. `cd x && install` everywhere but
+ * Windows, where Windows PowerShell 5.1, the one Windows opens, refuses `&&` and cmd.exe takes
+ * a single-quoted folder literally; there each package manager's own folder flag says it, with
+ * the folder in double quotes when it needs any.
+ */
+export function installIn(manager: string, install: string, folder: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform !== "win32") return `cd ${shellPath(folder)} && ${install}`;
+  const at = windowsFolder(folder);
+  if (manager === "npm") return `${install} --prefix ${at}`;
+  if (manager === "pnpm") return `pnpm --dir ${at} install`;
+  if (manager === "yarn") return `yarn --cwd ${at} install`;
+  if (manager === "bun") return `bun install --cwd ${at}`;
+  return `cd ${at} && ${install}`;
+}
 
 /**
  * Installs the project's dependencies from its lockfile when package.json names packages that
@@ -249,8 +325,8 @@ async function installDependencies(root: string, output: Output, timeoutMs: numb
   if (!needed.install) throw refuse(`Dependencies are not installed. Run npm install, then run ${rerun} again.`, "npm install");
   const plan = needed.install;
   if (plan.folder !== resolve(root)) {
-    const where = shellPath(relative(resolve(root), plan.folder) || ".");
-    throw refuse(`${listed} ${needed.missing.length === 1 ? "is" : "are"} not installed. This project's lockfile is in ${plan.folder}, a workspace this command does not install for you. Run ${plan.install} there, then run ${rerun} again.`, `cd ${where} && ${plan.install}`);
+    const where = relative(resolve(root), plan.folder) || ".";
+    throw refuse(`${listed} ${needed.missing.length === 1 ? "is" : "are"} not installed. This project's lockfile is in ${plan.folder}, a workspace this command does not install for you. Run ${plan.install} there, then run ${rerun} again.`, installIn(plan.manager, plan.install, where));
   }
   if (!needed.fresh) throw refuse(`${listed} ${needed.missing.length === 1 ? "is" : "are"} in package.json but not installed. Run ${plan.install}, then run ${rerun} again.`, plan.install);
   if (omitted) throw refuse(`Dependencies are not installed.`, plan.install);
@@ -319,7 +395,7 @@ export async function build(command: string, root: string, output: Output, timeo
       const plan = await lockfileInstall(root, pkg);
       const there = plan && plan.folder !== resolve(root) ? plan.folder : undefined;
       const install = plan?.install ?? "npm install";
-      missing = { install: there ? `cd ${shellPath(relative(resolve(root), there))} && ${install}` : install,
+      missing = { install: there ? installIn(plan!.manager, install, relative(resolve(root), there)) : install,
         message: `The build could not find ${tool ?? "a program it runs"}, so the project's dependencies are probably not installed. Run ${install}${there ? ` in ${there}` : ""}, then run ${rerun} again.` };
     } else {
       missing = { install: "", message: `The build could not find ${tool ?? "a program it runs"}, so it is probably not installed on this machine. Install it, or put it on PATH, then run ${rerun} again.` };
@@ -522,17 +598,67 @@ function archiveSource(archive: PackedArchive): ArchiveSource {
 
 /** Packaging leftovers from a deploy that was stopped mid-way (Ctrl-C, a closed laptop):
  * a snapshot folder can be the size of the build. Only run under the project lock, so no
- * other deploy of this project is writing them, and only for ones a few hours old. */
-async function sweepPackaging(directory: string) {
+ * other deploy of this project is writing them, and only for ones a few hours old.
+ *
+ * And every cached archive, with its packaging receipt, that the saved deploy does not name
+ * (`keep`). A deploy only ever resumes its own archive, so the others are dead weight, and
+ * they were never removed: a creator in the jam took to deleting `.opengame/*.zip` and
+ * `*.packaging.json` by hand before every deploy (feedback, 25 Nov 2026). Those go at any
+ * age, since nothing but the saved deploy reads them and the lock is held. */
+async function sweepPackaging(directory: string, keep?: string) {
   const names = await readdir(directory).catch(() => [] as string[]);
   for (const name of names) {
-    if (!/^(?:snapshot-[A-Za-z0-9]{6}|archive-[0-9a-f-]{36}\.zip)$/.test(name)) continue;
+    const cached = /^([0-9a-f]{64})\.(?:zip|packaging\.json)$/.exec(name);
+    if (cached ? cached[1] === keep : !/^(?:snapshot-[A-Za-z0-9]{6}|archive-[0-9a-f-]{36}\.zip)$/.test(name)) continue;
     const path = join(directory, name);
     // react-doctor-disable-next-line react-doctor/async-await-in-loop
     const info = await lstat(path).catch(() => null);
     // react-doctor-disable-next-line react-doctor/async-await-in-loop
-    if (info && !info.isSymbolicLink() && Date.now() - info.mtimeMs > 6 * 3600_000) await rm(path, { recursive: true, force: true });
+    if (info && !info.isSymbolicLink() && (cached || Date.now() - info.mtimeMs > 6 * 3600_000)) await rm(path, { recursive: true, force: true });
   }
+}
+
+/** Whether the saved deploy's archive is still where it was cached, at its size. Its bytes
+ * are checked again when it is read (cachedArchive); this only asks whether it is gone. */
+async function archiveOnDisk(root: string, saved: NonNullable<Project["deploy"]>): Promise<boolean> {
+  const info = await lstat(join(root, ".opengame", `${saved.request.sha256}.zip`)).catch(() => null);
+  return Boolean(info?.isFile() && info.size === saved.request.byteSize);
+}
+
+/** When an allowance frees up, said both ways: how long, and the clock time where the
+ * person is, so nobody has to keep their own log of deploy times to know when to come back.
+ * Rounded to the nearest unit, beside a clock time that is exact. */
+export function freesUpWords(seconds: number, now = Date.now()): string {
+  const units = (count: number, unit: string) => `${count} ${unit}${count === 1 ? "" : "s"}`;
+  const when = seconds < 120 ? units(seconds, "second") : seconds < 7200 ? units(Math.round(seconds / 60), "minute") : units(Math.round(seconds / 3600), "hour");
+  const at = new Date(now + seconds * 1000);
+  const clock = at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const day = at.toDateString() === new Date(now).toDateString() ? "" : ` ${at.toLocaleDateString([], { weekday: "short" })}`;
+  return `in about ${when}, at${day} ${clock} your time`;
+}
+
+/* The server's own "in about N hours" (lib/platform/deploy.ts withRetryAfter: "The next one
+   frees up", and "The next failed deploy is cleared" for storage), with any clock already added. */
+const RELATIVE = /in about \d+ (?:seconds?|minutes?|hours?)(?:, at [^.]*? your time)?/;
+const AGAIN = /\s*Try again[^.]*\.\s*$/;
+
+/** The server's sentence with its wait said from now: its own relative time replaced, or,
+ * when it gave none in words, a sentence that says it. */
+export function withWhen(message: string, seconds: number, now = Date.now()): string {
+  if (RELATIVE.test(message)) return message.replace(RELATIVE, freesUpWords(seconds, now));
+  return `${message.replace(AGAIN, "").trim()} It frees up ${freesUpWords(seconds, now)}.`;
+}
+
+/** A refused deploy as `status` says it, from what was saved when it was refused. With no
+ * wait the server's sentence stands as it was: a full storage allowance with nothing to
+ * clear has no time to give, and "that has passed" would send the person to be refused again. */
+export function refusalLine(refusal: DeployRefusal, now = Date.now()): { message: string; retryAfterSeconds?: number } {
+  const lead = "Your last deploy was refused.";
+  if (refusal.retryAfterSeconds === undefined) return { message: `${lead} ${refusal.message}` };
+  const left = Math.ceil((Date.parse(refusal.at) + refusal.retryAfterSeconds * 1000 - now) / 1000);
+  if (left > 0) return { message: `${lead} ${withWhen(refusal.message, left, now)}`, retryAfterSeconds: left };
+  const said = refusal.message.replace(/\s*The next [^.]*\.\s*$/, "").replace(AGAIN, "").trim();
+  return { message: `${lead} ${said} That wait is over, so run opengame deploy to try again.` };
 }
 
 /**
@@ -731,7 +857,9 @@ function resumableDrop(error: unknown): error is CliError {
   return error instanceof CliError && error.retry === "later" && error.exitCode === 5 &&
     ["network", "upload_interrupted", "temporarily_unavailable"].includes(error.code);
 }
-class DeadUpload extends Error { constructor(readonly cause: ApiError) { super(cause.message); } }
+/** The 429s an allowance gives, which the database raises before a deploy exists (lib/platform/deploy.ts DATABASE_REFUSALS). */
+const ALLOWANCE_REFUSALS = ["deploy_rate_limited", "deploy_day_limited", "scan_budget_exhausted", "platform_scan_budget_exhausted", "storage_budget_exhausted"] as const;
+class DeadUpload extends Error { constructor(readonly cause: CliError) { super(cause.message); } }
 
 export async function deployCommand(command: "deploy" | "status", root: string, flags: Flags, output: Output) {
   const started = performance.now();
@@ -759,7 +887,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
   /* Only the jam's flags and the banner style: deploy's own --title, --description and --genre
      write a missing opengame.json, so the game then has those words and publishing them again
      would be refused. The banner style is never in opengame.json, so it only answers the publish. */
-  const jamFlags = ["no-jam", "track", "models", "sponsor", "sponsor-email", "banner-style"];
+  const jamFlags = ["no-jam", "track", "models", "sponsor", "sponsor-email", "sponsor-post", "banner-style"];
   const publishing = command === "deploy" && flags.publish ? publishAnswers(Object.fromEntries(Object.entries(flags).filter(([name]) => jamFlags.includes(name)))) : null;
   const strayJam = jamFlags.find(name => flags[name] !== undefined);
   if (command === "deploy" && !publishing && strayJam) throw new CliError("conflicting_flags", `--${strayJam} answers the publish step, so it goes with --publish.`, 2);
@@ -787,6 +915,17 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
       const state = await readProject(root, api.origin);
       if (!state.deploy?.operationId || (state.deploy.terminal && state.gameId)) {
         if (state.deploy && !state.deploy.terminal) throw new CliError("upload_pending", "Your deploy was saved before the server answered. Run opengame deploy to resume it.", undefined, { next: "opengame deploy" });
+        // The newest deploy from this folder was refused at the door: say that, and when the
+        // allowance frees up, before the game's own state (which is the deploy before it).
+        const refusal = state.deploy && !state.deploy.operationId && state.deploy.refused ? refusalLine(state.deploy.refused) : null;
+        if (refusal && !state.gameId) {
+          const saved = state.deploy!.refused!;
+          throw refusal.retryAfterSeconds !== undefined
+            ? new CliError(saved.code, refusal.message, EXIT.rateLimited, { retry: "later", retryAfterSeconds: refusal.retryAfterSeconds, next: "opengame deploy" })
+            : saved.retryAfterSeconds === undefined ? new CliError(saved.code, refusal.message, EXIT.rateLimited)
+            : new CliError("not_linked", `${refusal.message} No game exists for this folder yet.`, undefined, { next: "opengame deploy" });
+        }
+        if (refusal) output.emit({ type: "notice", code: "deploy_refused", message: refusal.message });
         if (!state.gameId) throw new CliError("not_linked", "Run opengame deploy to create a game, or opengame link --game <id> to use an existing game.");
         const game = await readGame(api, token, state.gameId);
         // Nothing plays and nothing is taken: not a "ready preview", which is what this said.
@@ -922,7 +1061,7 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
         }
         const workDirectory = join(root, ".opengame");
         await mkdir(workDirectory, { recursive: true, mode: 0o700 });
-        await sweepPackaging(workDirectory);
+        await sweepPackaging(workDirectory, saved && !saved.terminal && !saved.uploaded ? saved.request.sha256 : undefined);
         prepared = await timed("prepare", () => prepareDeploy(root, output, !flags["no-build"], { vendor: Boolean(flags.vendor), incremental: limits.incrementalUpload && !incompatibleFileUpload, noBuild: Boolean(flags["no-build"]), install: !flags["no-install"], workDirectory,
           /* A restart keeps the plan the saved deploy used, of whatever kind, with its
              delivery named: left to the default, which only a Unity plan passes, a large-game
@@ -960,7 +1099,10 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
              still sends anything at or under multipart.aboveBytes as one PUT. */
           ...(limits.archiveParts && !archive.unityAssets && !archive.incremental ? { multipart: true as const } : {}) } };
         await save();
-        if (previousHash && previousHash !== archive.sha256) await unlink(join(root, ".opengame", `${previousHash}.zip`)).catch(() => {});
+        if (previousHash && previousHash !== archive.sha256) {
+          await unlink(join(root, ".opengame", `${previousHash}.zip`)).catch(() => {});
+          await unlink(join(root, ".opengame", `${previousHash}.packaging.json`)).catch(() => {});
+        }
       } else output.emit({ type: "notice", code: "resuming_deploy", message: saved?.uploaded
         ? "This build is already being checked. Following that deploy."
         : "Resuming the saved deploy with its original archive. Use a new --idempotency-key to deploy newer edits." });
@@ -969,6 +1111,22 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
       if (pending.request.metadata === "local") output.emit({ type: "notice", code: "local_metadata_selected",
         message: "This deploy uses your local metadata, replacing the website values when its candidate is prepared." });
       if (pending.request.byteSize > limits.archiveBytesMax || pending.request.fileCount > limits.fileCountMax) throw new CliError("bundle_limit", "This build exceeds the server's current size or file limit. Reduce the build, then deploy with a new --idempotency-key.", 1);
+      /* A resume whose archive is gone asks the server where its operation stands before
+         anything reads the archive: the per-file and asset transports read it before the
+         create, and a deploy whose bytes landed while its answer was lost needs none of it.
+         One past uploading is followed. One still uploading goes on, meets the missing
+         archive, and starts again from the current files (the catch below). An unreadable
+         answer changes nothing: the create that follows asks the same question. A deploy
+         whose create landed but whose answer never came has no operation saved to ask about,
+         so it starts again under a new key, and the operation it left holds its bytes only
+         until its upload window closes. */
+      if (resume && !freshArchive && pending.operationId && !pending.uploaded && !(await archiveOnDisk(root, pending))) {
+        const latest = await api.json(`/api/v1/operations/${pending.operationId}`, { token })
+          .then(body => operation(body.operation, pending.operationId!))
+          .catch((error: unknown) => { if (error instanceof CliError && error.exitCode === 3) throw error; return null; });
+        if (latest && remember(latest, state)) await save();
+        if (latest && latest.state !== "uploading") return { op: latest, title: pending.request.manifest.title, achievements: pending.request.manifest.achievements, kind: pending.request.manifest };
+      }
       try {
         const assetUpload = pending.transport !== undefined && pending.transport !== "files";
         const delivery = planDelivery(pending.unityAssets);
@@ -1083,15 +1241,45 @@ export async function deployCommand(command: "deploy" | "status", root: string, 
           pending.terminal = true; await save();
           throw new DeadUpload(error);
         }
+        /* A saved deploy whose archive is gone (cleaned up by hand, or by a tool that empties
+           caches) cannot send its bytes, and the answer used to be archive_unavailable with an
+           instruction to invent a new retry key (jam feedback, 25 Nov 2026). Without a key of
+           the person's own it starts again from the files as they are now, as a dead upload
+           does. A saved operation was asked first (above), so this is one still waiting for its
+           bytes. A changed archive is still refused: that is not a missing file. */
+        if (error instanceof CliError && error.code === "archive_unavailable" && !key && !freshArchive && !(await archiveOnDisk(root, pending))) {
+          pending.terminal = true; await save();
+          throw new DeadUpload(new CliError("archive_unavailable", "its archive is no longer in .opengame"));
+        }
         // The server answered the create itself with a refusal (a token without Deploy, a
         // removed game, an invalid request, a key reused for other bytes), so no operation
         // exists and the key saved for it has nothing to resume. Left open, `status` said
         // "Your deploy was saved before the server answered" and told the agent to deploy
         // again to resume it, after the server had answered. Found by the SDK e2e
-        // acceptance run (16 Oct 2026) with a read-only token. A timeout or a 429 keeps it
-        // open: the same key is the right retry for those.
+        // acceptance run (16 Oct 2026) with a read-only token. A timeout keeps it open, as a
+        // 429 does unless an allowance refused it (below): the same key is the right retry.
         if (error instanceof ApiError && !pending.operationId && error.status >= 400 && error.status < 500 &&
           error.status !== 408 && error.status !== 429) { pending.terminal = true; await save(); }
+        /* A refusal by an allowance is an answer too: the database refuses the deploy before it
+           exists, so nothing was uploaded and there is nothing to resume. It used to stay open,
+           and `status` said "Your deploy was saved before the server answered" about a deploy
+           the server had refused, and the next deploy, a day later, resumed the refused
+           archive instead of packing the edits made since (jam feedback, 25 Nov 2026). It is
+           closed, and the refusal saved for status to say. Only the allowance codes: the
+           token's request throttle (`rate_limited`) answers before the key is looked up, so a
+           deploy whose create landed and whose answer was lost can meet it, and that one must
+           keep its key. An explicit --idempotency-key still resumes a closed deploy, since
+           resumesSavedDeploy honours a named key. */
+        if (error instanceof ApiError && !pending.operationId && error.status === 429 && (ALLOWANCE_REFUSALS as readonly string[]).includes(error.code)) {
+          pending.terminal = true;
+          pending.refused = { code: error.code, message: error.message.slice(0, 600), at: new Date().toISOString(),
+            ...(error.retryAfterSeconds !== undefined ? { retryAfterSeconds: error.retryAfterSeconds } : {}) };
+          await save();
+        }
+        if (error instanceof ApiError && error.status === 429 && error.retryAfterSeconds !== undefined && error.retryAfterSeconds >= 120) {
+          throw new CliError(error.code, withWhen(error.message, error.retryAfterSeconds), error.exitCode,
+            { retry: "later", retryAfterSeconds: error.retryAfterSeconds, next: "opengame status" });
+        }
         if (error instanceof ApiError && !pending.operationId && error.status === 400 && error.reason === "invalid_request" && pending.request.manifest.achievements !== undefined &&
             /manifest/i.test(error.message) && /valid|unknown|unrecogni[sz]ed|achievements/i.test(error.message)) {
           throw new CliError("achievements_unsupported", ERRORS.achievements_unsupported!.message!);

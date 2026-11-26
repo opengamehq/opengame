@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { initProject } from "../src/init";
 import { detectBuildOutput, readBuildPackage } from "../src/build-output";
 import { engineGuide, engineSetup, ENGINE_IDS, ENGINE_PRESETS } from "../src/engines";
+import { forWindowsShell } from "../src/deploy";
 import { ENGINE_REGISTRY } from "../../preflight/src/engines";
 import { LIMITS } from "@opengame/shared";
 
@@ -494,7 +495,7 @@ test("a Kaigen source tree past the search limit still gets its output folder", 
   assert.equal(result.manifest.build?.output, "out/wasm/release");
 }));
 
-test("Kaigen without hzproject.hzt, or on Windows, gets no invented build command", async () => fixture(async root => {
+test("Kaigen without hzproject.hzt gets no invented build command, and Windows gets the same one as everywhere", async () => fixture(async root => {
   const named = await initProject(root, { ...metadata, engine: "kaigen" });
   assert.deepEqual(named.manifest.build, { output: "out/wasm/release" });
   assert.deepEqual(named.manifest.requires, { renderer: "webgpu" });
@@ -503,9 +504,11 @@ test("Kaigen without hzproject.hzt, or on Windows, gets no invented build comman
   const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
   Object.defineProperty(process, "platform", { ...platform, value: "win32" });
   try {
+    // One manifest for every machine: the build runner turns hz/hzbuild into hz\hzbuild on Windows.
     const windows = await engineSetup(root, {}, "kaigen");
-    assert.equal(windows.command, undefined);
-    assert.match(windows.instructions, /On Windows the build tool is hz\\hzbuild, so init set no build command/);
+    assert.equal(windows.command, "hz/hzbuild wasm --release");
+    assert.equal(forWindowsShell(windows.command!).command, "hz\\hzbuild wasm --release");
+    assert.doesNotMatch(windows.instructions, /no build command/);
   } finally { Object.defineProperty(process, "platform", platform); }
   // Another engine's recipe carries no renderer requirement.
   assert.equal((await engineSetup(root, {}, "threejs")).requires, undefined);

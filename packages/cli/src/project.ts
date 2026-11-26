@@ -17,8 +17,12 @@ export type DeployRequest = { gameId?: string; byteSize: number; fileCount: numb
   multipart?: true;
   /** The manifest fields init chose without being told (`provisionalFields` in init.ts), which review and the details form treat as placeholders. */
   provisional?: DeployProvisional[] };
+/** A 429 at the door, as the server worded it, when, and how long it said to wait. */
+export type DeployRefusal = { code: string; message: string; at: string; retryAfterSeconds?: number };
 export type SubmitRequest = { releaseId: string; jam: { slug: string; track: string; models: string[]; sponsors: string[]; evidence: Record<string, string> } | null; destination?: "qa" };
-export type Project = { version: 1; origin: string; gameId?: string; metadataRevision?: number; deploy?: { key: string; transport?: "files" | string; unityAssets?: UnityAssetsState; request: DeployRequest; operationId?: string; terminal?: boolean; uploaded?: boolean };
+export type Project = { version: 1; origin: string; gameId?: string; metadataRevision?: number; deploy?: { key: string; transport?: "files" | string; unityAssets?: UnityAssetsState; request: DeployRequest; operationId?: string; terminal?: boolean; uploaded?: boolean;
+    /** The server refused this deploy before it existed (an allowance, a 429), so nothing was uploaded: what `status` says instead of a pending upload. */
+    refused?: DeployRefusal };
   /** The last submit's retry key, saved before the request leaves, so a lost answer is recovered rather than repeated. */
   submit?: { key: string; request: SubmitRequest; submissionId?: string };
   /** The operation whose declared achievements were saved in full. */
@@ -52,7 +56,9 @@ function parse(value: unknown, origin: string): Project {
   if (!state || state.version !== 1 || state.origin !== origin || (state.gameId !== undefined && !uuid.test(state.gameId)) ||
     (state.metadataRevision !== undefined && (!Number.isSafeInteger(state.metadataRevision) || state.metadataRevision < 1))) throw invalid();
   if (state.deploy) {
-    const { key, transport, operationId, terminal, uploaded, request } = state.deploy;
+    const { key, transport, operationId, terminal, uploaded, request, refused } = state.deploy;
+    // A refusal that does not read as one this CLI wrote is dropped, not fatal: it only words status.
+    if (refused !== undefined && !validRefusal(refused)) delete state.deploy.refused;
     if ((transport !== undefined && transport !== "files" && !LARGE_ASSET_DELIVERIES.includes(transport)) || typeof key !== "string" || !validKey(key) || (operationId !== undefined && !uuid.test(operationId)) ||
       (terminal !== undefined && typeof terminal !== "boolean") || (uploaded !== undefined && typeof uploaded !== "boolean") || !request ||
       !Number.isSafeInteger(request.byteSize) || request.byteSize <= 0 || !Number.isSafeInteger(request.fileCount) || request.fileCount <= 0 ||
@@ -82,6 +88,14 @@ function parse(value: unknown, origin: string): Project {
   if ((state as { submit?: unknown }).submit === null) delete state.submit;
   if (state.submit !== undefined && !validSubmit(state.submit)) unreadableSubmit.add(state);
   return state;
+}
+
+function validRefusal(value: unknown): value is DeployRefusal {
+  if (!value || typeof value !== "object") return false;
+  const { code, message, at, retryAfterSeconds } = value as DeployRefusal;
+  return typeof code === "string" && /^[a-z][a-z0-9_]{1,63}$/.test(code) && typeof message === "string" && message.length <= 600 &&
+    typeof at === "string" && Number.isFinite(Date.parse(at)) &&
+    (retryAfterSeconds === undefined || (Number.isSafeInteger(retryAfterSeconds) && retryAfterSeconds >= 0));
 }
 
 function validAchievements(value: unknown): value is NonNullable<Project["achievements"]> {

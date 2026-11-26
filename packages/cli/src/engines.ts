@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { isBundlePath, type GameManifest, type GameRequirements } from "@opengame/protocol";
 import { LIMITS } from "@opengame/shared";
 import { detectEngine, ENGINE_NAMES, engineFileKind, type EngineId } from "../../preflight/src/engines";
-import { withoutBom } from "./files";
+import { entryType, withoutBom } from "./files";
 import { CliError } from "./output";
 import { safeReadFile, safeReadFiles } from "./safe-fs";
 import { guidePage, namedEngine } from "./engine-guides.mjs";
@@ -265,6 +265,15 @@ async function inspectSourceSettings(root: string, manifest: GameManifest): Prom
   return result;
 }
 
+/** The regular files directly in `root` whose names match, with Windows' listing corrected
+ * by entryType (a OneDrive file lists as a link there). */
+async function filesIn(root: string, match: (name: string) => boolean) {
+  const entries = (await readdir(root, { withFileTypes: true })).filter(entry => match(entry.name));
+  const types = await Promise.all(entries.map(entry => entryType(root, entry)));
+  return entries.filter((_, index) => types[index]!.isFile);
+}
+const someFile = async (root: string, match: (name: string) => boolean) => (await filesIn(root, match)).length > 0;
+
 /** Markers only suggest a recipe. No build tool runs during detection. A Cargo
  * manifest alone is not a web target, and a csproj is not proof of KNI support.
  *
@@ -277,7 +286,8 @@ async function inspectSourceSettings(root: string, manifest: GameManifest): Prom
  * how a creator says it. */
 async function detectSourceEngine(root: string, pkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> }): Promise<{ id: string; evidence: string }> {
   const entries = await readdir(root, { withFileTypes: true });
-  const names = entries.filter(entry => entry.isFile() && !entry.isSymbolicLink()).map(entry => entry.name);
+  const types = await Promise.all(entries.map(entry => entryType(root, entry)));
+  const names = entries.filter((_, index) => types[index]!.isFile).map(entry => entry.name);
   const has = (pattern: RegExp) => names.find(name => pattern.test(name));
   const markers = [["hzproject.hzt", "kaigen"], ["ProjectSettings/ProjectVersion.txt", "unity"], ["project.godot", "godot"], ["game.project", "defold"], ["conf.lua", "love2d"], ["config.lua", "solar2d"], ["options.rpy", "renpy"], ["game/options.rpy", "renpy"], [".luaurc", "luau"], ["main.lua", "lua"], ["build.zig", "zig"], ["Package.swift", "swift"], ["Trunk.toml", "rust"]] as const;
   const csproj = has(/\.csproj$/i);
@@ -353,7 +363,7 @@ export async function engineSetup(root: string, pkg: Parameters<typeof detectSou
     setup.requires = { renderer: "webgpu" };
     // A project folder (Content, Intermediate, DerivedDataCache) is far past the entry count
     // init will search, as Kaigen's is; Package Project decides the folder, so take it.
-    if ((await readdir(root, { withFileTypes: true })).some(entry => entry.isFile() && /\.uproject$/i.test(entry.name))) setup.outputKnown = true;
+    if (await someFile(root, name => /\.uproject$/i.test(name))) setup.outputKnown = true;
     setup.instructions = "Package with Platforms > Wasm > Package Project in Unreal Engine 5.9, Shipping configuration, and choose Build as the archive folder. "
       + "Deploy the Wasm folder it writes (Build/Wasm): index.html, the wasm-*.js scripts, wasm-manifest.json, wasm-cache.json and the <Project> and Engine folders, with their .br copies. "
       + "OpenGame sends the isolation headers itself, so Inject isolation headers can be on or off. "
@@ -366,12 +376,13 @@ export async function engineSetup(root: string, pkg: Parameters<typeof detectSou
   if (["jsdos", "ruffle"].includes(preset.id)) setup.instructions = "A single SWF or jsdos file can be uploaded once opengame check has validated its contents. opengame dev and opengame vendor add the standard player page around it only when the check read all of the file and the pinned player runtime is available and cleared for redistribution. A file name or this --engine choice does not make a file acceptable. If the runtime's source coverage is incomplete, the command fails with an error.";
   /* Kaigen has no editor export. Its build tool lives in the project, hz/hzbuild beside
      hzproject.hzt, so the command is only written when that file says this is the project
-     root. Windows spells the path hz\hzbuild, and one manifest cannot carry both, so there
-     the command is left to the creator. The renderer is WebGPU with no WebGL path. */
+     root. Windows spells the path hz\hzbuild; the CLI turns the program's slashes round when
+     it runs a build there (forWindowsShell, deploy.ts), so one manifest carries both. Until
+     25 Nov 2026 Windows got no command. The renderer is WebGPU with no WebGL path. */
   if (preset.id === "kaigen") {
     setup.requires = { renderer: "webgpu" };
     const project = await projectText(root, "hzproject.hzt") !== undefined;
-    if (project && process.platform !== "win32") setup.command = "hz/hzbuild wasm --release";
+    if (project) setup.command = "hz/hzbuild wasm --release";
     // The build tool decides the folder, and a Kaigen source tree (cooked assets, shader caches, the
     // engine link) is far past the entry count init will search, so it refused every real project.
     if (project) setup.outputKnown = true;
@@ -380,8 +391,7 @@ export async function engineSetup(root: string, pkg: Parameters<typeof detectSou
       + "Copy opengame-global.js into the page, and templates/kaigen/opengame-kaigen.js after it if the game uses platform services. "
       + "If the page adds files of its own, assemble them in a staging folder such as dist/ and set build.output to it. "
       + "Kaigen renders with WebGPU, so init added requires.renderer webgpu to opengame.json."
-      + (!project ? " No hzproject.hzt was found here, so init set no build command."
-        : process.platform === "win32" ? " On Windows the build tool is hz\\hzbuild, so init set no build command. Run it before each check." : "");
+      + (!project ? " No hzproject.hzt was found here, so init set no build command." : "");
   }
   if (preset.id === "flame" || preset.id === "flutter") setup.command = "flutter build web --no-web-resources-cdn";
   if (["rust", "bevy"].includes(preset.id) && (await projectText(root, "Trunk.toml") !== undefined || /data-trunk/.test(await projectText(root, "index.html") ?? ""))) setup.command = "trunk build --release";
@@ -399,7 +409,7 @@ export async function engineSetup(root: string, pkg: Parameters<typeof detectSou
      .pdb.gz symbols as nested archives, so the command init wrote failed its first check
      on a template-fresh Blazor app and on a KNI one (1 Nov 2026, SDK 8.0.427). */
   if (["dotnet", "csharp", "kni"].includes(preset.id)) {
-    const projects = (await readdir(root, { withFileTypes: true })).filter(entry => entry.isFile() && /\.csproj$/i.test(entry.name));
+    const projects = await filesIn(root, name => /\.csproj$/i.test(name));
     if (projects.length === 1 && /Microsoft\.NET\.Sdk\.BlazorWebAssembly/.test(await projectText(root, projects[0]!.name) ?? "")) {
       setup.command = BLAZOR_PUBLISH;
       setup.sourceRoot = "wwwroot";

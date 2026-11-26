@@ -14,6 +14,7 @@ import { Api, ApiError } from "./http";
 import { CliError, Output, agentMode, terminalText } from "./output";
 import { readProject, savedSubmit, validKey, withProject, type SubmitRequest } from "./project";
 import { confirm } from "./prompt";
+import { sponsorPostsFlag } from "./publish";
 
 type Flags = Record<string, string | boolean>;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -181,7 +182,7 @@ export function sendAgain(current: Submission): boolean {
  * marketplace and QA is neither.
  */
 function refuseJamFlags(flags: Flags) {
-  const named = ["jam", "no-jam", "track", "models", "sponsor"].filter(name => flags[name] !== undefined)
+  const named = ["jam", "no-jam", "track", "models", "sponsor", "sponsor-post"].filter(name => flags[name] !== undefined)
     .concat(Object.keys(flags).filter(name => name.startsWith("evidence-")));
   if (named.length) throw new CliError("conflicting_flags",
     `A QA submission enters no jam. Remove ${named.map(name => `--${name}`).join(", ")}, or remove --qa to submit to the jam.`, EXIT.input);
@@ -302,12 +303,16 @@ export async function chooseDestination(api: Api, token: string, root: string, f
     evidence: Object.fromEntries(Object.entries(flags).filter(([k, v]) => k.startsWith("evidence-") && typeof v === "string")
       .map(([k, v]) => [k.slice("evidence-".length), v as string])),
   };
+  /* A sponsor track can ask for a post on X (Meshy's, 26 Nov 2026). The form's check below refuses
+     a link that is not a post; whether one is owed is the server's, which names this flag. */
+  const posts = Object.entries(sponsorPostsFlag(flags["sponsor-post"]));
+  if (posts.length) answers.sponsorDetails = Object.fromEntries(posts.map(([sponsor, postUrl]) => [sponsor, { postUrl }]));
   /* A person is no longer walked through the jam's form here (the owner's call, 11 Nov 2026: the CLI
      collects the minimum, and the rest is filled in on a private page). Their deploy went to
      review by itself, and its page is where the track, the models and the sponsor tracks are
      chosen, so a person who named none of them is sent there. An agent still answers with
      flags, and a missing one still exits 2 naming the flag. */
-  const asked = Boolean(answers.track) || answers.models!.length > 0 || answers.sponsors!.length > 0 || Object.keys(answers.evidence!).length > 0;
+  const asked = Boolean(answers.track) || answers.models!.length > 0 || answers.sponsors!.length > 0 || Object.keys(answers.evidence!).length > 0 || posts.length > 0;
   if (person && !asked && !rerun) return "page";
   /* The submission records its tracks, not the models or the sponsor evidence, so those are
      asked again. The sponsor tracks are kept too, so the form asks for their evidence rather

@@ -48,7 +48,10 @@ export async function jamsCommand(slug: string | undefined, flags: Flags, output
       `${form.track.flag} (one, required)`, ...form.track.options.map(o => `  ${o.value.padEnd(24)} ${o.label}`),
       "", `${form.models.flag} (comma separated, at least ${form.models.min})`, ...form.models.options.map(o => `  ${o.value.padEnd(24)} ${o.label}${o.provider && o.provider !== o.label ? `, ${o.provider}` : ""}`),
       "", `${form.sponsors.flag} (comma separated, optional; each needs a model from its sponsor, and --sponsor-email with your account there)`,
-      ...form.sponsors.options.map(o => `  ${o.value.padEnd(24)} ${o.label}. --sponsor-email ${o.value}=you@example.com`),
+      /* A track that asks for a post on X (Meshy's, 26 Nov 2026) says so on its own row, with
+         the flag, since publish is refused without it and nothing else here would say why. */
+      ...form.sponsors.options.flatMap(o => [`  ${o.value.padEnd(24)} ${o.label}. --sponsor-email ${o.value}=you@example.com`,
+        ...(o.xPostRequired ? [`  ${"".padEnd(24)} Needs a post on X about the game: --sponsor-post ${o.value}=https://x.com/you/status/123`] : [])]),
       "", "Deploy the game, and once it passes review enter it with:",
       "opengame publish --track <key> --models <keys>",
     ];

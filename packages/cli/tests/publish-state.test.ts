@@ -260,7 +260,8 @@ test("jams and a jam's form point at publish, not at submit", async () => {
   const form = { formVersion: 1, jam: { ...jam, entriesPerCreator: 3, termsVersion: "2026-09-27" },
     track: { flag: "--track", label: "Genre track", options: [{ value: "rpg", label: "RPG" }] },
     models: { flag: "--models", label: "Models used", min: 1, options: [{ value: "claude", label: "Claude", provider: "Anthropic" }] },
-    sponsors: { flag: "--sponsor", label: "Sponsor tracks", options: [{ value: "fal", label: "Best use of fal.ai", provider: "fal.ai", evidenceLabel: "What fal.ai did" }] },
+    sponsors: { flag: "--sponsor", label: "Sponsor tracks", options: [{ value: "fal", label: "Best use of fal.ai", provider: "fal.ai", evidenceLabel: "What fal.ai did" },
+      { value: "meshy", label: "Best use of Meshy", provider: "meshy", xPostRequired: true }] },
     evidence: { flagPrefix: "--evidence-", label: "What it did" } };
   let jams: unknown[] = [];
   const api = await fakeApi((req, res) => {
@@ -281,6 +282,9 @@ test("jams and a jam's form point at publish, not at submit", async () => {
     assert.doesNotMatch(text, /opengame submit|--evidence-/);
     assert.match(text, /opengame publish --track <key> --models <keys>$/);
     assert.match(text, /--sponsor-email fal=you@example\.com/, "publish takes a sponsor's account email, not evidence");
+    // Meshy's track asks for a post on X (26 Nov 2026); fal's does not, so only Meshy's row says so.
+    assert.match(text, /Needs a post on X about the game: --sponsor-post meshy=https:\/\/x\.com\/you\/status\/123/);
+    assert.doesNotMatch(text, /--sponsor-post fal=/);
   } finally { await api.close(); }
 });
 

@@ -30,6 +30,7 @@ export * from "./token-management";
 export * from "./incremental-upload";
 export * from "./archive-parts";
 export * from "./deploy-source";
+export * from "./ignore-file";
 
 export * from "./bootstrap";
 export * from "./client-usage";

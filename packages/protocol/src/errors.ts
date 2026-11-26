@@ -103,6 +103,9 @@ export const ERRORS: Readonly<Record<string, Row>> = {
   archive_limit: game, symlink: game, special_file: game, unportable_name: game, unicode_collision: game, build_changed: game,
   manifest_invalid: game, manifest_unreadable: game, folder_missing: game, static_build_required: game,
   reserved_runtime_path: game, entry_missing: game, vendor_hash: game,
+  // .opengameignore (ignore-file.ts) that cannot be used: too large, it leaves out the entry
+  // page, or it leaves out a file an asset plan sends. The sentence is the door's own.
+  ignore_file: game,
   // No opengame.json at all: the folder needs `opengame init`, which is a step, not a change to the game.
   manifest_missing: say(input, "There is no opengame.json in this folder. Run opengame init."),
   output_outside_project: game, archive_changed: game, genre_invalid: input, manifest_exists: input,

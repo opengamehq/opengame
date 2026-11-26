@@ -7,7 +7,7 @@ import { incrementalArchiveBytes, isBundlePath, type GameManifest, type Incremen
 import { LIMITS } from "@opengame/shared";
 import { createArchive } from "./archive";
 import { readableBytes } from "./bytes";
-import { isExcludedPath, loadManifest, outputFolder, withoutBom } from "./files";
+import { entryType, ignoredAsset, isExcludedPath, loadManifest, outputFolder, readIgnoreFile, withoutBom } from "./files";
 import { safeHashFiles, safeReadFile, safeReadFiles, safeReadLargeFile, safeDirectoryIdentity } from "./safe-fs";
 import { CliError, type Output } from "./output";
 
@@ -71,7 +71,11 @@ export function unityInputDigest(boot: { sha256: string; byteSize: number }, ass
  * as an asset either: large-game-v1's path rule admits opengame.json, which no
  * suffix-list kind ever did. Links are refused rather than followed, as everywhere else
  * the CLI reads an export, and a folder that is not a real directory is a bad plan. */
-async function walkExport(sourceRoot: string, folder: string, visit: (path: string, byteSize: number) => void): Promise<void> {
+async function walkExport(sourceRoot: string, folder: string, visit: (path: string, byteSize: number) => void, skipped?: (path: string) => void): Promise<void> {
+  /* And what the creator's .opengameignore leaves out, which an automatic split or a folder
+     in a plan would otherwise send as an asset while the boot archive's notice listed it as
+     left out (review of 25 Nov 2026). */
+  const ignored = await readIgnoreFile(sourceRoot);
   const walk = async (relative: string) => {
     const full = relative ? join(sourceRoot, relative) : sourceRoot;
     const stat = await lstat(full).catch(() => null);
@@ -79,9 +83,11 @@ async function walkExport(sourceRoot: string, folder: string, visit: (path: stri
     for (const entry of await readdir(full, { withFileTypes: true })) {
       const path = relative ? `${relative}/${entry.name}` : entry.name;
       if (isExcludedPath(path) || entry.name === "opengame.json" || path === "opengame-assets") continue;
-      if (entry.isSymbolicLink()) throw new CliError("symlink", `${path} is a symlink. External assets must be regular files inside the build folder, so copy the actual file there in its place.`, 1);
-      if (entry.isDirectory()) await walk(path);
-      else if (entry.isFile()) visit(path, (await lstat(join(full, entry.name))).size);
+      const type = await entryType(full, entry);
+      if (ignored.ignores(path, type.isDirectory)) { skipped?.(path); continue; }
+      if (type.isLink) throw new CliError("symlink", `${path} is a symlink. External assets must be regular files inside the build folder, so copy the actual file there in its place.`, 1);
+      if (type.isDirectory) await walk(path);
+      else if (type.isFile) visit(path, (await lstat(join(full, entry.name))).size);
     }
   };
   await walk(folder);
@@ -91,7 +97,12 @@ async function walkExport(sourceRoot: string, folder: string, visit: (path: stri
  * not admit stays in the boot archive, as it would unlisted. */
 async function expandFolder(sourceRoot: string, folder: string, delivery: string): Promise<string[]> {
   const found: string[] = [];
-  await walkExport(sourceRoot, folder, path => { if (isLargeAssetPath(path, delivery)) found.push(path); });
+  let hidden = false;
+  await walkExport(sourceRoot, folder, path => { if (isLargeAssetPath(path, delivery)) found.push(path); }, () => { hidden = true; });
+  /* A folder whose every file the creator's list leaves out (`tools/**`, or `*.png` over a
+     folder of images) is the same contradiction as a named file, and read as an invalid plan
+     when its walk found nothing (third review, 25 Nov 2026). */
+  if (!found.length && hidden) throw ignoredAsset(`${folder.replace(/\/+$/, "")}/`);
   return found;
 }
 
@@ -235,10 +246,18 @@ export async function selectAssetPlan(folder: string, projectRoot: string, planP
   const limits = largeAssetLimits(delivery)!;
   const paths = plan.auto ? await autoSplitAssets(sourceRoot, delivery) : [...plan.paths];
   const listed = new Set(paths.map(path => canonicalName(path)));
+  // A plan folder the list leaves out whole is the same contradiction as a named file, and
+  // was reported as an invalid plan, since its walk found nothing (second review, 25 Nov 2026).
+  const ignoredRules = await readIgnoreFile(sourceRoot);
+  const hiddenFolder = plan.folders.find(folder => ignoredRules.ignores(folder, true));
+  if (hiddenFolder !== undefined) throw ignoredAsset(`${hiddenFolder.replace(/\/+$/, "")}/`);
   for (const folder of plan.folders) for (const path of await expandFolder(sourceRoot, folder, delivery)) {
     if (!listed.has(canonicalName(path))) { listed.add(canonicalName(path)); paths.push(path); }
   }
   paths.sort(compareAssetPaths);
+  // A file the plan names by itself, which no walk filtered.
+  const named = paths.find(path => ignoredRules.ignores(path));
+  if (named !== undefined) throw ignoredAsset(named);
   if (!paths.length || paths.length > limits.fileCountMax) throw invalidPlan();
   return { sourceRoot, sourceIdentity, delivery, limits, paths, auto: plan.auto };
 }

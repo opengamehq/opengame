@@ -1255,7 +1255,7 @@ export async function preflight(
       severity: "warning",
       title: `${missingRefCount} referenced file${missingRefCount === 1 ? " is" : "s are"} not in the folder.`,
       detail:
-        "These are asked for while the game runs, so they may be generated on the way, in which case ignore this. If they are not, the game will go looking for them once it is published and find them missing.",
+        "These are asked for while the game runs, so they may be generated on the way, in which case ignore this. If they are not, the game will go looking for them once it is published and find them missing. If the files asking for them are your own tools or tests rather than the game, name them in .opengameignore and they stay out of the upload.",
       more: [...missingRefs.values()].slice(0, 10),
     });
   }

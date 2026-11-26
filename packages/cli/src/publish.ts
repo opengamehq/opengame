@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { GENRE_SLUGS, LIMITS } from "@opengame/shared";
-import { BANNER_STYLE_CHOICES, EXIT, SUBMISSION_OPEN, deploymentPath, gameDetailsApiPath, gameDetailsSchema, submissionSchema, type CreatorGame, type OperationSummary, type Submission } from "@opengame/protocol";
+import { BANNER_STYLE_CHOICES, EXIT, SUBMISSION_OPEN, deploymentPath, gameDetailsApiPath, gameDetailsSchema, submissionSchema, xPostUrl,
+  type CreatorGame, type OperationSummary, type Submission } from "@opengame/protocol";
 import { trustedBrowserUrl } from "./browser";
 import { activeToken } from "./credentials";
 import { linkedGameId, readGame, refuseRemoved } from "./games";
@@ -22,7 +23,9 @@ export interface PublishAnswers {
   players?: { mode: "single" } | { mode: "private" | "online"; min: number; max: number };
   /** How the game's house banner is drawn (22 Nov 2026). */
   bannerStyle?: BannerStyleChoice;
-  jam?: { track: string; models: string[]; sponsors: string[]; sponsorEmails: Record<string, string> } | null;
+  jam?: { track: string; models: string[]; sponsors: string[]; sponsorEmails: Record<string, string>;
+    /** A link to a post on X for each sponsor track that asks for one (Meshy's, 26 Nov 2026). */
+    sponsorPosts: Record<string, string> } | null;
 }
 
 export type BannerStyleChoice = (typeof BANNER_STYLE_CHOICES)[number];
@@ -55,7 +58,7 @@ export function publishAnswers(flags: Flags): PublishAnswers {
   const players = playersFlags(flags);
   if (players !== undefined && players !== "auto") answers.players = players;
   if (flags["banner-style"] !== undefined) answers.bannerStyle = bannerStyleFlag(flags["banner-style"]);
-  const jamFlags = ["track", "models", "sponsor", "sponsor-email"].filter(name => flags[name] !== undefined);
+  const jamFlags = ["track", "models", "sponsor", "sponsor-email", "sponsor-post"].filter(name => flags[name] !== undefined);
   if (flags["no-jam"] && jamFlags.length) throw new CliError("conflicting_flags", `Use --no-jam to publish to the gallery, or ${jamFlags.map(f => `--${f}`).join(", ")} to enter the jam, not both.`, EXIT.input);
   if (flags["no-jam"]) answers.jam = null;
   else if (jamFlags.length) {
@@ -71,10 +74,35 @@ export function publishAnswers(flags: Flags): PublishAnswers {
     }
     const missing = sponsors.filter(sponsor => !sponsorEmails[sponsor]);
     if (missing.length) throw new CliError("jam_answers_required", `Add the email of the account you used at ${missing.join(" and ")}, so its team can verify the entry: --sponsor-email ${missing[0]}=you@example.com.`, EXIT.input);
-    answers.jam = { track: flags.track, models: list(flags.models), sponsors, sponsorEmails };
+    answers.jam = { track: flags.track, models: list(flags.models), sponsors, sponsorEmails, sponsorPosts: sponsorPostsFlag(flags["sponsor-post"]) };
   }
   return answers;
 }
+
+/**
+ * `--sponsor-post sponsor=link`, read the way `--sponsor-email` is: comma separated pairs,
+ * split at the first "=". Each link is written the one way the server stores it
+ * (`https://x.com/<handle>/status/<id>`), so a `twitter.com` link or one with `?s=20` on the
+ * end is taken, and anything that is not one post on X is refused before a request is made.
+ * Whether a track needs a post at all is the server's to say: it holds the answers against the
+ * game's standing entry, which an update of an entered game keeps along with its link, and
+ * refuses a new entry without one in a sentence naming this flag. A copy of that rule here read
+ * the wrong submission for an entered game's update and refused what the server takes
+ * (review, 26 Nov 2026), so there is none.
+ */
+export function sponsorPostsFlag(value: string | boolean | undefined): Record<string, string> {
+  const posts: Record<string, string> = {};
+  for (const pair of list(value)) {
+    const at = pair.indexOf("=");
+    const sponsor = at < 0 ? "" : pair.slice(0, at).trim(), link = at < 0 ? "" : pair.slice(at + 1).trim();
+    if (!sponsor || !link) throw new CliError("invalid_flag", `Use --sponsor-post sponsor=link, separated by commas for several, as in --sponsor-post meshy=${EXAMPLE_POST}.`, EXIT.input);
+    const post = xPostUrl(link);
+    if (!post) throw new CliError("invalid_flag", `${link} is not a link to a post on X. Copy the post’s own link, which looks like ${EXAMPLE_POST}.`, EXIT.input);
+    posts[sponsor] = post;
+  }
+  return posts;
+}
+const EXAMPLE_POST = "https://x.com/you/status/123";
 
 /**
  * `opengame publish`: confirm the details of a release that passed review and put it live, as

@@ -3222,6 +3222,10 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "xPostRequired": {
+                      "default": false,
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -3230,7 +3234,8 @@
                     "hint",
                     "provider",
                     "evidenceLabel",
-                    "evidenceCharsMax"
+                    "evidenceCharsMax",
+                    "xPostRequired"
                   ],
                   "additionalProperties": false
                 }
@@ -3320,6 +3325,10 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "xPostRequired": {
+                      "default": false,
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -3328,7 +3337,8 @@
                     "hint",
                     "provider",
                     "evidenceLabel",
-                    "evidenceCharsMax"
+                    "evidenceCharsMax",
+                    "xPostRequired"
                   ],
                   "additionalProperties": false
                 }
@@ -3415,6 +3425,10 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "xPostRequired": {
+                      "default": false,
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -3423,7 +3437,8 @@
                     "hint",
                     "provider",
                     "evidenceLabel",
-                    "evidenceCharsMax"
+                    "evidenceCharsMax",
+                    "xPostRequired"
                   ],
                   "additionalProperties": false
                 }
@@ -13655,7 +13670,7 @@
             }
           },
           "429": {
-            "description": "`deploy_rate_limited`, `deploy_day_limited`, `storage_budget_exhausted` or `rate_limited` for this token. Only `rate_limited` carries `retryAfterSeconds` here. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
+            "description": "`deploy_rate_limited`, `deploy_day_limited`, `storage_budget_exhausted` or `rate_limited` for this token. Wait `retryAfterSeconds` when the body gives it: an allowance says when it frees up, and `storage_budget_exhausted` only when a failed deploy is waiting to be cleared. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15845,7 +15860,7 @@
             }
           },
           "429": {
-            "description": "`deploy_rate_limited`, `deploy_day_limited`, `scan_budget_exhausted` (a granted lane's own allowance, which counts asset bytes), `storage_budget_exhausted` or `rate_limited` for this token. Only `rate_limited` carries `retryAfterSeconds` here. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
+            "description": "`deploy_rate_limited`, `deploy_day_limited`, `scan_budget_exhausted` (a granted lane's own allowance, which counts asset bytes), `storage_budget_exhausted` or `rate_limited` for this token. Wait `retryAfterSeconds` when the body gives it: an allowance says when it frees up, and `storage_budget_exhausted` only when a failed deploy is waiting to be cleared. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16173,7 +16188,7 @@
             }
           },
           "429": {
-            "description": "`deploy_rate_limited`, `deploy_day_limited`, `scan_budget_exhausted` (a granted lane's own allowance, which counts asset bytes), `storage_budget_exhausted` or `rate_limited` for this token. Only `rate_limited` carries `retryAfterSeconds` here. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
+            "description": "`deploy_rate_limited`, `deploy_day_limited`, `scan_budget_exhausted` (a granted lane's own allowance, which counts asset bytes), `storage_budget_exhausted` or `rate_limited` for this token. Wait `retryAfterSeconds` when the body gives it: an allowance says when it frees up, and `storage_budget_exhausted` only when a failed deploy is waiting to be cleared. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
             "content": {
               "application/json": {
                 "schema": {
@@ -34989,6 +35004,18 @@
                         },
                         "default": {},
                         "description": "The email of the account used at each sponsor in `sponsors`, keyed by the sponsor."
+                      },
+                      "sponsorPosts": {
+                        "type": "object",
+                        "propertyNames": {
+                          "maxLength": 80
+                        },
+                        "additionalProperties": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "default": {},
+                        "description": "A link to the creator's post on X about the game, keyed by the sponsor, for each track in `sponsors` whose form option has `xPostRequired` (Meshy's). An `x.com` or `twitter.com` link to one post is stored as `https://x.com/<handle>/status/<id>`; anything else is refused with `invalid_request`. A track the game's entry already holds keeps its link and is not asked again."
                       }
                     }
                   }
@@ -35063,7 +35090,7 @@
             }
           },
           "400": {
-            "description": "`invalid_request`: the body does not match the schema, a word the game has already was sent, a description is owed and none was given, a subgenre is not under the genre, or a sponsor's email is not a whole address. `invalid_models`: `jam.models` for a release already entered names a key that is not on the list, or a list its entry could not keep. Nothing was published.",
+            "description": "`invalid_request`: the body does not match the schema, a word the game has already was sent, a description is owed and none was given, a subgenre is not under the genre, a sponsor's email is not a whole address, a sponsor's post is not a link to a post on X, or a track that asks for a post was given none. `invalid_models`: `jam.models` for a release already entered names a key that is not on the list, or a list its entry could not keep. Nothing was published.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35529,7 +35556,8 @@
                           "hint": "Anything with a finish line or a final whistle.",
                           "provider": null,
                           "evidenceLabel": null,
-                          "evidenceCharsMax": null
+                          "evidenceCharsMax": null,
+                          "xPostRequired": false
                         }
                       ]
                     },
@@ -35544,7 +35572,8 @@
                           "hint": "text",
                           "provider": "anthropic",
                           "evidenceLabel": null,
-                          "evidenceCharsMax": null
+                          "evidenceCharsMax": null,
+                          "xPostRequired": false
                         },
                         {
                           "value": "eleven-v3",
@@ -35552,7 +35581,8 @@
                           "hint": "audio",
                           "provider": "elevenlabs",
                           "evidenceLabel": null,
-                          "evidenceCharsMax": null
+                          "evidenceCharsMax": null,
+                          "xPostRequired": false
                         }
                       ]
                     },
@@ -35566,7 +35596,8 @@
                           "hint": "Voice, music or sound made with ElevenLabs.",
                           "provider": "elevenlabs",
                           "evidenceLabel": "What ElevenLabs made in your game",
-                          "evidenceCharsMax": 600
+                          "evidenceCharsMax": 600,
+                          "xPostRequired": false
                         }
                       ]
                     },

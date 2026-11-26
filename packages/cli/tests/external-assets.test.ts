@@ -158,6 +158,28 @@ test("auto is a large-game-v1 plan only, and an explicit list still works there"
 /* The cover named in opengame.json used to be held in the boot archive too. Nothing uploads
    it any more (30 Oct 2026), so a picture in the export is chosen by its size like the rest,
    and naming one in opengame.json changes nothing about the plan. */
+/* Review of 25 Nov 2026: the automatic split walked the export without the creator's
+   .opengameignore, so an ignored screenshot of 1 MiB or more was sent as an asset while the
+   boot archive's notice listed it as left out. */
+test("auto leaves out what .opengameignore names, and a plan naming an ignored file is refused", async () => temporary(async root => {
+  await writeFile(join(root, "index.html"), "<canvas>");
+  await writeFile(join(root, ".opengameignore"), "tools/\n");
+  await sparse(root, "sound/music.ogg", MIN * 4);
+  await sparse(root, "tools/screenshot.png", MIN * 2);
+  assert.deepEqual(await autoSplitAssets(root, LARGE), ["sound/music.ogg"]);
+  await writeFile(join(root, "plan.json"), JSON.stringify({ delivery: LARGE, assets: ["sound/music.ogg", "tools/screenshot.png"] }));
+  await assert.rejects(readUnityAssetPlan(root, root, "plan.json", { unityOnly: false }),
+    (error: unknown) => (error as { code?: string }).code === "ignore_file" && /tools\/screenshot\.png is in the asset plan and also left out/.test((error as Error).message));
+  // A plan folder the list leaves out whole says so, rather than calling the plan invalid.
+  await writeFile(join(root, "plan.json"), JSON.stringify({ delivery: LARGE, assets: ["tools/"] }));
+  await assert.rejects(readUnityAssetPlan(root, root, "plan.json", { unityOnly: false }),
+    (error: unknown) => (error as { code?: string }).code === "ignore_file" && /^tools\/ is in the asset plan/.test((error as Error).message));
+  // And one whose every file it leaves out, which is what git's `tools/**` means.
+  await writeFile(join(root, ".opengameignore"), "tools/**\n");
+  await assert.rejects(readUnityAssetPlan(root, root, "plan.json", { unityOnly: false }),
+    (error: unknown) => (error as { code?: string }).code === "ignore_file" && /^tools\/ is in the asset plan/.test((error as Error).message));
+}));
+
 test("auto sends every eligible file of fileBytesMin or more, and never code or opengame.json", async () => temporary(async root => {
   await writeFile(join(root, "index.html"), "<canvas>");
   await writeFile(join(root, "opengame.json"), "{}");

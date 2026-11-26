@@ -323,6 +323,16 @@ function nearestCommand(typed: string): string | null {
   return best && best.cost <= 2 && best.cost < typed.length && !(next && next.cost === best.cost && next.stretch === best.stretch) ? best.name : null;
 }
 function unknownCommand(typed: string): CliError {
+  /* A folder written against the command, `opengame deploy.` for `opengame deploy .`: the
+     nearest-command guess named deploy, which is what was typed, and left the person to spot
+     the missing space themselves (jam feedback, 25 Nov 2026). */
+  const glued = /^([a-z]+)((?:\.{1,2}|~)(?:[/\\].*)?|[/\\].*)$/.exec(typed);
+  if (glued && Object.hasOwn(commands, glued[1]!) && commands[glued[1]!]?.args?.includes("dir")) {
+    // `deploy/dist` meant the dist folder here, not /dist at the root of the disk.
+    const folder = /^[/\\]/.test(glued[2]!) ? `.${glued[2]}` : glued[2];
+    const meant = `opengame ${glued[1]} ${folder}`;
+    return new CliError("unknown_command", `Unknown command ${typed}. Put a space between the command and the folder: ${meant}`, undefined, { next: meant });
+  }
   const near = nearestCommand(typed);
   return new CliError("unknown_command", `Unknown command ${typed}.${near ? ` Did you mean opengame ${near}?` : ""} Run opengame help to see every command.`,
     undefined, { next: near ? `opengame ${near} --help` : "opengame help" });

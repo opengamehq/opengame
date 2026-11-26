@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { LIMITS } from "@opengame/shared";
 import { isBundlePath } from "@opengame/protocol";
 import { CliError } from "./output";
-import { insideProject, withoutBom, isExcludedPath } from "./files";
+import { entryType, insideProject, withoutBom, isExcludedPath } from "./files";
 import { detectExportEngine, projectText, projectTexts, type EngineSetup } from "./engines";
 import { safeReadFile } from "./safe-fs";
 import { scopeOwned, published, packages } from "../../shared/npm-release.json";
@@ -59,10 +59,12 @@ export async function detectBuildOutput(root: string, pkg: Package, explicit?: s
     const entries = await readdir(join(base, folder), { withFileTypes: true });
     for (const entry of entries) {
       const name = folder === "." ? entry.name : `${folder}/${entry.name}`;
-      if (isExcludedPath(name, entry.isDirectory()) || ignored.has(entry.name) || entry.isSymbolicLink()) continue;
+      // Windows lists a OneDrive file as a link; entryType asks again (files.ts).
+      const type = await entryType(join(base, folder), entry);
+      if (isExcludedPath(name, type.isDirectory) || ignored.has(entry.name) || type.isLink) continue;
       if (++visited > LIMITS.bundle.fileCountMax) throw new CliError("build_output_required", "There are too many project files to infer an export safely. Choose --output <folder>.", 2);
-      if (entry.isDirectory() && depth < 4) await walk(name, depth + 1);
-      else if (entry.isFile() && entry.name === LIMITS.bundle.entryPoint) candidates.push(folder);
+      if (type.isDirectory && depth < 4) await walk(name, depth + 1);
+      else if (type.isFile && entry.name === LIMITS.bundle.entryPoint) candidates.push(folder);
     }
   }
   await walk(".", 0);
@@ -72,10 +74,11 @@ export async function detectBuildOutput(root: string, pkg: Package, explicit?: s
     async function list(dir: string, depth: number) {
       for (const entry of await readdir(join(base, folder, dir), { withFileTypes: true })) {
         const name = dir ? `${dir}/${entry.name}` : entry.name;
-        if (entry.isSymbolicLink() || isExcludedPath(name, entry.isDirectory()) || ignored.has(entry.name)) continue;
+        const type = await entryType(join(base, folder, dir), entry);
+        if (type.isLink || isExcludedPath(name, type.isDirectory) || ignored.has(entry.name)) continue;
         if (paths.length >= LIMITS.bundle.fileCountMax) return;
-        if (entry.isFile()) paths.push(name);
-        else if (entry.isDirectory() && depth < 4) await list(name, depth + 1);
+        if (type.isFile) paths.push(name);
+        else if (type.isDirectory && depth < 4) await list(name, depth + 1);
       }
     }
     await list("", 0);

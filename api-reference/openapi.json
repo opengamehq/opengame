@@ -13655,7 +13655,7 @@
             }
           },
           "429": {
-            "description": "`deploy_rate_limited`, `deploy_day_limited`, `storage_budget_exhausted` or `rate_limited` for this token. Only `rate_limited` carries `retryAfterSeconds` here. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
+            "description": "`deploy_rate_limited`, `deploy_day_limited`, `storage_budget_exhausted` or `rate_limited` for this token. Wait `retryAfterSeconds` when the body gives it: an allowance says when it frees up, and `storage_budget_exhausted` only when a failed deploy is waiting to be cleared. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15845,7 +15845,7 @@
             }
           },
           "429": {
-            "description": "`deploy_rate_limited`, `deploy_day_limited`, `scan_budget_exhausted` (a granted lane's own allowance, which counts asset bytes), `storage_budget_exhausted` or `rate_limited` for this token. Only `rate_limited` carries `retryAfterSeconds` here. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
+            "description": "`deploy_rate_limited`, `deploy_day_limited`, `scan_budget_exhausted` (a granted lane's own allowance, which counts asset bytes), `storage_budget_exhausted` or `rate_limited` for this token. Wait `retryAfterSeconds` when the body gives it: an allowance says when it frees up, and `storage_budget_exhausted` only when a failed deploy is waiting to be cleared. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16173,7 +16173,7 @@
             }
           },
           "429": {
-            "description": "`deploy_rate_limited`, `deploy_day_limited`, `scan_budget_exhausted` (a granted lane's own allowance, which counts asset bytes), `storage_budget_exhausted` or `rate_limited` for this token. Only `rate_limited` carries `retryAfterSeconds` here. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
+            "description": "`deploy_rate_limited`, `deploy_day_limited`, `scan_budget_exhausted` (a granted lane's own allowance, which counts asset bytes), `storage_budget_exhausted` or `rate_limited` for this token. Wait `retryAfterSeconds` when the body gives it: an allowance says when it frees up, and `storage_budget_exhausted` only when a failed deploy is waiting to be cleared. `rate_limited` for a GitHub deploy: this account asked for 30 GitHub repository checks in the last hour, the most it can, so nothing was uploaded. Wait `retryAfterSeconds`, or deploy the build with Drop or the CLI.",
             "content": {
               "application/json": {
                 "schema": {

@@ -2378,7 +2378,10 @@
       "boardVariantCombosMax": 48,
       "boardRunsPerPlayerMax": 100,
       "pathCharsMax": 512,
-      "buildCommandCharsMax": 1000
+      "buildCommandCharsMax": 1000,
+      "ignoreFileRulesMax": 1000,
+      "ignoreFileLineCharsMax": 1000,
+      "ignoreFileStepsMax": 400000000
     },
     "sdk": {
       "handshakeTimeoutMs": 4000,

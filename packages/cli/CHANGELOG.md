@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.13.12
+
+- When a deploy is refused because the account has used its five deploys for the day, or its
+  hourly allowance, the message says when the next one frees up, both how long and the time on
+  your clock. The CLI's file-by-file upload asked the server by a route that left that out, so
+  the message ended at "Try again later".
+- A deploy refused that way no longer looks like an upload in progress. `opengame status` used to
+  say the deploy "was saved before the server answered"; it now says it was refused, that
+  nothing was uploaded, and when to try again. The next `opengame deploy` packs your files as
+  they are then, not the refused copy.
+- A saved deploy whose archive was deleted from `.opengame` starts again from your current files,
+  with an `upload_restarted` notice, instead of stopping with `archive_unavailable`. A deploy
+  with its own `--idempotency-key` still stops, as before.
+- The CLI cleans up after itself: each deploy removes the archives and packaging receipts in
+  `.opengame` that no saved deploy needs. They used to stay until deleted by hand.
+- A `.opengameignore` at the top of the folder you upload keeps your own tools, tests and
+  screenshots out of `check` and the upload. It reads like a `.gitignore`. Drop and GitHub
+  deploys read it too.
+- `opengame deploy.`, with no space before the folder, says to put one in and gives the command
+  as it should be.
+
+## 0.13.11
+
+- On Windows, a game kept in a OneDrive folder (Documents and Desktop are on many machines)
+  reads as files and folders. Windows can list a file OneDrive syncs as a link, and then `init`
+  found no `index.html` there and `check` refused the build as a symlink. The CLI now asks
+  again about anything listed as a link, and refuses only real links and junctions.
+- Build commands run on Windows as written for macOS and Linux: `GOOS=js GOARCH=wasm go build`
+  sets those variables, Godot's quoted preset name reaches Godot without its quotes, and a
+  program named by path, such as Kaigen's `hz/hzbuild`, runs. `init` now writes Kaigen's build
+  command on Windows too.
+- On Windows, a build whose program is missing says so instead of only "the build command
+  failed", and the commands the CLI suggests next quote a folder in a way cmd.exe and
+  PowerShell both read and install another folder's dependencies without `cd ... &&`, which
+  Windows PowerShell refuses.
+
 ## 0.13.10
 
 - `init`, `dev` and `vendor` run on Windows. They stopped there with "This command needs Python 3

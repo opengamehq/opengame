@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.13.11
+
+- On Windows, a game kept in a OneDrive folder (Documents and Desktop are on many machines)
+  reads as files and folders. Windows can list a file OneDrive syncs as a link, and then `init`
+  found no `index.html` there and `check` refused the build as a symlink. The CLI now asks
+  again about anything listed as a link, and refuses only real links and junctions.
+- Build commands run on Windows as written for macOS and Linux: `GOOS=js GOARCH=wasm go build`
+  sets those variables, Godot's quoted preset name reaches Godot without its quotes, and a
+  program named by path, such as Kaigen's `hz/hzbuild`, runs. `init` now writes Kaigen's build
+  command on Windows too.
+- On Windows, a build whose program is missing says so instead of only "the build command
+  failed", and the commands the CLI suggests next quote a folder in a way cmd.exe and
+  PowerShell both read and install another folder's dependencies without `cd ... &&`, which
+  Windows PowerShell refuses.
+
 ## 0.13.10
 
 - `init`, `dev` and `vendor` run on Windows. They stopped there with "This command needs Python 3

@@ -16,7 +16,7 @@ import { authCommand } from "./auth";
 import { readBootstrap } from "./bootstrap";
 import { Api, ApiError, UploadInterrupted, uploadRetryPauseMs } from "./http";
 import { activeToken } from "./credentials";
-import { collectFiles, loadManifest, outputFolder, replaceFile } from "./files";
+import { collectFiles, loadManifest, outputFolder, replaceFile, windowsFolder } from "./files";
 import { archiveDigest, createArchive, readArchiveRange, type PackedArchive } from "./archive";
 import { lockfileInstall, missingDependencies, readBuildPackage, siteFramework, type SiteFramework } from "./build-output";
 import { ensureProjectIgnored, ensureDeployManifest, kindPhrase, provisionalFields } from "./init";
@@ -117,9 +117,67 @@ type Ran = { code: number | null; error?: boolean; timedOut: boolean; tail: stri
  * to a person and the output captured in --json, in a process group of its own when piped,
  * and stopped with everything it started at the time limit. `noun` names it in the notice.
  */
-async function runProjectCommand(command: string, root: string, output: Output, timeoutMs: number, noun: string, graceMs = BUILD_STOP_GRACE_MS): Promise<Ran> {
-  // A project's build is its own code. It has no reason to inherit the API token.
-  const env = { ...process.env }; delete env.OPENGAME_TOKEN;
+/**
+ * A build command as cmd.exe can run it. Node's shell on Windows is cmd.exe, and opengame.json
+ * is often written on a Mac: init writes Go's `GOOS=js GOARCH=wasm go build ...` and Godot's
+ * `godot --headless --export-release 'Web' 'build/web/index.html'`, and a person writes
+ * `NODE_ENV=production vite build`. cmd.exe runs `GOOS=js` as a program and hands `'Web'` to
+ * Godot quotes and all, so each failed on every Windows machine (audit, 25 Nov 2026). Leading
+ * NAME=value assignments become environment variables, as a POSIX shell makes them; the
+ * program's own path takes backslashes, since cmd.exe reads `hz/hzbuild` or
+ * `./node_modules/.bin/vite` as a program and a /switch; and a single-quoted word outside
+ * double quotes becomes a double-quoted one when that means the same thing to cmd.exe and to
+ * the program: no %, ! or " inside it, and no trailing backslash, which a program's own
+ * parser would read as escaping the closing quote. A line for cmd.exe's own `for` or for
+ * PowerShell keeps its quotes, since there single quotes mean something. Anything else is
+ * left exactly as written; only the first program's path is turned round.
+ */
+export function forWindowsShell(command: string): { command: string; env: Record<string, string> } {
+  const env: Record<string, string> = {};
+  let rest = command.trimStart();
+  for (;;) {
+    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(?:'([^']*)'|"([^"]*)"|([^\s'"]*))\s+(?=\S)/.exec(rest);
+    if (!match) break;
+    env[match[1]!] = match[2] ?? match[3] ?? match[4] ?? "";
+    rest = rest.slice(match[0].length);
+  }
+  const program = /^[^\s'"&|<>()^]+/.exec(rest)?.[0];
+  if (program && program.includes("/") && !program.includes("://")) rest = program.replace(/\//g, "\\") + rest.slice(program.length);
+  if (/^(?:for|powershell(?:\.exe)?|pwsh(?:\.exe)?)(?=\s|$)/i.test(rest)) return { command: rest, env };
+  let out = "", inDouble = false;
+  for (let index = 0; index < rest.length; index += 1) {
+    const char = rest[index]!;
+    if (char === '"') inDouble = !inDouble;
+    if (char === "'" && !inDouble) {
+      const end = rest.indexOf("'", index + 1);
+      const inner = end === -1 ? "" : rest.slice(index + 1, end);
+      if (end !== -1 && !/[%!"]/.test(inner) && !inner.endsWith("\\")) { out += `"${inner}"`; index = end; continue; }
+    }
+    out += char;
+  }
+  return { command: out, env };
+}
+
+/**
+ * The command and environment a project's build runs with. A build is the project's own code
+ * and has no reason to inherit the API token. Windows names variables without case, and Node
+ * there keeps the first of each spelling it finds, so the token is removed in every spelling
+ * and a variable the command sets replaces the one already there whatever its case.
+ */
+export function projectCommand(command: string, platform: NodeJS.Platform = process.platform, base: NodeJS.ProcessEnv = process.env) {
+  const windows = platform === "win32" ? forWindowsShell(command) : undefined;
+  const env: NodeJS.ProcessEnv = { ...base };
+  const same = (a: string, b: string) => platform === "win32" ? a.toUpperCase() === b.toUpperCase() : a === b;
+  for (const [name, value] of Object.entries(windows?.env ?? {})) {
+    for (const key of Object.keys(env)) if (same(key, name)) delete env[key];
+    env[name] = value;
+  }
+  for (const key of Object.keys(env)) if (same(key, "OPENGAME_TOKEN")) delete env[key];
+  return { command: windows?.command ?? command, env };
+}
+
+async function runProjectCommand(original: string, root: string, output: Output, timeoutMs: number, noun: string, graceMs = BUILD_STOP_GRACE_MS): Promise<Ran> {
+  const { command, env } = projectCommand(original);
   const capture = output.json;
   let tail = "";
   let leftRunning = false;
@@ -196,7 +254,8 @@ export function commandNotFound(code: number | null, tail: string): { tool?: str
     ?? /command not found: ([^\s'"]+)/.exec(text)?.[1]
     ?? /'([^'\n]+)' is not recognized as an internal or external command/.exec(text)?.[1];
   if (tool) return { tool };
-  return code === 127 ? {} : undefined;
+  // 127 from a POSIX shell, 9009 from cmd.exe, which no POSIX exit status can be.
+  return code === 127 || code === 9009 ? {} : undefined;
 }
 
 export type BuildOptions = {
@@ -221,6 +280,22 @@ function devOmitted(): string | undefined {
 
 /** A folder for a shell command, quoted only when it has to be. */
 const shellPath = (path: string) => /^[\w./-]+$/.test(path) ? path : `'${path.replace(/'/g, "'\\''")}'`;
+
+/**
+ * The install to run in another folder, as one command. `cd x && install` everywhere but
+ * Windows, where Windows PowerShell 5.1, the one Windows opens, refuses `&&` and cmd.exe takes
+ * a single-quoted folder literally; there each package manager's own folder flag says it, with
+ * the folder in double quotes when it needs any.
+ */
+export function installIn(manager: string, install: string, folder: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform !== "win32") return `cd ${shellPath(folder)} && ${install}`;
+  const at = windowsFolder(folder);
+  if (manager === "npm") return `${install} --prefix ${at}`;
+  if (manager === "pnpm") return `pnpm --dir ${at} install`;
+  if (manager === "yarn") return `yarn --cwd ${at} install`;
+  if (manager === "bun") return `bun install --cwd ${at}`;
+  return `cd ${at} && ${install}`;
+}
 
 /**
  * Installs the project's dependencies from its lockfile when package.json names packages that
@@ -249,8 +324,8 @@ async function installDependencies(root: string, output: Output, timeoutMs: numb
   if (!needed.install) throw refuse(`Dependencies are not installed. Run npm install, then run ${rerun} again.`, "npm install");
   const plan = needed.install;
   if (plan.folder !== resolve(root)) {
-    const where = shellPath(relative(resolve(root), plan.folder) || ".");
-    throw refuse(`${listed} ${needed.missing.length === 1 ? "is" : "are"} not installed. This project's lockfile is in ${plan.folder}, a workspace this command does not install for you. Run ${plan.install} there, then run ${rerun} again.`, `cd ${where} && ${plan.install}`);
+    const where = relative(resolve(root), plan.folder) || ".";
+    throw refuse(`${listed} ${needed.missing.length === 1 ? "is" : "are"} not installed. This project's lockfile is in ${plan.folder}, a workspace this command does not install for you. Run ${plan.install} there, then run ${rerun} again.`, installIn(plan.manager, plan.install, where));
   }
   if (!needed.fresh) throw refuse(`${listed} ${needed.missing.length === 1 ? "is" : "are"} in package.json but not installed. Run ${plan.install}, then run ${rerun} again.`, plan.install);
   if (omitted) throw refuse(`Dependencies are not installed.`, plan.install);
@@ -319,7 +394,7 @@ export async function build(command: string, root: string, output: Output, timeo
       const plan = await lockfileInstall(root, pkg);
       const there = plan && plan.folder !== resolve(root) ? plan.folder : undefined;
       const install = plan?.install ?? "npm install";
-      missing = { install: there ? `cd ${shellPath(relative(resolve(root), there))} && ${install}` : install,
+      missing = { install: there ? installIn(plan!.manager, install, relative(resolve(root), there)) : install,
         message: `The build could not find ${tool ?? "a program it runs"}, so the project's dependencies are probably not installed. Run ${install}${there ? ` in ${there}` : ""}, then run ${rerun} again.` };
     } else {
       missing = { install: "", message: `The build could not find ${tool ?? "a program it runs"}, so it is probably not installed on this machine. Install it, or put it on PATH, then run ${rerun} again.` };

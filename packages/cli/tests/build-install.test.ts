@@ -4,7 +4,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { Output } from "../src/output";
-import { build, commandNotFound } from "../src/deploy";
+import { build, commandNotFound, forWindowsShell, installIn, projectCommand } from "../src/deploy";
 import { lockfileInstall, missingDependencies } from "../src/build-output";
 
 /* On 11 Nov 2026 `opengame deploy` on a fresh clone of a Vite game ran `npm run build` and
@@ -204,6 +204,8 @@ test("each shell's way of saying a program is missing is read", () => {
   assert.deepEqual(commandNotFound(127, "zsh: command not found: vite"), { tool: "vite" });
   assert.deepEqual(commandNotFound(1, "'vite' is not recognized as an internal or external command,\r\noperable program or batch file."), { tool: "vite" });
   assert.deepEqual(commandNotFound(127, "something else"), {});
+  // cmd.exe's own status for a missing program, which a person's terminal shows without the text.
+  assert.deepEqual(commandNotFound(9009, ""), {});
   assert.equal(commandNotFound(1, "error TS2304: Cannot find name"), undefined);
 });
 
@@ -236,4 +238,44 @@ test("dependencies count as installed when Node would resolve them, hoisted or n
   assert.deepEqual((await missingDependencies(lone))?.missing, ["fake-tool"]);
   assert.equal(await missingDependencies(await project(t, { "package.json": JSON.stringify({ scripts: { build: "make" } }) })), null);
   assert.equal(await missingDependencies(await project(t, {})), null);
+});
+
+/* Node's shell on Windows is cmd.exe, and init writes these commands on any machine
+   (audit, 25 Nov 2026): each failed there as written. */
+test("a build command runs under cmd.exe as a POSIX shell would run it", () => {
+  assert.deepEqual(forWindowsShell("GOOS=js GOARCH=wasm go build -o web/game.wasm ."), { command: "go build -o web/game.wasm .", env: { GOOS: "js", GOARCH: "wasm" } });
+  assert.deepEqual(forWindowsShell("NODE_ENV=production BASE='/my game/' vite build"), { command: "vite build", env: { NODE_ENV: "production", BASE: "/my game/" } });
+  assert.deepEqual(forWindowsShell("godot --headless --export-release 'Web' 'build/web/index.html'"),
+    { command: 'godot --headless --export-release "Web" "build/web/index.html"', env: {} });
+  assert.equal(forWindowsShell("hz/hzbuild wasm --release").command, "hz\\hzbuild wasm --release");
+  assert.equal(forWindowsShell("./node_modules/.bin/vite build --outDir dist/web").command, ".\\node_modules\\.bin\\vite build --outDir dist/web");
+  // Left exactly as written: no command after the assignment, a URL, a quote inside double
+  // quotes, and single quotes around text cmd.exe would read differently in double quotes.
+  for (const same of ["FOO=bar", "https://example.com/build.sh", 'echo "it\'s built"', "echo '%PATH%'", "echo 'wow!'", "npm run build",
+    // cmd.exe's for and PowerShell give single quotes a meaning; a trailing backslash would escape the new closing quote.
+    "for /f %i in ('git rev-parse HEAD') do echo %i", "powershell -Command Copy-Item 'my dir' dist", "tool --out 'C:\\out\\'"]) {
+    assert.deepEqual(forWindowsShell(same), { command: same, env: {} }, same);
+  }
+});
+
+test("an install in another folder is one command each shell runs", () => {
+  assert.equal(installIn("pnpm", "pnpm install", "../..", "linux"), "cd ../.. && pnpm install");
+  assert.equal(installIn("npm", "npm install", "../my repo", "darwin"), "cd '../my repo' && npm install");
+  // Windows PowerShell 5.1 refuses &&, and cmd.exe keeps single quotes, so each manager's flag.
+  assert.equal(installIn("npm", "npm install", "..\\..", "win32"), 'npm install --prefix "..\\.."');
+  // PowerShell expands $ inside double quotes, so that folder gets single quotes.
+  assert.equal(installIn("npm", "npm install", "..\\$dev", "win32"), "npm install --prefix '..\\$dev'");
+  assert.equal(installIn("pnpm", "pnpm install", "..\\my repo", "win32"), 'pnpm --dir "..\\my repo" install');
+  assert.equal(installIn("yarn", "yarn install", "..", "win32"), "yarn --cwd .. install");
+  assert.equal(installIn("bun", "bun install", "..", "win32"), "bun install --cwd ..");
+});
+
+test("a build's environment drops the API token in any spelling and takes the command's variables", () => {
+  const base = { Path: "C:\\Windows", OpenGame_Token: "secret", OPENGAME_TOKEN: "secret", Goos: "windows" };
+  const windows = projectCommand("GOOS=js GOARCH=wasm go build -o web/game.wasm .", "win32", base);
+  assert.equal(windows.command, "go build -o web/game.wasm .");
+  assert.deepEqual(windows.env, { Path: "C:\\Windows", GOOS: "js", GOARCH: "wasm" });
+  // Elsewhere the shell makes the variables itself, and names have case.
+  const linux = projectCommand("GOOS=js go build", "linux", { PATH: "/usr/bin", OPENGAME_TOKEN: "secret", Goos: "x" });
+  assert.deepEqual(linux, { command: "GOOS=js go build", env: { PATH: "/usr/bin", Goos: "x" } });
 });

@@ -139,6 +139,9 @@ test("help --json describes every command, flag, exit code and environment varia
     // The locked installs deploy runs before a build (deploy.ts, installDependencies), and
     // parcel's output folder, read from a build script by build-output.ts.
     "--frozen-lockfile", "--immutable", "--dist-dir",
+    // The package managers' own folder flags, in the install a Windows "Next:" suggests for a
+    // workspace (deploy.ts, installIn), since Windows PowerShell refuses `cd ... &&`.
+    "--prefix", "--cwd",
     // `nuxt build --prerender`, a static Nuxt build that build-output.ts accepts.
     "--prerender"]);
   const unknown = [...named].filter(flag => !flags.has(flag) && !/^--evidence-/.test(flag) && !externalFlags.has(flag)).sort();

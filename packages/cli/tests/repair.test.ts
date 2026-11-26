@@ -260,6 +260,8 @@ test("an upload the server will never accept is closed and replaced, not resumed
       return json(res, 200, { operation: op(2, "queued"), uploaded: true });
     }
     if (req.url === `/api/v1/operations/${id(2)}/upload`) return json(res, 200, { operation: op(2, "queued") });
+    // The saved archive is gone, so the CLI asks first; the server still says uploading.
+    if (req.url === `/api/v1/operations/${id(1)}`) return json(res, 200, { operation: op(1, "uploading") });
   });
   try {
     // A deploy saved earlier, never finished, now past its deadline.
@@ -337,16 +339,208 @@ test("a deploy the server refuses outright leaves nothing pending for status to 
   } finally { await h.close(); }
 });
 
-test("a deploy that never got an answer stays resumable with its key", async () => {
-  let creates = 0;
+/* Jam feedback, 25 Nov 2026: a deploy the daily allowance refused stayed open, so status said
+   it "was saved before the server answered", and the next deploy resumed the refused archive
+   rather than packing the edits made since. A 429 is an answer, and nothing was created. */
+test("a deploy an allowance refuses is closed, and status says when it frees up rather than a pending upload", async () => {
+  let refuse = true;
   const h = await harness((req, res) => {
-    if (req.url === "/api/v1/deploys") { creates++; return json(res, 429, { error: "deploy_rate_limited", message: "Wait.", retryAfterSeconds: 1 }, { "retry-after": "1" }); }
+    if (req.url === "/api/v1/deploys") {
+      if (refuse) return json(res, 429, { error: "deploy_day_limited", message: "You have started 5 deploys in the last 24 hours, the most one account can. Nothing was uploaded. The next one frees up in about 4 hours.", retryAfterSeconds: 14_400 }, { "retry-after": "14400" });
+      return json(res, 200, { operation: op(2, "queued"), uploaded: true });
+    }
+  });
+  try {
+    const refused = await h.cli("deploy", h.root, "--no-wait");
+    assert.equal(refused.code, 4, JSON.stringify(refused.events.at(-1)));
+    const error = refused.events.at(-1);
+    assert.deepEqual([error.code, error.retryAfterSeconds, error.retry], ["deploy_day_limited", 14_400, "later"]);
+    assert.match(error.message, /Nothing was uploaded\. The next one frees up in about 4 hours, at (?:\w+ )?\d.*your time\.$/);
+    const saved = JSON.parse(await readFile(join(h.root, ".opengame/project.json"), "utf8"));
+    assert.equal(saved.deploy.terminal, true);
+    assert.equal(saved.deploy.operationId, undefined);
+    assert.equal(saved.deploy.refused.code, "deploy_day_limited");
+
+    const status = await h.cli("status", h.root);
+    const said = status.events.at(-1);
+    assert.equal(status.code, 4, JSON.stringify(said));
+    assert.equal(said.code, "deploy_day_limited");
+    assert.match(said.message, /^Your last deploy was refused\. You have started 5 deploys .* Nothing was uploaded\. The next one frees up in about 4 hours, at .*your time\.$/);
+    assert.ok(said.retryAfterSeconds > 14_000 && said.retryAfterSeconds <= 14_400, String(said.retryAfterSeconds));
+
+    // The next deploy packs the folder as it is now, under a new key, not the refused archive.
+    refuse = false;
+    await writeFile(join(h.root, "index.html"), "<!doctype html><title>Night shift, edited</title>");
+    const again = await h.cli("deploy", h.root, "--no-wait");
+    assert.equal(again.code, 0, JSON.stringify(again.events.at(-1)));
+    const creates = h.seen.filter(call => call.url === "/api/v1/deploys");
+    assert.equal(creates.length, 2);
+    assert.notEqual(JSON.parse(creates[0]!.body).sha256, JSON.parse(creates[1]!.body).sha256);
+    assert.notEqual(creates[0]!.key, creates[1]!.key);
+    assert.ok(!again.events.some(event => event.code === "resuming_deploy"));
+  } finally { await h.close(); }
+});
+
+/* Review of 25 Nov 2026: the token's request throttle answers before the key is looked up, so
+   a deploy whose create landed and whose answer was lost can meet it. Closing that one would
+   start a second operation under a new key. */
+test("the token's request throttle leaves the saved deploy open with its key", async () => {
+  const h = await harness((req, res) => {
+    if (req.url === "/api/v1/deploys") return json(res, 429, { error: "rate_limited", message: "This token has made too many requests. Wait a minute.", retryAfterSeconds: 60 }, { "retry-after": "60" });
   });
   try {
     await h.cli("deploy", h.root, "--no-wait");
     const saved = JSON.parse(await readFile(join(h.root, ".opengame/project.json"), "utf8"));
     assert.notEqual(saved.deploy.terminal, true);
-    assert.ok(creates >= 1);
+    assert.equal(saved.deploy.refused, undefined);
+  } finally { await h.close(); }
+});
+
+test("a refusal is worded from now, and one with no wait gives no time", async () => {
+  const { refusalLine, freesUpWords } = await import("../src/deploy");
+  const at = "2026-11-25T10:00:00.000Z", now = Date.parse(at);
+  const day = { code: "deploy_day_limited", at, retryAfterSeconds: 14_400,
+    message: "You have started 5 deploys in the last 24 hours, the most one account can. Nothing was uploaded. The next one frees up in about 4 hours." };
+  const later = refusalLine(day, now + 3_600_000);
+  assert.equal(later.retryAfterSeconds, 10_800);
+  assert.match(later.message, /^Your last deploy was refused\. You have started 5 deploys .* Nothing was uploaded\. The next one frees up in about 3 hours, at .*your time\.$/);
+  assert.match(refusalLine(day, now + 20_000_000).message, /Nothing was uploaded\. That wait is over, so run opengame deploy to try again\.$/);
+  const storage = { code: "storage_budget_exhausted", at, message: "Your account has used its storage. Delete a game you no longer need." };
+  assert.equal(refusalLine(storage, now).message, `Your last deploy was refused. ${storage.message}`);
+  assert.equal(refusalLine(storage, now).retryAfterSeconds, undefined);
+  // Rounded to the nearest unit beside an exact clock; one of a unit is singular.
+  assert.match(freesUpWords(7300, now), /^in about 2 hours, at /);
+  assert.match(freesUpWords(1, now), /^in about 1 second, at /);
+});
+
+test("a deploy with a retry key of its own still resumes after a refusal", async () => {
+  const h = await harness((req, res) => {
+    if (req.url === "/api/v1/deploys") return json(res, 429, { error: "deploy_rate_limited", message: "Wait.", retryAfterSeconds: 1 }, { "retry-after": "1" });
+  });
+  try {
+    await h.cli("deploy", h.root, "--no-wait", "--idempotency-key", "mine");
+    await h.cli("deploy", h.root, "--no-wait", "--idempotency-key", "mine");
+    const keys = h.seen.filter(call => call.url === "/api/v1/deploys").map(call => call.key);
+    assert.deepEqual(keys, ["mine", "mine"]);
+  } finally { await h.close(); }
+});
+
+/* The same creator deleted the cached archive while cleaning up, and the next deploy stopped on
+   archive_unavailable, telling them to invent a new retry key. */
+test("a saved deploy whose archive was deleted starts again from the current files", async () => {
+  let creates = 0;
+  const h = await harness((req, res) => {
+    if (req.url === "/api/v1/deploys") {
+      creates++;
+      // The resume reaches the same operation, which still wants its bytes.
+      if (creates <= 2) return json(res, 200, { operation: op(1, "uploading"), upload: { url: `${h.origin}/storage`, headers: { "content-type": "application/zip" } } });
+      return json(res, 200, { operation: op(2, "queued"), uploaded: true });
+    }
+    if (req.url === "/storage") { res.destroy(); return; }
+    if (req.url === `/api/v1/operations/${id(1)}/upload`) return json(res, 503, { error: "temporarily_unavailable", message: "Try again shortly." });
+    if (req.url === `/api/v1/operations/${id(1)}`) return json(res, 200, { operation: op(1, "uploading") });
+  });
+  h.env.OPENGAME_UPLOAD_RESUME_ROUNDS = "0";
+  try {
+    const first = await h.cli("deploy", h.root, "--no-wait");
+    assert.notEqual(first.code, 0);
+    const saved = JSON.parse(await readFile(join(h.root, ".opengame/project.json"), "utf8"));
+    assert.equal(saved.deploy.operationId, id(1));
+    assert.notEqual(saved.deploy.terminal, true);
+    await rm(join(h.root, ".opengame", `${saved.deploy.request.sha256}.zip`));
+    await writeFile(join(h.root, "index.html"), "<!doctype html><title>Night shift, edited</title>");
+    const again = await h.cli("deploy", h.root, "--no-wait");
+    assert.equal(again.code, 0, JSON.stringify(again.events.at(-1)));
+    assert.ok(again.events.some(event => event.code === "upload_restarted" && /no longer in \.opengame/.test(event.message)), JSON.stringify(again.events));
+    const bodies = h.seen.filter(call => call.url === "/api/v1/deploys");
+    assert.notEqual(JSON.parse(bodies[0]!.body).sha256, JSON.parse(bodies.at(-1)!.body).sha256);
+    assert.notEqual(bodies[0]!.key, bodies.at(-1)!.key);
+  } finally { await h.close(); }
+});
+
+/* Review of 25 Nov 2026: a deploy whose bytes landed while its answer was lost, with its
+   archive then deleted, used to start a second operation under a new key. It is followed. */
+test("a saved deploy whose archive is gone but whose bytes landed is followed, not started again", async () => {
+  const h = await harness((req, res) => {
+    if (req.url === `/api/v1/operations/${id(1)}`) return json(res, 200, { operation: op(1, "queued") });
+    if (req.url === "/api/v1/deploys") return json(res, 200, { operation: op(2, "queued"), uploaded: true });
+  });
+  try {
+    await withProject(h.root, h.origin, async (state, save) => {
+      state.deploy = { key: "landed", operationId: id(1), terminal: false, request: { byteSize: 64, fileCount: 1, sha256: "b".repeat(64), manifest, metadataRevision: null, metadata: "preserve" } };
+      await save();
+    });
+    const followed = await h.cli("deploy", h.root, "--no-wait");
+    assert.equal(followed.code, 0, JSON.stringify(followed.events.at(-1)));
+    assert.equal(h.seen.filter(call => call.url === "/api/v1/deploys").length, 0, "no second operation");
+    assert.ok(!followed.events.some(event => event.code === "upload_restarted"));
+    const saved = JSON.parse(await readFile(join(h.root, ".opengame/project.json"), "utf8"));
+    assert.equal(saved.deploy.operationId, id(1));
+    assert.equal(saved.deploy.uploaded, true);
+  } finally { await h.close(); }
+});
+
+/* Greptile on opengamehq/opengame#41: a lookup that failed was read as "still uploading", so a
+   deploy whose bytes had landed started again under a new key. It stops, keeping the key. */
+test("a saved deploy whose archive is gone and whose state cannot be read is kept, not started again", async () => {
+  const h = await harness((req, res) => {
+    if (req.url === `/api/v1/operations/${id(1)}`) return json(res, 503, { error: "temporarily_unavailable", message: "Try again shortly.", retry: "later" });
+    if (req.url === "/api/v1/deploys") return json(res, 200, { operation: op(2, "queued"), uploaded: true });
+  });
+  h.env.OPENGAME_UPLOAD_RESUME_ROUNDS = "0";
+  try {
+    await withProject(h.root, h.origin, async (state, save) => {
+      state.deploy = { key: "landed-maybe", operationId: id(1), terminal: false, request: { byteSize: 64, fileCount: 1, sha256: "c".repeat(64), manifest, metadataRevision: null, metadata: "preserve" } };
+      await save();
+    });
+    const stopped = await h.cli("deploy", h.root, "--no-wait");
+    assert.equal(stopped.code, 5, JSON.stringify(stopped.events.at(-1)));
+    assert.equal(stopped.events.at(-1).retry, "later");
+    assert.equal(h.seen.filter(call => call.url === "/api/v1/deploys").length, 0, "no second deploy");
+    const saved = JSON.parse(await readFile(join(h.root, ".opengame/project.json"), "utf8"));
+    assert.deepEqual([saved.deploy.key, saved.deploy.operationId, saved.deploy.terminal], ["landed-maybe", id(1), false]);
+  } finally { await h.close(); }
+});
+
+/* And one whose upload window closed is started again from the current files, as a dead
+   upload is, rather than followed to an expired page (the same review). */
+test("a saved deploy whose archive is gone and whose upload expired starts again", async () => {
+  const h = await harness((req, res) => {
+    if (req.url === `/api/v1/operations/${id(1)}`) return json(res, 200, { operation: op(1, "expired") });
+    if (req.url === "/api/v1/deploys") return json(res, 200, { operation: op(2, "queued"), uploaded: true });
+  });
+  try {
+    await withProject(h.root, h.origin, async (state, save) => {
+      state.deploy = { key: "expired-key", operationId: id(1), terminal: false, request: { byteSize: 64, fileCount: 1, sha256: "d".repeat(64), manifest, metadataRevision: null, metadata: "preserve" } };
+      await save();
+    });
+    const again = await h.cli("deploy", h.root, "--no-wait");
+    assert.equal(again.code, 0, JSON.stringify(again.events.at(-1)));
+    assert.ok(again.events.some(event => event.code === "upload_restarted" && /upload window closed/.test(event.message)), JSON.stringify(again.events));
+    const keys = h.seen.filter(call => call.url === "/api/v1/deploys").map(call => call.key);
+    assert.equal(keys.length, 1);
+    assert.notEqual(keys[0], "expired-key");
+  } finally { await h.close(); }
+});
+
+/* And the cache no longer grows: every archive and packaging receipt the saved deploy does not
+   name is removed when the next deploy packs, whatever its age. */
+test("a fresh deploy clears cached archives and receipts the saved deploy does not name", async () => {
+  const h = await harness((req, res) => {
+    if (req.url === "/api/v1/deploys") return json(res, 200, { operation: op(1, "queued"), uploaded: true });
+  });
+  try {
+    await mkdir(join(h.root, ".opengame"), { recursive: true });
+    const stale = "e".repeat(64);
+    await writeFile(join(h.root, ".opengame", `${stale}.zip`), "old");
+    await writeFile(join(h.root, ".opengame", `${stale}.packaging.json`), "{}");
+    await writeFile(join(h.root, ".opengame", "notes.txt"), "mine");
+    const done = await h.cli("deploy", h.root, "--no-wait");
+    assert.equal(done.code, 0, JSON.stringify(done.events.at(-1)));
+    const { readdir } = await import("node:fs/promises");
+    const left = await readdir(join(h.root, ".opengame"));
+    assert.ok(!left.includes(`${stale}.zip`) && !left.includes(`${stale}.packaging.json`), left.join(", "));
+    assert.ok(left.includes("notes.txt"), "a file the CLI did not write is left alone");
   } finally { await h.close(); }
 });
 
@@ -674,6 +868,8 @@ test("after the close a new deploy stops at once and a saved one resumes", async
     if (req.url === "/api/v1/status") return json(res, 200, { launched: true, access: true, deploysFrozen: true });
     if (req.url === "/api/v1/deploys") return json(res, 200, { operation: op(1, "queued"), uploaded: true });
     if (req.url === `/api/v1/operations/${id(1)}/upload`) return json(res, 200, { operation: op(1, "queued") });
+    // The saved archive is gone, so the CLI asks first; the server still says uploading.
+    if (req.url === `/api/v1/operations/${id(1)}`) return json(res, 200, { operation: op(1, "uploading") });
   });
   h.env.OPENGAME_TEST_SKIP_LAUNCH_CHECK = undefined;
   try {

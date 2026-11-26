@@ -999,7 +999,7 @@
       "recordMaxSeconds": 900,
       "warnSeconds": 15,
       "flushMs": 500,
-      "startTimeoutMs": 4000,
+      "startTimeoutMs": 10000,
       "drainTimeoutMs": 3000,
       "bytesPerSecondMax": 5000000,
       "packetsPerSecondMax": 600,
@@ -1692,7 +1692,10 @@
       "boardVariantCombosMax": 48,
       "boardRunsPerPlayerMax": 100,
       "pathCharsMax": 512,
-      "buildCommandCharsMax": 1000
+      "buildCommandCharsMax": 1000,
+      "ignoreFileRulesMax": 1000,
+      "ignoreFileLineCharsMax": 1000,
+      "ignoreFileStepsMax": 400000000
     },
     "sdk": {
       "radio": {

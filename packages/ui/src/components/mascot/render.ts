@@ -488,7 +488,83 @@ function toHex([r, g, b]: Rgb) {
   return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1).toUpperCase()}`;
 }
 
-const pathCache = new Map<string, { fill: string; d: string }[]>();
+/* ONE MEMORY A PROCESS, WHICHEVER COPY OF THIS MODULE ASKS. A server bundle can hold this
+   file twice, once for the components it renders to a payload and once for the ones it
+   renders to markup, and a still handed to one copy (`keepMascotPaths`) was never seen by the
+   other, which then drew the face anyway (review, 26 Nov 2026). The paths are a pure function
+   of the key, so sharing them across copies of one build is sharing the same answers. */
+const PATHS = Symbol.for("opengame.mascot.paths");
+type Still = { fill: string; d: string }[];
+const shared = globalThis as { [PATHS]?: Map<string, Still> };
+const pathCache: Map<string, Still> = (shared[PATHS] ??= new Map());
+
+/**
+ * The name one still is kept under: the look, its cells across and its theme. It is also what
+ * `MascotAvatar` writes on the group it draws (`data-still`), so a browser can find a still
+ * the server already drew.
+ */
+export function mascotStillKey(look: MascotLook, size: number, dark: boolean): string {
+  return `${formatMascot(look)}/${size}/${dark ? 1 : 0}`;
+}
+
+/** A still this process has already drawn or been handed, or undefined: a look, never a wait. */
+export function keptMascotPaths(look: MascotLook, size: number, dark: boolean): Still | undefined {
+  return pathCache.get(mascotStillKey(look, size, dark));
+}
+
+/**
+ * Hand this process a still that this same function drew somewhere else, so `mascotPaths`
+ * does not draw it again: a server takes one from a cache its other instances filled.
+ * Drawing a face is about 12 ms at 104 cells, and a page of twenty people a server had not
+ * seen was a quarter of a second of it.
+ */
+export function keepMascotPaths(look: MascotLook, size: number, dark: boolean, paths: Still): void {
+  remember(mascotStillKey(look, size, dark), paths);
+}
+
+function remember(key: string, paths: Still): void {
+  /* Oldest first out, so a picker paging through looks keeps the ones it just drew. A
+     Map iterates in insertion order, which is all an LRU this small needs. A key already
+     held is moved to the newest end and puts nothing out. */
+  if (!pathCache.delete(key) && pathCache.size >= 1500) pathCache.delete(pathCache.keys().next().value as string);
+  pathCache.set(key, paths);
+}
+
+/* Whether the parser has finished with a node: it, or something it sits in, has something
+   after it. While a document is still arriving, the one branch with nothing after it at any
+   depth is the branch still being written. */
+function closed(node: Node): boolean {
+  if (document.readyState !== "loading") return true;
+  for (let at: Node | null = node; at; at = at.parentNode) if (at.nextSibling) return true;
+  return false;
+}
+
+/**
+ * THE STILL THE SERVER DREW, READ BACK IN THE BROWSER. A page arrives with its faces already
+ * in the markup, and hydrating it called this function for each of them to compute paths the
+ * document was already holding: thirty faces was about 270 ms of the main thread on a desktop
+ * core before the page answered a press, and several times that on a phone. The group
+ * carries its key, so a miss looks for it in the document first. What it finds is this
+ * function's own output, from the server's copy of it. A group the document is still
+ * receiving is not believed: half its paths would be half a face, kept for the page's life.
+ */
+function drawnInDocument(key: string): Still | null {
+  if (typeof document === "undefined") return null;
+  try {
+    const group = document.querySelector(`g[data-still="${key.replace(/["\\]/g, "\\$&")}"]`);
+    if (!group || !closed(group)) return null;
+    const paths: Still = [];
+    for (const path of Array.from(group.children)) {
+      const fill = path.getAttribute("fill");
+      const d = path.getAttribute("d");
+      if (path.localName !== "path" || !fill || !d) return null;
+      paths.push({ fill, d });
+    }
+    return paths.length ? paths : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * The still character as SVG paths, one per colour, each a run-length list of
@@ -501,12 +577,17 @@ const pathCache = new Map<string, { fill: string; d: string }[]>();
  */
 export function mascotPaths(look: MascotLook, size: number, dark: boolean, pose: MascotPose = STILL_POSE): { fill: string; d: string }[] {
   const posed = pose === STILL_POSE ? "" : `/${Object.values(pose).join(",")}`;
-  const key = `${formatMascot(look)}/${size}/${dark ? 1 : 0}${posed}`;
+  const key = `${mascotStillKey(look, size, dark)}${posed}`;
   const cached = pathCache.get(key);
   if (cached) {
     pathCache.delete(key);
     pathCache.set(key, cached);
     return cached;
+  }
+  const drawn = posed ? null : drawnInDocument(key);
+  if (drawn) {
+    remember(key, drawn);
+    return drawn;
   }
   const frame = mascotFrame(look);
   const cell = frame.span / size;
@@ -533,9 +614,6 @@ export function mascotPaths(look: MascotLook, size: number, dark: boolean, pose:
     }
   }
   const paths = [...runs].map(([fill, d]) => ({ fill, d }));
-  /* Oldest first out, so a picker paging through looks keeps the ones it just drew. A
-     Map iterates in insertion order, which is all an LRU this small needs. */
-  if (pathCache.size >= 1500) pathCache.delete(pathCache.keys().next().value as string);
-  pathCache.set(key, paths);
+  remember(key, paths);
   return paths;
 }

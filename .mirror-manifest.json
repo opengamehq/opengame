@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "375c7cf99d7f78b6ff14a8147219915f8d0a8a9b"
+    "commit": "d059ad60b80ffb6beb61383e250a5be24ad4a451"
   },
-  "digest": "3f64d70e78f6e9453413bcfaba862944738b7afbc0db5885a9e7f7eaa43c1dd5",
+  "digest": "e4b97f0619c67ece08caf932bb52e9a8c354ae0903a52fcd2428c9c10ddbdc7f",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -177,8 +177,8 @@
     },
     {
       "path": "api-reference/openapi.json",
-      "bytes": 1455182,
-      "sha256": "5df98c7d09fa92685aeef7d3da64dd0c49f81b668fd65ded709829ace0cf4274",
+      "bytes": 1455940,
+      "sha256": "b6d7657e16d948502ca9e0c23e443b881350939536ada86dc9ce5e19bb66c251",
       "executable": false
     },
     {
@@ -2373,8 +2373,8 @@
     },
     {
       "path": "packages/protocol/src/analytics.ts",
-      "bytes": 35020,
-      "sha256": "929b09df47194316424f4ca67cb305c26a82137f08304826344115be227f5577",
+      "bytes": 35329,
+      "sha256": "233a1137ad1eed409ec04bdb1a621fd32f8eb0d845e4ccd15b54dab1c2919fc5",
       "executable": false
     },
     {
@@ -3051,8 +3051,8 @@
     },
     {
       "path": "packages/shared/src/analytics.ts",
-      "bytes": 11773,
-      "sha256": "fa67972cb210d00132adb4024316be9c4707d135a140c26b56d62190c07c607b",
+      "bytes": 11807,
+      "sha256": "f87b18c56497100c245b0a7d15d7b545dff36dee754c5bf12956ed98e4d8f4f7",
       "executable": false
     },
     {

@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "54ac47dad5da94f2c44bad654b84ffa8470b4330"
+    "commit": "5b66a7dcf1e19cdcd69633cd6e660259c8fcf170"
   },
-  "digest": "f3922686ab09e0d7aa3ca457ecc69e7869ec10abf6b595694f75ab2dec93c26b",
+  "digest": "8052a69850245bccb38a215d3be73ab190a872d968e298401034e1d9a39d90e9",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -4791,8 +4791,8 @@
     },
     {
       "path": "packages/ui/src/components/mascot-art.ts",
-      "bytes": 3314,
-      "sha256": "a1f4ec2e01f12d05bf14a1444c68390cb0907722c87efa178b1854949a3a6213",
+      "bytes": 3370,
+      "sha256": "bb29c34774c611009b5dc3c14789b83025401b5b48d35d0a229b47ec326872c4",
       "executable": false
     },
     {
@@ -4851,8 +4851,8 @@
     },
     {
       "path": "packages/ui/src/components/mascot/render.ts",
-      "bytes": 22401,
-      "sha256": "6fe42013758055a38e0f083690d0768badbeffce8173db6790f3e93dbe233d44",
+      "bytes": 26093,
+      "sha256": "1cf1c7563f2b07be4bcfb458294fb2ed9e8bdc321733211ba4445f4d72382199",
       "executable": false
     },
     {

@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "d059ad60b80ffb6beb61383e250a5be24ad4a451"
+    "commit": "f7cb87bc454183017d07a3ead031a04709f58923"
   },
-  "digest": "e4b97f0619c67ece08caf932bb52e9a8c354ae0903a52fcd2428c9c10ddbdc7f",
+  "digest": "00cecc586d695bc3d6ce69d65b390004a675d49fb19b7d27a251cae5cf5b311b",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -195,8 +195,8 @@
     },
     {
       "path": "infra/worker/src/game-audio.ts",
-      "bytes": 167818,
-      "sha256": "cb2b83c306fd3d00b3f79565356b37ebb9c09a09bf990d6e5af4b843c29a84b2",
+      "bytes": 198021,
+      "sha256": "e7e6eb80da09d8c686d3a428ae154b3933855d7f04e86a557813b74ad85237d3",
       "executable": false
     },
     {
@@ -2967,20 +2967,20 @@
     },
     {
       "path": "packages/shared/limits.browser.json",
-      "bytes": 50884,
-      "sha256": "824f8b8e33dd3597d09b4c5f92ccee4ee9449fad80854c4ebded452cffd4ab77",
+      "bytes": 50948,
+      "sha256": "07b6413e9fe8820de32e99f154c51f54ed51bb47c17f5a32e047e233ce5db274",
       "executable": false
     },
     {
       "path": "packages/shared/limits.json",
-      "bytes": 68494,
-      "sha256": "fd525b34f9f396c4b0be9ae089fa83d18f33e19485a842ca2a748797eba5027c",
+      "bytes": 68597,
+      "sha256": "3649429cabc0a58d90e1ced39df2a88fca17524f22ac558e42b4ec7d8ef8e5e7",
       "executable": false
     },
     {
       "path": "packages/shared/limits.values.json",
-      "bytes": 68494,
-      "sha256": "fd525b34f9f396c4b0be9ae089fa83d18f33e19485a842ca2a748797eba5027c",
+      "bytes": 68597,
+      "sha256": "3649429cabc0a58d90e1ced39df2a88fca17524f22ac558e42b4ec7d8ef8e5e7",
       "executable": false
     },
     {

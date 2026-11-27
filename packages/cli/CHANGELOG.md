@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.13
+
+- `--sponsor-post <sponsor>=<link>` on `opengame publish`, `opengame deploy --publish` and
+  `opengame submit` adds the link to your post on X about the game, for a sponsor track that
+  asks for one. Meshy's track does: its judges score Workflow from the video, and an entry
+  without the link is refused and nothing is published. `x.com` and `twitter.com` links are
+  both accepted, and a link that is not a post is refused before anything is sent.
+- `opengame jams <slug>` marks each track that asks for a post on X.
+- Already entered? Add or change the link on your entries page, opengame.io/jam/entries, or in
+  the game's Jam panel on Your games, until entries close.
+
 ## 0.13.12
 
 - When a deploy is refused because the account has used its five deploys for the day, or its

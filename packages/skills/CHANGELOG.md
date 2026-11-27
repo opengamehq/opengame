@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.1
+
+- `opengame-jam` 1.1.5: Meshy's track asks for a link to the person's post on X about the game.
+  Ask for it and pass it with `--sponsor-post meshy=<link>`; an entry already in the track adds
+  it on the entries page. `opengame-all-in-one` 1.0.20 carries it.
+
 ## 1.8.0
 
 - `opengame-brush-stroke-shader-style` 1.0.2 is new: making a game look and play as if it were

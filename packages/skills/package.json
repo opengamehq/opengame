@@ -1,6 +1,6 @@
 {
   "name": "@opengamehq/skills",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "private": true,
   "description": "Agent skills for making browser games and putting them on OpenGame.",
   "keywords": [

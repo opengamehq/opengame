@@ -280,6 +280,32 @@ test("website metadata cannot replace checkout build settings or its SDK version
   assert.equal(withoutLocalSettings.sdk, undefined);
 });
 
+/* platform_freeze_candidate refuses a manifest whose fields outside METADATA_FIELDS differ
+   from the request's, so a stale deploy has to carry every one of them. The list this
+   replaced left `owner` out, and the first Drop update that named its owner was refused on
+   every retry until its checks gave up (SUB-2435, 27 Nov 2026). A new schema field fails
+   here until it has a value below, and then it is carried by construction. */
+test("a stale deploy carries every checkout field the schema has, owner included", () => {
+  const pins = LIMITS.platform.engineRuntimes.runtimes;
+  const checkout: Record<string, unknown> = {
+    $schema: "https://opengame.io/schema/opengame.json", owner: "@heyhappy",
+    build: { command: "npm run build", output: "dist" }, sdk: "^2",
+    runtimes: [{ id: "ruffle", version: pins.ruffle.version }],
+    achievements: [{ id: "first_win", title: "First win" }],
+  };
+  const product = new Set<string>([...METADATA_FIELDS, "cover"]);
+  const fields = Object.keys(manifestSchema.shape).filter(key => !product.has(key));
+  assert.deepEqual(fields.filter(key => !(key in checkout)), [], "give the new field a value here");
+  const local = parseManifest({ ...game(), ...checkout });
+  const server = parseManifest({ ...game(), title: "Website title" });
+  for (const revision of [null, 1]) {
+    const { manifest, source } = resolveMetadata(local, server, revision, 2);
+    assert.equal(source, "server");
+    assert.equal(manifest.title, "Website title");
+    for (const key of fields) assert.deepEqual(manifest[key as keyof typeof manifest], checkout[key], key);
+  }
+});
+
 test("engine exports can disable SDK injection without changing legacy version pins", () => {
   const local = parseManifest({ ...game(), sdk: { inject: false, version: "^2" } });
   assert.deepEqual(local.sdk, { inject: false, version: "^2" });

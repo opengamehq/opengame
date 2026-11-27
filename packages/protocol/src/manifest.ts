@@ -553,13 +553,24 @@ export function resolveMetadata(
     JSON.stringify(local[key]) !== JSON.stringify(server[key]));
   const stale = baseRevision === null || baseRevision < serverRevision;
   const source = stale && !useLocal ? "server" : "local";
-  const manifest = source === "server" ? { ...gameMetadata(server),
-    ...(local.build === undefined ? {} : { build: local.build }),
-    ...(local.sdk === undefined ? {} : { sdk: local.sdk }),
-    ...(local.runtimes === undefined ? {} : { runtimes: local.runtimes }),
-    // Achievements are the checkout's, like the runtimes: the website does not edit them.
-    ...(local.achievements === undefined ? {} : { achievements: local.achievements }),
-    ...(local.$schema === undefined ? {} : { $schema: local.$schema }),
-  } : local;
+  const manifest = source === "server" ? { ...checkoutFields(local), ...gameMetadata(server) } as GameManifest : local;
   return { manifest, conflicts: stale ? conflicts : [], source };
+}
+
+/**
+ * Everything in the manifest that is the checkout's rather than the website's: every field
+ * but METADATA_FIELDS and the retired cover. Taken by subtraction, so a field added to the
+ * schema later is carried without anybody remembering to list it here.
+ *
+ * It was a list until 27 Nov 2026 (build, sdk, runtimes, achievements, $schema), and `owner`
+ * was never on it. platform_freeze_candidate refuses a manifest whose non-metadata fields
+ * differ from the request's (metadata_selection_mismatch), so the first Drop update whose
+ * opengame.json named its owner, SUB-2435, was refused on every retry and sat at "Queued
+ * for checks" for three and a half hours. Any client sends `owner` when the file has it (the
+ * CLI, the GitHub tab and Drop alike), and any update without a current metadata revision
+ * takes this branch; `opengame init` never writes it, which is why it went unseen.
+ */
+function checkoutFields(local: GameManifest): Partial<GameManifest> {
+  const product: ReadonlySet<string> = new Set([...METADATA_FIELDS, "cover"]);
+  return Object.fromEntries(Object.entries(local).filter(([key, value]) => !product.has(key) && value !== undefined));
 }

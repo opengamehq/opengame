@@ -138,7 +138,7 @@ export type AnalyticsReport = {
   insights?: AnalyticsInsights;
   preview?: { eventId: string; occurredAt: string; kind: AnalyticsKind; name: string; props: Record<string, string | number | boolean> }[];
   funnels?: { name: string; steps: { name: string; players: number | null; conversion: number | null }[] }[];
-  freshness: { receiptWatermark?: string | null; dataSince: string | null; updatedAt: string | null; completeThrough: string | null; partial: boolean; source: "clickhouse" | "postgres"; quality: "exact" | "estimated" | "legacy"; unavailable: string[] };
+  freshness: { receiptWatermark?: string | null; dataSince: string | null; updatedAt: string | null; completeThrough: string | null; partial: boolean; playtimeCoverage?: number | null; source: "clickhouse" | "postgres"; quality: "exact" | "estimated" | "legacy"; unavailable: string[] };
 };
 
 /** CSV and Parquet use this one projection of the optional canonical sections.

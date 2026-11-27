@@ -350,7 +350,11 @@ function reportSchema(fresh: boolean) {
   insights: analyticsInsightsSchema.optional(),
   preview: z.array(z.object({ eventId: z.string(), occurredAt: instant, kind: z.enum(ANALYTICS_KINDS), name: z.string(), props: z.record(z.string(), z.union([z.string(), z.number().finite(), z.boolean()])) })).optional(),
   funnels: z.array(z.object({ name: z.string(), steps: z.array(z.object({ name: z.string(), players: metric, conversion: ratio })) })).optional(),
+  // The share of the week's play sessions whose active time was measured, to the
+  // hundredth, where the playtime figures are the measured ones; absent where there is no
+  // playtime or the report predates it (27 Nov 2026). A reader that does not know it drops it.
   freshness: z.object({ receiptWatermark: instant.nullable().optional(), dataSince: instant.nullable(), updatedAt: instant.nullable(), completeThrough: instant.nullable(), partial: z.boolean(),
+    playtimeCoverage: ratio.optional(),
     source: z.enum(["clickhouse", "postgres"]), quality: z.enum(["exact", "estimated", "legacy"]), unavailable: z.array(z.string()) }),
  });
   // Reports saved before 22 Oct 2026 may carry the last-hour figures. A fresh one

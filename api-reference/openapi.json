@@ -9092,6 +9092,18 @@
               "partial": {
                 "type": "boolean"
               },
+              "playtimeCoverage": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "source": {
                 "type": "string",
                 "enum": [
@@ -23824,6 +23836,18 @@
                         },
                         "partial": {
                           "type": "boolean"
+                        },
+                        "playtimeCoverage": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "source": {
                           "type": "string",

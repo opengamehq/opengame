@@ -2,7 +2,7 @@
 name: opengame-all-in-one
 description: Every OpenGame skill in one install, with the order to use them in, for taking a browser game from an idea to a AAA-feeling release, a trailer and a montage. Carries the platform, craft and video skills whole. Use when someone wants one skill that covers everything, says make it AAA or make it game of the year, starts a big game with agents, or does not know which OpenGame skill to load.
 metadata:
-  version: "1.0.19"
+  version: "1.0.20"
 ---
 
 # Make a browser game that feels AAA

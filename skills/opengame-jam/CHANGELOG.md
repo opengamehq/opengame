@@ -1,5 +1,9 @@
 # opengame-jam changelog
 
+## 1.1.5
+
+Meshy's track asks for a link to the person's post on X about the game: ask for it, and pass it as `--sponsor-post meshy=<link>`. An entry already in the track adds it on the entries page. (27 Nov 2026)
+
 ## 1.1.4
 
 The jam has kicked off: the opening says so in the past tense and drops the pre-launch refusal. (19 Nov 2026)

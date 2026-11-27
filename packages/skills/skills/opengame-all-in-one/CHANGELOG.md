@@ -1,5 +1,9 @@
 # opengame-all-in-one changelog
 
+## 1.0.20
+
+Carries `opengame-jam` 1.1.5, which asks for the link to the person's post on X for Meshy's track. (27 Nov 2026)
+
 ## 1.0.19
 
 Carries `opengame-brush-stroke-shader-style` 1.0.2, whose helpers no longer contain a double brace in their type comments. (23 Nov 2026)

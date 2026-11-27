@@ -1,4 +1,4 @@
-> Carried from `opengame-jam` 1.1.4. Read it when: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, deploys one exact release, and enters it with the person's own answers, with opengame publish or on the deploy's page. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
+> Carried from `opengame-jam` 1.1.5. Read it when: Enter a game in an OpenGame jam. Finds the open jams, their tracks and rules, checks the game against them, deploys one exact release, and enters it with the person's own answers, with opengame publish or on the deploy's page. Use when the person says enter the jam, submit to the jam, which track should I pick, am I eligible, what are the jam rules, or mentions the OpenGame Global AI Game Jam.
 
 
 # Enter an OpenGame jam
@@ -72,6 +72,11 @@ Help them prepare the answers; do not answer for them.
 - **Sponsor tracks:** earned, not picked. A sponsor's track opens only once a model from
   that sponsor is listed under models used, and asks for the email of the account the
   person used there.
+- **Post on X:** Meshy's track also asks for a link to the person's post on X: a short video
+  of the game and how they made its assets with Meshy, tagging @MeshyAI. Its
+  judges score Workflow from it, and an entry without the link is not judged in that track.
+  The person posts it; you never post for them. Ask for the post's link, which looks like
+  `https://x.com/<them>/status/<number>`.
 
 `opengame jams <slug> --json` lists the whole form.
 
@@ -94,6 +99,10 @@ command for it. When `opengame status --json` shows `data.review.state` as
   opengame publish --track <track> --models <model>,<model> \
     --sponsor <sponsor> --sponsor-email <sponsor>=<their email> --json
   ```
+
+  For Meshy's track add `--sponsor-post meshy=<link to their post on X>`. Without it the
+  entry is refused and nothing is published. A person already entered adds or changes the
+  link on their entries page, `https://opengame.io/jam/entries`, until entries close.
 
   It enters the jam, publishes, waits until the game is live, and prints the address to
   share in `data.url`. `opengame deploy --publish` with the same flags does the deploy,

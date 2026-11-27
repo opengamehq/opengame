@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "5b66a7dcf1e19cdcd69633cd6e660259c8fcf170"
+    "commit": "17c3a2b68b0fb97e0870dec8343b3d95c3f66814"
   },
-  "digest": "8052a69850245bccb38a215d3be73ab190a872d968e298401034e1d9a39d90e9",
+  "digest": "e1a222e87cda3e46f9c4b81db62822a55817fe491e0f6257f02be5925cbb6f44",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -2457,8 +2457,8 @@
     },
     {
       "path": "packages/protocol/src/manifest.ts",
-      "bytes": 38946,
-      "sha256": "681851528dedbd019a12123718371996c2463619042cfcc730c71da02d65a104",
+      "bytes": 39707,
+      "sha256": "16c7e547e6303c8c05567f9962dcba034b7ad369daba19f0f7018437f8b2c5a3",
       "executable": false
     },
     {
@@ -2565,8 +2565,8 @@
     },
     {
       "path": "packages/protocol/tests/manifest.test.ts",
-      "bytes": 38738,
-      "sha256": "c4c3f7caa657861b65bb46dc64861232352ea105be934edc3957ebe7dba102f7",
+      "bytes": 40348,
+      "sha256": "3ce5b8a1c9d9d21ad93c36c5f1aebd9543389fd261093722057540a40f7b740d",
       "executable": false
     },
     {

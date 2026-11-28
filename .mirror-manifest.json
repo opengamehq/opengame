@@ -1,9 +1,9 @@
 {
   "format": 1,
   "source": {
-    "commit": "11160de27f67e828309ed5af5f6536309aa39ea5"
+    "commit": "fc5197a796233b61d0adb6d9523d7842f163a9ca"
   },
-  "digest": "95af7e54ed7ef6d7e17613b42404177dc484a6f998983d96170a2a97dca72064",
+  "digest": "6de4952ee1b0054fc445b8de5164b341985d9605a5ca7042622969cea0cfbb86",
   "skippedTests": [
     {
       "path": "packages/cli/tests/cli.test.ts",
@@ -195,8 +195,8 @@
     },
     {
       "path": "infra/worker/src/game-audio.ts",
-      "bytes": 214050,
-      "sha256": "bb964e017f1f081b5da894e8388c1734affac860089c4a836370aafd4fb85126",
+      "bytes": 222686,
+      "sha256": "360d4827925834c6000cbe785782db216575d854d7dca6945b2c9d6bff5d7f11",
       "executable": false
     },
     {
@@ -441,8 +441,8 @@
     },
     {
       "path": "packages/cli/src/limits-allowlist.json",
-      "bytes": 9241,
-      "sha256": "a12a0d3d91327578203f6a42fe2481f33ff797274bc98da7eaba8da87d08a302",
+      "bytes": 9268,
+      "sha256": "54b8afac1670f05de71897f6a15553e60c1a92cc103fbcc88a112c7680c9294e",
       "executable": false
     },
     {
@@ -2967,20 +2967,20 @@
     },
     {
       "path": "packages/shared/limits.browser.json",
-      "bytes": 51389,
-      "sha256": "5d057a2abd889c5454ba3a3bc57d1b3c281499d96efa2a7b148c60a09abde4b5",
+      "bytes": 51645,
+      "sha256": "3709bb7b391c5cc0fa078c9022760fe77ed69ad5bca78e1452f06f1d3cecdcae",
       "executable": false
     },
     {
       "path": "packages/shared/limits.json",
-      "bytes": 69038,
-      "sha256": "376b025001d2ce14e9d82fb5165cf8011954d1ec5e79b07a08284fe19a071e24",
+      "bytes": 69294,
+      "sha256": "6d0248154269a1f2bf1ab3ef32c1e819f1b372a866b9756066a9e71e67d73074",
       "executable": false
     },
     {
       "path": "packages/shared/limits.values.json",
-      "bytes": 69038,
-      "sha256": "376b025001d2ce14e9d82fb5165cf8011954d1ec5e79b07a08284fe19a071e24",
+      "bytes": 69294,
+      "sha256": "6d0248154269a1f2bf1ab3ef32c1e819f1b372a866b9756066a9e71e67d73074",
       "executable": false
     },
     {

@@ -999,7 +999,7 @@
       "behindShareMax": 0.05,
       "lowerAfterLooks": 2,
       "raiseAfterLooks": 30,
-      "stopAfterLooks": 10,
+      "stopAfterLooks": 4,
       "lowerDropSeconds": 10,
       "bitsPerSecond": 12000000,
       "compactBitsPerSecond": 6000000,

@@ -21,7 +21,7 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-35-every-game-frame-rate";
+export const GAME_AUDIO_VERSION = "audio-36-the-page-s-own-pictures";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 /** The recording block the receiver reads (`limits.play.recording`), less the page's own numbers. */
@@ -3237,7 +3237,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     return Math.abs((size.width / size.height) / (session.size.width / session.size.height) - 1) > 0.02;
   };
   const captureFrame = (session, now) => {
-    if (session.stopped) return;
+    if (session.stopped || session.videoOff) return;
     queueCapture((time) => captureFrame(session, time));
     if (session.reshaping) return;
     // Paced to the session's rate on any display: a frame is due every 1000 / fps ms, so a
@@ -3442,6 +3442,48 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     untapMedia(session);
     flushRecord(session);
   };
+  // THE PAGE'S OWN PICTURES (28 Nov 2026). Drawing the page here, HTML and all, can never be
+  // exactly what the player sees on every engine and library, and it costs the game's thread.
+  // Where the browser allows it, the page records the stage's own pixels instead (Element
+  // Capture, on opengame.io, once the player has allowed it), and asks this receiver for its
+  // sound alone: no picture is copied or encoded here then, and nothing of the page is walked.
+  // Turned back on (the player stopped sharing, or the page's capture failed), the encoder is
+  // reset and configured afresh so its next picture is a keyframe carrying its configuration,
+  // and the governor starts its count again.
+  const setRecordVideo = async (session, on) => {
+    if (session.stopped || !session.encoder) return;
+    if (!on) {
+      if (session.videoOff) return;
+      session.videoOff = true;
+      if (captureTick) { nativeCancelFrame.call(globalThis, captureTick.id); captureTick = null; }
+      if (session.watch) { session.watch.disconnect(); session.watch = null; }
+      releaseDom(session.dom);
+      session.dom.images = [];
+      session.dom.any = false;
+      try { if (session.encoder.state === 'configured') await session.encoder.flush(); } catch { /* Keep what came out. */ }
+      flushRecord(session);
+      return;
+    }
+    if (!session.videoOff) return;
+    session.videoOff = false;
+    // Reset first: an encoder only configured again may not say its configuration with its next
+    // picture, and the page needs it to tell the pictures that follow from its own.
+    try { if (session.encoder.state !== 'closed') { session.encoder.reset(); session.encoder.configure(session.config); } } catch { void stopRecord(session, 'failed'); return; }
+    const now = performance.now();
+    session.lastKey = -1;
+    session.due = -Infinity;
+    session.governed = now;
+    session.dueCount = 0;
+    session.behindCount = 0;
+    session.costSum = 0;
+    session.costCount = 0;
+    session.strained = 0;
+    session.starved = 0;
+    session.lastScan = -Infinity;
+    markDirty(session);
+    watchPage(session);
+    queueCapture((time) => captureFrame(session, time));
+  };
   const startRecord = async (origin, data) => {
     if (recording) {
       tellRecord({ id: data.id, origin: origin }, { op: 'failed', reason: 'busy' });
@@ -3486,8 +3528,11 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     session.context = session.canvas.getContext('2d', { alpha: false });
     session.start = performance.now();
     session.governed = session.start;
+    // epoch: where this session's clock starts, in milliseconds on the wall clock both documents
+    // share, so the page can lay pictures it makes itself on the same clock as this sound (THE
+    // PAGE'S OWN PICTURES, below).
     tellRecord(session, { op: 'started', width: session.size.width, height: session.size.height, fps: session.fps,
-      codec: chosen.config.codec, hardware: chosen.hardware });
+      codec: chosen.config.codec, hardware: chosen.hardware, epoch: performance.timeOrigin + session.start });
     session.flusher = setInterval(() => flushRecord(session), rec.flushMs);
     watchPage(session);
     // A game that makes its sound only after the first press has no context yet, and one may
@@ -3568,6 +3613,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       // A save asks for what is waiting first, so a replay ends on the frame that was on
       // screen when the player pressed, not up to flushMs before it.
       else if (data.op === 'flush' && recording && recording.id === data.id) void drainRecord(recording);
+      else if (data.op === 'video' && typeof data.on === 'boolean' && recording && recording.id === data.id) void setRecordVideo(recording, data.on);
       return;
     }
     if (data.type === 'volume') {

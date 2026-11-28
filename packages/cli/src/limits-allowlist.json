@@ -5,6 +5,7 @@
     "analytics.achievementDescriptionCharsMax",
     "analytics.achievementIdCharsMax",
     "analytics.achievementTitleCharsMax",
+    "analytics.frameRate",
     "analytics.funnelStepsMax",
     "analytics.queryTimeoutMs",
     "analytics.reports.outstandingJobsPerOwnerMax",

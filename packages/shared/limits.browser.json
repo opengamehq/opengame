@@ -962,6 +962,16 @@
     "runtime": {
       "inputIntervalMs": 1000
     },
+    "frameRate": {
+      "windowMs": 10000,
+      "intervalMs": 60000,
+      "framesMin": 30,
+      "samplesPerPlayMax": 30,
+      "fpsMax": 1000,
+      "pixelRatioMax": 8,
+      "megapixelsMax": 200,
+      "coresMax": 64
+    },
     "windowSettleHours": 6,
     "windowsFromDay": "2026-08-01",
     "windowPeriodsBackMax": 104,
@@ -988,7 +998,8 @@
       "captureBudgetMs": 48,
       "behindShareMax": 0.05,
       "lowerAfterLooks": 2,
-      "starvedAfterLooks": 6,
+      "raiseAfterLooks": 30,
+      "stopAfterLooks": 10,
       "lowerDropSeconds": 10,
       "bitsPerSecond": 12000000,
       "compactBitsPerSecond": 6000000,

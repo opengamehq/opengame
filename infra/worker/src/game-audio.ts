@@ -21,16 +21,20 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-34-smooth-or-not-at-all";
+export const GAME_AUDIO_VERSION = "audio-35-every-game-frame-rate";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 /** The recording block the receiver reads (`limits.play.recording`), less the page's own numbers. */
 const RECORDING = (({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs,
-  fpsMin, softwareFpsMax, captureBudgetMs, behindShareMax, lowerAfterLooks, starvedAfterLooks, layerScanMs, domMinIntervalMs, domCostFactor, domSliceMs, domSliceIdleMs, domDeadlineMs, domStallMaxMs, domStallsMax, domStepMaxMs, domStepSlowMs, domBackoffMs, domRefreshMs, reshapeMs,
+  fpsMin, softwareFpsMax, captureBudgetMs, behindShareMax, lowerAfterLooks, raiseAfterLooks, stopAfterLooks, layerScanMs, domMinIntervalMs, domCostFactor, domSliceMs, domSliceIdleMs, domDeadlineMs, domStallMaxMs, domStallsMax, domStepMaxMs, domStepSlowMs, domBackoffMs, domRefreshMs, reshapeMs,
   hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond }) =>
   ({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs,
-    fpsMin, softwareFpsMax, captureBudgetMs, behindShareMax, lowerAfterLooks, starvedAfterLooks, layerScanMs, domMinIntervalMs, domCostFactor, domSliceMs, domSliceIdleMs, domDeadlineMs, domStallMaxMs, domStallsMax, domStepMaxMs, domStepSlowMs, domBackoffMs, domRefreshMs, reshapeMs,
+    fpsMin, softwareFpsMax, captureBudgetMs, behindShareMax, lowerAfterLooks, raiseAfterLooks, stopAfterLooks, layerScanMs, domMinIntervalMs, domCostFactor, domSliceMs, domSliceIdleMs, domDeadlineMs, domStallMaxMs, domStallsMax, domStepMaxMs, domStepSlowMs, domBackoffMs, domRefreshMs, reshapeMs,
     hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond }))(limits.play.recording);
+
+/** The frame-rate sample (`limits.analytics.frameRate`), less the page's own cap. */
+const FRAME_RATE = (({ windowMs, intervalMs, framesMin, fpsMax, pixelRatioMax, megapixelsMax, coresMax }) =>
+  ({ windowMs, intervalMs, framesMin, fpsMax, pixelRatioMax, megapixelsMax, coresMax }))(limits.analytics.frameRate);
 
 const SCREENSHOT = (({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce, domSourceBytesMax }) =>
   ({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce, domSourceBytesMax }))(limits.studio.preview.screenshot);
@@ -590,8 +594,8 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     return false;
   };
   // How much of each watched canvas is in view, as the browser last reported it: true once a
-  // pixel or more each way is left after every ancestor's clipping. Sixty-four canvases at
-  // most; one past that is never counted.
+  // pixel or more each way is left after every ancestor's clipping, or, before its first report,
+  // when it began to be watched. Sixty-four canvases at most; one past that is never counted.
   const inView = new WeakMap();
   let viewWatcher = null;
   let viewWatched = 0;
@@ -603,18 +607,32 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
         for (const entry of entries) inView.set(entry.target, entry.isIntersecting && entry.intersectionRect.width >= 1 && entry.intersectionRect.height >= 1);
       }, { threshold: [0, 0.001, 0.01, 0.1, 0.5, 1] });
     }
-    inView.set(canvas, false);
+    inView.set(canvas, performance.now());
     viewWatched++;
     viewWatcher.observe(canvas);
   };
   // Somewhere the player could see it: some of it in view, by the browser's report or, with
   // no observer, by its box, and not hidden by its own style or anything around it. A worker's
   // scratch canvas parked off screen or clipped away is not what the player is looking at.
+  // A FRAME THE BROWSER IS NOT RENDERING SENDS NO REPORT. The parent holds a warm frame hidden
+  // under its poster, and Chromium throttles a hidden frame's rendering, observers' reports
+  // included: whether the first one came in before the throttle depended on how long this script
+  // took to start, so a worker's first picture went unreported from under the poster about half
+  // the time once the script grew (28 Nov 2026). A canvas with no report a second after it began
+  // to be watched is taken on its box, as where there is no observer; a frame that renders has
+  // reported long before then, the clipped-away scratch canvas above included.
   const canvasShows = (canvas) => {
+    let boxOnly = !ViewObserver;
     if (ViewObserver) {
       watchView(canvas);
-      if (inView.get(canvas) !== true) return false;
-    } else {
+      const seen = inView.get(canvas);
+      if (seen === false) return false;
+      if (seen !== true) {
+        if (performance.now() - seen < 1000) return false;
+        boxOnly = true;
+      }
+    }
+    if (boxOnly) {
       const rect = canvas.getBoundingClientRect();
       if (rect.width < 1 || rect.height < 1 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= innerWidth || rect.top >= innerHeight) return false;
     }
@@ -860,10 +878,129 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     tick.id = nativeRequestFrame.call(globalThis, (time) => { markFrame(time); if (captureTick === tick) captureTick = null; run(time); });
     captureTick = tick;
   };
+  // EVERY GAME'S OWN FRAME RATE (28 Nov 2026). For windowMs, once every intervalMs while the
+  // tab is visible and the frame on screen, each frame in which the game ran an animation
+  // callback is counted here, by the timestamp every callback of one frame shares, and the
+  // window goes to the page, which reports it as host_frame_rate (limits.analytics.frameRate).
+  // That covers every game, with or without the SDK, so the platform can see which games miss
+  // 60 and on what screens and machines. Windows open and close on the game's own requests for
+  // a frame, so the sampler holds no timer, and a game that asks for none is never measured
+  // (nor is one paced by a timer or drawn from a worker: framesMin). Only a callback asked for
+  // during a window is wrapped, and it counts only while its window is open; outside one the
+  // call passes straight through, as it always did. The numbers come from the game's own
+  // document, which can change them, so they are its claim and decide nothing.
+  const fr = __OG_FRAME_RATE__;
+  const sampleClock = typeof performance === 'object' && performance && typeof performance.now === 'function' ? performance.now.bind(performance) : null;
+  let sampling = false;
+  let spoiled = false;
+  let nextSampleAt = fr.windowMs;
+  let sampleEndsAt = 0;
+  let tallied = 0;
+  let tallyFirst = 0;
+  let tallyLast = 0;
+  let tallyGaps = [];
+  // A cross-origin frame scrolled out of view is throttled by the browser while its tab still
+  // says visible; a window it spent any of out of view measured the throttle, not the game.
+  let offscreen = false;
+  const tallyFrame = (time) => {
+    if (tallied && time === tallyLast) return;
+    if (tallied) tallyGaps.push(time - tallyLast); else tallyFirst = time;
+    tallyLast = time;
+    tallied++;
+  };
+  const roundTo = (value, places) => Math.round(value * places) / places;
+  // What the game draws on: the canvas with the most pixels behind it, its size in megapixels,
+  // and how many of its pixels there are to each CSS pixel shown, beside the screen's own ratio,
+  // so a slow game drawing at three times the pixels it needs can be told from one that is slow
+  // at any size. Read once a window, as it ends.
+  const describeCanvas = (message) => {
+    let largest = null;
+    let area = 0;
+    try {
+      for (const canvas of document.getElementsByTagName('canvas')) {
+        const size = canvas.width * canvas.height;
+        if (size > area) { area = size; largest = canvas; }
+      }
+      if (!largest || area / 1e6 > fr.megapixelsMax) return;
+      message.canvasMp = roundTo(area / 1e6, 100);
+      const shown = largest.clientWidth * largest.clientHeight;
+      if (shown > 0) message.canvasScale = roundTo(Math.min(fr.pixelRatioMax, Math.sqrt(area / shown)), 100);
+    } catch { /* No answer: the rate goes without it. */ }
+  };
+  // A game that froze across the window's end (a map load) asks for its next frame only once
+  // the freeze is over, so the time since its last counted frame is part of the window too:
+  // without it, five smooth seconds and then ten frozen ones read as 60.
+  const endSample = (now) => {
+    sampling = false;
+    const frames = tallied;
+    const gaps = tallyGaps;
+    let span = tallyLast - tallyFirst;
+    if (frames && now - tallyLast > 100) { gaps.push(now - tallyLast); span = now - tallyFirst; }
+    if (spoiled || offscreen || !documentParent || document.visibilityState === 'hidden' || frames < fr.framesMin || span <= 0) return;
+    gaps.sort((x, y) => x - y);
+    const slow = gaps[Math.min(gaps.length - 1, Math.floor(gaps.length * 0.95))];
+    const message = { og: 1, type: 'frames', fps: roundTo(Math.min(fr.fpsMax, gaps.length * 1000 / span), 10), lowFps: roundTo(Math.min(fr.fpsMax, 1000 / slow), 10) };
+    const ratio = Number(globalThis.devicePixelRatio);
+    if (ratio > 0 && ratio <= fr.pixelRatioMax) message.pixelRatio = roundTo(ratio, 100);
+    describeCanvas(message);
+    const cores = Number(navigator.hardwareConcurrency);
+    if (Number.isInteger(cores) && cores > 0) message.cores = Math.min(fr.coresMax, cores);
+    try { host.postMessage(message, documentParent); } catch { /* The parent went first. */ }
+  };
+  const startSample = (now) => {
+    nextSampleAt = now + fr.intervalMs;
+    if (!documentParent || offscreen || document.visibilityState === 'hidden') { nextSampleAt = now + fr.windowMs; return; }
+    sampling = true;
+    spoiled = false;
+    sampleEndsAt = now + fr.windowMs;
+    tallied = 0;
+    tallyFirst = 0;
+    tallyLast = 0;
+    tallyGaps = [];
+  };
+  // On each request the game makes for a frame: the window opens when one is due and closes
+  // once it has run its length.
+  const sampleTick = () => {
+    if (!sampleClock) return;
+    const now = sampleClock();
+    if (!sampling) { if (now >= nextSampleAt) startSample(now); }
+    else if (now >= sampleEndsAt) endSample(now);
+  };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') spoiled = true; });
+  try {
+    if (ViewObserver && document.documentElement) {
+      // A root with no area (every child positioned, as some engine templates are) sits on the
+      // frame's top edge and reads as out of view once the page scrolls a little, so it says
+      // nothing either way.
+      new ViewObserver((entries) => {
+        for (const entry of entries) {
+          const box = entry.boundingClientRect;
+          offscreen = !entry.isIntersecting && box.width * box.height > 0;
+          if (offscreen) spoiled = true;
+        }
+      }).observe(document.documentElement);
+    }
+  } catch { /* No observer: the tab's visibility alone decides. */ }
+  // The SDK samples the browser's frame cadence itself, one play in ten, with a loop of its own
+  // through this same requestAnimationFrame: counted, it would read a game drawing at 30 as 60.
+  // Its callback names the event it reports, which no game's would, so it is known by that,
+  // read once for each function.
+  const measuring = new WeakMap();
+  const isSdkSampler = (callback) => {
+    let known = measuring.get(callback);
+    if (known === undefined) {
+      try { const source = nativeToString.call(callback); known = source.includes('runtime_performance') && source.includes('sampleWindowMs'); } catch { known = false; }
+      measuring.set(callback, known);
+    }
+    return known;
+  };
+  const counted = (callback) => isSdkSampler(callback) ? callback : (time) => { if (sampling) tallyFrame(time); return callback(time); };
   if (nativeRequestFrame && nativeCancelFrame) {
     globalThis.requestAnimationFrame = passFor(function requestAnimationFrame(callback) {
-      if (!captureTick || typeof callback !== 'function') return nativeRequestFrame.call(globalThis, callback);
-      const id = nativeRequestFrame.call(globalThis, (time) => { markFrame(time); return callback(time); });
+      if (typeof callback === 'function') sampleTick();
+      if (!captureTick || typeof callback !== 'function') return nativeRequestFrame.call(globalThis, sampling && typeof callback === 'function' ? counted(callback) : callback);
+      const sampled = sampling && !isSdkSampler(callback);
+      const id = nativeRequestFrame.call(globalThis, (time) => { markFrame(time); if (sampled && sampling) tallyFrame(time); return callback(time); });
       // The game's callback is due next frame. So is the capture if it was queued between
       // frames or during this one; then it moves behind the game's. A capture queued before
       // this frame began is due in this frame, after the game's callback, and stays.
@@ -3139,12 +3276,17 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   //   dropped that way, the clip is choppy.
   // Past either for lowerAfterLooks looks running, the recording steps down: 60 pictures a second
   // to 30, then the next smaller picture (1440p, 1080p, 720p) at 30, which is half to a quarter
-  // of the pixels to copy and to encode. With no smaller picture left it stops, as 'slow', and the
-  // stage says this device cannot record the game smoothly: a choppy clip, or one paid for in the
-  // game's frames, is worse than none (27 Nov 2026, "we need high quality recordings
-  // only"). It goes back up a step only where the copy, not the encoder, made it come down, and
-  // the step up would cost under half the budget, so it does not swing. A software encoder, which
-  // takes cores of its own, starts at softwareFpsMax.
+  // of the pixels to copy and to encode. It goes back up a step where the copy made it come down
+  // and the step up would cost under half the budget, and, where the encoder did, once it has
+  // kept up for raiseAfterLooks looks running, so a few seconds of a map load do not keep a whole
+  // play at 30. A software encoder, which takes cores of its own, starts at softwareFpsMax.
+  // AT THE BOTTOM (28 Nov 2026). With nothing smaller left, an encoder still behind keeps
+  // recording: the encoder is not on the game's thread, and the clip is judged for a public page
+  // by the bar (lib/recordings/quality.ts), not refused here. Only the copy, which is the game's
+  // own time, stops a recording, as 'slow', and only past stopAfterLooks looks running at 720p30.
+  // And a game whose own frames came slowly (a match ending, a map loading, a heavy scene) is not
+  // the recorder's to judge: until this date that stopped the recording too, and told an M4 Max
+  // that it could not record OG Snipes, which it records at 60.
   const FPS_STEPS = [60, 30];
   const SIZE_STEPS = () => [[rec.hevcEdge, rec.hevcShortEdge], [rec.edge, rec.shortEdge], [rec.compactEdge, rec.compactShortEdge]];
   const bitrateFor = (codec, edge) => edge >= rec.hevcEdge ? rec.hevcBitsPerSecond
@@ -3165,41 +3307,49 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     session.behindCount = 0;
     // A hidden tab runs no frames, and a look that spans a stall of the whole page (a map
     // loading, a tab brought back) measures the stall: neither says anything about the recording.
-    if (document.hidden || looked > 2500 || due < 1) { session.strained = 0; session.starved = 0; return; }
+    if (document.hidden || looked > 2500 || due < 1) { session.strained = 0; session.calm = 0; return; }
     const costly = spent > rec.captureBudgetMs;
     const lagging = behind / due > rec.behindShareMax;
-    // Pictures that reached the encoder this second, against the least a clip may hold: a page
-    // whose own frames come slower than that is starved, whatever the copy and the encoder do.
-    const starved = (due - behind) * 1000 / looked < rec.fpsMin * (1 - rec.behindShareMax);
     const steps = [session.fpsCeiling].concat(FPS_STEPS.filter((fps) => fps < session.fpsCeiling && fps >= rec.fpsMin));
     const at = steps.indexOf(session.fps);
+    // Looks running, since the last step down, in which the copy cost the game more than its budget.
+    session.costlyRun = costly ? (session.costlyRun || 0) + 1 : 0;
     if (costly || lagging) {
+      session.calm = 0;
       session.strained++;
       if (session.strained < rec.lowerAfterLooks) return;
-      session.strained = 0;
       if (lagging) session.encoderBound = true;
       if (at >= 0 && at < steps.length - 1) {
+        session.strained = 0;
+        session.costlyRun = 0;
         session.fps = steps[at + 1];
         tellRecord(session, { op: 'lowered', width: session.size.width, height: session.size.height, fps: session.fps });
-      } else lowerSize(session);
+        return;
+      }
+      if (!session.floor && SIZE_STEPS().some((edges) => edges[0] < session.edges[0])) { session.strained = 0; session.costlyRun = 0; lowerSize(session); return; }
+      // The bottom: the copy alone stops it, and only once it has cost the game this long.
+      if (session.costlyRun >= rec.stopAfterLooks) void stopRecord(session, 'slow');
       return;
     }
     session.strained = 0;
-    // Slowly, since only a page's own frames make it: a smaller picture first, in case the copy
-    // was part of it, then 'slow', so no clip is kept at under fpsMin.
-    session.starved = starved ? session.starved + 1 : 0;
-    if (session.starved >= rec.starvedAfterLooks) { session.starved = 0; lowerSize(session); return; }
-    if (!session.encoderBound && at > 0 && session.cost * steps[at - 1] < rec.captureBudgetMs / 2) session.fps = steps[at - 1];
+    session.calm++;
+    if (at <= 0) return;
+    if (session.encoderBound) {
+      if (session.calm < rec.raiseAfterLooks) return;
+      session.encoderBound = false;
+    } else if (!(session.cost * steps[at - 1] < rec.captureBudgetMs / 2)) return;
+    session.calm = 0;
+    session.fps = steps[at - 1];
   };
   // The next smaller picture, at the rate the session has now, through the same drain and
   // reconfigure as a change of the stage's shape (reshape); the page starts a new clip there. A
-  // smaller picture the encoder will not take is as far as this machine goes: it stops as 'slow'.
+  // smaller picture the encoder will not take makes the one it has the bottom (AT THE BOTTOM).
   const lowerSize = (session) => {
     if (session.reshaping) return;
     const next = SIZE_STEPS().find((edges) => edges[0] < session.edges[0]);
-    if (!next) { void stopRecord(session, 'slow'); return; }
+    if (!next) { session.floor = true; return; }
     void reshape(session, next, bitrateFor(session.config.codec, next[0]), true).then((changed) => {
-      if (!changed && !session.stopped) void stopRecord(session, 'slow');
+      if (!changed && !session.stopped) session.floor = true;
     });
   };
   const copyFrame = (session, now, encoder) => {
@@ -3300,7 +3450,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     const session = { id: data.id, origin: origin, stopped: false, closed: false, pending: [], mix: null, taps: new Map(),
       due: -Infinity, lastKey: -1, lastScan: -Infinity, scene: [], sceneId: 0, scale: 1, skip: new WeakSet(), ground: '#000', viewport: [0, 0], refused: 0,
       reshaping: false, reshapeSince: 0, fps: rec.fpsMax, fpsCeiling: rec.fpsMax, cost: 0, costSum: 0, costCount: 0, governed: 0,
-      dueCount: 0, behindCount: 0, strained: 0, starved: 0, encoderBound: false,
+      dueCount: 0, behindCount: 0, strained: 0, calm: 0, encoderBound: false,
       dom: { images: [], any: false, dirty: true, busy: false, broken: false, next: 0, last: -Infinity, sceneId: -1,
         ...pageCaches(), windows: [], stalls: 0 },
       watch: null, mediaTaps: new Map(), mediaContext: null };
@@ -3456,6 +3606,7 @@ export function gameAudioRuntime(origins: string[], overrides: { recording?: Par
     .replace("__OG_GAMEPAD_INTERVAL__", () => String(limits.analytics.runtime.inputIntervalMs))
     .replace("__OG_GAMEPAD_DEADZONE__", () => String(limits.analytics.runtime.gamepadDeadzone))
     .replace("__OG_CAPTURE__", () => capture)
+    .replace("__OG_FRAME_RATE__", () => JSON.stringify(FRAME_RATE))
     .replace("__OG_RECORDING__", () => JSON.stringify({ ...RECORDING, ...overrides.recording }))
     .replace("__OG_AUDIO_PARENTS__", () => parents);
 }

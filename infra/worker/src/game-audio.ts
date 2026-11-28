@@ -21,19 +21,19 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-30-encoder-fallback";
+export const GAME_AUDIO_VERSION = "audio-33-every-context-heard";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 /** The recording block the receiver reads (`limits.play.recording`), less the page's own numbers. */
 const RECORDING = (({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs,
-  layerScanMs, domMinIntervalMs, domCostFactor, domWalkMs, domSliceMs, domBackoffMs, domRefreshMs, reshapeMs,
+  fpsMin, softwareFpsMax, captureBudgetMs, layerScanMs, domMinIntervalMs, domCostFactor, domSliceMs, domSliceIdleMs, domDeadlineMs, domStallMaxMs, domStallsMax, domStepMaxMs, domStepSlowMs, domBackoffMs, domRefreshMs, reshapeMs,
   hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond }) =>
   ({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs,
-    layerScanMs, domMinIntervalMs, domCostFactor, domWalkMs, domSliceMs, domBackoffMs, domRefreshMs, reshapeMs,
+    fpsMin, softwareFpsMax, captureBudgetMs, layerScanMs, domMinIntervalMs, domCostFactor, domSliceMs, domSliceIdleMs, domDeadlineMs, domStallMaxMs, domStallsMax, domStepMaxMs, domStepSlowMs, domBackoffMs, domRefreshMs, reshapeMs,
     hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond }))(limits.play.recording);
 
-const SCREENSHOT = (({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }) =>
-  ({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce }))(limits.studio.preview.screenshot);
+const SCREENSHOT = (({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce, domSourceBytesMax }) =>
+  ({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce, domSourceBytesMax }))(limits.studio.preview.screenshot);
 
 export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // The parent as it is before any game script runs, captured first: a report can go out the
@@ -843,7 +843,11 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   const nativeSetTimeout = typeof setTimeout === 'function' ? setTimeout : null;
   let inFrame = null;
   let clearing = false;
+  // How many frames this document has run callbacks in, so a wait can tell whether the thread
+  // was free during it (a decode that holds the thread holds every frame back with it).
+  let framesRun = 0;
   const markFrame = (time) => {
+    if (time !== inFrame) framesRun++;
     inFrame = time;
     if (clearing || !nativeSetTimeout) return;
     clearing = true;
@@ -1348,33 +1352,34 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // Past the byte budget, or past the element cap, the page is too much to carry: its own
   // error, so a page with no canvas is told that rather than told it is still loading.
   const CROWDED = 'too much to carry';
+  // A step of a recording's redraw that took longer than domStepMaxMs (refreshDom).
+  const SLOW = 'slow';
   const spend = (budget, size) => {
     budget.bytes += size;
     if (budget.bytes > shot.domBytesMax) throw new Error(CROWDED);
   };
-  // A file is refused from its declared length, and cut off while it is read, once it could
-  // not fit what is left of the budget as base64. Until 5 Oct 2026 it was read whole and
-  // measured afterwards, so one large image cost its full download before being dropped.
-  // What is left counts the bytes the other reads in flight have taken so far, so six files
-  // read at once cannot each take the whole remainder.
-  const room = (job) => Math.floor((shot.domBytesMax - job.bytes) * 3 / 4) - job.reading;
-  const readCapped = async (response, job) => {
+  // A file is refused from its declared length, and cut off while it is read, past
+  // domSourceBytesMax. Until 5 Oct 2026 it was read whole and measured afterwards, so one large
+  // image cost its full download before being dropped. A file carried whole must also fit what
+  // is left of the drawing's budget as base64 (room, checked where it is used); a file read to
+  // be resampled need not, since only the small copy goes into the drawing (27 Nov 2026: held to
+  // room, a large picture shown small was left out, where it can be drawn).
+  const room = (job) => Math.floor((shot.domBytesMax - job.bytes) * 3 / 4);
+  // The file, or TOO_LARGE once it passes most, or null for no body.
+  const TOO_LARGE = 'too large';
+  const readCapped = async (response, most) => {
+    if (!response.body) return null;
     const declared = Number(response.headers.get('content-length'));
-    if (!response.body || (Number.isFinite(declared) && declared > room(job))) { try { await response.body?.cancel(); } catch { /* Gone already. */ } return null; }
+    if (Number.isFinite(declared) && declared > most) { try { await response.body.cancel(); } catch { /* Gone already. */ } return TOO_LARGE; }
     const reader = response.body.getReader();
     const parts = [];
     let size = 0;
-    try {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value.byteLength > room(job)) { try { await reader.cancel(); } catch { /* Gone already. */ } return null; }
-        size += value.byteLength;
-        job.reading += value.byteLength;
-        parts.push(value);
-      }
-    } finally {
-      job.reading -= size;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > most) { try { await reader.cancel(); } catch { /* Gone already. */ } return TOO_LARGE; }
+      parts.push(value);
     }
     return new Blob(parts, { type: response.headers.get('content-type') || '' });
   };
@@ -1394,17 +1399,238 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   });
   // One fetch per address per capture, and every use counted against the budget, since
   // each use is another copy in the markup.
+  //
+  // A recording keeps these between its redraws, so a page's files are fetched and its pictures
+  // made once a session rather than once a redraw: a cache keeps its newest entries, up to a
+  // count and a size in bytes, and forgets an answer that came back empty (a file cut off
+  // mid-read, or refused for want of room in one redraw) so the next may try again. Until 27 Nov
+  // 2026 the recording's cache was emptied whenever it passed 24 files, so a page of 30 icons
+  // fetched every one of them each redraw.
+  const cacheOf = (most, bytes) => { const cache = new Map(); cache.most = most; cache.bytesMax = bytes; cache.sizes = new Map(); cache.bytes = 0; return cache; };
+  const forget = (cache, key) => {
+    cache.delete(key);
+    const size = cache.sizes.get(key);
+    if (size) { cache.bytes -= size; cache.sizes.delete(key); }
+  };
+  const recall = (cache, key) => {
+    const found = cache.get(key);
+    if (found) { cache.delete(key); cache.set(key, found); }
+    return found;
+  };
+  const sizeOf = (value) => !value ? 0 : typeof value === 'string' ? value.length : typeof value.size === 'number' ? value.size : 64;
+  const remember = (cache, key, made) => {
+    forget(cache, key);
+    cache.set(key, made);
+    // By count, the oldest answer already in; an ask still on its way is never dropped, or
+    // the same file could be fetched twice in one drawing.
+    while (cache.size > cache.most) {
+      let oldest = null;
+      for (const [held] of cache) if (cache.sizes.has(held)) { oldest = held; break; }
+      if (oldest === null) break;
+      forget(cache, oldest);
+    }
+    made.then((value) => {
+      if (cache.get(key) !== made) return;
+      if (!value) { forget(cache, key); return; }
+      const size = sizeOf(value);
+      cache.sizes.set(key, size);
+      cache.bytes += size;
+      // By size too, the oldest answer already in, never this one or an ask still on its way.
+      while (cache.bytes > cache.bytesMax) {
+        let oldest = null;
+        for (const [held] of cache) if (held !== key && cache.sizes.has(held)) { oldest = held; break; }
+        if (oldest === null) break;
+        forget(cache, oldest);
+      }
+    }, () => { if (cache.get(key) === made) forget(cache, key); });
+    return made;
+  };
+  // The caches a capture or a recording's redraws read: files fetched, files as data: addresses,
+  // pictures resampled, the size of each picture file, and the files that could not be had.
+  const pageCaches = () => ({ files: cacheOf(400, 32e6), cache: cacheOf(400, 16e6), pictures: cacheOf(400, 16e6), sizes: cacheOf(800, 1e6), refused: new Set() });
+  // A file that could not be had (past domSourceBytesMax, not there, a redirect, a revoked
+  // blob:) is not asked for again: in that drawing, by the path that falls back to carrying it
+  // whole, and for the rest of the page's caches' life, so a recording does not download a file
+  // it will refuse on every redraw.
+  //
+  // A file to be carried whole is read only within what is left of the drawing's room (most),
+  // so one too large for it is refused from its declared length, never downloaded and encoded
+  // to be dropped (Greptile on #2451). That refusal holds for the drawing alone, since the next
+  // may have more room, and a file read that way is kept for every use, being the whole file.
+  const fetchFile = (href, job, most = shot.domSourceBytesMax) => {
+    if (job.refused.has(href)) return Promise.resolve(null);
+    const held = recall(job.files, href);
+    if (held) return held;
+    const within = most < shot.domSourceBytesMax;
+    const tight = job.tight || (job.tight = new Set());
+    if (within && tight.has(href)) return Promise.resolve(null);
+    const read = queued(job, async () => {
+      if (job.stop.signal.aborted) return null;
+      let found = null;
+      try {
+        const response = await fetch(href, { credentials: 'omit', redirect: 'error', signal: job.stop.signal });
+        found = response.ok ? await readCapped(response, Math.max(0, most)) : null;
+      } catch { found = null; }
+      if (found instanceof Blob) return found;
+      if (!job.stop.signal.aborted) {
+        if (found === TOO_LARGE && within) tight.add(href);
+        else {
+          if (job.refused.size > 512) job.refused.clear();
+          job.refused.add(href);
+        }
+      }
+      return null;
+    });
+    return within ? read.then((blob) => { if (blob && !job.files.has(href)) remember(job.files, href, Promise.resolve(blob)); return blob; })
+      : remember(job.files, href, read);
+  };
+  const used = (job) => (data) => { if (data) spend(job, data.length); return data; };
   const inline = (value, job) => {
     const href = sameSite(value);
     if (!href) return Promise.resolve(null);
-    const fetched = href.startsWith('data:') ? Promise.resolve(href) : job.cache.get(href) || queued(job, async () => {
-      if (job.stop.signal.aborted) return null;
-      const response = await fetch(href, { credentials: 'omit', redirect: 'error', signal: job.stop.signal });
-      const blob = response.ok ? await readCapped(response, job) : null;
-      return blob ? await asDataUrl(blob) : null;
-    });
-    job.cache.set(href, fetched);
-    return fetched.then((data) => { if (data) spend(job, data.length); return data; });
+    const data = href.startsWith('data:') ? Promise.resolve(href)
+      : recall(job.cache, href) || remember(job.cache, href, fetchFile(href, job, room(job))
+        .then((blob) => blob && blob.size <= room(job) ? asDataUrl(blob) : null));
+    return data.then((found) => found && found.length <= room(job) * 4 / 3 ? used(job)(found) : null);
+  };
+  // PICTURES AT THE SIZE THEY ARE DRAWN (27 Nov 2026). An image went into the markup as its
+  // whole file, and the browser decodes every picture inside a drawn page on the game's own
+  // thread, in one go, as the page is drawn: twelve 256 px pictures shown at 48 px made a page
+  // of 8 MB, and decoding it was 80 ms of a 126 ms stall, every redraw (measured headless on a
+  // 1,080-element HUD, after a creator found a 100 ms hitch every 2 s while Replay ran). So a
+  // picture drawn smaller than its file is resampled once to the pixels it covers in the
+  // recording (its box on screen, transforms included, at the picture's scale, in steps of a
+  // quarter octave so a box that grows a little reuses it) and carried as a WebP.
+  //
+  // Always from the file, fetched as every inlined file is (this origin only, no redirects),
+  // and never from the <img> element: createImageBitmap decodes an element on this thread
+  // before it returns, 177 ms for a 4096 px picture (review, 27 Nov 2026), where from a Blob
+  // the decode and the scaling happen elsewhere, as convertToBlob's encoding does. A picture
+  // drawn at its file's size or larger, or drawn pixelated, goes in as its file, as before.
+  const STEP = Math.pow(2, 0.25);
+  const stepUp = (factor) => factor >= 1 ? 1 : Math.max(1 / 64, Math.pow(STEP, Math.ceil(Math.log(Math.max(factor, 1e-6)) / Math.log(STEP))));
+  const canResample = () => typeof createImageBitmap === 'function' && typeof OffscreenCanvas === 'function';
+  const resampled = async (blob, width, height) => {
+    const bitmap = await createImageBitmap(blob, { resizeWidth: width, resizeHeight: height, resizeQuality: 'high' });
+    try {
+      const canvas = new OffscreenCanvas(width, height);
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+      return await asDataUrl(await canvas.convertToBlob({ type: 'image/webp', quality: 0.9 }));
+    } finally { bitmap.close(); }
+  };
+  // A file resampled to width x height, made once and kept; null where it cannot be.
+  const pictureOf = (href, width, height, job) => {
+    const key = href + ' ' + width + 'x' + height;
+    return recall(job.pictures, key) || remember(job.pictures, key, fetchFile(href, job)
+      .then((blob) => blob ? queued(job, () => resampled(blob, width, height)) : null).catch(() => null));
+  };
+  const crisp = (style) => /pixelated|crisp-edges/.test(style.imageRendering);
+  // How much bigger the box is drawn than laid out, from the transforms on it and above it.
+  const magnification = (node, rect) => {
+    const laidOut = Math.max(node.offsetWidth || 0, node.offsetHeight || 0);
+    return laidOut > 0 ? Math.min(8, Math.max(rect.width, rect.height) / laidOut) : 1;
+  };
+  const imagePicture = (node, source, style, job) => {
+    const href = sameSite(source);
+    const width = node.naturalWidth;
+    const height = node.naturalHeight;
+    // object-fit none and scale-down draw the file at its own size, which a resampled copy
+    // would change.
+    if (!href || href.startsWith('data:') || !canResample() || !(job.scale > 0) || !width || !height || crisp(style)
+      || /^(none|scale-down)$/.test(style.objectFit)) return inline(source, job);
+    const rect = node.getBoundingClientRect();
+    const factor = stepUp(job.scale * Math.max(rect.width / width, rect.height / height));
+    if (factor >= 1) return inline(source, job);
+    return pictureOf(href, Math.max(1, Math.round(width * factor)), Math.max(1, Math.round(height * factor)), job)
+      .then((data) => data ? used(job)(data) : inline(source, job));
+  };
+  // A list of comma-separated values, with the commas inside brackets or quotes left alone.
+  const splitList = (value) => {
+    const items = [];
+    let depth = 0;
+    let quote = '';
+    let from = 0;
+    for (let i = 0; i < value.length; i++) {
+      const c = value[i];
+      if (quote) { if (c === '\\') i++; else if (c === quote) quote = ''; continue; }
+      if (c === '"' || c === "'") quote = c;
+      else if (c === '(') depth++;
+      else if (c === ')') depth--;
+      else if (c === ',' && depth === 0) { items.push(value.slice(from, i).trim()); from = i + 1; }
+    }
+    items.push(value.slice(from).trim());
+    return items;
+  };
+  // A background is resampled the same way, for which the size it is drawn at is worked out
+  // from background-size and the box. Where that size depends on the file's own size (auto in
+  // both directions), the copy is given the file's size in pixels outright, since the resampled
+  // file's own size is another; everywhere else the size is left as the page wrote it. Only a
+  // background that scrolls with its element: a fixed one is sized against the viewport, a
+  // local one against its scrolled contents. What is read from the element is read here, in the
+  // walk, with the rest of its style.
+  const URL_ALONE = /^url\(\s*(['"]?)(.*)\1\s*\)$/;
+  const backgroundPlan = (node, style) => {
+    if (!(node instanceof HTMLElement) || !style.backgroundImage.includes('url(') || !canResample() || crisp(style)
+      || splitList(style.backgroundAttachment).some((attachment) => attachment !== 'scroll')) return null;
+    const rect = node.getBoundingClientRect();
+    const pad = (side) => Number.parseFloat(style['padding' + side]) || 0;
+    const boxes = {
+      'border-box': [node.offsetWidth, node.offsetHeight],
+      'padding-box': [node.clientWidth, node.clientHeight],
+      'content-box': [node.clientWidth - pad('Left') - pad('Right'), node.clientHeight - pad('Top') - pad('Bottom')],
+    };
+    return { images: splitList(style.backgroundImage), sizes: splitList(style.backgroundSize), origins: splitList(style.backgroundOrigin),
+      boxes: boxes, magnified: magnification(node, rect) };
+  };
+  const naturalSize = (href, job) => recall(job.sizes, href) || remember(job.sizes, href, fetchFile(href, job).then(async (blob) => {
+    if (!blob) return null;
+    const bitmap = await createImageBitmap(blob);
+    const size = [bitmap.width, bitmap.height];
+    bitmap.close();
+    return size;
+  }).catch(() => null));
+  // The size one background is drawn at, in CSS pixels, or null where it cannot be worked out.
+  const drawnSize = (token, box, natural) => {
+    const [width, height] = natural;
+    if (token === 'cover' || token === 'contain') {
+      const fit = (token === 'cover' ? Math.max : Math.min)(box[0] / width, box[1] / height);
+      return [width * fit, height * fit];
+    }
+    const [x, y = 'auto'] = token.split(/\s+/);
+    const length = (value, whole) => value === 'auto' ? null : /^-?[\d.]+px$/.test(value) ? Number.parseFloat(value)
+      : /^-?[\d.]+%$/.test(value) ? Number.parseFloat(value) / 100 * whole : NaN;
+    let across = length(x, box[0]);
+    let down = length(y, box[1]);
+    if (Number.isNaN(across) || Number.isNaN(down)) return null;
+    if (across === null && down === null) { across = width; down = height; }
+    else if (across === null) across = down * width / height;
+    else if (down === null) down = across * height / width;
+    return across > 0 && down > 0 ? [across, down] : null;
+  };
+  const backgroundLayer = async (plan, at, job) => {
+    const token = plan.images[at];
+    const sizeToken = plan.sizes[at % plan.sizes.length] || 'auto';
+    const whole = async () => [(await inlineCss(token, job)), sizeToken];
+    const found = URL_ALONE.exec(token);
+    if (!found) return whole();
+    let href = null;
+    try { href = sameSite(new URL(found[2], document.baseURI).href); } catch { /* Not an address. */ }
+    if (!href || href.startsWith('data:')) return whole();
+    const natural = await naturalSize(href, job);
+    const box = plan.boxes[plan.origins[at % plan.origins.length]] || plan.boxes['padding-box'];
+    const drawn = natural && box[0] > 0 && box[1] > 0 ? drawnSize(sizeToken, box, natural) : null;
+    if (!drawn) return whole();
+    const factor = stepUp(job.scale * plan.magnified * Math.max(drawn[0] / natural[0], drawn[1] / natural[1]));
+    if (factor >= 1) return whole();
+    const data = await pictureOf(href, Math.max(1, Math.round(natural[0] * factor)), Math.max(1, Math.round(natural[1] * factor)), job);
+    if (!data) return whole();
+    used(job)(data);
+    return ['url("' + data + '")', /^auto( auto)?$/.test(sizeToken) ? natural[0] + 'px ' + natural[1] + 'px' : sizeToken];
+  };
+  const BACKGROUND_PROPERTIES = new Set(['background-image', 'background-size']);
+  const backgroundText = async (plan, job) => {
+    const layers = await Promise.all(plan.images.map((_, at) => backgroundLayer(plan, at, job)));
+    return 'background-image:' + layers.map((layer) => layer[0]).join(', ') + ';background-size:' + layers.map((layer) => layer[1]).join(', ') + ';';
   };
   const URL_IN_CSS = /url\(\s*(['"]?)([^'")]+)\1\s*\)/g;
   const inlineCss = async (text, job, base) => {
@@ -1467,14 +1693,67 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     return values;
   };
   const plainDefaults = () => defaultsOf(HTML_NS, 'span');
-  const styleText = (style, prefix, own, parent) => {
-    const plain = plainDefaults();
+  // AND NOTHING THAT CANNOT CHANGE THE PICTURE (27 Nov 2026). A copied element came to about
+  // 1 KB, and a page's copy is decoded on the game's thread, so its size is time taken from the
+  // game. Half of it could not change what is drawn:
+  //   - every logical property (block-size, inset-inline-start, border-block-end-color), which
+  //     the computed style lists beside the physical one it is the same value as;
+  //   - the colour of a border, outline, column rule or underline that is not drawn;
+  //   - transform-origin with no transform, and perspective-origin with no perspective;
+  //   - a property that is not inherited, written only because the parent's differs (a HUD's
+  //     ticks each carried transform:none under a strip that moved), since the copy then takes
+  //     the same value as the element's own default anyway. Only properties whose default does
+  //     not hang on the font size or the direction: a paragraph's 1em margin read as 16 px from
+  //     the probe is not the same default on a paragraph of 20 px type.
+  //   - every custom property (27 Nov 2026, later). The computed value of every real property
+  //     has its var() already filled in, so the copy never reads one, and an inherited one is on
+  //     every element under where it was set. World at War Zombies sets --menu-art: url(...) on
+  //     its root, and each url() was inlined as a data URL: every span and paragraph carried a
+  //     495 KB picture, each layer came to 6 to 7 MB, and decoding one held the game's thread
+  //     for up to 240 ms, four layers in a row, every 10 to 20 s (measured headless with an NVIDIA card).
+  const LOGICAL = /(^|-)(block|inline)(-|$)|^border-(start|end)-(start|end)-radius$/;
+  const customOf = (style) => {
     let text = '';
     for (let i = 0; i < style.length; i++) {
       const name = style[i];
+      if (!name.startsWith('--')) continue;
+      const value = style.getPropertyValue(name);
+      if (value.length > 512 || /url\(/i.test(value)) continue;
+      text += name + ':' + value + ';';
+    }
+    return text;
+  };
+  const needlessNames = new Map();
+  const needless = (name) => {
+    let found = needlessNames.get(name);
+    if (found === undefined) { found = name.startsWith('--') || LOGICAL.test(name); needlessNames.set(name, found); }
+    return found;
+  };
+  const NOT_INHERITED = new Set(['transform', 'translate', 'rotate', 'scale', 'background-image', 'background-color', 'opacity', 'filter',
+    'box-shadow', 'z-index', 'position', 'top', 'right', 'bottom', 'left', 'overflow-x', 'overflow-y', 'clip-path', 'mix-blend-mode',
+    'isolation', 'transform-style', 'perspective', 'will-change', 'contain', 'display']);
+  const SIDES_LOWER = ['top', 'right', 'bottom', 'left'];
+  const unusedOf = (style, prefix) => {
+    const unused = new Set();
+    for (const side of SIDES_LOWER) if (/^(none|hidden)$/.test(style.getPropertyValue('border-' + side + '-style'))) unused.add('border-' + side + '-color');
+    if (style.outlineStyle === 'none') unused.add('outline-color');
+    if (style.columnRuleStyle === 'none') unused.add('column-rule-color');
+    if (style.textDecorationLine === 'none') unused.add('text-decoration-color');
+    if (!prefix && style.transform === 'none' && style.rotate === 'none' && style.scale === 'none' && style.translate === 'none') unused.add('transform-origin');
+    if (style.perspective === 'none') unused.add('perspective-origin');
+    return unused;
+  };
+  const styleText = (style, prefix, own, parent, skipped) => {
+    const plain = plainDefaults();
+    const unused = unusedOf(style, prefix);
+    let text = '';
+    for (let i = 0; i < style.length; i++) {
+      const name = style[i];
+      if ((skipped && skipped.has(name)) || needless(name) || unused.has(name)) continue;
       let value = style.getPropertyValue(name);
       if (prefix && name === 'transform') value = prefix + (value === 'none' ? '' : value);
-      else if (value === own.get(name) && value === plain.get(name) && value === (parent ? parent.getPropertyValue(name) : plain.get(name))) continue;
+      else if (value === own.get(name) && (NOT_INHERITED.has(name)
+        || (value === plain.get(name) && value === (parent ? parent.getPropertyValue(name) : plain.get(name))))) continue;
       text += name + ':' + value + ';';
     }
     return text;
@@ -1533,31 +1812,166 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // transparent boxes is not drawn at all.
   const SIDES = ['Top', 'Right', 'Bottom', 'Left'];
   const paints = (style) => !/^(transparent|rgba\([^)]*,\s*0\))$/.test(style.backgroundColor) || style.backgroundImage !== 'none' || style.boxShadow !== 'none'
-    || SIDES.some((side) => Number.parseFloat(style['border' + side + 'Width']) > 0 && !/^(none|hidden)$/.test(style['border' + side + 'Style']));
+    || SIDES.some((side) => Number.parseFloat(style['border' + side + 'Width']) > 0 && !/^(none|hidden)$/.test(style['border' + side + 'Style']))
+    // An outline (a reticle, a selection box), a list's marker, a backdrop filter and a column
+    // rule paint too: markupOf leaves a positioned box out of the layers it does not paint in.
+    || (style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0)
+    || (style.display === 'list-item' && (style.listStyleType !== 'none' || style.listStyleImage !== 'none')) || (style.backdropFilter && style.backdropFilter !== 'none')
+    || (style.columnRuleStyle !== 'none' && Number.parseFloat(style.columnRuleWidth) > 0);
+  // Out of the flow, so leaving it out of a layer moves nothing else. display: contents makes no
+  // box, and its children are laid out where it sits, so it is never out of the flow.
+  const outOfFlow = (style) => (style.position === 'absolute' || style.position === 'fixed') && style.display !== 'contents';
   const walkWhole = (walk) => {
     for (;;) { const step = walk.next(); if (step.done) return step.value; }
   };
+  // A promise whose failure is the caller's to read, never the page's console: one that failed
+  // after the drawing had already given up (too much to carry, past the deadline) used to reach
+  // the game's own console as an uncaught "too much to carry".
+  const settled = (promise) => { promise.catch(() => {}); return promise; };
   const idleSlice = () => new Promise((resolve) => {
     const idle = globalThis.requestIdleCallback;
-    if (typeof idle === 'function') idle.call(globalThis, () => resolve(), { timeout: 100 });
-    else nativeSetTimeout.call(globalThis, resolve, 16);
+    if (typeof idle === 'function') idle.call(globalThis, (deadline) => resolve(deadline), { timeout: 100 });
+    else nativeSetTimeout.call(globalThis, () => resolve(null), 16);
   });
-  const walkSliced = async (walk, job, began) => {
+  // How long one slice may run: domSliceMs, or more of an idle period the browser says it has to
+  // spare before its next frame, up to domSliceIdleMs. A slice the browser ran because its
+  // timeout came, with no idle time at all, takes domSliceMs. So a page whose game leaves idle
+  // time between frames is walked in a few frames rather than a few dozen, and the walk still
+  // never runs into the next frame's time.
+  const sliceFor = (job, deadline) => !deadline || deadline.didTimeout ? job.sliceMs
+    : Math.max(job.sliceMs, Math.min(job.sliceIdleMs || job.sliceMs, deadline.timeRemaining() - 1));
+  const walkSliced = async (walk, job, began, probed) => {
     job.spent = job.spent || 0;
+    let budget = job.sliceMs;
     for (let started = began; ; started = performance.now()) {
       let step;
       // The probe is in the document only within a slice, never across the game's own code.
-      openProbe(true);
+      if (probed) openProbe(true);
       try {
-        do { step = walk.next(); } while (!step.done && performance.now() - started < job.sliceMs);
+        do { step = walk.next(); } while (!step.done && performance.now() - started < budget);
       } finally {
-        closeProbe();
+        if (probed) closeProbe();
         job.spent += performance.now() - started;
       }
       if (step.done) return step.value;
       if (performance.now() > job.deadline || job.stop.signal.aborted) throw new Error('over budget');
-      await idleSlice();
+      budget = sliceFor(job, await idleSlice());
     }
+  };
+  // THE MARKUP, A FEW ELEMENTS AT A TIME (27 Nov 2026). XMLSerializer writes a whole page in one
+  // call, and the escaping for a data: address was one more pass over all of it: 16 ms and 22 ms
+  // on a page of 8 MB, in the same task as the decode. This writes the copy as XHTML, as
+  // XMLSerializer would (an SVG inside it is still handed to XMLSerializer, which knows its
+  // namespaces), escaped for the address as it goes, one element a step, so walkSliced can stop
+  // it anywhere. A character XML refuses (a control character, half a surrogate pair) is dropped
+  // or replaced rather than left to fail the whole picture.
+  //
+  // The parts come back as a list. A picture is carried only by the layer it paints in: an
+  // element marked with a layer gets its src, or its style with the pictures in it, as a part
+  // holding both versions, and every other layer takes the one without them, since that layer
+  // hides the element anyway. A subtree out of the flow (marks.loose) is a group of its own,
+  // kept only in the layers marks.paintsIn says it paints in. The slot (the style that picks
+  // which layer shows) is a part each layer fills in. Each list's raw counts its own markup's
+  // characters, for the byte budget.
+  const XHTML_NS = 'http://www.w3.org/1999/xhtml';
+  const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/;
+  const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
+  // Pairs are matched first and kept; what is left of the range is half a pair. No lookbehind,
+  // which a Safari before 16.4 cannot parse, and a parse error here would take the whole
+  // receiver with it.
+  const SURROGATES = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]/g;
+  const xmlText = (value) => value.replace(NOT_XML, '').replace(SURROGATES, (found) => found.length === 2 ? found : '\uFFFD')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const xmlAttribute = (value) => xmlText(value).replace(/"/g, '&quot;').replace(/\t/g, '&#9;').replace(/\n/g, '&#10;').replace(/\r/g, '&#13;');
+  // The element's own pictures, and only those that lay nothing out: a mask, a clip path or a
+  // filter given by a url() reaches its descendants, which may paint in a layer the element
+  // itself does not.
+  // Not list-style-image: a marker inside the item is laid out by its picture's size.
+  const OWN_PICTURES = /(background-image|border-image-source):((?:url\("[^"]*"\)|[^;"])*);/g;
+  const PICTURE_URL = /url\("data:[^"]*"\)/g;
+  const withoutPictures = (value) => value.replace(OWN_PICTURES, (whole, name, list) => name + ':' + list.replace(PICTURE_URL, 'none') + ';');
+  const HEAVY_CHARS = 512;
+  // A long string (the sheet of font faces, a picture carried whole) escaped a piece a step,
+  // never splitting a surrogate pair: [escaped for the address, its length before that].
+  const CHUNK_CHARS = 65536;
+  const escapedSliced = function* (value, escape) {
+    if (value.length <= CHUNK_CHARS) { const text = escape(value); return [encodeURIComponent(text), text.length]; }
+    const pieces = [];
+    let raw = 0;
+    for (let from = 0; from < value.length;) {
+      let to = Math.min(value.length, from + CHUNK_CHARS);
+      const code = value.charCodeAt(to - 1);
+      if (to < value.length && code >= 0xD800 && code <= 0xDBFF) to++;
+      const text = escape(value.slice(from, to));
+      raw += text.length;
+      pieces.push(encodeURIComponent(text));
+      from = to;
+      yield;
+    }
+    return [pieces.join(''), raw];
+  };
+  const markupOf = function* (root, parts, tally, slot, marks) {
+    const visit = function* (node, top, into) {
+      const put = (text) => { into.raw += text.length; into.parts.push(encodeURIComponent(text)); };
+      if (node.nodeType === 3) {
+        const [text, raw] = yield* escapedSliced(node.nodeValue, xmlText);
+        into.raw += raw;
+        into.parts.push(text);
+        return;
+      }
+      if (node.nodeType !== 1) return;
+      yield;
+      if (node === slot) { into.parts.push(null); return; }
+      if (marks && !top && marks.loose.has(node)) {
+        const group = { paintsIn: marks.paintsIn.get(node) || 0, parts: [], raw: 0 };
+        into.parts.push(group);
+        into = group;
+      }
+      if (node.namespaceURI !== XHTML_NS) { put(serialize(node)); return; }
+      const layer = node.getAttribute('data-l');
+      let open = '<' + node.localName + (top ? ' xmlns="' + XHTML_NS + '"' : '');
+      for (const attribute of node.attributes) {
+        const value = attribute.value;
+        const name = ' ' + attribute.name + '="';
+        if (value.length < HEAVY_CHARS) { open += name + xmlAttribute(value) + '"'; continue; }
+        put(open);
+        open = '';
+        const quoted = function* (text) {
+          const [escaped, raw] = yield* escapedSliced(text, xmlAttribute);
+          return [encodeURIComponent(name) + escaped + '%22', name.length + raw + 1];
+        };
+        const [full, fullRaw] = yield* quoted(value);
+        const carries = attribute.name === 'src' ? value.startsWith('data:') : attribute.name === 'style' && value.includes('url("data:');
+        if (layer === null || !carries) { into.raw += fullRaw; into.parts.push(full); continue; }
+        // A hidden element ('h') paints in no layer, so none carries its pictures. A layer that
+        // does not show the element has its src left out, as an image still loading is.
+        const [bare, bareRaw] = attribute.name === 'src' ? ['', 0] : yield* quoted(withoutPictures(value));
+        into.parts.push({ at: layer === 'h' ? -1 : Number(layer), full: full, bare: bare, fullRaw: fullRaw, bareRaw: bareRaw });
+      }
+      if (!node.firstChild && VOID_ELEMENTS.test(node.localName)) { put(open + ' />'); return; }
+      put(open + '>');
+      for (let child = node.firstChild; child; child = child.nextSibling) yield* visit(child, false, into);
+      put('</' + node.localName + '>');
+    };
+    const whole = { parts: parts, raw: 0 };
+    yield* visit(root, true, whole);
+    tally.raw = whole.raw;
+  };
+  // One layer's markup, as the tail of a data: address, with its length before escaping.
+  const layerMarkup = (parts, tally, at, slotText) => {
+    const chosen = [];
+    let raw = 0;
+    const take = (list) => {
+      for (const part of list) {
+        if (typeof part === 'string') chosen.push(part);
+        else if (part === null) { raw += slotText.length; chosen.push(encodeURIComponent(slotText)); }
+        else if (part.parts) { if (part.paintsIn & (at > 30 ? -1 : 1 << at)) { raw += part.raw; take(part.parts); } }
+        else if (part.at === at) { raw += part.fullRaw; chosen.push(part.full); }
+        else { raw += part.bareRaw; chosen.push(part.bare); }
+      }
+    };
+    take(parts);
+    return { text: chosen.join(''), raw: tally.raw + raw };
   };
   // LAYERS, FOR A RECORDING. Given layers (RECORD AND INSTANT REPLAY, below), the page is
   // copied once with every canvas and video left out, each element and run of text marked
@@ -1586,6 +2000,12 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     let elements = 0;
     const waits = [];
     const pseudo = [];
+    // Which layers paint anywhere in each copied element, as bits, and which elements sit out
+    // of the flow (absolute, fixed): markupOf leaves such a subtree out of every layer it paints
+    // nothing in, which moves nothing else, since nothing else is laid out around it.
+    const paintsIn = new WeakMap();
+    const loose = new WeakSet();
+    const bit = (at) => at > 30 ? -1 : 1 << at;
     // A generator, so a recording can walk the page a few milliseconds at a time (walkSliced,
     // below) while the screenshot still walks it in one go, exactly as before (walkWhole).
     const copy = function* (node, scrolled, parent) {
@@ -1609,13 +2029,18 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
         elements += node.getElementsByTagName('*').length;
         if (elements > shot.domElementsMax) throw new Error(CROWDED);
         const svg = inert.importNode(node, true);
-        const text = styleText(style, prefix, defaultsOf(SVG_NS, 'svg'), parent);
+        // Copied whole, its own style attributes and sheets keep their var(--x), which nothing
+        // else in the copy defines now that copied elements carry no custom properties: so the
+        // SVG's root carries the ones it inherits, short of any picture (styleText, above).
+        const text = styleText(style, prefix, defaultsOf(SVG_NS, 'svg'), parent) + customOf(style);
         spend(job, text.length);
         svg.setAttribute('style', text);
         if (layers) {
           const at = style.visibility !== 'visible' ? 'h' : layers.of(node);
           svg.setAttribute('data-l', String(at));
           if (at !== 'h') layers.used.add(at);
+          paintsIn.set(svg, at === 'h' ? 0 : bit(at));
+          if (outOfFlow(style)) loose.add(svg);
         }
         return svg;
       }
@@ -1631,7 +2056,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
         // Only an image the page has finished loading: one still on its way is not on screen
         // yet, and asking for it again would be a second download of it.
         const source = node.complete && node.naturalWidth > 0 ? node.currentSrc || node.src : '';
-        if (source) waits.push(inline(source, job).then((data) => { if (data) out.setAttribute('src', data); }));
+        if (source) waits.push(settled(imagePicture(node, source, style, job).then((data) => { if (data) out.setAttribute('src', data); })));
       } else {
         out = inert.createElement(tag);
         for (const name of KEPT_ATTRIBUTES) if (node.hasAttribute(name)) out.setAttribute(name, node.getAttribute(name));
@@ -1644,35 +2069,42 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
           out.setAttribute('selected', '');
         }
       }
-      const text = styleText(style, prefix, defaultsOf(HTML_NS, out.localName), parent);
+      const backgrounds = backgroundPlan(node, style);
+      const text = styleText(style, prefix, defaultsOf(HTML_NS, out.localName), parent, backgrounds ? BACKGROUND_PROPERTIES : null);
       spend(job, text.length);
       out.setAttribute('style', text);
-      if (text.includes('url(')) waits.push(inlineCss(text, job).then((done) => { out.setAttribute('style', done); }));
+      if (text.includes('url(') || backgrounds) {
+        waits.push(settled(Promise.all([text.includes('url(') ? inlineCss(text, job) : text, backgrounds ? backgroundText(backgrounds, job) : ''])
+          .then(([done, drawn]) => { out.setAttribute('style', done + drawn); })));
+      }
+      let mask = 0;
+      const mark = (at) => { layers.used.add(at); mask |= bit(at); };
       if (layers) {
         out.setAttribute('data-l', String(own));
-        if (own !== 'h' && (out.localName === 'img' || out.localName === 'input' || out.localName === 'textarea' || out.localName === 'select' || paints(style))) layers.used.add(own);
+        if (own !== 'h' && (out.localName === 'img' || out.localName === 'input' || out.localName === 'textarea' || out.localName === 'select' || paints(style))) mark(own);
       }
       for (const which of ['::before', '::after']) {
         const generated = getComputedStyle(node, which);
         const content = generated.getPropertyValue('content');
         if (!content || content === 'none' || content === 'normal') continue;
-        if (layers && own !== 'h') layers.used.add(own);
+        if (layers && own !== 'h') mark(own);
         const name = 'og-shot-' + pseudo.length;
         out.classList.add(name);
         const rule = '.' + name + which + '{' + styleText(generated, '', plainDefaults(), style) + '}';
         spend(job, rule.length);
-        pseudo.push(inlineCss(rule, job));
+        pseudo.push(settled(inlineCss(rule, job)));
       }
       if (out.localName !== 'img' && !(node instanceof HTMLTextAreaElement)) {
         const inner = node.scrollTop || node.scrollLeft ? 'translate(' + -node.scrollLeft + 'px,' + -node.scrollTop + 'px) ' : '';
         for (const child of node.childNodes) {
           const made = yield* copy(child, inner, style);
           if (!made) continue;
+          if (layers && made.nodeType === 1) mask |= paintsIn.get(made) || 0;
           // Text paints in the layer of where it sits, which is its element's unless one of
           // the recorded canvases or videos comes between them; it then gets a span to carry it.
           if (layers && own !== 'h' && made.nodeType === 3 && /\S/.test(made.nodeValue)) {
             const at = layers.of(child);
-            layers.used.add(at);
+            mark(at);
             if (at !== own) {
               const carrier = inert.createElement('span');
               carrier.setAttribute('data-l', String(at));
@@ -1684,6 +2116,10 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
           out.appendChild(made);
         }
       }
+      if (layers) {
+        paintsIn.set(out, mask);
+        if (outOfFlow(style)) loose.add(out);
+      }
       return out;
     };
     let root;
@@ -1692,7 +2128,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       // thread long enough to cost it a frame: a page of a hundred elements took 35 to 40 ms to
       // read whole on a machine without a GPU (OG Snipes' start screen, 23 Nov 2026). The page
       // may change between slices; the watch sees that and draws it again next time.
-      root = await walkSliced(copy(document.documentElement, '', null), job, began);
+      root = await walkSliced(copy(document.documentElement, '', null), job, began, true);
     } else {
       try { openProbe(); root = walkWhole(copy(document.documentElement, '', null)); }
       finally { closeProbe(); }
@@ -1705,42 +2141,72 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     const sheet = inert.createElement('style');
     sheet.textContent = faces + '\n' + rules.join('\n');
     root.insertBefore(sheet, root.firstChild);
+    const open = encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">'
+      + '<foreignObject x="0" y="0" width="100%" height="100%">');
+    const close = encodeURIComponent('</foreignObject></svg>');
+    // A data: URL and not a blob: one. Chrome taints a canvas for a foreignObject drawn
+    // from a blob: address and not from a data: one, measured in the test beside this.
+    const address = (markup) => 'data:image/svg+xml;charset=utf-8,' + open + markup + close;
     if (layers) {
       // One copy of the page, drawn once per layer with every other layer hidden. Hidden by
       // visibility, so each element keeps its box and its children lay out as they did.
-      const serialized = performance.now();
+      if (layers.used.size > layers.maxLayers) throw new Error(CROWDED);
       const shown = inert.createElement('style');
       root.insertBefore(shown, root.firstChild);
+      const parts = [];
+      const tally = { raw: 0 };
+      await walkSliced(markupOf(root, parts, tally, shown, { paintsIn: paintsIn, loose: loose }), job, performance.now(), false);
+      // Each layer is decoded in an idle task of its own, since the browser decodes a drawn
+      // page on this thread in one go; each layer carries only its own pictures, so that go
+      // is as short as the layer allows. job.windows keeps when each decode ran, for the
+      // check that it did not cost the game a frame (refreshDom).
       const pictures = [];
-      // Each layer is serialised whole, files inlined again, so the layers are bounded too: a
-      // page past maxLayers or past the walk's own time again is left out, as a slow walk is.
-      if (layers.used.size > layers.maxLayers) throw new Error(CROWDED);
       for (let at = 0; at <= layers.count; at++) {
-        if (performance.now() - serialized > layers.serializeMs) throw new Error('over budget');
         if (!layers.used.has(at)) { pictures.push(null); continue; }
-        shown.textContent = '[data-l]{visibility:hidden!important}[data-l="' + at + '"]{visibility:visible!important}';
-        const markup = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">'
-          + '<foreignObject x="0" y="0" width="100%" height="100%">' + serialize(root) + '</foreignObject></svg>';
-        if (markup.length > shot.domBytesMax) throw new Error(CROWDED);
+        await idleSlice();
+        if (late() || job.stop.signal.aborted) throw new Error('over budget');
+        // The browser's report of the last decode has come in by now: a long frame it says was
+        // neither the game's scripts nor its rendering ends the drawing here.
+        if (job.windows && stalledDuring(job.windows)) throw new Error(SLOW);
+        const markup = layerMarkup(parts, tally, at, '<style>[data-l]{visibility:hidden!important}[data-l="' + at + '"]{visibility:visible!important}</style>');
+        // The markup is the copy that is actually held, so it is what the budget is checked
+        // against last: inlined files counted once per use, plus every computed style.
+        if (markup.raw > shot.domBytesMax) throw new Error(CROWDED);
         const picture = new Image();
-        picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(markup);
+        const decoding = performance.now();
+        const framesBefore = framesRun;
+        picture.src = address(markup.text);
+        await picture.decode();
+        // The decode is the browser's own work and nothing here can time it exactly. A long frame
+        // the browser reports as neither the game's scripts nor its rendering counts it (checked
+        // before the next layer, above, and at the next look, refreshDom). So does the wait for
+        // it, but only a wait the game ran no frame during: a recording asks for every frame, so
+        // a wait with none was the thread held. A wait the game's frames ran through was mostly
+        // the game's time, and counting it stopped the HTML of a game spending 30 ms of every
+        // frame on its thread within a minute (review, 27 Nov 2026). One past domStepMaxMs ends
+        // the drawing there, rather than going on to decode the other layers one after another,
+        // which was 0.6 to 0.8 s of World at War Zombies' thread at a time (measured 27 Nov 2026);
+        // one past domStepSlowMs, a frame's worth, is kept but puts the next drawing domBackoffMs
+        // off (refreshDom). The whole wait is counted in what the drawing cost, which spaces the
+        // next one by domCostFactor: overcounted, it costs the clip freshness, never the game.
+        const decoded = performance.now();
+        const held = framesRun === framesBefore ? decoded - decoding : 0;
+        job.slowest = Math.max(job.slowest || 0, held);
+        job.spent = (job.spent || 0) + (decoded - decoding);
+        if (job.windows) job.windows.push([decoding, decoded, held > rec.domStepMaxMs]);
+        if (held > rec.domStepMaxMs) throw new Error(SLOW);
         pictures.push(picture);
       }
-      job.spent += performance.now() - serialized;
-      await Promise.all(pictures.map((picture) => picture && picture.decode()));
       if (late()) throw new Error('over budget');
       return pictures;
     }
-    const markup = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">'
-      + '<foreignObject x="0" y="0" width="100%" height="100%">' + serialize(root) + '</foreignObject></svg>';
-    // The markup is the copy that is actually held, so it is what the budget is checked
-    // against last: inlined files counted once per use, plus every computed style.
-    if (markup.length > shot.domBytesMax) throw new Error(CROWDED);
+    const parts = [];
+    const tally = { raw: 0 };
+    walkWhole(markupOf(root, parts, tally, null, null));
+    if (tally.raw > shot.domBytesMax) throw new Error(CROWDED);
     if (late()) throw new Error('over budget');
-    // A data: URL and not a blob: one. Chrome taints a canvas for a foreignObject drawn
-    // from a blob: address and not from a data: one, measured in the test beside this.
     const picture = new Image();
-    picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(markup);
+    picture.src = address(parts.join(''));
     await picture.decode();
     return picture;
   };
@@ -1807,7 +2273,8 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
         let drewBlankPage = false;
         let crowded = false;
         try {
-          const job = { deadline: started + shot.domBudgetMs, bytes: 0, cache: new Map(), stop: new AbortController(), active: 0, queue: [], reading: 0 };
+          const job = { deadline: started + shot.domBudgetMs, bytes: 0, ...pageCaches(), scale: scale,
+            stop: new AbortController(), active: 0, queue: [] };
           const page = await withBudget(drawPage(snapshots, innerWidth, innerHeight, job), job);
           const whole = blankCanvas();
           whole.context.drawImage(page, 0, 0, whole.canvas.width, whole.canvas.height);
@@ -1914,7 +2381,8 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
         for (const codec of choice.codecs || avc) {
           const hevc = codec.startsWith('hvc1');
           const config = { codec: codec, width: choice.size.width, height: choice.size.height, bitrate: choice.bitrate,
-            framerate: rec.fpsMax, hardwareAcceleration: hardwareAcceleration, latencyMode: 'realtime' };
+            framerate: hardwareAcceleration === 'prefer-hardware' ? rec.fpsMax : Math.min(rec.fpsMax, rec.softwareFpsMax),
+            hardwareAcceleration: hardwareAcceleration, latencyMode: 'realtime' };
           if (hevc) config.hevc = { format: 'hevc' }; else config.avc = { format: 'avc' };
           const key = encoderKey(config);
           if (refusedEncoders.has(key)) continue;
@@ -1945,10 +2413,18 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     }
     return null;
   };
-  // The tap is a worklet with no outputs, which a browser runs for as long as it has an
-  // input. It hands the page about 2048 frames at a time. Loaded from a blob: address,
-  // which every runtime contract's script-src allows.
-  const TAP = "registerProcessor('og-record-tap', class extends AudioWorkletProcessor { constructor() { super(); this.parts = []; this.size = 0; } process(inputs) { const input = inputs[0]; if (input && input.length) { const left = input[0]; const right = input[1] || input[0]; this.parts.push([left.slice(), right.slice()]); this.size += left.length; if (this.size >= 2048) { this.port.postMessage(this.parts); this.parts = []; this.size = 0; } } return true; } });";
+  // The tap is a worklet with no outputs, which a browser runs for as long as its context
+  // runs, since process() keeps answering true. It hands the page about 2048 frames at a
+  // time. Loaded from a blob: address, which every runtime contract's script-src allows.
+  // SILENCE IS SENT TOO (27 Nov 2026). While nothing is connected to the ear, a browser hands
+  // process() no channels at all, and the tap used to send nothing then. World at War Zombies
+  // stops its menu music and leaves that context running when a map loads, and plays the map
+  // through a second one: the quiet first context still set the track's pace (below) and sent
+  // no blocks to pace by, so every block of the map's sound was queued and dropped, and the owner's
+  // clip went silent at the load. A block of silence is a quantum of zeros, so a running
+  // context always keeps time. Since a tap now always has something to say, untap tells it to
+  // stop, or a recording's taps would post silence for the life of the page.
+  const TAP = "registerProcessor('og-record-tap', class extends AudioWorkletProcessor { constructor() { super(); this.parts = []; this.size = 0; this.done = false; this.quiet = new Float32Array(typeof renderQuantumSize === 'number' ? renderQuantumSize : 128); this.port.onmessage = () => { this.done = true; }; } process(inputs) { if (this.done) return false; const input = inputs[0]; if (input && input.length) { const left = input[0]; const right = input[1] || input[0]; this.parts.push([left.slice(), right.slice()]); this.size += left.length; } else { this.parts.push([this.quiet, this.quiet]); this.size += this.quiet.length; } if (this.size >= 2048) { this.port.postMessage(this.parts); this.parts = []; this.size = 0; } return true; } });";
   let tapUrl = null;
   // Linear resampling, carried across blocks so the joins do not click: phase is where
   // the next output sample falls, in input samples from the start of the next block.
@@ -2047,6 +2523,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       if (!tap) continue;
       try { nativeDisconnect.call(tap.input, tap.node); } catch { /* Already gone. */ }
       tap.node.port.onmessage = null;
+      try { tap.node.port.postMessage('stop'); } catch { /* Already gone. */ }
     }
     session.taps.clear();
   };
@@ -2102,26 +2579,45 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // The game's own level for the element, which the player's volume never touches (the
   // receiver scales the element by the player's level on top, and the copy is taken before
   // that): a muted cutscene stays silent and music at 0.2 stays at 0.2.
-  const ownLevel = (element) => desired.get(element) ? 0 : ownVolume.has(element) ? ownVolume.get(element) : 1;
+  // For a stream an element plays, heard from the stream itself (below), paused is silent too:
+  // a capture goes quiet by itself when its element pauses, and the stream goes on sounding
+  // (Greptile on #2453). Only there, since a capture is made from inside play(), before the
+  // element stops being paused, and its first sound must not wait for the play event.
+  const ownLevel = (element, borrowed) => desired.get(element) || (borrowed && element.paused) ? 0 : ownVolume.has(element) ? ownVolume.get(element) : 1;
   const levelTap = (session, element) => {
     const entry = session.mediaTaps.get(element);
-    if (entry) entry.level.gain.value = ownLevel(element);
+    if (entry) entry.level.gain.value = ownLevel(element, entry.borrowed);
   };
   const tapElement = (session, element) => {
     if (session.mix === false || session.stopped || routed.has(element) || session.mediaTaps.has(element)) return;
-    if (typeof element.captureStream !== 'function' || typeof AudioContext !== 'function') return;
+    if (typeof AudioContext !== 'function') return;
+    // AN ELEMENT PLAYING A STREAM IS HEARD FROM THAT STREAM (27 Nov 2026). Chrome's capture of
+    // such an element shares the stream's own tracks, so stopping what it returned stopped the
+    // game's: a video showing a canvas's stream went black when a recording let it go. Its sound
+    // tracks are listened to as they are, and never stopped here; only a capture made here is.
+    // By its shape rather than instanceof, so a stream made in another frame counts too.
+    const own = element.srcObject;
+    const borrowed = Boolean(own) && typeof own.getAudioTracks === 'function' && typeof own.addEventListener === 'function';
+    if (!borrowed && typeof element.captureStream !== 'function') return;
     let stream;
-    try { stream = element.captureStream(); } catch { return; }
+    try { stream = borrowed ? own : element.captureStream(); } catch { return; }
     if (!session.mediaContext) {
       try { session.mediaContext = new AudioContext(); } catch { return; }
     }
     const context = session.mediaContext;
     const level = context.createGain();
-    level.gain.value = ownLevel(element);
+    level.gain.value = ownLevel(element, borrowed);
     nativeConnect.call(level, tapInputFor(context));
-    const entry = { stream: stream, level: level, sources: new Map(), done: null };
+    const entry = { stream: stream, borrowed: borrowed, level: level, sources: new Map(), done: null, added: null, removed: null, attach: null, detach: null, playing: null };
     session.mediaTaps.set(element, entry);
+    // ONLY THE SOUND (27 Nov 2026). A captured <video> carries a video track too, and Chrome
+    // copies every decoded frame of it into that track on the game's own thread for as long as
+    // the track lives, which was the whole recording: World at War Zombies' menu plays its map
+    // previews as muted videos, each copied every frame for nothing. The pictures are drawn from
+    // the element itself (drawMedia), so a video track captured here is stopped the moment it
+    // appears.
     const attach = (track) => {
+      if (track.kind === 'video') { if (!borrowed) { try { track.stop(); } catch { /* Gone. */ } } return; }
       if (session.stopped || track.kind !== 'audio' || entry.sources.has(track)) return;
       try {
         const source = context.createMediaStreamSource(new MediaStream([track]));
@@ -2133,9 +2629,16 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       const source = entry.sources.get(track);
       if (source) { try { source.disconnect(); } catch { /* Gone. */ } entry.sources.delete(track); }
     };
-    stream.getAudioTracks().forEach(attach);
-    stream.addEventListener('addtrack', (event) => attach(event.track));
-    stream.addEventListener('removetrack', (event) => detach(event.track));
+    stream.getTracks().forEach(attach);
+    entry.attach = attach;
+    entry.detach = detach;
+    entry.playing = () => levelTap(session, element);
+    element.addEventListener('pause', entry.playing);
+    element.addEventListener('play', entry.playing);
+    entry.added = (event) => attach(event.track);
+    entry.removed = (event) => detach(event.track);
+    stream.addEventListener('addtrack', entry.added);
+    stream.addEventListener('removetrack', entry.removed);
     // An element that finished lets go of its copy, so a game that makes a new Audio() for
     // every shot does not pile them up over a long recording; playing again taps it again.
     entry.done = () => releaseElement(session, element);
@@ -2150,9 +2653,13 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     session.mediaTaps.delete(element);
     element.removeEventListener('ended', entry.done);
     element.removeEventListener('emptied', entry.done);
+    element.removeEventListener('pause', entry.playing);
+    element.removeEventListener('play', entry.playing);
     for (const source of entry.sources.values()) { try { source.disconnect(); } catch { /* Gone. */ } }
     try { entry.level.disconnect(); } catch { /* Gone. */ }
-    for (const track of entry.stream.getTracks()) { try { track.stop(); } catch { /* Gone. */ } }
+    entry.stream.removeEventListener('addtrack', entry.added);
+    entry.stream.removeEventListener('removetrack', entry.removed);
+    if (!entry.borrowed) for (const track of entry.stream.getTracks()) { try { track.stop(); } catch { /* Gone. */ } }
   };
   const tapMedia = (session) => {
     if (session.mix === false || session.stopped) return;
@@ -2161,6 +2668,15 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       if (element && !element.paused) tapElement(session, element);
     }
     for (const element of session.mediaTaps.keys()) levelTap(session, element);
+    // A track the game adds to or takes from its own stream by script raises no addtrack or
+    // removetrack: each look takes any it has not heard yet and lets go of any the stream no
+    // longer has, without stopping it, since it is the game's.
+    for (const entry of session.mediaTaps.values()) {
+      if (!entry.borrowed || !entry.attach) continue;
+      const tracks = entry.stream.getAudioTracks();
+      tracks.forEach(entry.attach);
+      for (const track of [...entry.sources.keys()]) if (!tracks.includes(track)) entry.detach(track);
+    }
     const context = session.mediaContext;
     if (context && context.state === 'suspended') context.resume().catch(() => {});
   };
@@ -2227,10 +2743,16 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // The HTML is the costly part: a walk of the whole document on the game's own thread. So
   // it is redrawn only when the page has changed (a mutation, a running CSS animation, or
   // every domRefreshMs in case something like :hover changed it), in idle time, no sooner
-  // than domCostFactor times what the last walk took, and never for longer than domWalkMs: a
-  // page that takes longer is left out for domBackoffMs rather than allowed to stutter the
-  // game. A game that is one canvas and nothing else walks once, finds nothing to draw, and
-  // costs no more than it did.
+  // than domCostFactor times what the last walk took, in steps none of which holds the thread
+  // for long, and within domDeadlineMs: a page that takes longer is left out for domBackoffMs
+  // rather than allowed to stutter the game. A game that is one canvas and nothing else walks
+  // once, finds nothing to draw, and costs no more than it did.
+  //
+  // And it is checked. Where the browser reports long frames (long-animation-frame, or
+  // longtask), a redraw during whose decoding or painting the game had one that its own scripts
+  // do not account for is followed by a wait of domBackoffMs, doubling each time it happens
+  // again, up to domStallMaxMs. So a page whose drawing still costs a frame on some machine
+  // loses its HTML's freshness in the recording, never the game's smoothness.
   //
   // Paint order is approximated. Each canvas, video and element paints at the z-index of the
   // outermost stacking context it sits in (negative under what flows, positioned or z 0 over
@@ -2262,7 +2784,6 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       count: marks.length,
       used: new Set(),
       maxLayers: 6,
-      serializeMs: rec.domWalkMs,
       of: (node) => {
         // The root and the body paint the page's ground, under everything.
         if (node === document.documentElement || node === document.body) return 0;
@@ -2354,10 +2875,65 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     dom.images = [];
     dom.any = false;
   };
+  // Long frames, as the browser reports them, kept a minute for the check after each redraw,
+  // with how much of each the game does not account for. A long-animation-frame entry names the
+  // scripts that ran in it and when the browser began rendering; the game's scripts (anything
+  // but an idle callback, which is where this decodes and paints) and the rendering of the
+  // game's own page are the game's, and what is left of the frame is what a redraw can have
+  // cost. A frame counts against a redraw only where that is most of it and at least
+  // STALL_MS. Otherwise a game busy in its own code or its own layout, loading say, would
+  // have its HTML refreshed in the recording once a minute. A longtask entry names nothing, so
+  // all of it counts.
+  const STALL_MS = 40;
+  const longFrames = [];
+  let longFramesWatched = false;
+  const watchLongFrames = () => {
+    if (longFramesWatched) return;
+    longFramesWatched = true;
+    try {
+      const types = PerformanceObserver.supportedEntryTypes || [];
+      const type = types.includes('long-animation-frame') ? 'long-animation-frame' : types.includes('longtask') ? 'longtask' : '';
+      if (!type) return;
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const end = entry.startTime + entry.duration;
+          // Rendering runs from renderStart to the end and holds the frame's animation-frame
+          // callbacks, which scripts lists too: those are counted once, as rendering.
+          const rendering = entry.renderStart > 0 ? Math.max(0, end - entry.renderStart) : 0;
+          const theirs = (entry.scripts || []).reduce((sum, script) => sum
+            + (script.invoker === 'IdleRequestCallback' || (entry.renderStart > 0 && script.startTime >= entry.renderStart) ? 0 : script.duration), 0);
+          const left = entry.duration - theirs - rendering;
+          if (left >= STALL_MS && left >= entry.duration / 2) longFrames.push([entry.startTime, end]);
+        }
+        const kept = performance.now() - 60000;
+        while (longFrames.length && longFrames[0][1] < kept) longFrames.shift();
+      }).observe({ type: type });
+    } catch { /* No way to tell here; every step is still sliced, and a slow paint is timed. */ }
+  };
+  // Windows are [from, to, slow]: slow when the step timed itself past domStepMaxMs on this thread
+  // (a paint), which counts whatever the browser reports.
+  const stalledDuring = (windows) => windows.some(([from, to, slow]) => slow || longFrames.some(([start, end]) => start < to && end > from));
   const refreshDom = (session) => {
     const dom = session.dom;
     const now = performance.now();
     if (dom.busy || dom.broken || session.stopped || now < dom.next) return;
+    // The last redraw's decoding and painting, against the long frames reported since: by now
+    // (domMinIntervalMs at least) the browser has delivered any that overlapped them. A clean
+    // redraw starts the doubling again from domBackoffMs.
+    if (dom.windows.length) {
+      const stalled = stalledDuring(dom.windows);
+      dom.windows = [];
+      if (!stalled) dom.stalls = 0;
+      else {
+        dom.stalls++;
+        // A page whose drawing has cost the game a frame domStallsMax times running is not drawn
+        // again while this recording lasts: its HTML is left out of the clip, and the game keeps
+        // every frame. Once a minute was still a hitch a minute.
+        if (dom.stalls >= rec.domStallsMax) { dom.broken = true; releaseDom(dom); return; }
+        dom.next = now + Math.min(rec.domStallMaxMs, rec.domBackoffMs * Math.pow(2, dom.stalls - 1));
+        return;
+      }
+    }
     if (!dom.dirty && now - dom.last < rec.domRefreshMs) return;
     dom.busy = true;
     dom.dirty = false;
@@ -2366,9 +2942,11 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
       // Watching again from here: it stopped at the first change, so a page that changes every
       // frame costs one mutation record per walk rather than one per change.
       watchPage(session);
-      const job = { deadline: performance.now() + shot.domBudgetMs, sliceMs: rec.domSliceMs, spent: 0,
-        bytes: 0, cache: dom.cache, stop: new AbortController(), active: 0, queue: [], reading: 0 };
-      if (dom.cache.size > 24) dom.cache.clear();
+      watchLongFrames();
+      const windows = [];
+      const job = { deadline: performance.now() + rec.domDeadlineMs, sliceMs: rec.domSliceMs, sliceIdleMs: rec.domSliceIdleMs, spent: 0,
+        bytes: 0, slowest: 0, cache: dom.cache, files: dom.files, pictures: dom.pictures, sizes: dom.sizes, refused: dom.refused, scale: session.scale, windows: windows,
+        stop: new AbortController(), active: 0, queue: [] };
       const scene = session.scene;
       const sceneId = session.sceneId;
       const width = Math.max(1, Math.round((innerWidth || 1) * session.scale));
@@ -2379,27 +2957,39 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
         // Painted once, here, so each frame copies pixels rather than laying out HTML again. Onto
         // a canvas of this document's: Chrome marks an ImageBitmap made from a drawn page as
         // foreign, and keeps a canvas it is drawn on readable (the screenshot relies on it).
-        const painted = performance.now();
-        images = pictures.map((picture) => {
-          if (!picture) return null;
+        // Each layer in an idle task of its own, as each was decoded.
+        for (const picture of pictures) {
+          if (!picture) { images.push(null); continue; }
+          await idleSlice();
+          if (session.stopped) break;
+          if (stalledDuring(windows)) throw new Error(SLOW);
+          const painted = performance.now();
           const layer = makeCanvas();
           layer.width = width;
           layer.height = height;
           layer.getContext('2d').drawImage(picture, 0, 0, width, height);
-          return layer;
-        });
-        job.spent += performance.now() - painted;
-        dom.next = performance.now() + Math.max(rec.domMinIntervalMs, job.spent * rec.domCostFactor);
-      } catch {
+          images.push(layer);
+          const paintedFor = performance.now() - painted;
+          windows.push([painted, performance.now(), paintedFor > rec.domStepMaxMs]);
+          job.spent += paintedFor;
+          job.slowest = Math.max(job.slowest || 0, paintedFor);
+          if (paintedFor > rec.domStepMaxMs) throw new Error(SLOW);
+        }
+        // A drawing one of whose steps held the thread for a frame or more is not repeated for
+        // domBackoffMs: a page that costs a frame to draw costs the game one now and then, not one
+        // every second (a thousand-element HUD decodes in about 34 ms without a GPU).
+        dom.next = performance.now() + Math.max(rec.domMinIntervalMs, job.spent * rec.domCostFactor, job.slowest > rec.domStepSlowMs ? rec.domBackoffMs : 0);
+      } catch (error) {
         // Over the walk's time, over budget, or refused: the HTML is left out for a while,
         // rather than a stale picture of it held over a page that has moved on. The files the
-        // walk was fetching were cut off, so none of them is kept as missing.
+        // walk was fetching were cut off, and the caches forget an empty answer, so none of
+        // them is kept as missing. A step that was slow is in windows, and the check at the
+        // next look applies the wait, doubling it as it recurs.
+        for (const layer of images) if (layer) { layer.width = 0; layer.height = 0; }
         images = [];
-        dom.cache.clear();
-        dom.next = performance.now() + rec.domBackoffMs;
+        dom.next = performance.now() + (error && error.message === SLOW ? 0 : rec.domBackoffMs);
       }
-      // A file refused for want of room in one walk may fit the next.
-      for (const [href, fetched] of dom.cache) fetched.then((data) => { if (!data && dom.cache.get(href) === fetched) dom.cache.delete(href); });
+      dom.windows = windows;
       dom.busy = false;
       if (session.stopped || dom.broken) return;
       releaseDom(dom);
@@ -2507,13 +3097,47 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     if (session.stopped) return;
     queueCapture((time) => captureFrame(session, time));
     if (session.reshaping) return;
-    // Paced to fpsMax on any display: a frame is due every 1000 / fpsMax ms, so a 144 Hz
-    // screen records 60 a second rather than every second refresh, 48.
+    // Paced to the session's rate on any display: a frame is due every 1000 / fps ms, so a
+    // 144 Hz screen records 60 a second rather than every second refresh, 48.
     if (now < session.due - 2) return;
-    session.due = Math.max(session.due + 1000 / rec.fpsMax, now - 1000 / rec.fpsMax);
+    const step = 1000 / session.fps;
+    session.due = Math.max(session.due + step, now - step);
     const encoder = session.encoder;
     if (encoder.state !== 'configured' || encoder.encodeQueueSize > 2) return;
+    // The page is looked at again every layerScanMs before the copy, and outside its timing:
+    // that costs the same a second whatever the picture rate, so counting it per picture would
+    // push the rate down for nothing.
     if (now - session.lastScan > rec.layerScanMs) rescan(session, now);
+    const began = performance.now();
+    try { copyFrame(session, now, encoder); } finally { costed(session, performance.now() - began, now); }
+  };
+  // THE COPY IS TIMED, AND PAID FOR IN PICTURES, NEVER IN THE GAME'S FRAMES (27 Nov 2026). Each
+  // copy runs on the game's own thread, and what it costs is the browser's: measured
+  // headless with an NVIDIA card and no hardware encoder, drawing World at War Zombies' canvas
+  // took 2.9 ms and wrapping it for the encoder 2.4 ms, 60 times a second, half a core taken
+  // from the thread that forwards the player's input; on a game that draws on that thread it
+  // would be a third of every frame. So every copy times itself, and about once a second the
+  // recording looks at what its copies cost the game a second. Past captureBudgetMs it records
+  // fewer pictures a second, 60, 30, 20, 15 and then fpsMin, and it goes back up a step only
+  // where the step up would cost under half the budget, so it does not swing. A clip of a
+  // machine that copies slowly is less smooth; the game is never slower. A software encoder,
+  // which takes cores of its own, starts at softwareFpsMax.
+  const FPS_STEPS = [60, 30, 20, 15, 10];
+  const costed = (session, spent, now) => {
+    // The mean of the copies since the last look, so one slow first copy decides nothing.
+    session.costSum += spent;
+    session.costCount++;
+    if (now - session.governed < 1000) return;
+    session.governed = now;
+    session.cost = session.costSum / session.costCount;
+    session.costSum = 0;
+    session.costCount = 0;
+    const steps = [session.fpsCeiling].concat(FPS_STEPS.filter((fps) => fps < session.fpsCeiling && fps >= rec.fpsMin));
+    const at = steps.indexOf(session.fps);
+    if (session.cost * session.fps > rec.captureBudgetMs && at >= 0 && at < steps.length - 1) session.fps = steps[at + 1];
+    else if (at > 0 && session.cost * steps[at - 1] < rec.captureBudgetMs / 2) session.fps = steps[at - 1];
+  };
+  const copyFrame = (session, now, encoder) => {
     const dom = session.dom;
     if (!session.scene.length && !dom.any) return;
     const { width, height } = session.size;
@@ -2543,7 +3167,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     let frame;
     const timestamp = Math.max(0, Math.round((now - session.start) * 1000));
     try {
-      frame = new VideoFrame(session.canvas, { timestamp: timestamp, duration: Math.round(1e6 / rec.fpsMax) });
+      frame = new VideoFrame(session.canvas, { timestamp: timestamp, duration: Math.round(1e6 / session.fps) });
     } catch (error) {
       // A picture the browser will not let leave this document. Each source in it is tried
       // alone and only the ones refused are left out from now on: a game's own canvas holding
@@ -2610,8 +3234,9 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     }
     const session = { id: data.id, origin: origin, stopped: false, closed: false, pending: [], mix: null, taps: new Map(),
       due: -Infinity, lastKey: -1, lastScan: -Infinity, scene: [], sceneId: 0, scale: 1, skip: new WeakSet(), ground: '#000', viewport: [0, 0], refused: 0,
-      reshaping: false, reshapeSince: 0,
-      dom: { images: [], any: false, dirty: true, busy: false, broken: false, next: 0, last: -Infinity, sceneId: -1, cache: new Map() },
+      reshaping: false, reshapeSince: 0, fps: rec.fpsMax, fpsCeiling: rec.fpsMax, cost: 0, costSum: 0, costCount: 0, governed: 0,
+      dom: { images: [], any: false, dirty: true, busy: false, broken: false, next: 0, last: -Infinity, sceneId: -1,
+        ...pageCaches(), windows: [], stalls: 0 },
       watch: null, mediaTaps: new Map(), mediaContext: null };
     recording = session;
     // The first configuration the browser takes, and if configure refuses it after all, the
@@ -2638,11 +3263,14 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     }
     session.size = { width: chosen.config.width, height: chosen.config.height };
     session.config = chosen.config;
+    session.fpsCeiling = chosen.config.framerate;
+    session.fps = session.fpsCeiling;
     session.edges = chosen.edges;
     session.canvas = new OffscreenCanvas(session.size.width, session.size.height);
     session.context = session.canvas.getContext('2d', { alpha: false });
     session.start = performance.now();
-    tellRecord(session, { op: 'started', width: session.size.width, height: session.size.height, fps: rec.fpsMax,
+    session.governed = session.start;
+    tellRecord(session, { op: 'started', width: session.size.width, height: session.size.height, fps: session.fps,
       codec: chosen.config.codec, hardware: chosen.hardware });
     session.flusher = setInterval(() => flushRecord(session), rec.flushMs);
     watchPage(session);

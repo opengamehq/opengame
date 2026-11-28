@@ -104,7 +104,13 @@ export interface EngineSource { path: string; text: string }
    engines.py matches; JavaScript's `\s` also takes U+00A0, U+FEFF, U+2028 and the rest of
    Unicode's spaces, so `__THREE__ =` named Three.js here and nothing there (review of
    #904). `[\s\S]` stays, because it is every character on both sides. The parity test
-   carries a case for each, and refuses a registry pattern that writes `\s` again. */
+   carries a case for each, and refuses a registry pattern that writes `\s` again.
+
+   A STRING LITERAL MAY BE A TEMPLATE LITERAL, so a quote class in a pattern that reads one
+   is `["'\x60]`. Newer minifiers (Vite's Rolldown and oxc) write `VERSION:\x604.2.1\x60` and
+   `Symbol.for(\x60react.fragment\x60)`, and a class of two quotes read two Phaser 4 games and
+   two React 19 games as custom code, and 27 Three.js builds with no version, on 27 Nov 2026.
+   An object key or a concatenated string cannot be a template literal, and keeps two. */
 const VERSION = String.raw`\d+(?:\.\d+){0,3}(?:[-+][\w.]+)?`;
 const escape = (value: string) => value.replace(/[$]/g, "\\$&");
 
@@ -128,14 +134,14 @@ const TEXT_PROBES: { id: EngineId; name: string; probe: Probe }[] = [
     /* r186 builds write the revision in place, `window.__THREE__="186"`, where earlier ones
        assigned `REVISION` by name, and a reader that took only a name gave three-racer no
        version (24 Oct 2026). Both spellings are read. */
-    const registered = /__THREE__[ \t\n\r\f\v]*=[ \t\n\r\f\v]*(?:(["'])(\d+(?:dev)?)\1|([\w$]+))/.exec(text);
+    const registered = /__THREE__[ \t\n\r\f\v]*=[ \t\n\r\f\v]*(?:(["'\x60])(\d+(?:dev)?)\1|([\w$]+))/.exec(text);
     if (!registered && !text.includes("Multiple instances of Three.js being imported")) return null;
     const revision = registered ? registered[2] ?? declared(text, registered[3]!) : null;
     return { version: revision && /^\d+(?:dev)?$/.test(revision) ? `r${revision}` : null,
       evidence: registered ? "window.__THREE__ registration" : "the Three.js duplicate-instance warning" };
   } },
   { id: "phaser", name: "Phaser", probe: (text) => {
-    const m = new RegExp(String.raw`\bVERSION[ \t\n\r\f\v]*:[ \t\n\r\f\v]*(["'])(${VERSION})\1[\s\S]{0,400}?\bLOG_VERSION[ \t\n\r\f\v]*:`).exec(text);
+    const m = new RegExp(String.raw`\bVERSION[ \t\n\r\f\v]*:[ \t\n\r\f\v]*(["'\x60])(${VERSION})\1[\s\S]{0,400}?\bLOG_VERSION[ \t\n\r\f\v]*:`).exec(text);
     return m ? { version: m[2]!, evidence: "the VERSION and LOG_VERSION constants" } : null;
   } },
   { id: "pixijs", name: "PixiJS", probe: (text) => {
@@ -146,15 +152,15 @@ const TEXT_PROBES: { id: EngineId; name: string; probe: Probe }[] = [
     return { version, evidence: init || /__PIXI_(?:APP|RENDERER)_INIT__/.test(text) ? "the PixiJS devtools hook" : "the PixiJS console banner" };
   } },
   { id: "babylonjs", name: "Babylon.js", probe: (text) => {
-    const npm = new RegExp(String.raw`["']babylonjs@(${VERSION})["']`).exec(text);
+    const npm = new RegExp(String.raw`["'\x60]babylonjs@(${VERSION})["'\x60]`).exec(text);
     if (npm) return { version: npm[1]!, evidence: "the Engine.NpmPackage constant" };
-    if (!/\b_DefaultCdnUrl[ \t\n\r\f\v]*=[ \t\n\r\f\v]*["']https:\/\/cdn\.babylonjs\.com["']/.test(text)) return null;
-    const cdn = new RegExp(String.raw`\b_CdnVersion[ \t\n\r\f\v]*=[ \t\n\r\f\v]*["'](${VERSION})["']`).exec(text);
+    if (!/\b_DefaultCdnUrl[ \t\n\r\f\v]*=[ \t\n\r\f\v]*["'\x60]https:\/\/cdn\.babylonjs\.com["'\x60]/.test(text)) return null;
+    const cdn = new RegExp(String.raw`\b_CdnVersion[ \t\n\r\f\v]*=[ \t\n\r\f\v]*["'\x60](${VERSION})["'\x60]`).exec(text);
     return { version: cdn?.[1] ?? null, evidence: "the Tools default CDN constant" };
   } },
   { id: "playcanvas", name: "PlayCanvas", probe: (text) => {
-    const attribute = /["']data-engine["'][ \t\n\r\f\v]*,[ \t\n\r\f\v]*(?:\x60PlayCanvas \$\{([\w$]+)\}\x60|["']PlayCanvas ["'][ \t\n\r\f\v]*\+[ \t\n\r\f\v]*([\w$]+))/.exec(text);
-    if (!attribute && !/Symbol\.for\([ \t\n\r\f\v]*["']playcanvas\.inspector["'][ \t\n\r\f\v]*\)/.test(text)) return null;
+    const attribute = /["'\x60]data-engine["'\x60][ \t\n\r\f\v]*,[ \t\n\r\f\v]*(?:\x60PlayCanvas \$\{([\w$]+)\}\x60|["'\x60]PlayCanvas ["'\x60][ \t\n\r\f\v]*\+[ \t\n\r\f\v]*([\w$]+))/.exec(text);
+    if (!attribute && !/Symbol\.for\([ \t\n\r\f\v]*["'\x60]playcanvas\.inspector["'\x60][ \t\n\r\f\v]*\)/.test(text)) return null;
     const ident = attribute?.[1] ?? attribute?.[2];
     return { version: ident ? declared(text, ident) : null,
       evidence: attribute ? "the canvas data-engine attribute" : "the PlayCanvas inspector hook" };
@@ -414,6 +420,51 @@ function rawWebAssembly(paths: string[], sources: EngineSource[], modules: WasmM
     evidence: `${path}, loaded by ${call[1] ? `WebAssembly.${call[1]}` : `new WebAssembly.${call[2]}`} in ${loader.path}` };
 }
 
+/**
+ * What a fully read bundle with no engine, no library the registry knows and no wasm draws
+ * with, said as its name. The id stays `custom`, which is what runtime contracts, hosting
+ * and the filters key on; only the name and the evidence say more.
+ *
+ * On 27 Nov 2026, 137 of the jam's 252 entries were custom, and every one read "Custom".
+ * Opened one by one, five were Phaser 4 and React builds this check had missed (their
+ * minifier writes strings as template literals), 115 drew to a 2D canvas, 16 were the page
+ * itself with no canvas at all, and one had written its own WebGL renderer. "Custom" was
+ * true of the 132 and told a player nothing. Canvas 2D is said only when every context any
+ * script asks for is a literal "2d", and HTML and DOM only when none asks for one. A GPU
+ * context, or any context asked for by a name this cannot read, keeps "Custom": that is a
+ * renderer somebody wrote, and calling it Canvas 2D because a second canvas draws its text
+ * would be wrong. engines.py hand_written is the same rule.
+ */
+export const HAND_WRITTEN_NAMES = { canvas: "Canvas 2D", dom: "HTML and DOM" } as const;
+/* Every way a script asks a canvas for a context, each call on its own: `c.getContext("2d")`,
+   `c.getContext?.("2d")`, `c["getContext"]("2d")`, with the argument captured when it is a
+   literal. A call whose argument is not a literal (`getContext(name)`, the usual way a WebGL
+   renderer tries webgl2 and then webgl) captures nothing, and is read as unknown. */
+const CONTEXT_CALL = /\bgetContext(?:["'\x60][ \t\n\r\f\v]*\])?[ \t\n\r\f\v]*(?:\?\.)?[ \t\n\r\f\v]*\([ \t\n\r\f\v]*(?:(["'\x60])([\w-]{0,40})\1)?/g;
+const GPU_CONTEXTS = new Set(["webgl", "webgl2", "experimental-webgl", "webgpu"]);
+/* Every answer has evidence of its own, never the bare "custom code" earlier scans sealed for
+   all four. /jam's genre split and the Jam entries tab leave plain page and 2D canvas games
+   out, and read a "custom code" sealed before this as one
+   (20261128035050_jam_genre_counts_engine_built.sql); a renderer of its own has to say so to
+   be counted. */
+function handWritten(sources: EngineSource[]): Pick<EngineReport, "name" | "evidence"> {
+  let gpu: string | null = null, unknown: string | null = null, canvas: string | null = null;
+  for (const source of sources) {
+    if (/\bnavigator\.gpu\b/.test(source.text)) gpu ??= source.path;
+    if (/\btransferControlToOffscreen\b/.test(source.text)) unknown ??= source.path;
+    for (const call of source.text.matchAll(CONTEXT_CALL)) {
+      const kind = call[2];
+      if (kind === "2d") canvas ??= source.path;
+      else if (kind !== undefined && GPU_CONTEXTS.has(kind)) gpu ??= source.path;
+      else unknown ??= source.path;
+    }
+  }
+  if (gpu) return { name: ENGINE_NAMES.custom, evidence: `custom code with a WebGL or WebGPU renderer of its own in ${gpu}` };
+  if (unknown) return { name: ENGINE_NAMES.custom, evidence: `custom code asking for a canvas context this check cannot read in ${unknown}` };
+  if (canvas) return { name: HAND_WRITTEN_NAMES.canvas, evidence: `custom code drawing to a 2D canvas in ${canvas}` };
+  return { name: HAND_WRITTEN_NAMES.dom, evidence: "custom code drawing with the page, with no canvas context" };
+}
+
 export function detectEngine(paths: string[], sources: EngineSource[], options: { complete: boolean; wasm?: WasmModule[] }): EngineReport {
   const found = new Map<EngineId, DetectedEngine>();
   for (const engine of [...layoutProbes(paths, sources), ...registryProbes(paths, sources, options.wasm ?? [])]) found.set(engine.id, engine);
@@ -447,7 +498,7 @@ export function detectEngine(paths: string[], sources: EngineSource[], options: 
   const glue = sources.find((source) => EMSCRIPTEN_PROGRAM.every((pattern) => pattern.test(source.text)));
   if (glue) return custom(`Emscripten's runtime glue in ${glue.path}, but no .wasm read beside it imports the way an Emscripten build does`);
   const wasm = paths.find((path) => engineFileKind(path) === "module");
-  if (!wasm) return custom("custom code");
+  if (!wasm) { const plain = handWritten(sources); return { ...custom(plain.evidence), name: plain.name }; }
   const raw = rawWebAssembly(paths, sources, options.wasm ?? []);
   if (raw) return { ...raw, also: [] };
   return custom(`${wasm} arrived with no loader this check recognises`);
@@ -526,8 +577,8 @@ export const ENGINE_DEFAULT_ORIGINS: EngineDefault[] = [
   /* Phaser 3.90.0 Config: `this.gameURL = GetValue(config, 'url', 'https://phaser.io/' + CONST.LOG_VERSION)`.
      Printed in the banner, never requested. */
   { engine: "phaser", value: "https://phaser.io/",
-    before: /\.gameURL\s*=\s*[\w$.]+\(\s*[\w$]+\s*,\s*["']url["']\s*,\s*["']$/,
-    after: /^["']\s*\+\s*[\w$]+\.LOG_VERSION\s*\)/,
+    before: /\.gameURL\s*=\s*[\w$.]+\(\s*[\w$]+\s*,\s*["'\x60]url["'\x60]\s*,\s*["'\x60]$/,
+    after: /^["'\x60]\s*\+\s*[\w$]+\.LOG_VERSION\s*\)/,
     detail: `This is the default for Phaser's game URL setting. Phaser prints it in its console banner and never requests it. ${UNUSED}` },
   /* PixiJS 8.22.0 sayHello: the banner is an array spread into `globalThis.console.log`,
      so the string is not an argument of the call where the sink pass can see it. */
@@ -538,21 +589,21 @@ export const ENGINE_DEFAULT_ORIGINS: EngineDefault[] = [
     after: /^(?:\\n|\n)*\x60\s*,/,
     detail: `This is the address PixiJS prints in its console banner. It is never requested. ${UNUSED}` },
   /* Babylon.js 9.30.0 Tools._DefaultCdnUrl. The base for optional add-ons. */
-  { engine: "babylonjs", value: "https://cdn.babylonjs.com", before: /[\w$]\._DefaultCdnUrl\s*=\s*["']$/, after: END,
+  { engine: "babylonjs", value: "https://cdn.babylonjs.com", before: /[\w$]\._DefaultCdnUrl\s*=\s*["'\x60]$/, after: END,
     detail: `This is Babylon.js's default address for optional add-ons such as decoders and physics. Babylon requests it only when a game turns one on without a local copy. ${SHIP}` },
   /* Babylon.js 9.30.0 KhronosTextureContainer2.URLConfig.jsDecoderModule. */
   { engine: "babylonjs", value: "https://cdn.babylonjs.com/babylon.ktx2Decoder.js", neededWhen: /\.ktx2$/i,
-    before: /\.URLConfig\s*=\s*\{\s*jsDecoderModule\s*:\s*["']$/, after: END,
+    before: /\.URLConfig\s*=\s*\{\s*jsDecoderModule\s*:\s*["'\x60]$/, after: END,
     detail: `This is Babylon.js's default KTX2 decoder. Babylon requests it only to load a .ktx2 texture, and this build has none. ${UNUSED}` },
   /* Babylon.js 9.30.0 Tools._DefaultAssetsUrl. */
-  { engine: "babylonjs", value: "https://assets.babylonjs.com/core", before: /[\w$]\._DefaultAssetsUrl\s*=\s*["']$/, after: END,
+  { engine: "babylonjs", value: "https://assets.babylonjs.com/core", before: /[\w$]\._DefaultAssetsUrl\s*=\s*["'\x60]$/, after: END,
     detail: `This is Babylon.js's default address for its sample assets, such as the default environment texture. Babylon requests it only from helpers that load those assets. ${SHIP}` },
   /* Babylon.js 9.30.0 Animation.SnippetUrl, and the same constant on other classes. */
-  { engine: "babylonjs", value: "https://snippet.babylonjs.com", before: /[\w$]\.SnippetUrl\s*=\s*["']$/, after: END,
+  { engine: "babylonjs", value: "https://snippet.babylonjs.com", before: /[\w$]\.SnippetUrl\s*=\s*["'\x60]$/, after: END,
     detail: `This is Babylon.js's snippet server. Babylon requests it only to load a snippet by id. ${SHIP}` },
   /* Babylon.js 9.30.0 EXR loader's FFLATEUrl, fetched to decompress an EXR. */
   { engine: "babylonjs", value: "https://unpkg.com/fflate@0.8.2", neededWhen: /\.exr$/i,
-    before: /[\w$]\.FFLATEUrl\s*=\s*["']$/, after: END,
+    before: /[\w$]\.FFLATEUrl\s*=\s*["'\x60]$/, after: END,
     detail: `This is the copy of fflate Babylon.js fetches to decompress an EXR texture, and this build has no .exr file. ${UNUSED}` },
   /* React 19.3.1 production builds of react and react-dom, formatProdErrorMessage:
      `function r(U){var b="https://react.dev/errors/"+U;if(1<arguments.length){b+="?args[]="+...`.
@@ -560,8 +611,8 @@ export const ENGINE_DEFAULT_ORIGINS: EngineDefault[] = [
      argument. Found by the React starter failing its own check on 22 Oct 2026; every
      React 19 game a creator built would have failed the same way. */
   { engine: "react", value: "https://react.dev/errors/",
-    before: /function\s+[\w$]+\(\s*[\w$]+\s*\)\s*\{\s*var\s+[\w$]+\s*=\s*["']$/,
-    after: /^["']\s*\+\s*[\w$]+\s*;\s*if\s*\(\s*1\s*<\s*arguments\.length\s*\)\s*\{\s*[\w$]+\s*\+=\s*["']\?args\[\]=["']/,
+    before: /function\s+[\w$]+\(\s*[\w$]+\s*\)\s*\{\s*var\s+[\w$]+\s*=\s*["'\x60]$/,
+    after: /^["'\x60]\s*\+\s*[\w$]+\s*;\s*if\s*\(\s*1\s*<\s*arguments\.length\s*\)\s*\{\s*[\w$]+\s*\+=\s*["'\x60]\?args\[\]=["'\x60]/,
     detail: `This is the address React writes into its production error messages, so a player can look up the error. React never requests it. ${UNUSED}` },
   /* Excalibur 0.32.0 Engine, when it falls back to Canvas 2D: `this._toaster.toast("... Visit
      [LINK] for more information and potential solutions.","https://excaliburjs.com/docs/performance")`.

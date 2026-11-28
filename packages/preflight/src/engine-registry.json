@@ -59,14 +59,14 @@
     "signatures": [
       {
         "patterns": [
-          "Utils\\.RPGMAKER_NAME[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]MV[\\x22\\x27]",
+          "Utils\\.RPGMAKER_NAME[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27\\x60]MV[\\x22\\x27\\x60]",
           "Utils\\.RPGMAKER_VERSION[ \\t\\n\\r\\f\\v]*="
         ],
         "evidence": "rpgmaker runtime signatures",
         "source": "https://raw.githubusercontent.com/rpgtkoolmv/corescript/182e31449707ba7e406db0485c44c2a9d11e2dcd/js/rpg_core/Utils.js",
         "sha256": "31cba82553c3af8e7f61336e646a04be98798b992d5dd69d8e5fdc3f6637bf0d",
         "kind": "upstream-source",
-        "versionPattern": "RPGMAKER_VERSION[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]([^\\x22\\x27]+)"
+        "versionPattern": "RPGMAKER_VERSION[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27\\x60]([^\\x22\\x27\\x60]+)"
       }
     ]
   },
@@ -393,13 +393,13 @@
       {
         "patterns": [
           "KAPLAY already initialized, you are calling kaplay\\(\\) multiple times",
-          "Symbol\\.for\\([\\x22\\x27]kaplay\\.cancel[\\x22\\x27]\\)"
+          "Symbol\\.for\\([\\x22\\x27\\x60]kaplay\\.cancel[\\x22\\x27\\x60]\\)"
         ],
         "evidence": "kaplay runtime signatures",
         "source": "https://unpkg.com/kaplay@3001.0.19/dist/kaplay.js",
         "sha256": "88a946eafc4161f83505449d830b87c7bc15822bb0dae8ce03b2437506ef4a4b",
         "kind": "upstream-source",
-        "versionPattern": "[{,]version:[ \\t\\n\\r\\f\\v]*[\\x22\\x27]([34]\\d{3}\\.\\d+\\.\\d+)[\\x22\\x27]"
+        "versionPattern": "[{,]version:[ \\t\\n\\r\\f\\v]*[\\x22\\x27\\x60]([34]\\d{3}\\.\\d+\\.\\d+)[\\x22\\x27\\x60]"
       }
     ]
   },
@@ -410,36 +410,36 @@
     "signatures": [
       {
         "patterns": [
-          "engineName[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]LittleJS[\\x22\\x27]",
+          "engineName[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27\\x60]LittleJS[\\x22\\x27\\x60]",
           "engineVersion[ \\t\\n\\r\\f\\v]*="
         ],
         "evidence": "littlejs runtime signatures",
         "source": "https://unpkg.com/littlejsengine@1.28.0/src/engine.js",
         "sha256": "bb8c4f9c63ae2d167d04dc7eb3f592fc59a8f76944c0a24827da1932248dade4",
         "kind": "upstream-source",
-        "versionPattern": "engineVersion[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]([^\\x22\\x27]+)"
+        "versionPattern": "engineVersion[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27\\x60]([^\\x22\\x27\\x60]+)"
       },
       {
         "patterns": [
-          "[\\x22\\x27]LittleJS Engine v\\d+\\.\\d+",
+          "[\\x22\\x27\\x60]LittleJS Engine v\\d+\\.\\d+",
           "LittleJS: WebGL can not draw on this device"
         ],
         "evidence": "the LittleJS start-up banner",
         "source": "Voltbreak (littlejs-breaker), a Vite production build of littlejsengine 1.28.0, assets/index-BLVVTsOJ.js",
         "sha256": "2606818fa1c0a091772736d8814059a17e372a3ae9a660fccf87673f7225dffa",
         "kind": "exported-game-runtime",
-        "versionPattern": "[\\x22\\x27]LittleJS Engine v(\\d+\\.\\d+\\.\\d+)[\\x22\\x27]"
+        "versionPattern": "[\\x22\\x27\\x60]LittleJS Engine v(\\d+\\.\\d+\\.\\d+)[\\x22\\x27\\x60]"
       },
       {
         "patterns": [
-          "=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]LittleJS[\\x22\\x27][ \\t\\n\\r\\f\\v]*,[ \\t\\n\\r\\f\\v]*[\\w$]{1,64}[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]\\d+\\.\\d+\\.\\d+[\\x22\\x27]",
+          "=[ \\t\\n\\r\\f\\v]*[\\x22\\x27\\x60]LittleJS[\\x22\\x27\\x60][ \\t\\n\\r\\f\\v]*,[ \\t\\n\\r\\f\\v]*[\\w$]{1,64}[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27\\x60]\\d+\\.\\d+\\.\\d+[\\x22\\x27\\x60]",
           "LittleJS: WebGL can not draw on this device"
         ],
         "evidence": "the LittleJS name and version constants",
         "source": "esbuild 0.28.2 --bundle --minify --format=esm of `import { engineInit } from 'littlejsengine'; engineInit(()=>{},()=>{},()=>{},()=>{},()=>{});` with default conditions, which resolve littlejsengine 1.28.0 dist/littlejs.esm.js; sha256 of the whole bundle",
         "sha256": "eb42eced8f1609e06816203cce91bcfc713fe4766100b3b7a44f7d267e032b8d",
         "kind": "upstream-generated-runtime",
-        "versionPattern": "=[ \\t\\n\\r\\f\\v]*[\\x22\\x27]LittleJS[\\x22\\x27][ \\t\\n\\r\\f\\v]*,[ \\t\\n\\r\\f\\v]*[\\w$]{1,64}[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27](\\d+\\.\\d+\\.\\d+)[\\x22\\x27]"
+        "versionPattern": "=[ \\t\\n\\r\\f\\v]*[\\x22\\x27\\x60]LittleJS[\\x22\\x27\\x60][ \\t\\n\\r\\f\\v]*,[ \\t\\n\\r\\f\\v]*[\\w$]{1,64}[ \\t\\n\\r\\f\\v]*=[ \\t\\n\\r\\f\\v]*[\\x22\\x27\\x60](\\d+\\.\\d+\\.\\d+)[\\x22\\x27\\x60]"
       }
     ]
   },
@@ -463,16 +463,27 @@
   "react": {
     "name": "React",
     "evidenceStatus": "source-verified",
-    "reason": "Signature inspected in upstream runtime source, not an exported game fixture. Gate H has not been measured.",
+    "reason": "Signatures inspected in upstream runtime source, not an exported game fixture: React 19's transitional element symbol, and for React 18, which never writes it, react-dom's element symbols beside its devtools hook. React 17 and earlier call Symbol.for through an alias and are not recognised. Gate H has not been measured.",
     "signatures": [
       {
         "patterns": [
-          "Symbol\\.for\\([\\x22\\x27]react\\.transitional\\.element[\\x22\\x27]\\)",
-          "Symbol\\.for\\([\\x22\\x27]react\\.fragment[\\x22\\x27]\\)"
+          "Symbol\\.for\\([\\x22\\x27\\x60]react\\.transitional\\.element[\\x22\\x27\\x60]\\)",
+          "Symbol\\.for\\([\\x22\\x27\\x60]react\\.fragment[\\x22\\x27\\x60]\\)"
         ],
         "evidence": "react runtime signatures",
         "source": "https://unpkg.com/react@19.3.1/cjs/react.production.js",
         "sha256": "0b5529981841afa1b58c76ba85c29bb681ff5f07cd8cde6a10b967d3915b8e1c",
+        "kind": "upstream-source"
+      },
+      {
+        "patterns": [
+          "Symbol\\.for\\([\\x22\\x27\\x60]react\\.element[\\x22\\x27\\x60]\\)",
+          "Symbol\\.for\\([\\x22\\x27\\x60]react\\.fragment[\\x22\\x27\\x60]\\)",
+          "__REACT_DEVTOOLS_GLOBAL_HOOK__"
+        ],
+        "evidence": "react-dom runtime signatures",
+        "source": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+        "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
         "kind": "upstream-source"
       }
     ]

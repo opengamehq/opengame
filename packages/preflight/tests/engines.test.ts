@@ -226,6 +226,7 @@ test('a real plain canvas build reports no engine and passes clean', async () =>
   const files = walk(root).map((full) => file(relative(root, full).split(sep).join('/'), readFileSync(full, 'utf8')));
   const result = await platformPreflight(files);
   assert.equal(result.engine?.id, 'custom');
+  assert.equal(result.engine?.name, 'Canvas 2D');
   assert.equal(result.ok, true);
   assert.deepEqual(codes(result, 'blocker'), []);
   assert.deepEqual(codes(result, 'warning'), []);
@@ -423,6 +424,63 @@ test('Three.js r186, which registers its revision as a literal, keeps its versio
   assert.equal(result.engine?.version, 'r186');
   assert.equal((await game('window.__THREE__=R;const R="185";')).engine?.version, 'r185', 'a name is still read through its declaration');
   assert.equal((await game('window.__THREE__="../evil";')).engine?.version ?? null, null, 'only a revision number is a version');
+});
+
+/* Copied from jam entries on 27 Nov 2026, built by a minifier that writes every string as a
+   template literal: Naija Warriors (Phaser 4.2.1) and Five Blades (React 19), both sealed as
+   custom code, and a Three.js r182 build sealed with no version. */
+test('a build whose minifier writes strings as template literals is named, with its version', async () => {
+  const phaser4 = 'e.exports={VERSION:`4.2.1`,LOG_VERSION:`v4021`,BlendModes:n(10312),ScaleModes:n(29795),AUTO:0,CANVAS:1,WEBGL:2}';
+  assert.deepEqual([(await game(phaser4)).engine?.id, (await game(phaser4)).engine?.version], ['phaser', '4.2.1']);
+  const react19 = 'var Mr=Symbol.for(`react.transitional.element`),Nr=Symbol.for(`react.portal`),Pr=Symbol.for(`react.fragment`);';
+  assert.equal((await game(react19)).engine?.id, 'react');
+  const three = 'typeof window<`u`&&(window.__THREE__?Me(`WARNING: Multiple instances of Three.js being imported.`):window.__THREE__=`182`);';
+  assert.equal((await game(three)).engine?.version, 'r182');
+  const kaplay = KAPLAY.replace('"kaplay.cancel"', '`kaplay.cancel`');
+  assert.equal((await game(kaplay)).engine?.id, 'kaplay');
+  /* Its banner URL is still read as Phaser's default rather than as a host it calls. */
+  const config = phaser4 + ';function Config(e){this.gameURL=c(e,`url`,`https://phaser.io/`+i.LOG_VERSION)}';
+  assert.deepEqual(codes(await game(config), 'note').filter((code) => code === 'engine-default' || code === 'external-hosts'), ['engine-default']);
+  /* The quotes still have to match: a backtick opened and a quote closed is no literal. */
+  assert.equal((await game('e.exports={VERSION:`4.2.1",LOG_VERSION:`v4021`}')).engine?.id, 'custom');
+});
+
+/* Simulador Presidencial Global, 27 Nov 2026: React 18 never writes the transitional
+   element symbol React 19 is found by, so it was sealed as custom code. */
+test('React 18 is named from react-dom, and its element symbols alone are not React', async () => {
+  const react18 = 'var gb=Symbol.for("react.element"),hb=Symbol.for("react.portal"),ib=Symbol.for("react.fragment");'
+    + 'if("undefined"!==typeof __REACT_DEVTOOLS_GLOBAL_HOOK__){var ag=__REACT_DEVTOOLS_GLOBAL_HOOK__;}';
+  assert.equal((await game(react18)).engine?.id, 'react');
+  /* A library that checks for React elements (react-is inside a component kit) is not the app. */
+  assert.equal((await game('var a=Symbol.for("react.element"),b=Symbol.for("react.fragment");')).engine?.id, 'custom');
+});
+
+test('custom code is named for what it draws with, and a renderer of its own stays Custom', async () => {
+  const named = async (code: string) => { const r = await game(code); return [r.engine?.id, r.engine?.name]; };
+  assert.deepEqual(await named('const c=document.querySelector("canvas").getContext("2d");c.fillRect(0,0,9,9);'), ['custom', 'Canvas 2D']);
+  assert.deepEqual(await named('const c=e.getContext(`2d`,{alpha:!1});'), ['custom', 'Canvas 2D']);
+  assert.deepEqual(await named('document.body.append(Object.assign(document.createElement("button"),{textContent:"Deal"}));'), ['custom', 'HTML and DOM']);
+  assert.deepEqual(await named('const gl=canvas.getContext("webgl2");gl.clearColor(0,0,0,1);'), ['custom', 'Custom']);
+  /* A 2D canvas for the text beside a WebGL renderer is still a renderer somebody wrote. */
+  assert.deepEqual(await named('const t=a.getContext("2d"),gl=b.getContext("webgl");'), ['custom', 'Custom']);
+  assert.deepEqual(await named('if(navigator.gpu){adapter=await navigator.gpu.requestAdapter()}const c=e.getContext("2d");'), ['custom', 'Custom']);
+  /* A context asked for by a name this cannot read could be anything. */
+  assert.deepEqual(await named('const kind=pick();const c=e.getContext(kind);'), ['custom', 'Custom']);
+  assert.deepEqual(await named('const off=canvas.transferControlToOffscreen();worker.postMessage(off,[off]);'), ['custom', 'Custom']);
+  /* Each call is read on its own, so a 2D call in the same file does not vouch for the rest:
+     the usual WebGL fallback loop, a helper that takes the name, and the two call shapes a
+     plain `.getContext(` would miss (review of the branch, 27 Nov 2026). */
+  assert.deepEqual(await named('for(const n of["webgl2","webgl"]){gl=c.getContext(n);if(gl)break}const t=d.getContext("2d");'), ['custom', 'Custom']);
+  assert.deepEqual(await named('function get(n){return canvas.getContext(n,attrs)}gl=get("webgl");t=tc.getContext("2d");'), ['custom', 'Custom']);
+  assert.deepEqual(await named('const gl=c.getContext?.("webgl2");'), ['custom', 'Custom']);
+  assert.deepEqual(await named('const gl=c["getContext"]("webgl2");'), ['custom', 'Custom']);
+  assert.deepEqual(await named('const g=c.getContext?.(`2d`),h=d[\'getContext\']("2d",{alpha:false});'), ['custom', 'Canvas 2D']);
+  assert.deepEqual(await named('const b=c.getContext("bitmaprenderer");'), ['custom', 'Custom']);
+  /* Each says why in its evidence, and none in the bare "custom code" every scan before
+     27 Nov 2026 sealed, which /jam's genre split reads as a plain page or canvas. */
+  assert.equal((await game('const gl=canvas.getContext("webgl2");')).engine?.evidence, 'custom code with a WebGL or WebGPU renderer of its own in assets/index.js');
+  assert.equal((await game('const c=e.getContext(kind);')).engine?.evidence, 'custom code asking for a canvas context this check cannot read in assets/index.js');
+  assert.notEqual((await game('document.title="x";')).engine?.evidence, 'custom code');
 });
 
 /* Each LittleJS shape needs its WebGL fallback message beside it: a credit line with the

@@ -1006,9 +1006,13 @@
       "compactEdge": 1280,
       "compactShortEdge": 720,
       "fpsMax": 60,
-      "fpsMin": 10,
+      "fpsMin": 30,
       "softwareFpsMax": 30,
       "captureBudgetMs": 48,
+      "behindShareMax": 0.05,
+      "lowerAfterLooks": 2,
+      "starvedAfterLooks": 6,
+      "lowerDropSeconds": 10,
       "bitsPerSecond": 12000000,
       "compactBitsPerSecond": 6000000,
       "audioBitsPerSecond": 160000,
@@ -1072,7 +1076,12 @@
         "captionCharsMax": 500,
         "cutsMax": 20,
         "cutMsMin": 250,
-        "perGameOnPageMax": 3
+        "perGameOnPageMax": 3,
+        "publicFpsMin": 30,
+        "publicFpsSlack": 0.05,
+        "publicSecondFramesMin": 24,
+        "publicLongEdgeMin": 1920,
+        "publicShortEdgeMin": 1080
       }
     },
     "frameEventStringCharsMax": 120,

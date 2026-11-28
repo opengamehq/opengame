@@ -21,15 +21,15 @@ import limits from "../../../packages/shared/limits.json";
  * The version is part of every versioned document's ETag, so a change to this script
  * reaches browsers holding the old document instead of waiting out their cache.
  */
-export const GAME_AUDIO_VERSION = "audio-33-every-context-heard";
+export const GAME_AUDIO_VERSION = "audio-34-smooth-or-not-at-all";
 
 /** Only the numbers the receiver needs, so the page's half and this one read one block. */
 /** The recording block the receiver reads (`limits.play.recording`), less the page's own numbers. */
 const RECORDING = (({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs,
-  fpsMin, softwareFpsMax, captureBudgetMs, layerScanMs, domMinIntervalMs, domCostFactor, domSliceMs, domSliceIdleMs, domDeadlineMs, domStallMaxMs, domStallsMax, domStepMaxMs, domStepSlowMs, domBackoffMs, domRefreshMs, reshapeMs,
+  fpsMin, softwareFpsMax, captureBudgetMs, behindShareMax, lowerAfterLooks, starvedAfterLooks, layerScanMs, domMinIntervalMs, domCostFactor, domSliceMs, domSliceIdleMs, domDeadlineMs, domStallMaxMs, domStallsMax, domStepMaxMs, domStepSlowMs, domBackoffMs, domRefreshMs, reshapeMs,
   hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond }) =>
   ({ edge, shortEdge, compactEdge, compactShortEdge, fpsMax, bitsPerSecond, compactBitsPerSecond, audioBitsPerSecond, keyframeSeconds, flushMs,
-    fpsMin, softwareFpsMax, captureBudgetMs, layerScanMs, domMinIntervalMs, domCostFactor, domSliceMs, domSliceIdleMs, domDeadlineMs, domStallMaxMs, domStallsMax, domStepMaxMs, domStepSlowMs, domBackoffMs, domRefreshMs, reshapeMs,
+    fpsMin, softwareFpsMax, captureBudgetMs, behindShareMax, lowerAfterLooks, starvedAfterLooks, layerScanMs, domMinIntervalMs, domCostFactor, domSliceMs, domSliceIdleMs, domDeadlineMs, domStallMaxMs, domStallsMax, domStepMaxMs, domStepSlowMs, domBackoffMs, domRefreshMs, reshapeMs,
     hevcEdge, hevcShortEdge, hevcScreenPx, hevcBitsPerSecond, hevcCompactBitsPerSecond }))(limits.play.recording);
 
 const SCREENSHOT = (({ edgePx, jpegQualities, bytesMax, timeoutMs, intervalMs, domBudgetMs, domElementsMax, domBytesMax, domFetchesAtOnce, domSourceBytesMax }) =>
@@ -3066,24 +3066,30 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
   // stage has held another shape for reshapeMs, the encoder is drained and set to the new size,
   // and its next picture is a keyframe carrying the new configuration. An MP4 track has one
   // size, so the page starts a new stretch there (store.ts) and no clip spans the change.
-  const reshape = async (session) => {
+  // A smaller picture to keep up (lowerSize) comes through here too, with edges and a bitrate
+  // of its own: they become the session's only once the encoder has taken them, and the page is
+  // told then, before any picture of the new size can reach it. It answers whether it changed.
+  const reshape = async (session, edges = session.edges, bitrate = session.config.bitrate, lowered = false) => {
     session.reshaping = true;
     try {
-      const size = outputSize(session.edges[0], session.edges[1]);
-      if (size.width === session.size.width && size.height === session.size.height) return;
-      const config = Object.assign({}, session.config, { width: size.width, height: size.height });
+      const size = outputSize(edges[0], edges[1]);
+      if (size.width === session.size.width && size.height === session.size.height) return false;
+      const config = Object.assign({}, session.config, { width: size.width, height: size.height, bitrate: bitrate });
       const answer = await VideoEncoder.isConfigSupported(config).catch(() => null);
-      if (!answer || !answer.supported || session.stopped) return;
+      if (!answer || !answer.supported || session.stopped) return false;
       await session.encoder.flush();
-      if (session.stopped || session.encoder.state !== 'configured') return;
+      if (session.stopped || session.encoder.state !== 'configured') return false;
       session.encoder.configure(config);
+      session.edges = edges;
       session.config = config;
       session.size = size;
+      if (lowered) tellRecord(session, { op: 'lowered', width: size.width, height: size.height, fps: session.fps });
       session.canvas = new OffscreenCanvas(size.width, size.height);
       session.context = session.canvas.getContext('2d', { alpha: false });
       session.lastKey = -1;
       markDirty(session);
-    } catch { /* It keeps the shape it has. */ }
+      return true;
+    } catch { return false; /* It keeps the shape it has. */ }
     finally {
       session.reshaping = false;
       session.reshapeSince = 0;
@@ -3103,39 +3109,98 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     const step = 1000 / session.fps;
     session.due = Math.max(session.due + step, now - step);
     const encoder = session.encoder;
-    if (encoder.state !== 'configured' || encoder.encodeQueueSize > 2) return;
+    if (encoder.state !== 'configured') return;
+    session.dueCount++;
+    // A picture the encoder has no room for is dropped, never queued, so the game is never held
+    // waiting for it; but every one is counted (govern, below).
+    if (encoder.encodeQueueSize > 2) { session.behindCount++; govern(session, now); return; }
     // The page is looked at again every layerScanMs before the copy, and outside its timing:
     // that costs the same a second whatever the picture rate, so counting it per picture would
     // push the rate down for nothing.
     if (now - session.lastScan > rec.layerScanMs) rescan(session, now);
     const began = performance.now();
-    try { copyFrame(session, now, encoder); } finally { costed(session, performance.now() - began, now); }
+    try { copyFrame(session, now, encoder); } finally {
+      session.costSum += performance.now() - began;
+      session.costCount++;
+      govern(session, now);
+    }
   };
-  // THE COPY IS TIMED, AND PAID FOR IN PICTURES, NEVER IN THE GAME'S FRAMES (27 Nov 2026). Each
-  // copy runs on the game's own thread, and what it costs is the browser's: measured
-  // headless with an NVIDIA card and no hardware encoder, drawing World at War Zombies' canvas
-  // took 2.9 ms and wrapping it for the encoder 2.4 ms, 60 times a second, half a core taken
-  // from the thread that forwards the player's input; on a game that draws on that thread it
-  // would be a third of every frame. So every copy times itself, and about once a second the
-  // recording looks at what its copies cost the game a second. Past captureBudgetMs it records
-  // fewer pictures a second, 60, 30, 20, 15 and then fpsMin, and it goes back up a step only
-  // where the step up would cost under half the budget, so it does not swing. A clip of a
-  // machine that copies slowly is less smooth; the game is never slower. A software encoder,
-  // which takes cores of its own, starts at softwareFpsMax.
-  const FPS_STEPS = [60, 30, 20, 15, 10];
-  const costed = (session, spent, now) => {
-    // The mean of the copies since the last look, so one slow first copy decides nothing.
-    session.costSum += spent;
-    session.costCount++;
+  // SMOOTH, OR NOT AT ALL (27 Nov 2026). A recording either keeps up or comes down a step, and
+  // it never comes down past fpsMin pictures a second. Two things make a machine fall behind,
+  // and both are watched about once a second:
+  // - THE COPY, which runs on the game's own thread and times itself. Measured headless with an
+  //   NVIDIA card and no hardware encoder, drawing World at War Zombies' canvas took 2.9 ms and
+  //   wrapping it for the encoder 2.4 ms, half a core at 60; on a Mac with Metal, 0.1 to 0.2 ms.
+  //   Past captureBudgetMs a second, the game is paying for its clip.
+  // - THE ENCODER, which runs off the game's thread and drops whatever arrives while it is still
+  //   busy. A Karen Warfare clip from 26 Nov came out at 6 pictures a second for its whole five
+  //   minutes, 1080p on what was most likely a software encoder, because nine pictures in ten
+  //   arrived to a full encoder and nothing counted them. Past behindShareMax of the pictures due
+  //   dropped that way, the clip is choppy.
+  // Past either for lowerAfterLooks looks running, the recording steps down: 60 pictures a second
+  // to 30, then the next smaller picture (1440p, 1080p, 720p) at 30, which is half to a quarter
+  // of the pixels to copy and to encode. With no smaller picture left it stops, as 'slow', and the
+  // stage says this device cannot record the game smoothly: a choppy clip, or one paid for in the
+  // game's frames, is worse than none (27 Nov 2026, "we need high quality recordings
+  // only"). It goes back up a step only where the copy, not the encoder, made it come down, and
+  // the step up would cost under half the budget, so it does not swing. A software encoder, which
+  // takes cores of its own, starts at softwareFpsMax.
+  const FPS_STEPS = [60, 30];
+  const SIZE_STEPS = () => [[rec.hevcEdge, rec.hevcShortEdge], [rec.edge, rec.shortEdge], [rec.compactEdge, rec.compactShortEdge]];
+  const bitrateFor = (codec, edge) => edge >= rec.hevcEdge ? rec.hevcBitsPerSecond
+    : edge >= rec.edge ? (codec.startsWith('hvc1') ? rec.hevcCompactBitsPerSecond : rec.bitsPerSecond) : rec.compactBitsPerSecond;
+  const govern = (session, now) => {
     if (now - session.governed < 1000) return;
+    const looked = now - session.governed;
     session.governed = now;
-    session.cost = session.costSum / session.costCount;
+    const due = session.dueCount;
+    const behind = session.behindCount;
+    // What the copies cost the game this second, as they ran, and the mean of one, so one slow
+    // first copy decides nothing and a step up is priced at what a picture costs.
+    const spent = session.costSum * 1000 / looked;
+    if (session.costCount) session.cost = session.costSum / session.costCount;
     session.costSum = 0;
     session.costCount = 0;
+    session.dueCount = 0;
+    session.behindCount = 0;
+    // A hidden tab runs no frames, and a look that spans a stall of the whole page (a map
+    // loading, a tab brought back) measures the stall: neither says anything about the recording.
+    if (document.hidden || looked > 2500 || due < 1) { session.strained = 0; session.starved = 0; return; }
+    const costly = spent > rec.captureBudgetMs;
+    const lagging = behind / due > rec.behindShareMax;
+    // Pictures that reached the encoder this second, against the least a clip may hold: a page
+    // whose own frames come slower than that is starved, whatever the copy and the encoder do.
+    const starved = (due - behind) * 1000 / looked < rec.fpsMin * (1 - rec.behindShareMax);
     const steps = [session.fpsCeiling].concat(FPS_STEPS.filter((fps) => fps < session.fpsCeiling && fps >= rec.fpsMin));
     const at = steps.indexOf(session.fps);
-    if (session.cost * session.fps > rec.captureBudgetMs && at >= 0 && at < steps.length - 1) session.fps = steps[at + 1];
-    else if (at > 0 && session.cost * steps[at - 1] < rec.captureBudgetMs / 2) session.fps = steps[at - 1];
+    if (costly || lagging) {
+      session.strained++;
+      if (session.strained < rec.lowerAfterLooks) return;
+      session.strained = 0;
+      if (lagging) session.encoderBound = true;
+      if (at >= 0 && at < steps.length - 1) {
+        session.fps = steps[at + 1];
+        tellRecord(session, { op: 'lowered', width: session.size.width, height: session.size.height, fps: session.fps });
+      } else lowerSize(session);
+      return;
+    }
+    session.strained = 0;
+    // Slowly, since only a page's own frames make it: a smaller picture first, in case the copy
+    // was part of it, then 'slow', so no clip is kept at under fpsMin.
+    session.starved = starved ? session.starved + 1 : 0;
+    if (session.starved >= rec.starvedAfterLooks) { session.starved = 0; lowerSize(session); return; }
+    if (!session.encoderBound && at > 0 && session.cost * steps[at - 1] < rec.captureBudgetMs / 2) session.fps = steps[at - 1];
+  };
+  // The next smaller picture, at the rate the session has now, through the same drain and
+  // reconfigure as a change of the stage's shape (reshape); the page starts a new clip there. A
+  // smaller picture the encoder will not take is as far as this machine goes: it stops as 'slow'.
+  const lowerSize = (session) => {
+    if (session.reshaping) return;
+    const next = SIZE_STEPS().find((edges) => edges[0] < session.edges[0]);
+    if (!next) { void stopRecord(session, 'slow'); return; }
+    void reshape(session, next, bitrateFor(session.config.codec, next[0]), true).then((changed) => {
+      if (!changed && !session.stopped) void stopRecord(session, 'slow');
+    });
   };
   const copyFrame = (session, now, encoder) => {
     const dom = session.dom;
@@ -3235,6 +3300,7 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
     const session = { id: data.id, origin: origin, stopped: false, closed: false, pending: [], mix: null, taps: new Map(),
       due: -Infinity, lastKey: -1, lastScan: -Infinity, scene: [], sceneId: 0, scale: 1, skip: new WeakSet(), ground: '#000', viewport: [0, 0], refused: 0,
       reshaping: false, reshapeSince: 0, fps: rec.fpsMax, fpsCeiling: rec.fpsMax, cost: 0, costSum: 0, costCount: 0, governed: 0,
+      dueCount: 0, behindCount: 0, strained: 0, starved: 0, encoderBound: false,
       dom: { images: [], any: false, dirty: true, busy: false, broken: false, next: 0, last: -Infinity, sceneId: -1,
         ...pageCaches(), windows: [], stalls: 0 },
       watch: null, mediaTaps: new Map(), mediaContext: null };
@@ -3373,8 +3439,13 @@ export const GAME_AUDIO_RUNTIME = String.raw`(() => {
  * The receiver with its policy blanks filled: parent origins, input cadence and screenshot
  * limits. Exported so `apps/web/tests/browser/frame-capture-page.browser.mts` runs in a
  * real browser exactly what this Worker injects, rather than a copy of the filling-in.
+ *
+ * `overrides` is for the recording suite alone, which nothing served passes: its browsers have
+ * no GPU, so a copy there costs what the recorder would step down from and then stop at, and the
+ * suites that check what a clip holds run with the copy budget and the encoder's limit lifted.
+ * The suites that check the stepping down run with the real ones.
  */
-export function gameAudioRuntime(origins: string[]): string {
+export function gameAudioRuntime(origins: string[], overrides: { recording?: Partial<typeof RECORDING> } = {}): string {
   // Replacer functions, so a `$` in either value is copied rather than read as a pattern.
   const parents = JSON.stringify(origins).replaceAll("<", "\\u003c");
   const capture = JSON.stringify(SCREENSHOT);
@@ -3385,7 +3456,7 @@ export function gameAudioRuntime(origins: string[]): string {
     .replace("__OG_GAMEPAD_INTERVAL__", () => String(limits.analytics.runtime.inputIntervalMs))
     .replace("__OG_GAMEPAD_DEADZONE__", () => String(limits.analytics.runtime.gamepadDeadzone))
     .replace("__OG_CAPTURE__", () => capture)
-    .replace("__OG_RECORDING__", () => JSON.stringify(RECORDING))
+    .replace("__OG_RECORDING__", () => JSON.stringify({ ...RECORDING, ...overrides.recording }))
     .replace("__OG_AUDIO_PARENTS__", () => parents);
 }
 
